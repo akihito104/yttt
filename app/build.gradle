@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.freshdigitable.yttt'
+    compileSdk 33
+
+    defaultConfig {
+        applicationId "com.freshdigitable.yttt"
+        minSdk 26
+        targetSdk 33
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
+
+dependencies {
+
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation("androidx.activity:activity-ktx:1.6.1")
+    implementation("androidx.fragment:fragment-ktx:1.5.5")
+    implementation 'com.google.android.material:material:1.8.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    // https://developers.google.com/android/guides/setup
+    implementation "com.google.android.gms:play-services-base:18.2.0"
+    implementation 'com.google.android.gms:play-services-auth:20.4.1'
+    //https://github.com/googleapis/google-api-java-client
+    implementation('com.google.api-client:google-api-client-android:2.2.0') {
+        exclude group: 'org.apache.httpcomponents'
+    }
+    // https://github.com/googleapis/google-api-java-client-services/blob/main/clients/google-api-services-youtube/v3/README.md
+    implementation('com.google.apis:google-api-services-youtube:v3-rev20230123-2.0.0') {
+        exclude group: 'org.apache.httpcomponents'
+    }
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+}

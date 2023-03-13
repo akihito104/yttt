@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.appcompat.widget.LinearLayoutCompat
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    xmlns:tools="http://schemas.android.com/tools"
+    >
+    <TextView
+        android:id="@+id/video_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        tools:text="stream title"
+        />
+    <TextView
+        android:id="@+id/video_channelName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        tools:text="channel title"
+        />
+    <TextView
+        android:id="@+id/video_startDateTime"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        tools:text="2023/3/9(Thu) 18:00"
+        />
+</androidx.appcompat.widget.LinearLayoutCompat>
