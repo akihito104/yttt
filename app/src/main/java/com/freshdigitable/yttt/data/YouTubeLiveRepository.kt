@@ -1,7 +1,6 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.data
 
 import android.content.Context
-import androidx.core.content.edit
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
@@ -91,23 +90,5 @@ class YouTubeLiveRepository @Inject constructor(
 
     companion object {
         private val activityMaxPeriod = Period.ofDays(7)
-    }
-}
-
-class AccountRepository @Inject constructor(
-    @ApplicationContext context: Context,
-) {
-    private val pref = context.getSharedPreferences("yttt", Context.MODE_PRIVATE)
-
-    fun getAccount(): String? = pref.getString(PREF_ACCOUNT_NAME, null)
-
-    fun putAccount(account: String) {
-        pref.edit {
-            putString(PREF_ACCOUNT_NAME, account)
-        }
-    }
-
-    companion object {
-        private const val PREF_ACCOUNT_NAME = "accountName"
     }
 }

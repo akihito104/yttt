@@ -38,15 +38,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setup() {
-        val googleService = (application as YtttApp).googleService
-        val statusCode = googleService.connectionStatusCode
+        val statusCode = viewModel.getConnectionStatus()
         if (statusCode == ConnectionResult.SUCCESS) {
             val hasAccount = checkAccount()
             if (hasAccount) {
                 viewModel.onInit()
             }
         } else {
-            if (googleService.googleApiAvailability.isUserResolvableError(statusCode)) {
+            if (viewModel.isUserResolvableError(statusCode)) {
                 showGoogleApiErrorDialog(statusCode)
             }
         }

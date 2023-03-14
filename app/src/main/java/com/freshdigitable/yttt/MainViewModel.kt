@@ -6,6 +6,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.data.AccountRepository
+import com.freshdigitable.yttt.data.GoogleService
+import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.google.api.services.youtube.model.Video
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -15,11 +18,17 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val liveRepository: YouTubeLiveRepository,
     private val accountRepository: AccountRepository,
+    private val googleService: GoogleService,
 ) : ViewModel() {
     private val _onAir: MutableLiveData<List<Video>> = MutableLiveData()
     val onAir: LiveData<List<Video>> = _onAir
     private val _next: MutableLiveData<List<Video>> = MutableLiveData()
     val next: LiveData<List<Video>> = _next
+
+    fun getConnectionStatus(): Int = googleService.getConnectionStatusCode()
+
+    fun isUserResolvableError(statusCode: Int): Boolean =
+        googleService.isUserResolvableError(statusCode)
 
     fun login(account: String? = null): Boolean {
         if (account != null) {
