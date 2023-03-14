@@ -11,39 +11,22 @@ import com.google.api.services.youtube.YouTubeScopes
 import com.google.api.services.youtube.model.Activity
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.Video
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.Period
+import javax.inject.Inject
 
-class YouTubeLiveRepository(
-    context: Context
+class YouTubeLiveRepository @Inject constructor(
+    @ApplicationContext context: Context,
 ) {
     val credential: GoogleAccountCredential = GoogleAccountCredential.usingOAuth2(
-        context.applicationContext, listOf(YouTubeScopes.YOUTUBE_READONLY),
+        context, listOf(YouTubeScopes.YOUTUBE_READONLY),
     ).setBackOff(ExponentialBackOff())
     private val youtube = YouTube.Builder(
         NetHttpTransport(), GsonFactory.getDefaultInstance(), credential
     ).build()
-    private val pref = context.getSharedPreferences("yttt", Context.MODE_PRIVATE)
-
-    fun login(account: String? = null): Boolean {
-        if (account != null) {
-            putAccount(account)
-        }
-        val accountName = pref.getString(PREF_ACCOUNT_NAME, null)
-        if (accountName != null) {
-            credential.selectedAccountName = accountName
-            return true
-        }
-        return false
-    }
-
-    private fun putAccount(account: String) {
-        pref.edit {
-            putString(PREF_ACCOUNT_NAME, account)
-        }
-    }
 
     suspend fun fetchAllSubscribe(
         maxResult: Long = 30,
@@ -107,7 +90,24 @@ class YouTubeLiveRepository(
     }
 
     companion object {
-        private const val PREF_ACCOUNT_NAME = "accountName"
         private val activityMaxPeriod = Period.ofDays(7)
+    }
+}
+
+class AccountRepository @Inject constructor(
+    @ApplicationContext context: Context,
+) {
+    private val pref = context.getSharedPreferences("yttt", Context.MODE_PRIVATE)
+
+    fun getAccount(): String? = pref.getString(PREF_ACCOUNT_NAME, null)
+
+    fun putAccount(account: String) {
+        pref.edit {
+            putString(PREF_ACCOUNT_NAME, account)
+        }
+    }
+
+    companion object {
+        private const val PREF_ACCOUNT_NAME = "accountName"
     }
 }
