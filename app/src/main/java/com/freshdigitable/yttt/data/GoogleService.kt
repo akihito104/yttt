@@ -8,7 +8,7 @@ import javax.inject.Inject
 class GoogleService @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val googleApiAvailability: GoogleApiAvailability
+    val googleApiAvailability: GoogleApiAvailability
         get() = GoogleApiAvailability.getInstance()
 
     fun getConnectionStatusCode(): Int =

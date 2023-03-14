@@ -16,7 +16,6 @@ import androidx.lifecycle.LiveData
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.gms.common.ConnectionResult
-import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.material.tabs.TabLayoutMediator
 import com.google.api.services.youtube.model.Video
 import dagger.hilt.android.AndroidEntryPoint
@@ -39,38 +38,36 @@ class MainActivity : AppCompatActivity() {
 
     private fun setup() {
         val statusCode = viewModel.getConnectionStatus()
-        if (statusCode == ConnectionResult.SUCCESS) {
-            val hasAccount = checkAccount()
-            if (hasAccount) {
-                viewModel.onInit()
-            }
-        } else {
+        if (statusCode != ConnectionResult.SUCCESS) {
             if (viewModel.isUserResolvableError(statusCode)) {
                 showGoogleApiErrorDialog(statusCode)
             }
+            return
+        }
+        if (!viewModel.hasAccount()) {
+            pickAccount()
+        } else {
+            loadTimeline()
         }
     }
 
-    private fun checkAccount(): Boolean {
+    private fun pickAccount() {
         val permissionStatus = ContextCompat.checkSelfPermission(
             this,
             android.Manifest.permission.GET_ACCOUNTS
         )
         when {
-            permissionStatus == PackageManager.PERMISSION_GRANTED -> {
-                val succeeded = viewModel.login()
-                if (succeeded) {
-                    return true
-                } else {
-                    startPickAccount()
-                }
-            }
+            permissionStatus == PackageManager.PERMISSION_GRANTED -> startPickAccount()
             shouldShowRequestPermissionRationale(android.Manifest.permission.GET_ACCOUNTS) -> {
                 TODO("")
             }
             else -> getAccountRequestPermission.launch(android.Manifest.permission.GET_ACCOUNTS)
         }
-        return false
+    }
+
+    private fun loadTimeline() {
+        viewModel.login()
+        viewModel.onInit()
     }
 
     private val getAccountRequestPermission =
@@ -105,17 +102,17 @@ class MainActivity : AppCompatActivity() {
     private fun showGoogleApiErrorDialog(
         connectionStatusCode: Int
     ) {
-        val apiAvailability = GoogleApiAvailability.getInstance()
-        val googleApiErrorDialog =
-            registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) {
-                if (it.resultCode == RESULT_OK) {
-                    val hasAccount = checkAccount()
-                    if (hasAccount) {
-                        viewModel.onInit()
-                    }
+        val contract = ActivityResultContracts.StartIntentSenderForResult()
+        val googleApiErrorDialog = registerForActivityResult(contract) {
+            if (it.resultCode == RESULT_OK) {
+                if (!viewModel.hasAccount()) {
+                    pickAccount()
+                } else {
+                    loadTimeline()
                 }
             }
-        apiAvailability.showErrorDialogFragment(
+        }
+        viewModel.googleApiAvailability.showErrorDialogFragment(
             this,
             connectionStatusCode,
             googleApiErrorDialog,

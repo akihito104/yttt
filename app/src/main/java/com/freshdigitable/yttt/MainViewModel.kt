@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.GoogleService
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.api.services.youtube.model.Video
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -29,6 +30,10 @@ class MainViewModel @Inject constructor(
 
     fun isUserResolvableError(statusCode: Int): Boolean =
         googleService.isUserResolvableError(statusCode)
+
+    val googleApiAvailability: GoogleApiAvailability get() = googleService.googleApiAvailability
+
+    fun hasAccount(): Boolean = accountRepository.getAccount() != null
 
     fun login(account: String? = null): Boolean {
         if (account != null) {
