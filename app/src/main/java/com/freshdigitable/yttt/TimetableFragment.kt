@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
-import com.google.api.services.youtube.model.Video
+import com.freshdigitable.yttt.data.model.LiveVideo
 
 class TimetableFragment : Fragment(R.layout.fragment_timetable) {
     private val viewModel by activityViewModels<MainViewModel>()
@@ -44,13 +44,13 @@ class TimetableFragment : Fragment(R.layout.fragment_timetable) {
     }
 }
 
-class TimetableAdapter : ListAdapter<Video, VideoViewHolder>(diffUtil) {
+class TimetableAdapter : ListAdapter<LiveVideo, VideoViewHolder>(diffUtil) {
     companion object {
-        private val diffUtil = object : DiffUtil.ItemCallback<Video>() {
-            override fun areItemsTheSame(oldItem: Video, newItem: Video): Boolean =
+        private val diffUtil = object : DiffUtil.ItemCallback<LiveVideo>() {
+            override fun areItemsTheSame(oldItem: LiveVideo, newItem: LiveVideo): Boolean =
                 oldItem.id == newItem.id
 
-            override fun areContentsTheSame(oldItem: Video, newItem: Video): Boolean =
+            override fun areContentsTheSame(oldItem: LiveVideo, newItem: LiveVideo): Boolean =
                 oldItem == newItem
         }
     }
@@ -63,10 +63,9 @@ class TimetableAdapter : ListAdapter<Video, VideoViewHolder>(diffUtil) {
 
     override fun onBindViewHolder(holder: VideoViewHolder, position: Int) {
         val item = getItem(position)
-        holder.title.text = item.snippet.title
-        holder.channelTitle.text = item.snippet.channelTitle
-        holder.dateTime.text =
-            item.liveStreamingDetails?.scheduledStartTime?.toStringRfc3339() ?: "none"
+        holder.title.text = item.title
+        holder.channelTitle.text = item.channel.title
+        holder.dateTime.text = item.scheduledStartDateTime?.toString() ?: "none"
     }
 }
 
