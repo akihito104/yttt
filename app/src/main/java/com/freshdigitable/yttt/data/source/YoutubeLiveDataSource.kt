@@ -9,7 +9,7 @@ import java.time.Period
 
 interface YoutubeLiveDataSource {
     suspend fun fetchAllSubscribe(maxResult: Long = 30): List<LiveSubscription>
-    suspend fun fetchActivitiesList(
+    suspend fun fetchLiveChannelLogs(
         channelId: LiveChannel.Id,
         publishedAfter: Instant = Instant.now().minus(activityMaxPeriod),
         maxResult: Long = 30,

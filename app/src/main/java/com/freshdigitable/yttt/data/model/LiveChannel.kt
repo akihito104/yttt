@@ -6,3 +6,8 @@ interface LiveChannel {
 
     data class Id(val value: String)
 }
+
+data class LiveChannelEntity(
+    override val id: LiveChannel.Id,
+    override val title: String,
+) : LiveChannel

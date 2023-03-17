@@ -9,3 +9,9 @@ interface LiveSubscription {
 
     data class Id(val value: String)
 }
+
+data class LiveSubscriptionEntity(
+    override val id: LiveSubscription.Id,
+    override val subscribeSince: Instant,
+    override val channelId: LiveChannel.Id,
+) : LiveSubscription

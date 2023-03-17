@@ -20,3 +20,13 @@ interface LiveVideo {
 
     data class Id(val value: String)
 }
+
+data class LiveVideoEntity(
+    override val id: LiveVideo.Id,
+    override val channel: LiveChannel,
+    override val title: String,
+    override val scheduledStartDateTime: Instant?,
+    override val scheduledEndDateTime: Instant?,
+    override val actualStartDateTime: Instant?,
+    override val actualEndDateTime: Instant?
+) : LiveVideo

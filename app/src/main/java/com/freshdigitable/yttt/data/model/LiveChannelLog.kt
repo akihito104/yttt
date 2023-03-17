@@ -10,3 +10,10 @@ interface LiveChannelLog {
 
     data class Id(val value: String)
 }
+
+data class LiveChannelLogEntity(
+    override val id: LiveChannelLog.Id,
+    override val dateTime: Instant,
+    override val videoId: LiveVideo.Id,
+    override val channelId: LiveChannel.Id,
+) : LiveChannelLog
