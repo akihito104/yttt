@@ -15,9 +15,9 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.material.tabs.TabLayoutMediator
-import com.google.api.services.youtube.model.Video
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -66,7 +66,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadTimeline() {
-        viewModel.login()
+        val loggedIn = viewModel.login()
+        check(loggedIn) { "login failure..." }
         viewModel.onInit()
     }
 
@@ -129,12 +130,12 @@ class ViewPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter(activi
 
 enum class TimetablePage {
     OnAir {
-        override fun bind(viewModel: MainViewModel): LiveData<List<Video>> = viewModel.onAir
+        override fun bind(viewModel: MainViewModel): LiveData<List<LiveVideo>> = viewModel.onAir
     },
     Next {
-        override fun bind(viewModel: MainViewModel): LiveData<List<Video>> = viewModel.next
+        override fun bind(viewModel: MainViewModel): LiveData<List<LiveVideo>> = viewModel.next
     },
     ;
 
-    abstract fun bind(viewModel: MainViewModel): LiveData<List<Video>>
+    abstract fun bind(viewModel: MainViewModel): LiveData<List<LiveVideo>>
 }

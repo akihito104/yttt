@@ -2,15 +2,21 @@ package com.freshdigitable.yttt
 
 import android.content.Intent
 import android.util.Log
-import androidx.lifecycle.*
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.AccountRepository
+import com.freshdigitable.yttt.data.AccountRepository.Companion.getNewChooseAccountIntent
 import com.freshdigitable.yttt.data.GoogleService
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
+import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.GoogleApiAvailability
-import com.google.api.services.youtube.model.Video
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,10 +26,6 @@ class MainViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val googleService: GoogleService,
 ) : ViewModel() {
-    private val _onAir: MutableLiveData<List<Video>> = MutableLiveData()
-    val onAir: LiveData<List<Video>> = _onAir
-    private val _next: MutableLiveData<List<Video>> = MutableLiveData()
-    val next: LiveData<List<Video>> = _next
 
     fun getConnectionStatus(): Int = googleService.getConnectionStatusCode()
 
@@ -32,7 +34,7 @@ class MainViewModel @Inject constructor(
 
     val googleApiAvailability: GoogleApiAvailability get() = googleService.googleApiAvailability
 
-    fun hasAccount(): Boolean = accountRepository.getAccount() != null
+    fun hasAccount(): Boolean = accountRepository.hasAccount()
 
     fun login(account: String? = null): Boolean {
         if (account != null) {
@@ -40,58 +42,44 @@ class MainViewModel @Inject constructor(
         }
         val accountName = accountRepository.getAccount()
         if (accountName != null) {
-            liveRepository.credential.selectedAccountName = accountName
+            accountRepository.setSelectedAccountName(accountName)
             return true
         }
         return false
     }
 
-    fun createPickAccountIntent(): Intent = liveRepository.credential.newChooseAccountIntent()
+    fun createPickAccountIntent(): Intent = accountRepository.getNewChooseAccountIntent()
 
     fun onInit() {
         viewModelScope.launch { fetchLiveStreams() }
     }
 
-    @OptIn(FlowPreview::class)
+    private val videos = liveRepository.videos
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val onAir: LiveData<List<LiveVideo>> = videos.map { v ->
+        v.filter { it.isNowOnAir() }.sortedByDescending { it.actualStartDateTime }
+    }.asLiveData(viewModelScope.coroutineContext)
+    val next: LiveData<List<LiveVideo>> = videos.map { v ->
+        v.filter { it.isUpcoming() }.sortedBy { it.scheduledStartDateTime }
+    }.asLiveData(viewModelScope.coroutineContext)
+
     private suspend fun fetchLiveStreams() {
-        val channelIds = liveRepository.fetchAllSubscribe().map { it.snippet.resourceId.channelId }
+        val oa = onAir.value ?: emptyList()
+        val n = next.value ?: emptyList()
+        val currentVideoIds = oa.toMutableList().apply { addAll(n) }
+            .map { v -> v.id }
+            .distinct()
+        liveRepository.fetchVideoList(currentVideoIds)
+
+        val channelIds = liveRepository.fetchAllSubscribe().map { it.channelId }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
-        val videos = channelIds.asFlow()
-            .map { liveRepository.fetchActivitiesList(it) }
-            .map { a ->
-                a.filter { it.contentDetails?.upload != null }
-                    .map { it.contentDetails.upload.videoId }
-            }
-            .map { liveRepository.fetchVideoList(it) }
-            .flatMapConcat { v -> flow { v.forEach { emit(it) } } } /// ???
-            .filter { it.liveStreamingDetails != null }
-            .shareIn(viewModelScope, SharingStarted.Eagerly)
-
-        val onAirStream = videos.filter {
-            it.liveStreamingDetails.actualStartTime != null &&
-                it.liveStreamingDetails.actualEndTime == null
-        }.runningFold(listOf<Video>()) { acc, a ->
-            acc.toMutableList().apply { add(a) }
-                .sortedBy { it.liveStreamingDetails.actualStartTime.value }
+        channelIds.forEach { c ->
+            Log.d(TAG, "fetchLiveStreams: channel> $c")
+            val logs = liveRepository.fetchLiveChannelLogs(c)
+            liveRepository.fetchVideoList(logs.map { it.videoId })
         }
-        viewModelScope.launch {
-            onAirStream.collect {
-                _onAir.postValue(it)
-            }
-        }
-
-        val nextStream = videos.filter { it.liveStreamingDetails.actualStartTime == null }
-            .runningFold(listOf<Video>()) { acc, v ->
-                acc.toMutableList().apply { add(v) }
-                    .sortedBy {
-                        it.liveStreamingDetails.scheduledStartTime?.value ?: Long.MAX_VALUE
-                    }
-            }
-        viewModelScope.launch {
-            nextStream.collect {
-                _next.postValue(it)
-            }
-        }
+        Log.d(TAG, "fetchLiveStreams: end")
     }
 
     companion object {
