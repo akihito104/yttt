@@ -13,7 +13,10 @@ import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.GoogleApiAvailability
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -52,24 +55,31 @@ class MainViewModel @Inject constructor(
     }
 
     private val videos = liveRepository.videos
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val onAir: LiveData<List<LiveVideo>> = videos.map { v ->
-        Log.d(TAG, "onair.runningFold: ${v.size}")
         v.filter { it.isNowOnAir() }.sortedByDescending { it.actualStartDateTime }
-    }
-        .asLiveData(viewModelScope.coroutineContext)
+    }.asLiveData(viewModelScope.coroutineContext)
     val next: LiveData<List<LiveVideo>> = videos.map { v ->
-        Log.d(TAG, "upcoming.runningFold: ${v.size}")
         v.filter { it.isUpcoming() }.sortedBy { it.scheduledStartDateTime }
-    }
-        .asLiveData(viewModelScope.coroutineContext)
+    }.asLiveData(viewModelScope.coroutineContext)
 
     private suspend fun fetchLiveStreams() {
+        val oa = onAir.value ?: emptyList()
+        val n = next.value ?: emptyList()
+        val currentVideoIds = oa.toMutableList().apply { addAll(n) }
+            .map { v -> v.id }
+            .distinct()
+        liveRepository.fetchVideoList(currentVideoIds)
+
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channelId }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
         channelIds.forEach { c ->
+            Log.d(TAG, "fetchLiveStreams: channel> $c")
             val logs = liveRepository.fetchLiveChannelLogs(c)
             liveRepository.fetchVideoList(logs.map { it.videoId })
         }
+        Log.d(TAG, "fetchLiveStreams: end")
     }
 
     companion object {

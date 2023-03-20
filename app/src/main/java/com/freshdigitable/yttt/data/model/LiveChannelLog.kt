@@ -8,7 +8,7 @@ interface LiveChannelLog {
     val videoId: LiveVideo.Id
     val channelId: LiveChannel.Id
 
-    data class Id(val value: String)
+    data class Id(override val value: String) : IdBase<String>
 }
 
 data class LiveChannelLogEntity(
