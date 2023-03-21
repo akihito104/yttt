@@ -6,6 +6,7 @@ interface LiveVideo {
     val id: Id
     val title: String
     val channel: LiveChannel
+    val thumbnailUrl: String
     val scheduledStartDateTime: Instant?
     val scheduledEndDateTime: Instant?
     val actualStartDateTime: Instant?
@@ -28,5 +29,6 @@ data class LiveVideoEntity(
     override val scheduledStartDateTime: Instant?,
     override val scheduledEndDateTime: Instant?,
     override val actualStartDateTime: Instant?,
-    override val actualEndDateTime: Instant?
+    override val actualEndDateTime: Instant?,
+    override val thumbnailUrl: String,
 ) : LiveVideo
