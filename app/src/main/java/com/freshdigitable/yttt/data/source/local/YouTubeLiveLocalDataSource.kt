@@ -81,6 +81,10 @@ class YouTubeLiveLocalDataSource @Inject constructor(
             database.dao.addVideos(videos)
         }
     }
+
+    suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
+        return database.dao.findAllUnfinishedVideoList()
+    }
 }
 
 private fun LiveSubscription.toDbEntity(): LiveSubscriptionTable = LiveSubscriptionTable(
