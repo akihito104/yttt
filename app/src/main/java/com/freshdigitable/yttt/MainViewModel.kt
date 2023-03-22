@@ -65,12 +65,11 @@ class MainViewModel @Inject constructor(
     }.asLiveData(viewModelScope.coroutineContext)
 
     private suspend fun fetchLiveStreams() {
-        val oa = onAir.value ?: emptyList()
-        val n = next.value ?: emptyList()
-        val currentVideoIds = oa.toMutableList().apply { addAll(n) }
-            .map { v -> v.id }
-            .distinct()
-        liveRepository.fetchVideoList(currentVideoIds)
+        val first = liveRepository.findAllUnfinishedVideos()
+            .filter { it.isNowOnAir() || it.isUpcoming() }
+            .map { it.id }.distinct()
+        val currentVideo = liveRepository.fetchVideoList(first)
+        Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
 
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channelId }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")

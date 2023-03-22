@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
@@ -13,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
+import com.bumptech.glide.Glide
 import com.freshdigitable.yttt.data.model.LiveVideo
 
 class TimetableFragment : Fragment(R.layout.fragment_timetable) {
@@ -66,6 +68,16 @@ class TimetableAdapter : ListAdapter<LiveVideo, VideoViewHolder>(diffUtil) {
         holder.title.text = item.title
         holder.channelTitle.text = item.channel.title
         holder.dateTime.text = item.scheduledStartDateTime?.toString() ?: "none"
+        if (item.thumbnailUrl.isNotEmpty()) {
+            Glide.with(holder.thumbnail)
+                .load(item.thumbnailUrl)
+                .placeholder(R.drawable.baseline_smart_display_24)
+                .into(holder.thumbnail)
+        } else {
+            Glide.with(holder.thumbnail)
+                .load(R.drawable.baseline_smart_display_24)
+                .into(holder.thumbnail)
+        }
     }
 }
 
@@ -73,4 +85,5 @@ class VideoViewHolder(view: View) : ViewHolder(view) {
     val title: TextView = view.findViewById(R.id.video_title)
     val channelTitle: TextView = view.findViewById(R.id.video_channelName)
     val dateTime: TextView = view.findViewById(R.id.video_startDateTime)
+    val thumbnail: ImageView = view.findViewById(R.id.video_thumbnail)
 }

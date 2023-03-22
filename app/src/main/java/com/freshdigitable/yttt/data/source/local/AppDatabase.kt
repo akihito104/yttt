@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.ColumnInfo
 import androidx.room.Database
 import androidx.room.DatabaseView
@@ -35,7 +36,10 @@ import java.time.Instant
     views = [
         LiveVideoDbView::class,
     ],
-    version = 1,
+    version = 2,
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2),
+    ]
 )
 @TypeConverters(
     InstantConverter::class,
@@ -75,6 +79,8 @@ class LiveVideoTable(
     val actualStartDateTime: Instant? = null,
     @ColumnInfo(name = "actual_end_datetime")
     val actualEndDateTime: Instant? = null,
+    @ColumnInfo(name = "thumbnail", defaultValue = "")
+    val thumbnailUrl: String = "",
 )
 
 @DatabaseView(
@@ -98,6 +104,8 @@ data class LiveVideoDbView(
     override val actualStartDateTime: Instant?,
     @ColumnInfo(name = "actual_end_datetime")
     override val actualEndDateTime: Instant?,
+    @ColumnInfo(name = "thumbnail", defaultValue = "")
+    override val thumbnailUrl: String = "",
 ) : LiveVideo
 
 @Entity(tableName = "channel")
@@ -156,6 +164,8 @@ data class LiveChannelLogTable(
     override val videoId: LiveVideo.Id,
     @ColumnInfo(name = "channel_id")
     override val channelId: LiveChannel.Id,
+    @ColumnInfo(name = "thumbnail", defaultValue = "")
+    override val thumbnailUrl: String = "",
 ) : LiveChannelLog
 
 abstract class Converter<S, O>(
@@ -194,7 +204,5 @@ object DbModule {
     @Provides
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "ytttdb")
-            .fallbackToDestructiveMigration()
-            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 }

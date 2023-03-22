@@ -48,4 +48,8 @@ class YouTubeLiveRepository @Inject constructor(
         localSource.addVideo(res)
         return res
     }
+
+    suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
+        return localSource.findAllUnfinishedVideos()
+    }
 }

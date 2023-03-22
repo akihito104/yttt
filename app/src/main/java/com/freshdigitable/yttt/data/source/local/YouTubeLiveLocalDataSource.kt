@@ -53,7 +53,13 @@ class YouTubeLiveLocalDataSource @Inject constructor(
             .map { LiveChannelTable(id = it) }
         val videos = channelLogs.distinctBy { it.videoId }
             .filter { database.dao.findVideosById(listOf(it.videoId)).isEmpty() }
-            .map { LiveVideoTable(id = it.videoId, channelId = it.channelId) }
+            .map {
+                LiveVideoTable(
+                    id = it.videoId,
+                    channelId = it.channelId,
+                    thumbnailUrl = it.thumbnailUrl,
+                )
+            }
         database.withTransaction {
             database.dao.addChannels(channels)
             database.dao.addVideos(videos)
@@ -75,6 +81,10 @@ class YouTubeLiveLocalDataSource @Inject constructor(
             database.dao.addVideos(videos)
         }
     }
+
+    suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
+        return database.dao.findAllUnfinishedVideoList()
+    }
 }
 
 private fun LiveSubscription.toDbEntity(): LiveSubscriptionTable = LiveSubscriptionTable(
@@ -93,6 +103,7 @@ private fun LiveVideo.toDbEntity(): LiveVideoTable = LiveVideoTable(
     scheduledEndDateTime = scheduledEndDateTime,
     actualStartDateTime = actualStartDateTime,
     actualEndDateTime = actualEndDateTime,
+    thumbnailUrl = thumbnailUrl,
 )
 
 private fun LiveChannelLog.toDbEntity(): LiveChannelLogTable = LiveChannelLogTable(
@@ -100,4 +111,5 @@ private fun LiveChannelLog.toDbEntity(): LiveChannelLogTable = LiveChannelLogTab
     dateTime = dateTime,
     videoId = videoId,
     channelId = channelId,
+    thumbnailUrl = thumbnailUrl,
 )

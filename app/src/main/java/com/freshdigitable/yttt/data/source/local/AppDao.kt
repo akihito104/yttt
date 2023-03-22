@@ -37,6 +37,9 @@ interface AppDao {
     suspend fun findVideosById(ids: Collection<LiveVideo.Id>): List<LiveVideoDbView>
 
     @Query("SELECT * FROM video_view WHERE schedule_start_datetime NOTNULL AND actual_end_datetime ISNULL")
+    suspend fun findAllUnfinishedVideoList(): List<LiveVideoDbView>
+
+    @Query("SELECT * FROM video_view WHERE schedule_start_datetime NOTNULL AND actual_end_datetime ISNULL")
     fun findAllUnfinishedVideos(): Flow<List<LiveVideoDbView>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

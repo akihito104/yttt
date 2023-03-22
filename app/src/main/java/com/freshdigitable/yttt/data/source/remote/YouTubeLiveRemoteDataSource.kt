@@ -16,6 +16,7 @@ import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Activity
 import com.google.api.services.youtube.model.Subscription
+import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -111,7 +112,8 @@ private fun Activity.toChannelLog(): LiveChannelLog = LiveChannelLogEntity(
     id = LiveChannelLog.Id(id),
     dateTime = Instant.ofEpochMilli(snippet.publishedAt.value),
     videoId = LiveVideo.Id(contentDetails.upload.videoId),
-    channelId = LiveChannel.Id(snippet.channelId)
+    channelId = LiveChannel.Id(snippet.channelId),
+    thumbnailUrl = snippet.thumbnails.url,
 )
 
 private fun Video.toLiveVideo(): LiveVideo = LiveVideoEntity(
@@ -125,6 +127,9 @@ private fun Video.toLiveVideo(): LiveVideo = LiveVideoEntity(
     scheduledEndDateTime = liveStreamingDetails?.scheduledEndTime?.toInstant(),
     actualStartDateTime = liveStreamingDetails?.actualStartTime?.toInstant(),
     actualEndDateTime = liveStreamingDetails?.actualEndTime?.toInstant(),
+    thumbnailUrl = this.snippet.thumbnails.url,
 )
 
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
+private val ThumbnailDetails.url: String
+    get() = (maxres ?: high ?: standard ?: medium ?: default).url ?: ""
