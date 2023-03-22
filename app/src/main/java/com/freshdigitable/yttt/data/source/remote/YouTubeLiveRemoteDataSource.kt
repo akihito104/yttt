@@ -105,7 +105,11 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
 private fun Subscription.toLiveSubscription(): LiveSubscription = LiveSubscriptionEntity(
     id = LiveSubscription.Id(id),
     subscribeSince = Instant.ofEpochMilli(snippet.publishedAt.value),
-    channelId = LiveChannel.Id(snippet.resourceId.channelId)
+    channel = LiveChannelEntity(
+        id = LiveChannel.Id(snippet.resourceId.channelId),
+        iconUrl = snippet.thumbnails.url,
+        title = snippet.title,
+    ),
 )
 
 private fun Activity.toChannelLog(): LiveChannelLog = LiveChannelLogEntity(
@@ -121,6 +125,7 @@ private fun Video.toLiveVideo(): LiveVideo = LiveVideoEntity(
     channel = LiveChannelEntity(
         id = LiveChannel.Id(snippet.channelId),
         title = snippet.channelTitle,
+        iconUrl = "",
     ),
     title = snippet.title,
     scheduledStartDateTime = liveStreamingDetails?.scheduledStartTime?.toInstant(),

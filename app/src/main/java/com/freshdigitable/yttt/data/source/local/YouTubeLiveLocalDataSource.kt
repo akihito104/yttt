@@ -26,9 +26,9 @@ class YouTubeLiveLocalDataSource @Inject constructor(
 
     suspend fun addSubscribes(subscriptions: Collection<LiveSubscription>) =
         withContext(Dispatchers.IO) {
-            val channels = subscriptions.map { it.channelId }.toSet()
-                .filter { database.dao.findChannel(it) == null }
-                .map { LiveChannelTable(id = it) }
+            val channels = subscriptions.map { it.channel }.toSet()
+                .filter { database.dao.findChannel(it.id) == null }
+                .map { it.toDbEntity() }
             database.withTransaction {
                 database.dao.addChannels(channels)
                 database.dao.addSubscriptions(subscriptions.map { it.toDbEntity() })
@@ -72,12 +72,8 @@ class YouTubeLiveLocalDataSource @Inject constructor(
     }
 
     suspend fun addVideo(video: Collection<LiveVideo>) = withContext(Dispatchers.IO) {
-        val channels = video.map { it.channel }
-            .groupBy { it.id }.values.flatten()
-            .map { it.toDbEntity() }
         val videos = video.map { it.toDbEntity() }
         database.withTransaction {
-            database.dao.addChannels(channels)
             database.dao.addVideos(videos)
         }
     }
@@ -88,11 +84,11 @@ class YouTubeLiveLocalDataSource @Inject constructor(
 }
 
 private fun LiveSubscription.toDbEntity(): LiveSubscriptionTable = LiveSubscriptionTable(
-    id = id, subscribeSince = subscribeSince, channelId = channelId,
+    id = id, subscribeSince = subscribeSince, channelId = channel.id,
 )
 
 private fun LiveChannel.toDbEntity(): LiveChannelTable = LiveChannelTable(
-    id = id, title = title,
+    id = id, title = title, iconUrl = iconUrl,
 )
 
 private fun LiveVideo.toDbEntity(): LiveVideoTable = LiveVideoTable(
