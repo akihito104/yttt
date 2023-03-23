@@ -13,10 +13,13 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.ConnectionResult
+import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -29,9 +32,18 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         val viewPager = findViewById<ViewPager2>(R.id.main_pager)
         viewPager.adapter = ViewPagerAdapter(this)
-        TabLayoutMediator(findViewById(R.id.main_tabLayout), viewPager) { tab, pos ->
-            tab.text = TimetablePage.values()[pos].name
-        }.attach()
+
+        val tabLayout = requireNotNull(findViewById<TabLayout>(R.id.main_tabLayout))
+        TabLayoutMediator(tabLayout, viewPager) { _, _ -> }.attach()
+
+        TimetablePage.values().forEachIndexed { i, page ->
+            page.bind(viewModel)
+                .map { it.size }
+                .distinctUntilChanged().observe(this) { count ->
+                    val tab = tabLayout.getTabAt(i)
+                    tab?.text = page.tabText(this, count)
+                }
+        }
 
         setup()
     }
@@ -131,11 +143,16 @@ class ViewPagerAdapter(activity: FragmentActivity) : FragmentStateAdapter(activi
 enum class TimetablePage {
     OnAir {
         override fun bind(viewModel: MainViewModel): LiveData<List<LiveVideo>> = viewModel.onAir
+        override fun tabText(context: Context, count: Int): String =
+            context.getString(R.string.tab_onAir, count)
     },
-    Next {
-        override fun bind(viewModel: MainViewModel): LiveData<List<LiveVideo>> = viewModel.next
+    Upcoming {
+        override fun bind(viewModel: MainViewModel): LiveData<List<LiveVideo>> = viewModel.upcoming
+        override fun tabText(context: Context, count: Int): String =
+            context.getString(R.string.tab_upcoming, count)
     },
     ;
 
     abstract fun bind(viewModel: MainViewModel): LiveData<List<LiveVideo>>
+    abstract fun tabText(context: Context, count: Int): String
 }

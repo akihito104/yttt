@@ -60,7 +60,7 @@ class MainViewModel @Inject constructor(
     val onAir: LiveData<List<LiveVideo>> = videos.map { v ->
         v.filter { it.isNowOnAir() }.sortedByDescending { it.actualStartDateTime }
     }.asLiveData(viewModelScope.coroutineContext)
-    val next: LiveData<List<LiveVideo>> = videos.map { v ->
+    val upcoming: LiveData<List<LiveVideo>> = videos.map { v ->
         v.filter { it.isUpcoming() }.sortedBy { it.scheduledStartDateTime }
     }.asLiveData(viewModelScope.coroutineContext)
 
