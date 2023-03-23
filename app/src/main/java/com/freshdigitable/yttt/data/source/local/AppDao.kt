@@ -18,8 +18,8 @@ interface AppDao {
     @Query("DELETE FROM subscription WHERE id IN (:removed)")
     suspend fun removeSubscriptions(removed: Collection<LiveSubscription.Id>)
 
-    @Query("SELECT * FROM subscription")
-    fun findAllSubscriptions(): List<LiveSubscriptionTable>
+    @Query("SELECT * FROM subscription_view")
+    fun findAllSubscriptions(): List<LiveSubscriptionDbView>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelLogs(logs: Collection<LiveChannelLogTable>)

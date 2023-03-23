@@ -78,6 +78,11 @@ class TimetableAdapter : ListAdapter<LiveVideo, VideoViewHolder>(diffUtil) {
                 .load(R.drawable.baseline_smart_display_24)
                 .into(holder.thumbnail)
         }
+        if (item.channel.iconUrl.isNotEmpty()) {
+            Glide.with(holder.icon)
+                .load(item.channel.iconUrl)
+                .into(holder.icon)
+        }
     }
 }
 
@@ -86,4 +91,5 @@ class VideoViewHolder(view: View) : ViewHolder(view) {
     val channelTitle: TextView = view.findViewById(R.id.video_channelName)
     val dateTime: TextView = view.findViewById(R.id.video_startDateTime)
     val thumbnail: ImageView = view.findViewById(R.id.video_thumbnail)
+    val icon: ImageView = view.findViewById(R.id.video_channelIcon)
 }

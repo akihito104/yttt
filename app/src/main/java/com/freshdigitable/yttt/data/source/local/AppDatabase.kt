@@ -35,10 +35,12 @@ import java.time.Instant
     ],
     views = [
         LiveVideoDbView::class,
+        LiveSubscriptionDbView::class,
     ],
-    version = 2,
+    version = 3,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
+        AutoMigration(from = 2, to = 3),
     ]
 )
 @TypeConverters(
@@ -84,7 +86,7 @@ class LiveVideoTable(
 )
 
 @DatabaseView(
-    "SELECT v.*, c.title AS channel_title " +
+    "SELECT v.*, c.title AS channel_title, c.icon AS channel_icon " +
         "FROM video AS v " +
         "INNER JOIN channel AS c ON c.id = v.channel_id",
     viewName = "video_view",
@@ -110,11 +112,13 @@ data class LiveVideoDbView(
 
 @Entity(tableName = "channel")
 data class LiveChannelTable(
-    @PrimaryKey
+    @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     override val id: LiveChannel.Id,
     @ColumnInfo(name = "title", defaultValue = "")
     override val title: String = "",
+    @ColumnInfo(name = "icon", defaultValue = "")
+    override val iconUrl: String = "",
 ) : LiveChannel
 
 @Entity(
@@ -128,14 +132,29 @@ data class LiveChannelTable(
     ],
     indices = [Index("channel_id")],
 )
-data class LiveSubscriptionTable(
+class LiveSubscriptionTable(
     @PrimaryKey(autoGenerate = false)
+    @ColumnInfo(name = "id")
+    val id: LiveSubscription.Id,
+    @ColumnInfo(name = "subscription_since")
+    val subscribeSince: Instant,
+    @ColumnInfo(name = "channel_id")
+    val channelId: LiveChannel.Id,
+)
+
+@DatabaseView(
+    "SELECT s.*, c.title AS channel_title, c.icon AS channel_icon " +
+        "FROM subscription AS s " +
+        "INNER JOIN channel AS c ON c.id = s.channel_id",
+    viewName = "subscription_view"
+)
+data class LiveSubscriptionDbView(
     @ColumnInfo(name = "id")
     override val id: LiveSubscription.Id,
     @ColumnInfo(name = "subscription_since")
     override val subscribeSince: Instant,
-    @ColumnInfo(name = "channel_id")
-    override val channelId: LiveChannel.Id,
+    @Embedded(prefix = "channel_")
+    override val channel: LiveChannelTable
 ) : LiveSubscription
 
 @Entity(

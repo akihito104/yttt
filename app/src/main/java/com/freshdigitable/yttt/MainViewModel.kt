@@ -71,7 +71,7 @@ class MainViewModel @Inject constructor(
         val currentVideo = liveRepository.fetchVideoList(first)
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
 
-        val channelIds = liveRepository.fetchAllSubscribe().map { it.channelId }
+        val channelIds = liveRepository.fetchAllSubscribe().map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
         channelIds.forEach { c ->
             Log.d(TAG, "fetchLiveStreams: channel> $c")
