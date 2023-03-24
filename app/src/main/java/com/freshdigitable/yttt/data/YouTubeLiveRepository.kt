@@ -52,4 +52,11 @@ class YouTubeLiveRepository @Inject constructor(
     suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
         return localSource.findAllUnfinishedVideos()
     }
+
+    suspend fun deleteVideo(removed: Collection<LiveVideo.Id>) {
+        if (removed.isEmpty()) {
+            return
+        }
+        localSource.deleteVideo(removed)
+    }
 }

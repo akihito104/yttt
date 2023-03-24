@@ -42,6 +42,9 @@ interface AppDao {
     @Query("SELECT * FROM video_view WHERE schedule_start_datetime NOTNULL AND actual_end_datetime ISNULL")
     fun findAllUnfinishedVideos(): Flow<List<LiveVideoDbView>>
 
+    @Query("UPDATE video SET visible = false WHERE id IN (:ids)")
+    suspend fun updateVideoInvisible(ids: Collection<LiveVideo.Id>)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannels(channels: Collection<LiveChannelTable>)
 

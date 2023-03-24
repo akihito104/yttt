@@ -37,10 +37,11 @@ import java.time.Instant
         LiveVideoDbView::class,
         LiveSubscriptionDbView::class,
     ],
-    version = 3,
+    version = 4,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4),
     ]
 )
 @TypeConverters(
@@ -83,12 +84,16 @@ class LiveVideoTable(
     val actualEndDateTime: Instant? = null,
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     val thumbnailUrl: String = "",
+    @ColumnInfo(name = "visible", defaultValue = true.toString())
+    val visible: Boolean = true,
 )
 
 @DatabaseView(
-    "SELECT v.*, c.title AS channel_title, c.icon AS channel_icon " +
-        "FROM video AS v " +
-        "INNER JOIN channel AS c ON c.id = v.channel_id",
+    "SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, " +
+        "v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, " +
+        "c.title AS channel_title, c.icon AS channel_icon " +
+        "FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id " +
+        "WHERE v.visible == TRUE",
     viewName = "video_view",
 )
 data class LiveVideoDbView(
