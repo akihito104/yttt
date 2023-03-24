@@ -70,6 +70,9 @@ class MainViewModel @Inject constructor(
             .map { it.id }.distinct()
         val currentVideo = liveRepository.fetchVideoList(first)
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
+        val removed = first.subtract(currentVideo.map { it.id }.toSet())
+        Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
+        liveRepository.deleteVideo(removed)
 
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
