@@ -16,6 +16,10 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.bumptech.glide.Glide
 import com.freshdigitable.yttt.data.model.LiveVideo
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class TimetableFragment : Fragment(R.layout.fragment_timetable) {
     private val viewModel by activityViewModels<MainViewModel>()
@@ -55,6 +59,12 @@ class TimetableAdapter : ListAdapter<LiveVideo, VideoViewHolder>(diffUtil) {
             override fun areContentsTheSame(oldItem: LiveVideo, newItem: LiveVideo): Boolean =
                 oldItem == newItem
         }
+        private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd(E) HH:mm")
+        private val Instant.toLocalFormattedText: String
+            get() {
+                val localDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
+                return localDateTime.format(dateTimeFormatter)
+            }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VideoViewHolder {
@@ -67,7 +77,7 @@ class TimetableAdapter : ListAdapter<LiveVideo, VideoViewHolder>(diffUtil) {
         val item = getItem(position)
         holder.title.text = item.title
         holder.channelTitle.text = item.channel.title
-        holder.dateTime.text = item.scheduledStartDateTime?.toString() ?: "none"
+        holder.dateTime.text = item.scheduledStartDateTime?.toLocalFormattedText ?: "none"
         if (item.thumbnailUrl.isNotEmpty()) {
             Glide.with(holder.thumbnail)
                 .load(item.thumbnailUrl)
