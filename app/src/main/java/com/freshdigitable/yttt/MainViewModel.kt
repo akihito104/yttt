@@ -3,6 +3,7 @@ package com.freshdigitable.yttt
 import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
@@ -50,8 +51,17 @@ class MainViewModel @Inject constructor(
 
     fun createPickAccountIntent(): Intent = accountRepository.getNewChooseAccountIntent()
 
-    fun onInit() {
-        viewModelScope.launch { fetchLiveStreams() }
+    private val _isLoading = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
+    fun loadList() {
+        viewModelScope.launch {
+            if (_isLoading.value == false) {
+                _isLoading.postValue(true)
+                fetchLiveStreams()
+                _isLoading.postValue(false)
+            }
+        }
     }
 
     private val videos = liveRepository.videos

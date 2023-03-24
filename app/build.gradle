@@ -54,6 +54,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.0"
     implementation 'com.google.android.material:material:1.8.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-alpha01"
     // https://developers.google.com/android/guides/setup
     implementation "com.google.android.gms:play-services-base:18.2.0"
     implementation 'com.google.android.gms:play-services-auth:20.4.1'

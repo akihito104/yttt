@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
     private fun loadTimeline() {
         val loggedIn = viewModel.login()
         check(loggedIn) { "login failure..." }
-        viewModel.onInit()
+        viewModel.loadList()
     }
 
     private val getAccountRequestPermission =
@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity() {
         }) {
             if (it.isNotEmpty()) {
                 viewModel.login(it)
-                viewModel.onInit()
+                viewModel.loadList()
             }
         }
 
