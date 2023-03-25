@@ -8,6 +8,12 @@
     tools:context=".MainActivity"
     android:orientation="vertical"
     >
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/main_progress"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:indeterminate="true"
+        />
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/main_tabLayout"
@@ -32,5 +38,6 @@
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/main_pager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        />
 </LinearLayout>

@@ -37,7 +37,7 @@ class TimetableFragment : Fragment(R.layout.fragment_timetable) {
         }
         view.findViewById<SwipeRefreshLayout>(R.id.timetable_swipeRefreshLayout).apply {
             viewModel.isLoading.observe(viewLifecycleOwner) {
-                this.isRefreshing = it
+                this.isEnabled = !it
             }
             setOnRefreshListener {
                 viewModel.loadList()
