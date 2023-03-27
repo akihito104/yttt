@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -19,6 +20,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.ConnectionResult
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import dagger.hilt.android.AndroidEntryPoint
@@ -46,6 +48,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         setup()
+
+        val progress = findViewById<LinearProgressIndicator>(R.id.main_progress)
+        viewModel.isLoading.observe(this) {
+            progress.visibility = if (it) View.VISIBLE else View.INVISIBLE
+        }
     }
 
     private fun setup() {
@@ -80,7 +87,7 @@ class MainActivity : AppCompatActivity() {
     private fun loadTimeline() {
         val loggedIn = viewModel.login()
         check(loggedIn) { "login failure..." }
-        viewModel.onInit()
+        viewModel.loadList()
     }
 
     private val getAccountRequestPermission =
@@ -104,7 +111,7 @@ class MainActivity : AppCompatActivity() {
         }) {
             if (it.isNotEmpty()) {
                 viewModel.login(it)
-                viewModel.onInit()
+                viewModel.loadList()
             }
         }
 

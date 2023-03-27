@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
 import com.freshdigitable.yttt.data.model.LiveVideo
 import java.time.Instant
@@ -33,6 +34,14 @@ class TimetableFragment : Fragment(R.layout.fragment_timetable) {
         }
         TimetablePage.values()[position].bind(viewModel).observe(viewLifecycleOwner) {
             timetableAdapter.submitList(it)
+        }
+        view.findViewById<SwipeRefreshLayout>(R.id.timetable_swipeRefreshLayout).apply {
+            viewModel.isLoading.observe(viewLifecycleOwner) {
+                this.isRefreshing = it
+            }
+            setOnRefreshListener {
+                viewModel.loadList()
+            }
         }
     }
 
