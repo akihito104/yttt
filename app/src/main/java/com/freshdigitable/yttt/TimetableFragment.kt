@@ -37,18 +37,12 @@ class TimetableFragment : Fragment(R.layout.fragment_timetable) {
         }
         view.findViewById<SwipeRefreshLayout>(R.id.timetable_swipeRefreshLayout).apply {
             viewModel.isLoading.observe(viewLifecycleOwner) {
-                this.isEnabled = !it
+                this.isRefreshing = it
             }
             setOnRefreshListener {
                 viewModel.loadList()
             }
         }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        view?.findViewById<SwipeRefreshLayout>(R.id.timetable_swipeRefreshLayout)
-            ?.setOnRefreshListener(null)
     }
 
     private val position: Int
