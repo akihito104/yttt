@@ -20,6 +20,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.ConnectionResult
+import com.google.android.material.navigation.NavigationView
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -52,6 +53,17 @@ class MainActivity : AppCompatActivity() {
         val progress = findViewById<LinearProgressIndicator>(R.id.main_progress)
         viewModel.isLoading.observe(this) {
             progress.visibility = if (it) View.VISIBLE else View.INVISIBLE
+        }
+
+        val drawerMenu = requireNotNull(findViewById<NavigationView>(R.id.main_navView))
+        drawerMenu.setNavigationItemSelectedListener { item ->
+            return@setNavigationItemSelectedListener when (item.itemId) {
+                R.id.menu_subscription_list -> {
+                    SubscriptionListActivity.start(this)
+                    true
+                }
+                else -> false
+            }
         }
     }
 

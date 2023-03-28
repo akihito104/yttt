@@ -1,43 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<androidx.drawerlayout.widget.DrawerLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    tools:context=".MainActivity"
-    android:orientation="vertical"
     >
-    <com.google.android.material.progressindicator.LinearProgressIndicator
-        android:id="@+id/main_progress"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:indeterminate="true"
-        />
-
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/main_tabLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:tabMode="scrollable"
+        android:orientation="vertical"
+        tools:context=".MainActivity"
         >
-
-        <com.google.android.material.tabs.TabItem
-            android:id="@+id/tab_onAir"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/main_progress"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:indeterminate="true"
             />
 
-        <com.google.android.material.tabs.TabItem
-            android:id="@+id/tab_next"
-            android:layout_width="wrap_content"
+        <com.google.android.material.tabs.TabLayout
+            android:id="@+id/main_tabLayout"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            />
-    </com.google.android.material.tabs.TabLayout>
+            app:tabMode="scrollable"
+            >
 
-    <androidx.viewpager2.widget.ViewPager2
-        android:id="@+id/main_pager"
-        android:layout_width="match_parent"
+            <com.google.android.material.tabs.TabItem
+                android:id="@+id/tab_onAir"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                />
+
+            <com.google.android.material.tabs.TabItem
+                android:id="@+id/tab_next"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                />
+        </com.google.android.material.tabs.TabLayout>
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/main_pager"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+    </LinearLayout>
+    <com.google.android.material.navigation.NavigationView
+        android:id="@+id/main_navView"
+        android:layout_width="wrap_content"
         android:layout_height="match_parent"
+        android:layout_gravity="start"
+        app:menu="@menu/main_drawer"
         />
-</LinearLayout>
+</androidx.drawerlayout.widget.DrawerLayout>
