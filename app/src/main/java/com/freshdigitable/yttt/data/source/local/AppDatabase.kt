@@ -37,11 +37,12 @@ import java.time.Instant
         LiveVideoDbView::class,
         LiveSubscriptionDbView::class,
     ],
-    version = 4,
+    version = 5,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5),
     ]
 )
 @TypeConverters(
@@ -145,12 +146,15 @@ class LiveSubscriptionTable(
     val subscribeSince: Instant,
     @ColumnInfo(name = "channel_id")
     val channelId: LiveChannel.Id,
+    @ColumnInfo(name = "subs_order", defaultValue = Int.MAX_VALUE.toString())
+    val order: Int = Int.MAX_VALUE,
 )
 
 @DatabaseView(
     "SELECT s.*, c.title AS channel_title, c.icon AS channel_icon " +
         "FROM subscription AS s " +
-        "INNER JOIN channel AS c ON c.id = s.channel_id",
+        "INNER JOIN channel AS c ON c.id = s.channel_id " +
+        "ORDER BY subs_order ASC",
     viewName = "subscription_view"
 )
 data class LiveSubscriptionDbView(
@@ -159,7 +163,9 @@ data class LiveSubscriptionDbView(
     @ColumnInfo(name = "subscription_since")
     override val subscribeSince: Instant,
     @Embedded(prefix = "channel_")
-    override val channel: LiveChannelTable
+    override val channel: LiveChannelTable,
+    @ColumnInfo(name = "subs_order")
+    override val order: Int,
 ) : LiveSubscription
 
 @Entity(
