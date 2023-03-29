@@ -6,11 +6,14 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.View
+import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
@@ -65,6 +68,21 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+        val drawer = requireNotNull(findViewById<DrawerLayout>(R.id.main_navLayout))
+        val callback = onBackPressedDispatcher.addCallback(this) {
+            if (drawer.isDrawerOpen(drawerMenu)) {
+                drawer.close()
+            }
+        }
+        drawer.addDrawerListener(object : SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                callback.isEnabled = true
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                callback.isEnabled = false
+            }
+        })
     }
 
     private fun setup() {
