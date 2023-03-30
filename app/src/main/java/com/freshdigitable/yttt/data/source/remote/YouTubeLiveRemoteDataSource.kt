@@ -45,7 +45,7 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
             },
             getItems = { items },
             getNextToken = { nextPageToken },
-        ).map { it.toLiveSubscription() }
+        ).mapIndexed { i, s -> s.toLiveSubscription(i) }
     }
 
     override suspend fun fetchLiveChannelLogs(
@@ -98,11 +98,12 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         private const val PART_SNIPPET = "snippet"
         private const val PART_CONTENT_DETAILS = "contentDetails"
         private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
+        // https://developers.google.com/youtube/v3/docs/videos/list#parameters
         private const val VIDEO_MAX_FETCH_SIZE = 50
     }
 }
 
-private fun Subscription.toLiveSubscription(): LiveSubscription = LiveSubscriptionEntity(
+private fun Subscription.toLiveSubscription(order: Int): LiveSubscription = LiveSubscriptionEntity(
     id = LiveSubscription.Id(id),
     subscribeSince = Instant.ofEpochMilli(snippet.publishedAt.value),
     channel = LiveChannelEntity(
@@ -110,6 +111,7 @@ private fun Subscription.toLiveSubscription(): LiveSubscription = LiveSubscripti
         iconUrl = snippet.thumbnails.url,
         title = snippet.title,
     ),
+    order = order,
 )
 
 private fun Activity.toChannelLog(): LiveChannelLog = LiveChannelLogEntity(

@@ -19,7 +19,10 @@ interface AppDao {
     suspend fun removeSubscriptions(removed: Collection<LiveSubscription.Id>)
 
     @Query("SELECT * FROM subscription_view")
-    fun findAllSubscriptions(): List<LiveSubscriptionDbView>
+    suspend fun findAllSubscriptions(): List<LiveSubscriptionDbView>
+
+    @Query("SELECT * FROM subscription_view")
+    fun watchAllSubscriptions(): Flow<List<LiveSubscriptionDbView>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelLogs(logs: Collection<LiveChannelLogTable>)
@@ -40,7 +43,7 @@ interface AppDao {
     suspend fun findAllUnfinishedVideoList(): List<LiveVideoDbView>
 
     @Query("SELECT * FROM video_view WHERE schedule_start_datetime NOTNULL AND actual_end_datetime ISNULL")
-    fun findAllUnfinishedVideos(): Flow<List<LiveVideoDbView>>
+    fun watchAllUnfinishedVideos(): Flow<List<LiveVideoDbView>>
 
     @Query("UPDATE video SET visible = false WHERE id IN (:ids)")
     suspend fun updateVideoInvisible(ids: Collection<LiveVideo.Id>)

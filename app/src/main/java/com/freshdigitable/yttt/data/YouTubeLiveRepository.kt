@@ -17,6 +17,7 @@ class YouTubeLiveRepository @Inject constructor(
     private val remoteSource: YouTubeLiveRemoteDataSource,
     private val localSource: YouTubeLiveLocalDataSource,
 ) : YoutubeLiveDataSource {
+    val subscriptions: Flow<List<LiveSubscription>> = localSource.subscriptions
     val videos: Flow<List<LiveVideo>> = localSource.videos
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<LiveSubscription> {

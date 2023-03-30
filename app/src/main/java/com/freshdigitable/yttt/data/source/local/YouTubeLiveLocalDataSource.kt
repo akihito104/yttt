@@ -17,7 +17,8 @@ import javax.inject.Singleton
 class YouTubeLiveLocalDataSource @Inject constructor(
     private val database: AppDatabase,
 ) : YoutubeLiveDataSource {
-    val videos: Flow<List<LiveVideo>> = database.dao.findAllUnfinishedVideos()
+    val subscriptions: Flow<List<LiveSubscription>> = database.dao.watchAllSubscriptions()
+    val videos: Flow<List<LiveVideo>> = database.dao.watchAllUnfinishedVideos()
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<LiveSubscription> =
         withContext(Dispatchers.IO) {

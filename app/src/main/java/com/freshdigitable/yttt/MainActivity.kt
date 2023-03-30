@@ -4,13 +4,19 @@ import android.accounts.AccountManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Bundle
+import android.view.MenuItem
 import android.view.View
+import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.LiveData
@@ -20,6 +26,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.ConnectionResult
+import com.google.android.material.navigation.NavigationView
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -53,6 +60,59 @@ class MainActivity : AppCompatActivity() {
         viewModel.isLoading.observe(this) {
             progress.visibility = if (it) View.VISIBLE else View.INVISIBLE
         }
+
+        val drawerMenu = requireNotNull(findViewById<NavigationView>(R.id.main_navView))
+        drawerMenu.setNavigationItemSelectedListener { item ->
+            return@setNavigationItemSelectedListener when (item.itemId) {
+                R.id.menu_subscription_list -> {
+                    SubscriptionListActivity.start(this)
+                    true
+                }
+                else -> false
+            }
+        }
+        val drawer = requireNotNull(findViewById<DrawerLayout>(R.id.main_navLayout))
+        val callback = onBackPressedDispatcher.addCallback(this) {
+            if (drawer.isDrawerOpen(drawerMenu)) {
+                drawer.close()
+            }
+        }
+        drawer.addDrawerListener(object : SimpleDrawerListener() {
+            override fun onDrawerOpened(drawerView: View) {
+                callback.isEnabled = true
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                callback.isEnabled = false
+            }
+        })
+        val actionBarDrawerToggle =
+            ActionBarDrawerToggle(this, drawer, R.string.app_name, R.string.app_name)
+        drawer.addDrawerListener(actionBarDrawerToggle)
+        this.actionBarDrawerToggle = actionBarDrawerToggle
+        supportActionBar?.setHomeButtonEnabled(true)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    }
+
+    private var actionBarDrawerToggle: ActionBarDrawerToggle? = null
+    override fun onPostCreate(savedInstanceState: Bundle?) {
+        super.onPostCreate(savedInstanceState)
+        actionBarDrawerToggle?.syncState()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        actionBarDrawerToggle?.onConfigurationChanged(newConfig)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return actionBarDrawerToggle?.onOptionsItemSelected(item)
+            ?: super.onOptionsItemSelected(item)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        actionBarDrawerToggle = null
     }
 
     private fun setup() {
