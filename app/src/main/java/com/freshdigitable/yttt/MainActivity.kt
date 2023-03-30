@@ -4,12 +4,15 @@ import android.accounts.AccountManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.os.Bundle
+import android.view.MenuItem
 import android.view.View
 import androidx.activity.addCallback
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.drawerlayout.widget.DrawerLayout
@@ -83,6 +86,33 @@ class MainActivity : AppCompatActivity() {
                 callback.isEnabled = false
             }
         })
+        val actionBarDrawerToggle =
+            ActionBarDrawerToggle(this, drawer, R.string.app_name, R.string.app_name)
+        drawer.addDrawerListener(actionBarDrawerToggle)
+        this.actionBarDrawerToggle = actionBarDrawerToggle
+        supportActionBar?.setHomeButtonEnabled(true)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    }
+
+    private var actionBarDrawerToggle: ActionBarDrawerToggle? = null
+    override fun onPostCreate(savedInstanceState: Bundle?) {
+        super.onPostCreate(savedInstanceState)
+        actionBarDrawerToggle?.syncState()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        actionBarDrawerToggle?.onConfigurationChanged(newConfig)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return actionBarDrawerToggle?.onOptionsItemSelected(item)
+            ?: super.onOptionsItemSelected(item)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        actionBarDrawerToggle = null
     }
 
     private fun setup() {
