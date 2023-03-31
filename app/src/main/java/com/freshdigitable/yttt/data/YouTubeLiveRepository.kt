@@ -60,4 +60,8 @@ class YouTubeLiveRepository @Inject constructor(
         }
         localSource.deleteVideo(removed)
     }
+
+    suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannel> {
+        return remoteSource.fetchChannelList(ids)
+    }
 }

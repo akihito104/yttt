@@ -20,5 +20,19 @@
         android:id="@+id/menu_subscription_list"
         android:name="com.freshdigitable.yttt.SubscriptionListFragment"
         tools:layout="@layout/fragment_subscription_list"
-        />
+        >
+        <action
+            android:id="@+id/action_menu_subscription_list_to_channelFragment"
+            app:destination="@id/channelFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/channelFragment"
+        android:name="com.freshdigitable.yttt.ChannelFragment"
+        tools:layout="@layout/fragment_channel"
+        >
+        <argument
+            android:name="channelId"
+            app:argType="string"
+            />
+    </fragment>
 </navigation>

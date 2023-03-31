@@ -15,6 +15,7 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Activity
+import com.google.api.services.youtube.model.Channel
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
@@ -79,6 +80,21 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         }.map { it.toLiveVideo() }
     }
 
+    suspend fun fetchChannelList(
+        ids: Collection<LiveChannel.Id>,
+    ): List<LiveChannel> = withContext(Dispatchers.IO) {
+        ids.map { it.value }.chunked(VIDEO_MAX_FETCH_SIZE).flatMap {
+            youtube.channels().list(
+                listOf(
+                    PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics",
+                )
+            )
+                .setId(it)
+                .execute()
+                .items
+        }.map { LiveChannelImpl(it) }
+    }
+
     private fun <T, E> fetchAllItems(
         fetcher: (String?) -> T,
         getItems: T.() -> List<E>,
@@ -98,6 +114,7 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         private const val PART_SNIPPET = "snippet"
         private const val PART_CONTENT_DETAILS = "contentDetails"
         private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
+
         // https://developers.google.com/youtube/v3/docs/videos/list#parameters
         private const val VIDEO_MAX_FETCH_SIZE = 50
     }
@@ -140,3 +157,16 @@ private fun Video.toLiveVideo(): LiveVideo = LiveVideoEntity(
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
 private val ThumbnailDetails.url: String
     get() = (maxres ?: high ?: standard ?: medium ?: default).url ?: ""
+
+data class LiveChannelImpl(
+    private val channel: Channel,
+) : LiveChannel {
+    override val id: LiveChannel.Id
+        get() = LiveChannel.Id(channel.id)
+    override val title: String
+        get() = channel.snippet.title
+    override val iconUrl: String
+        get() = channel.snippet.thumbnails.url
+
+    override fun toString(): String = channel.toString()
+}
