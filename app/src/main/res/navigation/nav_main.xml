@@ -16,9 +16,9 @@
             app:destination="@+id/menu_subscription_list"
             />
     </fragment>
-    <activity
+    <fragment
         android:id="@+id/menu_subscription_list"
-        android:name="com.freshdigitable.yttt.SubscriptionListActivity"
-        tools:layout="@layout/activity_subscription_list"
+        android:name="com.freshdigitable.yttt.SubscriptionListFragment"
+        tools:layout="@layout/fragment_subscription_list"
         />
 </navigation>
