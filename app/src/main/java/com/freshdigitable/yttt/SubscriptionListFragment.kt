@@ -1,15 +1,13 @@
 package com.freshdigitable.yttt
 
-import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.activity.viewModels
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
@@ -27,24 +25,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SubscriptionListActivity : AppCompatActivity() {
+class SubscriptionListFragment : Fragment(R.layout.fragment_subscription_list) {
     private val viewModel: SubscriptionListViewModel by viewModels()
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_subscription_list)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         val adapter = SubscriptionListAdapter()
-        val list = requireNotNull(findViewById<RecyclerView>(R.id.subs_list))
+        val list = requireNotNull(requireActivity().findViewById<RecyclerView>(R.id.subs_list))
         list.adapter = adapter
-        list.layoutManager = LinearLayoutManager(this)
-        viewModel.subscriptions.observe(this) {
+        list.layoutManager = LinearLayoutManager(view.context)
+        viewModel.subscriptions.observe(viewLifecycleOwner) {
             adapter.submitList(it)
-        }
-    }
-
-    companion object {
-        fun start(context: Context) {
-            val intent = Intent(context, SubscriptionListActivity::class.java)
-            context.startActivity(intent)
         }
     }
 }
