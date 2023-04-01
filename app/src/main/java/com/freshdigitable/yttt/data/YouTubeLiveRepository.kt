@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelLog
+import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
@@ -63,5 +64,9 @@ class YouTubeLiveRepository @Inject constructor(
 
     suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannel> {
         return remoteSource.fetchChannelList(ids)
+    }
+
+    suspend fun fetchChannelSection(id: LiveChannel.Id): List<LiveChannelSection> {
+        return remoteSource.fetchChannelSection(id)
     }
 }

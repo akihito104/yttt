@@ -20,3 +20,9 @@ data class LiveChannelEntity(
 interface IdBase<S> {
     val value: S
 }
+
+interface LiveChannelSection {
+    val channelId: LiveChannel.Id
+    val title: String
+    val position: Long
+}

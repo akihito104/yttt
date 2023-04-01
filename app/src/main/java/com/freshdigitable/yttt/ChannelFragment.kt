@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.navArgs
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelSection
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flow
@@ -25,8 +26,13 @@ class ChannelFragment : Fragment(R.layout.fragment_channel) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val text = view.findViewById<TextView>(R.id.channel_text)
-        viewModel.fetchChannel(LiveChannel.Id(args.channelId)).observe(viewLifecycleOwner) {
+        val id = LiveChannel.Id(args.channelId)
+        viewModel.fetchChannel(id).observe(viewLifecycleOwner) {
             text.text = it?.toString()
+        }
+        val text2 = view.findViewById<TextView>(R.id.channel_text2)
+        viewModel.fetchChannelSection(id).observe(viewLifecycleOwner) {
+            text2.text = it?.toString()
         }
     }
 }
@@ -38,5 +44,10 @@ class ChannelViewModel @Inject constructor(
     fun fetchChannel(id: LiveChannel.Id): LiveData<LiveChannel?> = flow {
         val channel = repository.fetchChannelList(listOf(id)).firstOrNull()
         emit(channel)
+    }.asLiveData(viewModelScope.coroutineContext)
+
+    fun fetchChannelSection(id: LiveChannel.Id): LiveData<List<LiveChannelSection>> = flow {
+        val channelSection = repository.fetchChannelSection(id)
+        emit(channelSection)
     }.asLiveData(viewModelScope.coroutineContext)
 }

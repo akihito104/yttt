@@ -5,6 +5,7 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelLogEntity
+import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -16,6 +17,7 @@ import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Activity
 import com.google.api.services.youtube.model.Channel
+import com.google.api.services.youtube.model.ChannelSection
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
@@ -95,6 +97,16 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         }.map { LiveChannelImpl(it) }
     }
 
+    suspend fun fetchChannelSection(
+        channelId: LiveChannel.Id,
+    ): List<LiveChannelSection> = withContext(Dispatchers.IO) {
+        youtube.channelSections().list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setChannelId(channelId.value)
+            .execute()
+            .items
+            .map { LiveChannelSectionImpl(it) }
+    }
+
     private fun <T, E> fetchAllItems(
         fetcher: (String?) -> T,
         getItems: T.() -> List<E>,
@@ -158,7 +170,7 @@ private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
 private val ThumbnailDetails.url: String
     get() = (maxres ?: high ?: standard ?: medium ?: default).url ?: ""
 
-data class LiveChannelImpl(
+private data class LiveChannelImpl(
     private val channel: Channel,
 ) : LiveChannel {
     override val id: LiveChannel.Id
@@ -169,4 +181,19 @@ data class LiveChannelImpl(
         get() = channel.snippet.thumbnails.url
 
     override fun toString(): String = channel.toString()
+}
+
+private data class LiveChannelSectionImpl(
+    private val channelSection: ChannelSection
+) : LiveChannelSection {
+    override val channelId: LiveChannel.Id
+        get() = LiveChannel.Id(channelSection.snippet.channelId)
+    override val title: String
+        get() = channelSection.snippet.title
+    override val position: Long
+        get() = channelSection.snippet.position
+
+    override fun toString(): String {
+        return channelSection.toString()
+    }
 }
