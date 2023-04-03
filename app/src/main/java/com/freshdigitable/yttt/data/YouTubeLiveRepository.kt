@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LiveSubscription
@@ -62,7 +63,7 @@ class YouTubeLiveRepository @Inject constructor(
         localSource.deleteVideo(removed)
     }
 
-    suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannel> {
+    suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannelDetail> {
         return remoteSource.fetchChannelList(ids)
     }
 

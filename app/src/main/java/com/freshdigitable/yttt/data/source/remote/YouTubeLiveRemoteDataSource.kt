@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelLogEntity
@@ -84,7 +85,7 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
 
     suspend fun fetchChannelList(
         ids: Collection<LiveChannel.Id>,
-    ): List<LiveChannel> = withContext(Dispatchers.IO) {
+    ): List<LiveChannelDetail> = withContext(Dispatchers.IO) {
         ids.map { it.value }.chunked(VIDEO_MAX_FETCH_SIZE).flatMap {
             youtube.channels().list(
                 listOf(
@@ -172,13 +173,15 @@ private val ThumbnailDetails.url: String
 
 private data class LiveChannelImpl(
     private val channel: Channel,
-) : LiveChannel {
+) : LiveChannelDetail {
     override val id: LiveChannel.Id
         get() = LiveChannel.Id(channel.id)
     override val title: String
         get() = channel.snippet.title
     override val iconUrl: String
         get() = channel.snippet.thumbnails.url
+    override val bannerUrl: String?
+        get() = channel.brandingSettings?.image?.bannerExternalUrl
 
     override fun toString(): String = channel.toString()
 }
