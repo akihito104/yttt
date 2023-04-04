@@ -1,5 +1,8 @@
 package com.freshdigitable.yttt.data.model
 
+import java.math.BigInteger
+import java.time.Instant
+
 interface LiveChannel {
     val id: Id
     val title: String
@@ -31,4 +34,12 @@ interface LiveChannelSection {
 
 interface LiveChannelDetail : LiveChannel {
     val bannerUrl: String?
+    val subscriberCount: BigInteger
+    val isSubscriberHidden: Boolean
+    val videoCount: BigInteger
+    val viewsCount: BigInteger
+    val publishedAt: Instant
+    val customUrl: String
+    val keywords: Collection<String>
+    val description: String?
 }

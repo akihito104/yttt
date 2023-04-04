@@ -24,6 +24,7 @@ import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.math.BigInteger
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -182,8 +183,24 @@ private data class LiveChannelImpl(
         get() = channel.snippet.thumbnails.url
     override val bannerUrl: String?
         get() = channel.brandingSettings?.image?.bannerExternalUrl
+    override val subscriberCount: BigInteger
+        get() = channel.statistics.subscriberCount
+    override val isSubscriberHidden: Boolean
+        get() = channel.statistics.hiddenSubscriberCount
+    override val videoCount: BigInteger
+        get() = channel.statistics.videoCount
+    override val viewsCount: BigInteger
+        get() = channel.statistics.viewCount
+    override val customUrl: String
+        get() = channel.snippet.customUrl
+    override val keywords: Collection<String>
+        get() = channel.brandingSettings?.channel?.keywords?.split(",", " ") ?: emptyList()
+    override val publishedAt: Instant
+        get() = channel.snippet.publishedAt.toInstant()
+    override val description: String?
+        get() = channel.brandingSettings?.channel?.description
 
-    override fun toString(): String = channel.toString()
+    override fun toString(): String = channel.toPrettyString()
 }
 
 private data class LiveChannelSectionImpl(
@@ -197,6 +214,6 @@ private data class LiveChannelSectionImpl(
         get() = channelSection.snippet.position
 
     override fun toString(): String {
-        return channelSection.toString()
+        return channelSection.toPrettyString()
     }
 }

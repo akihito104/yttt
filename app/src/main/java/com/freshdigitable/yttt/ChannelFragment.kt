@@ -1,5 +1,9 @@
 package com.freshdigitable.yttt
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Paint
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
@@ -12,6 +16,8 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
+import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
@@ -19,6 +25,15 @@ import com.freshdigitable.yttt.data.model.LiveChannelSection
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flow
+import java.math.BigInteger
+import java.security.MessageDigest
+import java.text.DecimalFormat
+import java.text.NumberFormat
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.*
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -32,22 +47,61 @@ class ChannelFragment : Fragment(R.layout.fragment_channel) {
         val banner = view.findViewById<ImageView>(R.id.channel_banner)
         val icon = view.findViewById<ImageView>(R.id.channel_icon)
         val name = view.findViewById<TextView>(R.id.channel_name)
+        val stats = view.findViewById<TextView>(R.id.channel_stats)
+        val description = view.findViewById<TextView>(R.id.channel_description)
         val id = LiveChannel.Id(args.channelId)
         viewModel.fetchChannel(id).observe(viewLifecycleOwner) {
-            Glide.with(banner)
-                .load(it?.bannerUrl)
-                .centerCrop()
-                .into(banner)
+            if (it == null) {
+                return@observe
+            }
+            if (it.bannerUrl?.isNotBlank() == true) {
+                Glide.with(banner)
+                    .load(it.bannerUrl)
+                    .transform(CustomCrop(width = 1253, height = 338))
+                    .into(banner)
+            } else {
+                banner.visibility = View.GONE
+            }
             Glide.with(icon)
-                .load(it?.iconUrl)
+                .load(it.iconUrl)
                 .into(icon)
-            name.text = it?.title ?: ""
-            text.text = it?.toString()
+            name.text = it.title
+            stats.text = "${it.customUrl} " +
+                (if (!it.isSubscriberHidden) "Subscribers:${it.subscriberCount.toStringWithUnitPrefix} " else "") +
+                "Videos:${it.videoCount} Views:${it.viewsCount.toStringWithComma} " +
+                "Published:${it.publishedAt.toLocalFormattedText}"
+            description.text = it.description ?: ""
+            text.text = it.toString()
         }
         val text2 = view.findViewById<TextView>(R.id.channel_text2)
         viewModel.fetchChannelSection(id).observe(viewLifecycleOwner) {
             text2.text = it?.toString()
         }
+    }
+
+    companion object {
+        private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd")
+        private val Instant.toLocalFormattedText: String
+            get() {
+                val localDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
+                return localDateTime.format(dateTimeFormatter)
+            }
+        private val BigInteger.toStringWithComma: String
+            get() = NumberFormat.getNumberInstance(Locale.US).format(this)
+        private val BigInteger.toStringWithUnitPrefix: String
+            get() {
+                val decimal = this.toBigDecimal()
+                val precision = decimal.precision()
+                return if (precision <= 3) {
+                    this.toString()
+                } else {
+                    val prefixGrade = (precision - 1) / 3
+                    val shift = prefixGrade * 3
+                    val digit = DecimalFormat("#.##").format(decimal.movePointLeft(shift))
+                    "${digit}${unitPrefix[prefixGrade]}"
+                }
+            }
+        private val unitPrefix = arrayOf("", "k", "M", "G", "T", "P", "E")
     }
 }
 
@@ -64,4 +118,43 @@ class ChannelViewModel @Inject constructor(
         val channelSection = repository.fetchChannelSection(id)
         emit(channelSection)
     }.asLiveData(viewModelScope.coroutineContext)
+}
+
+private class CustomCrop(
+    private val width: Int,
+    private val height: Int
+) : BitmapTransformation() {
+    override fun transform(
+        pool: BitmapPool,
+        toTransform: Bitmap,
+        outWidth: Int,
+        outHeight: Int
+    ): Bitmap {
+        val scaled = toTransform.width / 2048.0f
+        val w = (width * scaled).toInt()
+        val h = (height * scaled).toInt()
+        val dx = (w - toTransform.width) * 0.5f
+        val dy = (h - toTransform.height) * 0.5f
+        val matrix = Matrix().apply {
+            postTranslate(dx, dy)
+        }
+        val bitmap = pool.get(w, h, toTransform.config ?: Bitmap.Config.ARGB_8888).apply {
+            setHasAlpha(toTransform.hasAlpha())
+        }
+        val canvas = Canvas(bitmap)
+        canvas.drawBitmap(toTransform, matrix, Paint(Paint.DITHER_FLAG or Paint.FILTER_BITMAP_FLAG))
+        canvas.setBitmap(null)
+        return bitmap
+    }
+
+    override fun equals(other: Any?): Boolean = other is CustomCrop
+
+    override fun hashCode(): Int = ID.hashCode()
+
+    override fun updateDiskCacheKey(messageDigest: MessageDigest) = messageDigest.update(ID_BYTES)
+
+    companion object {
+        private val ID = checkNotNull(CustomCrop::class.java.canonicalName)
+        private val ID_BYTES = ID.toByteArray(CHARSET)
+    }
 }
