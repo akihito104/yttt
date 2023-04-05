@@ -3,9 +3,7 @@ package com.freshdigitable.yttt
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.math.BigInteger
-import java.math.RoundingMode
 import java.text.DecimalFormat
-import java.text.NumberFormat
 
 /**
  * Example local unit test, which will execute on the development machine (host).
@@ -14,8 +12,7 @@ import java.text.NumberFormat
  */
 class ExampleUnitTest {
     @Test
-    fun addition_isCorrect() {
-//        assertEquals(4, 2 + 2)
+    fun studyBigDecimal() {
         assertEquals(2, BigInteger("20").toBigDecimal().precision())
         assertEquals(3, BigInteger("200").toBigDecimal().precision())
 
