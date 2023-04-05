@@ -64,10 +64,25 @@ class YouTubeLiveRepository @Inject constructor(
     }
 
     suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannelDetail> {
-        return remoteSource.fetchChannelList(ids)
+        if (ids.isEmpty()) {
+            return emptyList()
+        }
+        val cache = localSource.fetchChannelList(ids)
+        if (cache.size == ids.size) {
+            return cache
+        }
+        val remote = remoteSource.fetchChannelList(ids)
+        localSource.addChannelList(remote)
+        return remote
     }
 
     suspend fun fetchChannelSection(id: LiveChannel.Id): List<LiveChannelSection> {
-        return remoteSource.fetchChannelSection(id)
+        val cache = localSource.fetchChannelSection(id)
+        if (cache.isNotEmpty()) {
+            return cache
+        }
+        val remote = remoteSource.fetchChannelSection(id)
+        localSource.addChannelSection(remote)
+        return remote
     }
 }
