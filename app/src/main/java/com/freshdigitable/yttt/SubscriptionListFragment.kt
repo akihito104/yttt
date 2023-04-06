@@ -12,6 +12,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
@@ -74,6 +75,11 @@ class SubscriptionListAdapter : ListAdapter<LiveSubscription, SubscriptionItemHo
                 .into(holder.icon)
         }
         holder.name.text = item.channel.title
+        holder.itemView.setOnClickListener {
+            val action =
+                SubscriptionListFragmentDirections.actionMenuSubscriptionListToChannelFragment(item.channel.id.value)
+            it.findNavController().navigate(action)
+        }
     }
 }
 

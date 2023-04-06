@@ -2,9 +2,11 @@ package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelLogEntity
+import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -15,11 +17,14 @@ import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Activity
+import com.google.api.services.youtube.model.Channel
+import com.google.api.services.youtube.model.ChannelSection
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.math.BigInteger
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -79,6 +84,31 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         }.map { it.toLiveVideo() }
     }
 
+    suspend fun fetchChannelList(
+        ids: Collection<LiveChannel.Id>,
+    ): List<LiveChannelDetail> = withContext(Dispatchers.IO) {
+        ids.map { it.value }.chunked(VIDEO_MAX_FETCH_SIZE).flatMap {
+            youtube.channels().list(
+                listOf(
+                    PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics",
+                )
+            )
+                .setId(it)
+                .execute()
+                .items
+        }.map { LiveChannelImpl(it) }
+    }
+
+    suspend fun fetchChannelSection(
+        channelId: LiveChannel.Id,
+    ): List<LiveChannelSection> = withContext(Dispatchers.IO) {
+        youtube.channelSections().list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setChannelId(channelId.value)
+            .execute()
+            .items
+            .map { LiveChannelSectionImpl(it) }
+    }
+
     private fun <T, E> fetchAllItems(
         fetcher: (String?) -> T,
         getItems: T.() -> List<E>,
@@ -98,6 +128,7 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         private const val PART_SNIPPET = "snippet"
         private const val PART_CONTENT_DETAILS = "contentDetails"
         private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
+
         // https://developers.google.com/youtube/v3/docs/videos/list#parameters
         private const val VIDEO_MAX_FETCH_SIZE = 50
     }
@@ -140,3 +171,49 @@ private fun Video.toLiveVideo(): LiveVideo = LiveVideoEntity(
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
 private val ThumbnailDetails.url: String
     get() = (maxres ?: high ?: standard ?: medium ?: default).url ?: ""
+
+private data class LiveChannelImpl(
+    private val channel: Channel,
+) : LiveChannelDetail {
+    override val id: LiveChannel.Id
+        get() = LiveChannel.Id(channel.id)
+    override val title: String
+        get() = channel.snippet.title
+    override val iconUrl: String
+        get() = channel.snippet.thumbnails.url
+    override val bannerUrl: String?
+        get() = channel.brandingSettings?.image?.bannerExternalUrl
+    override val subscriberCount: BigInteger
+        get() = channel.statistics.subscriberCount
+    override val isSubscriberHidden: Boolean
+        get() = channel.statistics.hiddenSubscriberCount
+    override val videoCount: BigInteger
+        get() = channel.statistics.videoCount
+    override val viewsCount: BigInteger
+        get() = channel.statistics.viewCount
+    override val customUrl: String
+        get() = channel.snippet.customUrl
+    override val keywords: Collection<String>
+        get() = channel.brandingSettings?.channel?.keywords?.split(",", " ") ?: emptyList()
+    override val publishedAt: Instant
+        get() = channel.snippet.publishedAt.toInstant()
+    override val description: String?
+        get() = channel.brandingSettings?.channel?.description
+
+    override fun toString(): String = channel.toPrettyString()
+}
+
+private data class LiveChannelSectionImpl(
+    private val channelSection: ChannelSection
+) : LiveChannelSection {
+    override val channelId: LiveChannel.Id
+        get() = LiveChannel.Id(channelSection.snippet.channelId)
+    override val title: String
+        get() = channelSection.snippet.title
+    override val position: Long
+        get() = channelSection.snippet.position
+
+    override fun toString(): String {
+        return channelSection.toPrettyString()
+    }
+}

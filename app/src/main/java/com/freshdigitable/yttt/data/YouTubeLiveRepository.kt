@@ -1,7 +1,9 @@
 package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelLog
+import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
@@ -59,5 +61,28 @@ class YouTubeLiveRepository @Inject constructor(
             return
         }
         localSource.deleteVideo(removed)
+    }
+
+    suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannelDetail> {
+        if (ids.isEmpty()) {
+            return emptyList()
+        }
+        val cache = localSource.fetchChannelList(ids)
+        if (cache.size == ids.size) {
+            return cache
+        }
+        val remote = remoteSource.fetchChannelList(ids)
+        localSource.addChannelList(remote)
+        return remote
+    }
+
+    suspend fun fetchChannelSection(id: LiveChannel.Id): List<LiveChannelSection> {
+        val cache = localSource.fetchChannelSection(id)
+        if (cache.isNotEmpty()) {
+            return cache
+        }
+        val remote = remoteSource.fetchChannelSection(id)
+        localSource.addChannelSection(remote)
+        return remote
     }
 }
