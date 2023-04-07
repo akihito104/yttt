@@ -37,7 +37,8 @@ class YouTubeLiveRepository @Inject constructor(
         maxResult: Long
     ): List<LiveChannelLog> {
         val logs = localSource.fetchLiveChannelLogs(channelId)
-        val latestLog = if (logs.isNotEmpty()) logs.maxOf { it.dateTime } else publishedAfter
+        val latestLog =
+            if (logs.isNotEmpty()) logs.maxOf { it.dateTime }.plusSeconds(1) else publishedAfter
         val res = remoteSource.fetchLiveChannelLogs(channelId, latestLog, maxResult)
         localSource.addLiveChannelLogs(res)
         return res
