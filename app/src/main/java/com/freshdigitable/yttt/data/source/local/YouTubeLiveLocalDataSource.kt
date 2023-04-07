@@ -44,10 +44,13 @@ class YouTubeLiveLocalDataSource @Inject constructor(
 
     override suspend fun fetchLiveChannelLogs(
         channelId: LiveChannel.Id,
-        publishedAfter: Instant,
-        maxResult: Long
+        publishedAfter: Instant?,
+        maxResult: Long?,
     ): List<LiveChannelLog> {
-        return database.dao.findChannelLogs(channelId, publishedAfter)
+        if (publishedAfter != null) {
+            return database.dao.findChannelLogs(channelId, publishedAfter, maxResult)
+        }
+        return database.dao.findChannelLogs(channelId, maxResult)
     }
 
     suspend fun addLiveChannelLogs(channelLogs: List<LiveChannelLog>) {

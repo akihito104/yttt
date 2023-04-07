@@ -55,15 +55,20 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
 
     override suspend fun fetchLiveChannelLogs(
         channelId: LiveChannel.Id,
-        publishedAfter: Instant,
-        maxResult: Long,
+        publishedAfter: Instant?,
+        maxResult: Long?,
     ): List<LiveChannelLog> = withContext(Dispatchers.IO) {
         fetchAllItems(
             fetcher = { token ->
                 youtube.activities().list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-                    .setChannelId(channelId.value)
-                    .setMaxResults(maxResult)
-                    .setPublishedAfter(publishedAfter.toString())
+                    .setChannelId(channelId.value).apply {
+                        if (maxResult != null) {
+                            this.maxResults = maxResult
+                        }
+                        if (publishedAfter != null) {
+                            setPublishedAfter(publishedAfter.toString())
+                        }
+                    }
                     .setPageToken(token)
                     .execute()
             },

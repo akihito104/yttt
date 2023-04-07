@@ -27,10 +27,24 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelLogs(logs: Collection<LiveChannelLogTable>)
 
-    @Query("SELECT * FROM channel_log WHERE channel_id = :channelId AND datetime >= :publishedAfter")
+    @Query(
+        "SELECT * FROM channel_log" +
+            " WHERE channel_id = :channelId AND datetime >= :publishedAfter" +
+            " ORDER BY datetime DESC LIMIT :maxResult"
+    )
     suspend fun findChannelLogs(
         channelId: LiveChannel.Id,
-        publishedAfter: Instant
+        publishedAfter: Instant,
+        maxResult: Long? = Long.MAX_VALUE,
+    ): List<LiveChannelLogTable>
+
+    @Query(
+        "SELECT * FROM channel_log WHERE channel_id = :channelId" +
+            " ORDER BY datetime DESC LIMIT :maxResult"
+    )
+    suspend fun findChannelLogs(
+        channelId: LiveChannel.Id,
+        maxResult: Long? = Long.MAX_VALUE
     ): List<LiveChannelLogTable>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
