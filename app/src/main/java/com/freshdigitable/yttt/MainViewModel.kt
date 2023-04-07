@@ -14,6 +14,8 @@ import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.GoogleApiAvailability
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -86,11 +88,17 @@ class MainViewModel @Inject constructor(
 
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
-        channelIds.forEach { c ->
-            Log.d(TAG, "fetchLiveStreams: channel> $c")
-            val logs = liveRepository.fetchLiveChannelLogs(c)
-            liveRepository.fetchVideoList(logs.map { it.videoId })
+        val task = channelIds.map { id ->
+            viewModelScope.async {
+                val logs = liveRepository.fetchLiveChannelLogs(id)
+                if (logs.isEmpty()) {
+                    return@async
+                }
+                liveRepository.fetchVideoList(logs.map { it.videoId })
+                Log.d(TAG, "fetchLiveStreams: channel> $id,count>${logs.size}")
+            }
         }
+        task.awaitAll()
         Log.d(TAG, "fetchLiveStreams: end")
     }
 
