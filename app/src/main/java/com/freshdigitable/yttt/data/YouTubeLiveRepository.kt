@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.source.local.YouTubeLiveLocalDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeLiveRemoteDataSource
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
+import java.time.Period
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -33,13 +34,16 @@ class YouTubeLiveRepository @Inject constructor(
 
     override suspend fun fetchLiveChannelLogs(
         channelId: LiveChannel.Id,
-        publishedAfter: Instant,
-        maxResult: Long
+        publishedAfter: Instant?,
+        maxResult: Long?,
     ): List<LiveChannelLog> {
-        val logs = localSource.fetchLiveChannelLogs(channelId)
-        val latestLog =
-            if (logs.isNotEmpty()) logs.maxOf { it.dateTime }.plusSeconds(1) else publishedAfter
-        val res = remoteSource.fetchLiveChannelLogs(channelId, latestLog, maxResult)
+        val pa = if (publishedAfter != null) {
+            publishedAfter
+        } else {
+            val cache = localSource.fetchLiveChannelLogs(channelId, maxResult = 1).firstOrNull()
+            cache?.dateTime?.plusSeconds(1) ?: Instant.now().minus(activityMaxPeriod)
+        }
+        val res = remoteSource.fetchLiveChannelLogs(channelId, pa, maxResult)
         localSource.addLiveChannelLogs(res)
         return res
     }
@@ -85,5 +89,9 @@ class YouTubeLiveRepository @Inject constructor(
         val remote = remoteSource.fetchChannelSection(id)
         localSource.addChannelSection(remote)
         return remote
+    }
+
+    companion object {
+        private val activityMaxPeriod = Period.ofDays(7)
     }
 }
