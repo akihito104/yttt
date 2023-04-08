@@ -15,6 +15,9 @@
             android:id="@+id/action_tttFragment_to_subscriptionListActivity"
             app:destination="@+id/menu_subscription_list"
             />
+        <action
+            android:id="@+id/action_tttFragment_to_videoDetailFragment"
+            app:destination="@id/videoDetailFragment" />
     </fragment>
     <fragment
         android:id="@+id/menu_subscription_list"
@@ -32,6 +35,16 @@
         >
         <argument
             android:name="channelId"
+            app:argType="string"
+            />
+    </fragment>
+    <fragment
+        android:id="@+id/videoDetailFragment"
+        android:name="com.freshdigitable.yttt.VideoDetailFragment"
+        tools:layout="@layout/fragment_video_detail"
+        >
+        <argument
+            android:name="videoId"
             app:argType="string"
             />
     </fragment>

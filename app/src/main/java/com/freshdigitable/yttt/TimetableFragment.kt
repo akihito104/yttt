@@ -9,6 +9,7 @@ import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
@@ -84,6 +85,11 @@ class TimetableAdapter : ListAdapter<LiveVideo, VideoViewHolder>(diffUtil) {
 
     override fun onBindViewHolder(holder: VideoViewHolder, position: Int) {
         val item = getItem(position)
+        holder.itemView.setOnClickListener {
+            val action =
+                TimetableTabFragmentDirections.actionTttFragmentToVideoDetailFragment(item.id.value)
+            it.findNavController().navigate(action)
+        }
         holder.title.text = item.title
         holder.channelTitle.text = item.channel.title
         holder.dateTime.text = item.scheduledStartDateTime?.toLocalFormattedText ?: "none"
