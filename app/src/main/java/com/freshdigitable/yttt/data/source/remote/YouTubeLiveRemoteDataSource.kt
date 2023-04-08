@@ -158,7 +158,7 @@ private fun Activity.toChannelLog(): LiveChannelLog = LiveChannelLogEntity(
     thumbnailUrl = snippet.thumbnails.url,
 )
 
-private fun Video.toLiveVideo(): LiveVideo = LiveVideoEntity(
+private fun Video.toLiveVideo(): LiveVideo = object : LiveVideo by LiveVideoEntity(
     id = LiveVideo.Id(id),
     channel = LiveChannelEntity(
         id = LiveChannel.Id(snippet.channelId),
@@ -171,7 +171,9 @@ private fun Video.toLiveVideo(): LiveVideo = LiveVideoEntity(
     actualStartDateTime = liveStreamingDetails?.actualStartTime?.toInstant(),
     actualEndDateTime = liveStreamingDetails?.actualEndTime?.toInstant(),
     thumbnailUrl = this.snippet.thumbnails.url,
-)
+) {
+    override fun toString(): String = this@toLiveVideo.toPrettyString()
+}
 
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
 private val ThumbnailDetails.url: String

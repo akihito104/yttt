@@ -48,13 +48,19 @@ class YouTubeLiveRepository @Inject constructor(
         return res
     }
 
+    private val videoRemote = mutableMapOf<LiveVideo.Id, LiveVideo>()
     override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
         if (ids.isEmpty()) {
             return emptyList()
         }
         val res = remoteSource.fetchVideoList(ids)
         localSource.addVideo(res)
+        videoRemote.putAll(res.map { it.id to it })
         return res
+    }
+
+    suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo {
+        return videoRemote[id] ?: fetchVideoList(listOf(id)).first()
     }
 
     suspend fun findAllUnfinishedVideos(): List<LiveVideo> {

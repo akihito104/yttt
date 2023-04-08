@@ -30,7 +30,6 @@ class YouTubeLiveLocalDataSource @Inject constructor(
     suspend fun addSubscribes(subscriptions: Collection<LiveSubscription>) =
         withContext(Dispatchers.IO) {
             val channels = subscriptions.map { it.channel }.toSet()
-                .filter { database.dao.findChannel(it.id) == null }
                 .map { it.toDbEntity() }
             database.withTransaction {
                 database.dao.addChannels(channels)
