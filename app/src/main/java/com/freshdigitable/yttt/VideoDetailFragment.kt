@@ -13,8 +13,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
+import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -54,16 +54,12 @@ class VideoDetailViewModel @Inject constructor(
         return liveData(viewModelScope.coroutineContext) {
             val detail = repository.fetchVideoDetail(id)
             val channel = repository.fetchChannelList(listOf(detail.channel.id)).first()
-            val res = LiveVideoEntity(
-                id = id,
-                channel = channel,
-                title = detail.title,
-                thumbnailUrl = detail.thumbnailUrl,
-                scheduledStartDateTime = detail.scheduledStartDateTime,
-                scheduledEndDateTime = detail.scheduledEndDateTime,
-                actualStartDateTime = detail.actualStartDateTime,
-                actualEndDateTime = detail.actualEndDateTime,
-            )
+            val res = object : LiveVideo by detail {
+                override val channel: LiveChannel
+                    get() = channel
+
+                override fun toString(): String = detail.toString()
+            }
             emit(res)
         }
     }
