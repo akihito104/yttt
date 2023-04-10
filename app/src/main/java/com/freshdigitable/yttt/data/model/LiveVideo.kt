@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import java.math.BigInteger
 import java.time.Instant
 
 interface LiveVideo {
@@ -32,3 +33,8 @@ data class LiveVideoEntity(
     override val actualEndDateTime: Instant?,
     override val thumbnailUrl: String,
 ) : LiveVideo
+
+interface LiveVideoDetail : LiveVideo {
+    val description: String
+    val viewerCount: BigInteger?
+}

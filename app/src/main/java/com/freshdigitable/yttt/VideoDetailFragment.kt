@@ -15,8 +15,14 @@ import com.bumptech.glide.Glide
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.math.BigInteger
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -27,8 +33,10 @@ class VideoDetailFragment : Fragment(R.layout.fragment_video_detail) {
         super.onViewCreated(view, savedInstanceState)
         val thumbnail = view.findViewById<ImageView>(R.id.videoDetail_thumbnail)
         val title = view.findViewById<TextView>(R.id.videoDetail_title)
+        val stats = view.findViewById<TextView>(R.id.videoDetail_stats)
         val channelIcon = view.findViewById<ImageView>(R.id.channel_icon)
         val channelName = view.findViewById<TextView>(R.id.channel_name)
+        val description = view.findViewById<TextView>(R.id.videoDetail_description)
         val debug = view.findViewById<TextView>(R.id.videoDetail_debug)
 
         viewModel.fetchViewDetail(LiveVideo.Id(args.videoId)).observe(viewLifecycleOwner) {
@@ -42,6 +50,36 @@ class VideoDetailFragment : Fragment(R.layout.fragment_video_detail) {
                 .into(channelIcon)
             channelName.text = it.channel.title
             debug.text = it.toString()
+
+            val time = if (it.actualStartDateTime != null) {
+                "Started:${it.actualStartDateTime!!.toLocalFormattedText(startedFormat)}"
+            } else if (it.scheduledStartDateTime != null) {
+                "Starting:${it.scheduledStartDateTime!!.toLocalFormattedText(startingFormat)}"
+            } else null
+            val count =
+                if ((it as? LiveVideoDetail)?.viewerCount != null) "Viewers:${it.viewerCount.toString()}"
+                else null
+            if (time == null && count == null) {
+                stats.visibility = View.GONE
+            } else {
+                stats.text = listOfNotNull(time, count).joinToString("・")
+            }
+
+            if (it is LiveVideoDetail) {
+                description.text = it.description
+            } else {
+                description.visibility = View.GONE
+            }
+        }
+    }
+
+    companion object {
+        private const val startedFormat = "yyyy/MM/dd(E) HH:mm:ss"
+        private const val startingFormat = "yyyy/MM/dd(E) HH:mm"
+        private fun Instant.toLocalFormattedText(format: String): String {
+            val dateTimeFormatter = DateTimeFormatter.ofPattern(format)
+            val localDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
+            return localDateTime.format(dateTimeFormatter)
         }
     }
 }
@@ -54,7 +92,11 @@ class VideoDetailViewModel @Inject constructor(
         return liveData(viewModelScope.coroutineContext) {
             val detail = repository.fetchVideoDetail(id)
             val channel = repository.fetchChannelList(listOf(detail.channel.id)).first()
-            val res = object : LiveVideo by detail {
+            val res = object : LiveVideoDetail, LiveVideo by detail {
+                override val description: String
+                    get() = (detail as? LiveVideoDetail)?.description ?: ""
+                override val viewerCount: BigInteger?
+                    get() = (detail as? LiveVideoDetail)?.viewerCount
                 override val channel: LiveChannel
                     get() = channel
 
