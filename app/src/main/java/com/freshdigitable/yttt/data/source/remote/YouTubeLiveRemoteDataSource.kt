@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
 import com.google.api.client.http.javanet.NetHttpTransport
@@ -80,7 +81,7 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
 
     override suspend fun fetchVideoList(
         ids: Collection<LiveVideo.Id>,
-    ): List<LiveVideo> = withContext(Dispatchers.IO) {
+    ): List<LiveVideoDetail> = withContext(Dispatchers.IO) {
         ids.map { it.value }.chunked(VIDEO_MAX_FETCH_SIZE).flatMap {
             youtube.videos().list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
                 .setId(it)
@@ -158,20 +159,28 @@ private fun Activity.toChannelLog(): LiveChannelLog = LiveChannelLogEntity(
     thumbnailUrl = snippet.thumbnails.url,
 )
 
-private fun Video.toLiveVideo(): LiveVideo = LiveVideoEntity(
-    id = LiveVideo.Id(id),
-    channel = LiveChannelEntity(
-        id = LiveChannel.Id(snippet.channelId),
-        title = snippet.channelTitle,
-        iconUrl = "",
-    ),
-    title = snippet.title,
-    scheduledStartDateTime = liveStreamingDetails?.scheduledStartTime?.toInstant(),
-    scheduledEndDateTime = liveStreamingDetails?.scheduledEndTime?.toInstant(),
-    actualStartDateTime = liveStreamingDetails?.actualStartTime?.toInstant(),
-    actualEndDateTime = liveStreamingDetails?.actualEndTime?.toInstant(),
-    thumbnailUrl = this.snippet.thumbnails.url,
-)
+private fun Video.toLiveVideo(): LiveVideoDetail =
+    object : LiveVideoDetail, LiveVideo by LiveVideoEntity(
+        id = LiveVideo.Id(id),
+        channel = LiveChannelEntity(
+            id = LiveChannel.Id(snippet.channelId),
+            title = snippet.channelTitle,
+            iconUrl = "",
+        ),
+        title = snippet.title,
+        scheduledStartDateTime = liveStreamingDetails?.scheduledStartTime?.toInstant(),
+        scheduledEndDateTime = liveStreamingDetails?.scheduledEndTime?.toInstant(),
+        actualStartDateTime = liveStreamingDetails?.actualStartTime?.toInstant(),
+        actualEndDateTime = liveStreamingDetails?.actualEndTime?.toInstant(),
+        thumbnailUrl = this.snippet.thumbnails.url,
+    ) {
+        override val description: String
+            get() = this@toLiveVideo.snippet.description
+        override val viewerCount: BigInteger?
+            get() = this@toLiveVideo.liveStreamingDetails?.concurrentViewers
+
+        override fun toString(): String = this@toLiveVideo.toPrettyString()
+    }
 
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
 private val ThumbnailDetails.url: String

@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLiveLocalDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeLiveRemoteDataSource
@@ -48,13 +49,19 @@ class YouTubeLiveRepository @Inject constructor(
         return res
     }
 
+    private val videoRemote = mutableMapOf<LiveVideo.Id, LiveVideoDetail>()
     override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
         if (ids.isEmpty()) {
             return emptyList()
         }
         val res = remoteSource.fetchVideoList(ids)
         localSource.addVideo(res)
+        videoRemote.putAll(res.map { it.id to it })
         return res
+    }
+
+    suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo {
+        return videoRemote[id] ?: fetchVideoList(listOf(id)).first()
     }
 
     suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
