@@ -49,10 +49,10 @@ class VideoDetailFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 MdcTheme {
-                    val video = item.observeAsState().value
+                    val video = item.observeAsState().value ?: return@MdcTheme
                     LiveChannelListItemView(
-                        iconUrl = video?.channel?.iconUrl ?: "",
-                        title = video?.channel?.title ?: "",
+                        iconUrl = video.channel.iconUrl,
+                        title = video.channel.title,
                     )
                 }
             }

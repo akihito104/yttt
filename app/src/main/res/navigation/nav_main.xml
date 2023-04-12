@@ -22,7 +22,6 @@
     <fragment
         android:id="@+id/menu_subscription_list"
         android:name="com.freshdigitable.yttt.SubscriptionListFragment"
-        tools:layout="@layout/fragment_subscription_list"
         >
         <action
             android:id="@+id/action_menu_subscription_list_to_channelFragment"

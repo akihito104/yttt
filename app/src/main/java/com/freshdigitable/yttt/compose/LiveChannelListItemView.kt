@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.compose
 
 import android.content.res.Configuration
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,13 +26,21 @@ import com.google.accompanist.themeadapter.material.MdcTheme
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun LiveChannelListItemView(iconUrl: String, title: String) {
+fun LiveChannelListItemView(
+    iconUrl: String,
+    title: String,
+    onClick: (() -> Unit)? = null
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
             .padding(vertical = 8.dp)
-            .padding(start = 16.dp, end = 24.dp),
+            .padding(start = 16.dp, end = 24.dp)
+            .clickable(
+                enabled = onClick != null,
+                onClick = onClick ?: {},
+            )
     ) {
         if (iconUrl.isEmpty()) {
             Icon(
@@ -64,7 +73,7 @@ fun LiveChannelListItemView(iconUrl: String, title: String) {
 @Composable
 fun LiveChannelListItemViewPreviewNight() {
     MdcTheme {
-        LiveChannelListItemView("", "title")
+        LiveChannelListItemView("", "title") {}
     }
 }
 
@@ -72,6 +81,6 @@ fun LiveChannelListItemViewPreviewNight() {
 @Composable
 fun LiveChannelListItemViewPreview() {
     MdcTheme {
-        LiveChannelListItemView("", "title")
+        LiveChannelListItemView("", "title") {}
     }
 }
