@@ -1,11 +1,10 @@
 package com.freshdigitable.yttt
 
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.LiveData
@@ -18,9 +17,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
-import com.bumptech.glide.Glide
+import com.freshdigitable.yttt.compose.LiveChannelListItemView
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveSubscription
+import com.google.accompanist.themeadapter.material.MdcTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -41,8 +41,7 @@ class SubscriptionListFragment : Fragment(R.layout.fragment_subscription_list) {
 }
 
 class SubscriptionItemHolder(view: View) : ViewHolder(view) {
-    val icon: ImageView = view.findViewById(R.id.channel_icon)
-    val name: TextView = view.findViewById(R.id.channel_name)
+    val composeView: ComposeView = view as ComposeView
 }
 
 class SubscriptionListAdapter : ListAdapter<LiveSubscription, SubscriptionItemHolder>(diffUtil) {
@@ -62,23 +61,27 @@ class SubscriptionListAdapter : ListAdapter<LiveSubscription, SubscriptionItemHo
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SubscriptionItemHolder {
-        val layoutInflater = LayoutInflater.from(parent.context)
-        val view = layoutInflater.inflate(R.layout.view_channel_item, parent, false)
+        val view = ComposeView(parent.context)
         return SubscriptionItemHolder(view)
     }
 
     override fun onBindViewHolder(holder: SubscriptionItemHolder, position: Int) {
         val item = getItem(position)
-        if (item.channel.iconUrl.isNotEmpty()) {
-            Glide.with(holder.itemView)
-                .load(item.channel.iconUrl)
-                .into(holder.icon)
-        }
-        holder.name.text = item.channel.title
         holder.itemView.setOnClickListener {
             val action =
                 SubscriptionListFragmentDirections.actionMenuSubscriptionListToChannelFragment(item.channel.id.value)
             it.findNavController().navigate(action)
+        }
+        holder.composeView.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                MdcTheme {
+                    LiveChannelListItemView(
+                        iconUrl = item.channel.iconUrl,
+                        title = item.channel.title
+                    )
+                }
+            }
         }
     }
 }

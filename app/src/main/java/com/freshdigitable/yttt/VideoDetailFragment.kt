@@ -1,9 +1,14 @@
 package com.freshdigitable.yttt
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.LiveData
@@ -12,10 +17,12 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
+import com.freshdigitable.yttt.compose.LiveChannelListItemView
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
+import com.google.accompanist.themeadapter.material.MdcTheme
 import dagger.hilt.android.AndroidEntryPoint
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigInteger
@@ -26,29 +33,46 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class VideoDetailFragment : Fragment(R.layout.fragment_video_detail) {
+class VideoDetailFragment : Fragment() {
     private val viewModel: VideoDetailViewModel by viewModels()
     private val args: VideoDetailFragmentArgs by navArgs()
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        val view = inflater.inflate(R.layout.fragment_video_detail, container, false)
+        val item = viewModel.fetchViewDetail(LiveVideo.Id(args.videoId))
+        setup(view, item)
+        view.findViewById<ComposeView>(R.id.videoDetail_channel).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                MdcTheme {
+                    val video = item.observeAsState().value
+                    LiveChannelListItemView(
+                        iconUrl = video?.channel?.iconUrl ?: "",
+                        title = video?.channel?.title ?: "",
+                    )
+                }
+            }
+        }
+        return view
+    }
+
+    private fun setup(view: View, item: LiveData<LiveVideo>) {
         val thumbnail = view.findViewById<ImageView>(R.id.videoDetail_thumbnail)
         val title = view.findViewById<TextView>(R.id.videoDetail_title)
         val stats = view.findViewById<TextView>(R.id.videoDetail_stats)
-        val channelIcon = view.findViewById<ImageView>(R.id.channel_icon)
-        val channelName = view.findViewById<TextView>(R.id.channel_name)
         val description = view.findViewById<TextView>(R.id.videoDetail_description)
         val debug = view.findViewById<TextView>(R.id.videoDetail_debug)
 
-        viewModel.fetchViewDetail(LiveVideo.Id(args.videoId)).observe(viewLifecycleOwner) {
+        item.observe(viewLifecycleOwner) {
             Glide.with(thumbnail)
                 .load(it.thumbnailUrl)
                 .placeholder(R.drawable.baseline_smart_display_24)
                 .into(thumbnail)
             title.text = it.title
-            Glide.with(channelIcon)
-                .load(it.channel.iconUrl)
-                .into(channelIcon)
-            channelName.text = it.channel.title
             debug.text = it.toString()
 
             val time = if (it.actualStartDateTime != null) {
