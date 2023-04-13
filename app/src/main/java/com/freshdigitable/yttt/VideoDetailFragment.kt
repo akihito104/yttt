@@ -6,9 +6,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.LiveData
@@ -17,7 +20,7 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.Glide
-import com.freshdigitable.yttt.compose.LiveChannelListItemView
+import com.freshdigitable.yttt.compose.LiveChannelContentView
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -50,9 +53,10 @@ class VideoDetailFragment : Fragment() {
             setContent {
                 MdcTheme {
                     val video = item.observeAsState().value ?: return@MdcTheme
-                    LiveChannelListItemView(
+                    LiveChannelContentView(
                         iconUrl = video.channel.iconUrl,
                         title = video.channel.title,
+                        modifier = Modifier.padding(8.dp),
                     )
                 }
             }

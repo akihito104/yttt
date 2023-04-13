@@ -34,18 +34,18 @@ fun LiveChannelListItemView(
     iconSize: Dp = 40.dp,
     textOffset: Dp = 16.dp,
     textSize: TextUnit = 16.sp,
-    onClick: (() -> Unit)? = null
+    onClick: () -> Unit,
 ) {
     LiveChannelContentView(
         iconUrl = iconUrl,
         title = title,
         modifier = modifier
             .padding(vertical = 8.dp)
-            .padding(start = 16.dp, end = 24.dp),
+            .padding(start = 16.dp, end = 24.dp)
+            .clickable(onClick = onClick),
         iconSize = iconSize,
         textOffset = textOffset,
         textSize = textSize,
-        onClick = onClick
     )
 }
 
@@ -58,15 +58,12 @@ fun LiveChannelContentView(
     iconSize: Dp = 36.dp,
     textOffset: Dp = 8.dp,
     textSize: TextUnit = 14.sp,
-    onClick: (() -> Unit)? = null
 ) {
-    val mod = modifier
-        .fillMaxWidth()
-        .wrapContentHeight()
-    if (onClick != null) {
-        mod.clickable(onClick = onClick)
-    }
-    Row(modifier = mod) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight(),
+    ) {
         if (iconUrl.isEmpty()) {
             Icon(
                 imageVector = Icons.Default.AccountCircle,
@@ -114,6 +111,6 @@ private fun LiveChannelListItemViewPreview() {
 @Composable
 private fun LiveChannelContentViewPreview() {
     MdcTheme {
-        LiveChannelContentView("", "title") {}
+        LiveChannelContentView("", "title")
     }
 }
