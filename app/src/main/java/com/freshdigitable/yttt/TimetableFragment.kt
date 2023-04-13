@@ -6,6 +6,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -17,7 +22,9 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.bumptech.glide.Glide
+import com.freshdigitable.yttt.compose.LiveChannelContentView
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.google.accompanist.themeadapter.material.MdcTheme
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -91,7 +98,6 @@ class TimetableAdapter : ListAdapter<LiveVideo, VideoViewHolder>(diffUtil) {
             it.findNavController().navigate(action)
         }
         holder.title.text = item.title
-        holder.channelTitle.text = item.channel.title
         holder.dateTime.text = item.scheduledStartDateTime?.toLocalFormattedText ?: "none"
         if (item.thumbnailUrl.isNotEmpty()) {
             Glide.with(holder.thumbnail)
@@ -103,18 +109,24 @@ class TimetableAdapter : ListAdapter<LiveVideo, VideoViewHolder>(diffUtil) {
                 .load(R.drawable.baseline_smart_display_24)
                 .into(holder.thumbnail)
         }
-        if (item.channel.iconUrl.isNotEmpty()) {
-            Glide.with(holder.icon)
-                .load(item.channel.iconUrl)
-                .into(holder.icon)
+        holder.channel.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                MdcTheme {
+                    LiveChannelContentView(
+                        iconUrl = item.channel.iconUrl,
+                        title = item.channel.title,
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                    )
+                }
+            }
         }
     }
 }
 
 class VideoViewHolder(view: View) : ViewHolder(view) {
     val title: TextView = view.findViewById(R.id.video_title)
-    val channelTitle: TextView = view.findViewById(R.id.video_channelName)
     val dateTime: TextView = view.findViewById(R.id.video_startDateTime)
     val thumbnail: ImageView = view.findViewById(R.id.video_thumbnail)
-    val icon: ImageView = view.findViewById(R.id.video_channelIcon)
+    val channel: ComposeView = view.findViewById(R.id.video_channel)
 }
