@@ -24,6 +24,9 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.google.accompanist.themeadapter.material.MdcTheme
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
@@ -52,7 +55,9 @@ fun LiveVideoListItemView(
                     .align(Top)
             )
             Column(
-                modifier = Modifier.padding(horizontal = 8.dp),
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .padding(horizontal = 8.dp),
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
                 LiveChannelContentView(
@@ -60,7 +65,7 @@ fun LiveVideoListItemView(
                     title = video.channel.title,
                 )
                 Text(
-                    text = video.scheduledStartDateTime.toString(),
+                    text = video.scheduledStartDateTime?.toLocalFormattedText ?: "",
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -78,6 +83,13 @@ fun LiveVideoListItemView(
         )
     }
 }
+
+private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd(E) HH:mm")
+private val Instant.toLocalFormattedText: String
+    get() {
+        val localDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
+        return localDateTime.format(dateTimeFormatter)
+    }
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
