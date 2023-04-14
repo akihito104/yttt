@@ -40,7 +40,6 @@
     <fragment
         android:id="@+id/videoDetailFragment"
         android:name="com.freshdigitable.yttt.VideoDetailFragment"
-        tools:layout="@layout/fragment_video_detail"
         >
         <argument
             android:name="videoId"
