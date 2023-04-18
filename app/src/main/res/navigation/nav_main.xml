@@ -29,7 +29,6 @@
     <fragment
         android:id="@+id/channelFragment"
         android:name="com.freshdigitable.yttt.ChannelFragment"
-        tools:layout="@layout/fragment_channel"
         >
         <argument
             android:name="channelId"

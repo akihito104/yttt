@@ -49,7 +49,6 @@ fun LiveChannelListItemView(
     )
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun LiveChannelContentView(
     iconUrl: String,
@@ -64,29 +63,41 @@ fun LiveChannelContentView(
             .fillMaxWidth()
             .wrapContentHeight(),
     ) {
-        if (iconUrl.isEmpty()) {
-            Icon(
-                imageVector = Icons.Default.AccountCircle,
-                contentDescription = "",
-                modifier = Modifier
-                    .size(iconSize)
-                    .align(Alignment.Top)
-            )
-        } else {
-            GlideImage(
-                model = iconUrl,
-                contentDescription = "",
-                modifier = Modifier
-                    .size(iconSize)
-                    .align(Alignment.Top)
-                    .clip(CircleShape),
-            )
-        }
+        LiveChannelIcon(
+            iconUrl = iconUrl,
+            iconSize = iconSize,
+            modifier = Modifier.align(Alignment.Top),
+        )
         Spacer(modifier = Modifier.size(textOffset))
         Text(
             text = title,
             fontSize = textSize,
             modifier = Modifier.align(Alignment.CenterVertically),
+        )
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun LiveChannelIcon(
+    iconUrl: String,
+    iconSize: Dp,
+    modifier: Modifier = Modifier,
+) {
+    if (iconUrl.isEmpty()) {
+        Icon(
+            imageVector = Icons.Default.AccountCircle,
+            contentDescription = "",
+            modifier = modifier
+                .size(iconSize)
+        )
+    } else {
+        GlideImage(
+            model = iconUrl,
+            contentDescription = "",
+            modifier = modifier
+                .size(iconSize)
+                .clip(CircleShape),
         )
     }
 }
