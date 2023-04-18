@@ -9,7 +9,6 @@
     <fragment
         android:id="@+id/tttFragment"
         android:name="com.freshdigitable.yttt.TimetableTabFragment"
-        tools:layout="@layout/fragment_timetable_tab"
         >
         <action
             android:id="@+id/action_tttFragment_to_subscriptionListActivity"
