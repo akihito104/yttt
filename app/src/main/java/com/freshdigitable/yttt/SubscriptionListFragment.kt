@@ -35,7 +35,11 @@ class SubscriptionListFragment : Fragment() {
                 MdcTheme {
                     SubscriptionListScreen(
                         viewModel = viewModel,
-                        navController = findNavController(),
+                        onListItemClicked = { id ->
+                            val action = SubscriptionListFragmentDirections
+                                .actionMenuSubscriptionListToChannelFragment(id.value)
+                            findNavController().navigate(action)
+                        },
                     )
                 }
             }

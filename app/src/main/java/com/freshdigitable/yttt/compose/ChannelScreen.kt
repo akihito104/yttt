@@ -75,6 +75,7 @@ fun ChannelScreen(
             GlideImage(
                 model = channelDetail.bannerUrl,
                 contentDescription = "",
+                alignment = Alignment.TopCenter,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(32f / 9f),
@@ -137,7 +138,7 @@ private fun ChannelTabPage(
 ) {
     Box(
         Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(8.dp)
     ) {

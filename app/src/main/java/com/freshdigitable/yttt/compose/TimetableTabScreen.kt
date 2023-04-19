@@ -20,16 +20,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
-import androidx.navigation.NavController
 import com.freshdigitable.yttt.MainViewModel
 import com.freshdigitable.yttt.TimetablePage
+import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 
 @Composable
 fun TimetableTabScreen(
     viewModel: MainViewModel,
-    navController: NavController,
+    onListItemClicked: (LiveVideo.Id) -> Unit,
 ) {
     val tabData = TimetablePage.values().map { p ->
         val count = p.bind(viewModel)
@@ -44,7 +44,7 @@ fun TimetableTabScreen(
         TimetableScreen(
             page = TimetablePage.values()[index],
             viewModel = viewModel,
-            navController = navController,
+            onListItemClicked = onListItemClicked,
         )
     }
 }

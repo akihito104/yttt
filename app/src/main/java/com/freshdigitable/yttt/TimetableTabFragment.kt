@@ -26,7 +26,14 @@ class TimetableTabFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 MdcTheme {
-                    TimetableTabScreen(viewModel = viewModel, navController = findNavController())
+                    TimetableTabScreen(
+                        viewModel = viewModel,
+                        onListItemClicked = { id ->
+                            val action = TimetableTabFragmentDirections
+                                .actionTttFragmentToVideoDetailFragment(id.value)
+                            findNavController().navigate(action)
+                        },
+                    )
                 }
             }
         }

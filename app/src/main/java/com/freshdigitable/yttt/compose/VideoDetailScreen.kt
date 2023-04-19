@@ -13,6 +13,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,7 +55,9 @@ private fun VideoDetailScreen(video: LiveVideo) {
         GlideImage(
             model = video.thumbnailUrl,
             contentDescription = "",
+            contentScale = ContentScale.FillWidth,
             modifier = Modifier
+                .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .padding(bottom = 8.dp)
         )

@@ -16,10 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.freshdigitable.yttt.MainViewModel
 import com.freshdigitable.yttt.TimetablePage
-import com.freshdigitable.yttt.TimetableTabFragmentDirections
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -31,7 +29,7 @@ import java.time.Instant
 fun TimetableScreen(
     page: TimetablePage,
     viewModel: MainViewModel,
-    navController: NavController,
+    onListItemClicked: (LiveVideo.Id) -> Unit,
 ) {
     val refreshing = viewModel.isLoading.observeAsState(false).value
     val list = page.bind(viewModel).observeAsState(emptyList()).value
@@ -39,11 +37,7 @@ fun TimetableScreen(
         refreshing = refreshing,
         list = list,
         onRefresh = viewModel::loadList,
-        onClick = { item ->
-            val action = TimetableTabFragmentDirections
-                .actionTttFragmentToVideoDetailFragment(item.id.value)
-            navController.navigate(action)
-        },
+        onClick = onListItemClicked,
     )
 }
 
@@ -53,7 +47,7 @@ private fun TimetableScreen(
     refreshing: Boolean,
     list: List<LiveVideo>,
     onRefresh: () -> Unit,
-    onClick: (LiveVideo) -> Unit,
+    onClick: (LiveVideo.Id) -> Unit,
 ) {
     val state = rememberPullRefreshState(refreshing = refreshing, onRefresh = onRefresh)
     Box(
@@ -66,7 +60,7 @@ private fun TimetableScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             itemsIndexed(items = list, key = { _, item -> item.id.value }) { _, item ->
-                LiveVideoListItemView(video = item) { onClick(item) }
+                LiveVideoListItemView(video = item) { onClick(item.id) }
             }
         }
         PullRefreshIndicator(

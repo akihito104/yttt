@@ -15,7 +15,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.fragment.navArgs
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
@@ -140,19 +139,6 @@ class CustomCrop(
 }
 
 enum class ChannelPage {
-    ABOUT {
-        override fun bind(viewModel: ChannelViewModel, id: LiveChannel.Id): LiveData<String> =
-            viewModel.fetchChannel(id).map { it?.description ?: "" }
-    },
-    DEBUG_CHANNEL {
-        override fun bind(viewModel: ChannelViewModel, id: LiveChannel.Id): LiveData<String> =
-            viewModel.fetchChannel(id).map { it.toString() }
-    },
-    DEBUG_CHANNEL_SECTION {
-        override fun bind(viewModel: ChannelViewModel, id: LiveChannel.Id): LiveData<String> =
-            viewModel.fetchChannelSection(id).map { it.toString() }
-    }
+    ABOUT, DEBUG_CHANNEL, DEBUG_CHANNEL_SECTION
     ;
-
-    abstract fun bind(viewModel: ChannelViewModel, id: LiveChannel.Id): LiveData<String>
 }
