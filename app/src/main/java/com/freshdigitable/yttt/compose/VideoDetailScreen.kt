@@ -17,6 +17,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.VideoDetailViewModel
@@ -35,8 +36,8 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun VideoDetailScreen(
-    viewModel: VideoDetailViewModel,
     id: LiveVideo.Id,
+    viewModel: VideoDetailViewModel = hiltViewModel(),
 ) {
     val item = viewModel.fetchViewDetail(id).observeAsState().value ?: return
     VideoDetailScreen(video = item)

@@ -4,12 +4,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.SubscriptionListViewModel
 import com.freshdigitable.yttt.data.model.LiveChannel
 
 @Composable
 fun SubscriptionListScreen(
-    viewModel: SubscriptionListViewModel,
+    viewModel: SubscriptionListViewModel = hiltViewModel(),
     onListItemClicked: (LiveChannel.Id) -> Unit,
 ) {
     val subs = viewModel.subscriptions.observeAsState().value ?: emptyList()

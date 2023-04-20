@@ -40,9 +40,9 @@ fun LiveChannelListItemView(
         iconUrl = iconUrl,
         title = title,
         modifier = modifier
+            .clickable(onClick = onClick)
             .padding(vertical = 8.dp)
-            .padding(start = 16.dp, end = 24.dp)
-            .clickable(onClick = onClick),
+            .padding(start = 16.dp, end = 24.dp),
         iconSize = iconSize,
         textOffset = textOffset,
         textSize = textSize,

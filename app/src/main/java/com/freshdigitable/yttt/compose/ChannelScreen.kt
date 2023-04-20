@@ -26,11 +26,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import com.freshdigitable.yttt.ChannelFragment.Companion.toLocalFormattedText
-import com.freshdigitable.yttt.ChannelFragment.Companion.toStringWithComma
-import com.freshdigitable.yttt.ChannelFragment.Companion.toStringWithUnitPrefix
 import com.freshdigitable.yttt.ChannelPage
 import com.freshdigitable.yttt.ChannelViewModel
 import com.freshdigitable.yttt.CustomCrop
@@ -41,12 +39,18 @@ import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 import java.math.BigInteger
+import java.text.DecimalFormat
+import java.text.NumberFormat
 import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.*
 
 @Composable
 fun ChannelScreen(
     id: LiveChannel.Id,
-    viewModel: ChannelViewModel,
+    viewModel: ChannelViewModel = hiltViewModel(),
 ) {
     val detail = viewModel.fetchChannel(id).observeAsState().value
     val section = viewModel.fetchChannelSection(id).observeAsState(emptyList()).value
@@ -159,6 +163,29 @@ private fun ChannelPage.pageText(
         ChannelPage.DEBUG_CHANNEL_SECTION -> channelSection.toString()
     }
 }
+
+private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd")
+private val Instant.toLocalFormattedText: String
+    get() {
+        val localDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
+        return localDateTime.format(dateTimeFormatter)
+    }
+private val BigInteger.toStringWithComma: String
+    get() = NumberFormat.getNumberInstance(Locale.US).format(this)
+private val BigInteger.toStringWithUnitPrefix: String
+    get() {
+        val decimal = this.toBigDecimal()
+        val precision = decimal.precision()
+        return if (precision <= 3) {
+            this.toString()
+        } else {
+            val prefixGrade = (precision - 1) / 3
+            val shift = prefixGrade * 3
+            val digit = DecimalFormat("#.##").format(decimal.movePointLeft(shift))
+            "${digit}${unitPrefix[prefixGrade]}"
+        }
+    }
+private val unitPrefix = arrayOf("", "k", "M", "G", "T", "P", "E")
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable

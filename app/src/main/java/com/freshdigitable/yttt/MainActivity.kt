@@ -5,25 +5,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.view.MenuItem
-import android.view.View
-import androidx.activity.addCallback
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener
-import androidx.navigation.findNavController
-import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.onNavDestinationSelected
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
+import com.freshdigitable.yttt.compose.MainScreen
+import com.google.accompanist.themeadapter.material.MdcTheme
 import com.google.android.gms.common.ConnectionResult
-import com.google.android.material.navigation.NavigationView
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -32,60 +22,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        val drawerMenu = requireNotNull(findViewById<NavigationView>(R.id.main_navView))
-        val drawer = requireNotNull(findViewById<DrawerLayout>(R.id.main_navLayout))
-        setupDrawer(drawer, drawerMenu)
-
-        val navHostFragment =
-            supportFragmentManager.findFragmentById(R.id.main_navHost) as NavHostFragment
-        val navController = navHostFragment.navController
-        val appBarConfiguration = AppBarConfiguration(navController.graph, drawer)
-        setupActionBarWithNavController(navController, appBarConfiguration)
-        drawerMenu.setupWithNavController(navController)
-        this.appBarConfig = appBarConfiguration
-
-        setupList()
-    }
-
-    private fun setupDrawer(
-        drawer: DrawerLayout,
-        drawerMenu: NavigationView,
-    ) {
-        val callback = onBackPressedDispatcher.addCallback(this) {
-            if (drawer.isDrawerOpen(drawerMenu)) {
-                drawer.close()
+        setContent {
+            MdcTheme {
+                MainScreen()
             }
         }
-        drawer.addDrawerListener(object : SimpleDrawerListener() {
-            override fun onDrawerOpened(drawerView: View) {
-                callback.isEnabled = true
-            }
-
-            override fun onDrawerClosed(drawerView: View) {
-                callback.isEnabled = false
-            }
-        })
-        callback.isEnabled = drawer.isDrawerOpen(drawerMenu)
-    }
-
-    private var appBarConfig: AppBarConfiguration? = null
-
-    override fun onSupportNavigateUp(): Boolean {
-        val appBarConfiguration = this.appBarConfig ?: return super.onSupportNavigateUp()
-        val navController = findNavController(R.id.main_navHost)
-        return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val navController = findNavController(R.id.main_navHost)
-        return item.onNavDestinationSelected(navController) || super.onOptionsItemSelected(item)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        appBarConfig = null
+        setupList()
     }
 
     private fun setupList() {
