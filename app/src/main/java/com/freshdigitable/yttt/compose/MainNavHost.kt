@@ -83,7 +83,7 @@ sealed class MainNavRoute(
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             val arg = requireNotNull(backStackEntry.arguments?.getString(NavArg.CHANNEL_ID.argName))
-            ChannelScreen(id = LiveChannel.Id(arg))
+            ChannelDetailScreen(id = LiveChannel.Id(arg))
         }
     }
 
