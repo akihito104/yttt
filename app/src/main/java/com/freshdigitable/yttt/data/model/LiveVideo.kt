@@ -28,9 +28,9 @@ data class LiveVideoEntity(
     override val channel: LiveChannel,
     override val title: String,
     override val scheduledStartDateTime: Instant?,
-    override val scheduledEndDateTime: Instant?,
-    override val actualStartDateTime: Instant?,
-    override val actualEndDateTime: Instant?,
+    override val scheduledEndDateTime: Instant? = null,
+    override val actualStartDateTime: Instant? = null,
+    override val actualEndDateTime: Instant? = null,
     override val thumbnailUrl: String,
 ) : LiveVideo
 
