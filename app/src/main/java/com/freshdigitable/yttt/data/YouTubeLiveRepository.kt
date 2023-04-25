@@ -4,6 +4,8 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelSection
+import com.freshdigitable.yttt.data.model.LivePlaylist
+import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
@@ -96,6 +98,18 @@ class YouTubeLiveRepository @Inject constructor(
         val remote = remoteSource.fetchChannelSection(id)
         localSource.addChannelSection(remote)
         return remote
+    }
+
+    private val playlistItems = mutableMapOf<LivePlaylist.Id, List<LivePlaylistItem>>()
+    suspend fun fetchPlaylistItems(
+        id: LivePlaylist.Id,
+    ): List<LivePlaylistItem> {
+        if (playlistItems[id] != null) {
+            return requireNotNull(playlistItems[id])
+        }
+        val items = remoteSource.fetchPlaylistItems(id)
+        playlistItems[items.first().playlistId] = items
+        return items
     }
 
     companion object {

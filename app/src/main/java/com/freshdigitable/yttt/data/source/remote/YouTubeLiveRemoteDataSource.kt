@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import android.util.Log
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
@@ -7,6 +8,9 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelLogEntity
 import com.freshdigitable.yttt.data.model.LiveChannelSection
+import com.freshdigitable.yttt.data.model.LivePlaylist
+import com.freshdigitable.yttt.data.model.LivePlaylistItem
+import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -20,6 +24,7 @@ import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Activity
 import com.google.api.services.youtube.model.Channel
 import com.google.api.services.youtube.model.ChannelSection
+import com.google.api.services.youtube.model.PlaylistItem
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
@@ -35,15 +40,18 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
     accountRepository: AccountRepository,
 ) : YoutubeLiveDataSource {
     private val youtube = YouTube.Builder(
-        NetHttpTransport(), GsonFactory.getDefaultInstance(), accountRepository.credential
-    ).build()
+        NetHttpTransport(), GsonFactory.getDefaultInstance()
+    ) {
+        Log.d("RemoteDataSource", "init: ${it.url}")
+        accountRepository.credential.initialize(it)
+    }.build()
 
     override suspend fun fetchAllSubscribe(
         maxResult: Long,
     ): List<LiveSubscription> = withContext(Dispatchers.IO) {
         fetchAllItems(
             fetcher = { token ->
-                youtube.Subscriptions().list(listOf(PART_SNIPPET))
+                youtube.subscriptions().list(listOf(PART_SNIPPET))
                     .setMine(true)
                     .setMaxResults(maxResult)
                     .setPageToken(token)
@@ -113,6 +121,19 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
             .execute()
             .items
             .map { LiveChannelSectionImpl(it) }
+    }
+
+    suspend fun fetchPlaylistItems(
+        id: LivePlaylist.Id,
+        pageToken: String? = null,
+    ): List<LivePlaylistItem> = withContext(Dispatchers.IO) {
+        youtube.playlistItems().list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setPlaylistId(id.value)
+            .setMaxResults(20)
+            .setPageToken(pageToken)
+            .execute()
+            .items
+            .map { it.toLivePlaylistItem() }
     }
 
     private fun <T, E> fetchAllItems(
@@ -188,13 +209,11 @@ private val ThumbnailDetails.url: String
 
 private data class LiveChannelImpl(
     private val channel: Channel,
-) : LiveChannelDetail {
-    override val id: LiveChannel.Id
-        get() = LiveChannel.Id(channel.id)
-    override val title: String
-        get() = channel.snippet.title
-    override val iconUrl: String
-        get() = channel.snippet.thumbnails.url
+) : LiveChannelDetail, LiveChannel by LiveChannelEntity(
+    id = LiveChannel.Id(channel.id),
+    title = channel.snippet.title,
+    iconUrl = channel.snippet.thumbnails.url,
+) {
     override val bannerUrl: String?
         get() = channel.brandingSettings?.image?.bannerExternalUrl
     override val subscriberCount: BigInteger
@@ -213,6 +232,8 @@ private data class LiveChannelImpl(
         get() = channel.snippet.publishedAt.toInstant()
     override val description: String?
         get() = channel.brandingSettings?.channel?.description
+    override val uploadedPlayList: LivePlaylist.Id?
+        get() = channel.contentDetails?.relatedPlaylists?.uploads?.let { LivePlaylist.Id(it) }
 
     override fun toString(): String = channel.toPrettyString()
 }
@@ -231,3 +252,11 @@ private data class LiveChannelSectionImpl(
         return channelSection.toPrettyString()
     }
 }
+
+private fun PlaylistItem.toLivePlaylistItem(): LivePlaylistItem =
+    object : LivePlaylistItem by LivePlaylistItemEntity(
+        id = LivePlaylistItem.Id(id),
+        playlistId = LivePlaylist.Id(snippet.playlistId)
+    ) {
+        override fun toString(): String = toPrettyString()
+    }

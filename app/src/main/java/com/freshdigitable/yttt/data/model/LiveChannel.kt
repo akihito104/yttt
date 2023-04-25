@@ -42,4 +42,5 @@ interface LiveChannelDetail : LiveChannel {
     val customUrl: String
     val keywords: Collection<String>
     val description: String?
+    val uploadedPlayList: LivePlaylist.Id?
 }
