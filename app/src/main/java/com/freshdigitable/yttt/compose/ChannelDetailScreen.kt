@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +36,8 @@ import com.freshdigitable.yttt.CustomCrop
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
+import com.freshdigitable.yttt.data.model.LivePlaylist
+import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 import java.math.BigInteger
@@ -50,20 +54,30 @@ fun ChannelDetailScreen(
     id: LiveChannel.Id,
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
-    val detail = viewModel.fetchChannel(id).observeAsState().value ?: return
-    ChannelDetailScreen(channelDetail = detail) { page ->
+    val detail = viewModel.fetchChannel(id).observeAsState()
+    ChannelDetailScreen(channelDetail = { detail.value }) { page ->
         when (page) {
             ChannelPage.ABOUT -> PlainTextPage {
-                val d = viewModel.fetchChannel(id).observeAsState().value
-                d?.description ?: ""
+                detail.value?.description ?: ""
             }
+
             ChannelPage.DEBUG_CHANNEL -> PlainTextPage {
-                val d = viewModel.fetchChannel(id).observeAsState().value
-                d?.toString() ?: ""
+                detail.value?.toString() ?: ""
             }
+
             ChannelPage.DEBUG_CHANNEL_SECTION -> PlainTextPage {
                 val section = viewModel.fetchChannelSection(id).observeAsState().value
                 section?.toString() ?: ""
+            }
+
+            ChannelPage.UPLOADED -> {
+                val playlist = detail.value?.uploadedPlayList
+                if (playlist == null) {
+                    VideoList { emptyList() }
+                } else {
+                    val items = viewModel.fetchPlaylistItems(playlist).observeAsState(emptyList())
+                    VideoList { items.value }
+                }
             }
         }
     }
@@ -71,7 +85,7 @@ fun ChannelDetailScreen(
 
 @Composable
 private fun ChannelDetailScreen(
-    channelDetail: LiveChannelDetail,
+    channelDetail: () -> LiveChannelDetail?,
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -83,8 +97,9 @@ private fun ChannelDetailScreen(
 @Composable
 @OptIn(ExperimentalGlideComposeApi::class)
 private fun ChannelDetailHeader(
-    channelDetail: LiveChannelDetail,
+    channelDetailProvider: () -> LiveChannelDetail?,
 ) {
+    val channelDetail = channelDetailProvider() ?: return
     val subscriberCount = if (!channelDetail.isSubscriberHidden)
         "Subscribers:${channelDetail.subscriberCount.toStringWithUnitPrefix}"
     else null
@@ -95,38 +110,40 @@ private fun ChannelDetailHeader(
         "Views:${channelDetail.viewsCount.toStringWithComma}",
         "Published:${channelDetail.publishedAt.toLocalFormattedText}",
     ).joinToString("・")
-    if (channelDetail.bannerUrl != null) {
-        GlideImage(
-            model = channelDetail.bannerUrl,
-            contentDescription = "",
-            alignment = Alignment.TopCenter,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(32f / 9f),
-            requestBuilderTransform = {
-                it.transform(CustomCrop(width = 1253, height = 338))
-            },
-        )
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.padding(vertical = 8.dp),
-    ) {
-        LiveChannelIcon(
-            iconUrl = channelDetail.iconUrl,
-            iconSize = 56.dp,
-        )
-        Text(
-            text = channelDetail.title,
-            textAlign = TextAlign.Center,
-            fontSize = 20.sp,
-        )
-        Text(
-            text = statsText,
-            textAlign = TextAlign.Center,
-            fontSize = 12.sp,
-        )
+    Column {
+        if (channelDetail.bannerUrl?.isNotEmpty() == true) {
+            GlideImage(
+                model = channelDetail.bannerUrl,
+                contentDescription = "",
+                alignment = Alignment.TopCenter,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(32f / 9f),
+                requestBuilderTransform = {
+                    it.transform(CustomCrop(width = 1253, height = 338))
+                },
+            )
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp),
+        ) {
+            LiveChannelIcon(
+                iconUrl = channelDetail.iconUrl,
+                iconSize = 56.dp,
+            )
+            Text(
+                text = channelDetail.title,
+                textAlign = TextAlign.Center,
+                fontSize = 20.sp,
+            )
+            Text(
+                text = statsText,
+                textAlign = TextAlign.Center,
+                fontSize = 12.sp,
+            )
+        }
     }
 }
 
@@ -135,29 +152,32 @@ private fun ChannelDetailHeader(
 private fun ChannelDetailPager(
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
-    val pagerState = rememberPagerState()
-    val coroutineScope = rememberCoroutineScope()
-    ScrollableTabRow(
-        selectedTabIndex = pagerState.currentPage,
-        edgePadding = 0.dp,
-    ) {
-        ChannelPage.values().forEach { p ->
-            Tab(
-                selected = pagerState.currentPage == p.ordinal,
-                onClick = {
-                    coroutineScope.launch {
-                        pagerState.animateScrollToPage(p.ordinal)
-                    }
-                },
-                text = { Text(text = p.name) }
-            )
+    Column(Modifier.fillMaxSize()) {
+        val pagerState = rememberPagerState()
+        ScrollableTabRow(
+            selectedTabIndex = pagerState.currentPage,
+            edgePadding = 0.dp,
+        ) {
+            val coroutineScope = rememberCoroutineScope()
+            ChannelPage.values().forEach { p ->
+                Tab(
+                    selected = pagerState.currentPage == p.ordinal,
+                    onClick = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(p.ordinal)
+                        }
+                    },
+                    text = { Text(text = p.name) }
+                )
+            }
         }
-    }
-    HorizontalPager(
-        pageCount = ChannelPage.values().size,
-        state = pagerState,
-    ) { index ->
-        pageContent(ChannelPage.values()[index])
+        HorizontalPager(
+            pageCount = ChannelPage.values().size,
+            state = pagerState,
+            key = { i -> ChannelPage.values()[i].ordinal },
+        ) { index ->
+            pageContent(ChannelPage.values()[index])
+        }
     }
 }
 
@@ -176,6 +196,20 @@ private fun PlainTextPage(
             textAlign = TextAlign.Start,
         )
     }
+}
+
+@Composable
+fun VideoList(items: () -> List<LivePlaylistItem>) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        content = {
+            itemsIndexed(
+                items = items(),
+                key = { _, item -> item.id.value },
+            ) { _, item -> Text(text = item.toString()) }
+        },
+    )
 }
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd")
@@ -205,22 +239,43 @@ private val unitPrefix = arrayOf("", "k", "M", "G", "T", "P", "E")
 @Composable
 fun ChannelScreenPreview() {
     MdcTheme {
-        ChannelDetailScreen(object : LiveChannelDetail, LiveChannel by LiveChannelEntity(
-            id = LiveChannel.Id("a"),
-            title = "channel title",
-            iconUrl = "",
-        ) {
-            override val bannerUrl: String = ""
-            override val subscriberCount: BigInteger = BigInteger.valueOf(52400)
-            override val isSubscriberHidden: Boolean = false
-            override val videoCount: BigInteger = BigInteger.valueOf(132)
-            override val viewsCount: BigInteger = BigInteger.valueOf(38498283)
-            override val publishedAt: Instant = Instant.parse("2021-04-13T00:23:11Z")
-            override val customUrl: String = "@custom_url"
-            override val keywords: Collection<String> = emptyList()
-            override val description: String = "description is here."
+        ChannelDetailScreen({
+            object : LiveChannelDetail, LiveChannel by LiveChannelEntity(
+                id = LiveChannel.Id("a"),
+                title = "channel title",
+                iconUrl = "",
+            ) {
+                override val bannerUrl: String = ""
+                override val subscriberCount: BigInteger = BigInteger.valueOf(52400)
+                override val isSubscriberHidden: Boolean = false
+                override val videoCount: BigInteger = BigInteger.valueOf(132)
+                override val viewsCount: BigInteger = BigInteger.valueOf(38498283)
+                override val publishedAt: Instant = Instant.parse("2021-04-13T00:23:11Z")
+                override val customUrl: String = "@custom_url"
+                override val keywords: Collection<String> = emptyList()
+                override val description: String = "description is here."
+                override val uploadedPlayList: LivePlaylist.Id = LivePlaylist.Id("a")
+            }
         }) {
             PlainTextPage { "text here." }
         }
+    }
+}
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+private fun LazyColumnPreview() {
+    MdcTheme {
+        VideoList(
+            items = {
+                listOf("a", "b", "c").map {
+                    object : LivePlaylistItem {
+                        override val id: LivePlaylistItem.Id = LivePlaylistItem.Id(it)
+                        override val playlistId: LivePlaylist.Id = LivePlaylist.Id("d")
+                        override fun toString(): String = "id: $id"
+                    }
+                }
+            }
+        )
     }
 }
