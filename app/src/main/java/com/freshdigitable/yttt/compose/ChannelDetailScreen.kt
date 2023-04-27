@@ -2,9 +2,11 @@ package com.freshdigitable.yttt.compose
 
 import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,11 +20,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ScrollableTabRow
 import androidx.compose.material.Tab
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -38,6 +43,8 @@ import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
+import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
+import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 import java.math.BigInteger
@@ -65,9 +72,12 @@ fun ChannelDetailScreen(
                 detail.value?.toString() ?: ""
             }
 
-            ChannelPage.DEBUG_CHANNEL_SECTION -> PlainTextPage {
-                val section = viewModel.fetchChannelSection(id).observeAsState().value
-                section?.toString() ?: ""
+            ChannelPage.DEBUG_CHANNEL_SECTION -> {
+                val sectionState = viewModel.fetchChannelSection(id).observeAsState()
+                PlainTextPage {
+                    val section = sectionState.value
+                    section?.toString() ?: ""
+                }
             }
 
             ChannelPage.UPLOADED -> {
@@ -207,9 +217,44 @@ fun VideoList(items: () -> List<LivePlaylistItem>) {
             itemsIndexed(
                 items = items(),
                 key = { _, item -> item.id.value },
-            ) { _, item -> Text(text = item.toString()) }
+            ) { _, item -> VideoListItem(item = item) }
         },
     )
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun VideoListItem(item: LivePlaylistItem) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction = 0.5f)
+                .aspectRatio(16f / 9f)
+                .align(Alignment.Top),
+        ) {
+            if (item.thumbnailUrl.isEmpty()) {
+                Image(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = "",
+                    contentScale = ContentScale.FillHeight,
+                    alignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                GlideImage(
+                    model = item.thumbnailUrl,
+                    contentDescription = "",
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+        Text(
+            text = item.title, modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            fontSize = 14.sp,
+        )
+    }
 }
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd")
@@ -268,10 +313,20 @@ private fun LazyColumnPreview() {
     MdcTheme {
         VideoList(
             items = {
-                listOf("a", "b", "c").map {
-                    object : LivePlaylistItem {
-                        override val id: LivePlaylistItem.Id = LivePlaylistItem.Id(it)
-                        override val playlistId: LivePlaylist.Id = LivePlaylist.Id("d")
+                listOf("a", "b", "c").mapIndexed { i, title ->
+                    object : LivePlaylistItem by LivePlaylistItemEntity(
+                        id = LivePlaylistItem.Id(title),
+                        playlistId = LivePlaylist.Id("d"),
+                        title = "title($i)",
+                        channel = LiveChannelEntity(
+                            id = LiveChannel.Id("e"),
+                            title = "channel title",
+                            iconUrl = "",
+                        ),
+                        videoId = LiveVideo.Id("f"),
+                        thumbnailUrl = "",
+                        description = "description"
+                    ) {
                         override fun toString(): String = "id: $id"
                     }
                 }

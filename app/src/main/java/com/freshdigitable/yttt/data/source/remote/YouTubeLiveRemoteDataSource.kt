@@ -256,7 +256,16 @@ private data class LiveChannelSectionImpl(
 private fun PlaylistItem.toLivePlaylistItem(): LivePlaylistItem =
     object : LivePlaylistItem by LivePlaylistItemEntity(
         id = LivePlaylistItem.Id(id),
-        playlistId = LivePlaylist.Id(snippet.playlistId)
+        playlistId = LivePlaylist.Id(snippet.playlistId),
+        title = snippet.title,
+        thumbnailUrl = snippet.thumbnails.url,
+        videoId = LiveVideo.Id(contentDetails.videoId),
+        channel = LiveChannelEntity(
+            id = LiveChannel.Id(snippet.channelId),
+            title = snippet.channelTitle,
+            iconUrl = "",
+        ),
+        description = "video description",
     ) {
         override fun toString(): String = toPrettyString()
     }
