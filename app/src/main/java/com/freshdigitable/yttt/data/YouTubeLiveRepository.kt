@@ -85,7 +85,8 @@ class YouTubeLiveRepository @Inject constructor(
         if (cache.size == ids.size) {
             return cache
         }
-        val remote = remoteSource.fetchChannelList(ids)
+        val needed = ids - cache.map { it.id }.toSet()
+        val remote = remoteSource.fetchChannelList(needed)
         localSource.addChannelList(remote)
         return remote
     }

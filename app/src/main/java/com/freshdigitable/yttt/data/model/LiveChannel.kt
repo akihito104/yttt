@@ -20,19 +20,13 @@ data class LiveChannelEntity(
     override val iconUrl: String,
 ) : LiveChannel
 
-interface IdBase<S> {
-    val value: S
-    override fun equals(other: Any?): Boolean
-    override fun hashCode(): Int
-}
-
 interface LiveChannelSection {
     val channelId: LiveChannel.Id
     val title: String
     val position: Long
 }
 
-interface LiveChannelDetail : LiveChannel {
+interface LiveChannelAddition {
     val bannerUrl: String?
     val subscriberCount: BigInteger
     val isSubscriberHidden: Boolean
@@ -44,3 +38,5 @@ interface LiveChannelDetail : LiveChannel {
     val description: String?
     val uploadedPlayList: LivePlaylist.Id?
 }
+
+interface LiveChannelDetail : LiveChannel, LiveChannelAddition

@@ -94,13 +94,17 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         database.dao.updateVideoInvisible(removed)
     }
 
-    private val channelDetails = mutableMapOf<LiveChannel.Id, LiveChannelDetail>()
-    fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannelDetail> {
-        return ids.mapNotNull { channelDetails[it] }
+    suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannelDetail> {
+        return database.dao.findChannelDetail(ids)
     }
 
-    fun addChannelList(channelDetail: Collection<LiveChannelDetail>) {
-        channelDetail.forEach { channelDetails[it.id] = it }
+    suspend fun addChannelList(channelDetail: Collection<LiveChannelDetail>) {
+        val channels = channelDetail.map { it.toDbEntity() }
+        val additions = channelDetail.map { it.toAddition() }
+        database.withTransaction {
+            database.dao.addChannels(channels)
+            database.dao.addChannelAddition(additions)
+        }
     }
 
     private val channelSections = mutableMapOf<LiveChannel.Id, List<LiveChannelSection>>()
@@ -138,4 +142,18 @@ private fun LiveChannelLog.toDbEntity(): LiveChannelLogTable = LiveChannelLogTab
     videoId = videoId,
     channelId = channelId,
     thumbnailUrl = thumbnailUrl,
+)
+
+private fun LiveChannelDetail.toAddition(): LiveChannelAdditionTable = LiveChannelAdditionTable(
+    id = id,
+    bannerUrl = bannerUrl,
+    uploadedPlayList = uploadedPlayList,
+    description = description,
+    customUrl = customUrl,
+    isSubscriberHidden = isSubscriberHidden,
+    keywordsRaw = keywords.joinToString(","),
+    publishedAt = publishedAt,
+    subscriberCount = subscriberCount,
+    videoCount = videoCount,
+    viewsCount = viewsCount,
 )
