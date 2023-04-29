@@ -104,11 +104,12 @@ class YouTubeLiveRepository @Inject constructor(
     private val playlistItems = mutableMapOf<LivePlaylist.Id, List<LivePlaylistItem>>()
     suspend fun fetchPlaylistItems(
         id: LivePlaylist.Id,
+        maxResult: Long = 20,
     ): List<LivePlaylistItem> {
         if (playlistItems[id] != null) {
             return requireNotNull(playlistItems[id])
         }
-        val items = remoteSource.fetchPlaylistItems(id)
+        val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
         playlistItems[items.first().playlistId] = items
         return items
     }

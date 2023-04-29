@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.Period
 import javax.inject.Inject
 
 @HiltViewModel
@@ -80,22 +82,33 @@ class MainViewModel @Inject constructor(
         val first = liveRepository.findAllUnfinishedVideos()
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .map { it.id }.distinct()
-        val currentVideo = liveRepository.fetchVideoList(first)
+        val currentVideo = liveRepository.fetchVideoList(first).map { it.id }.toSet()
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
-        val removed = first.subtract(currentVideo.map { it.id }.toSet())
+        val removed = first.subtract(currentVideo)
         Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
         liveRepository.deleteVideo(removed)
 
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
-        val task = channelIds.map { id ->
+        val channelDetails = liveRepository.fetchChannelList(channelIds)
+        val publishedPeriod = Instant.now() - Period.ofDays(14)
+        val task = channelDetails.map { detail ->
             viewModelScope.async {
-                val logs = liveRepository.fetchLiveChannelLogs(id)
-                if (logs.isEmpty()) {
+                val id = detail.uploadedPlayList ?: return@async
+                val playlistItems = liveRepository.fetchPlaylistItems(id, maxResult = 10)
+                val ids = playlistItems.filter { it.publishedAt.isAfter(publishedPeriod) }
+                    .map { it.videoId } - currentVideo
+                if (ids.isEmpty()) {
                     return@async
                 }
-                liveRepository.fetchVideoList(logs.map { it.videoId })
-                Log.d(TAG, "fetchLiveStreams: channel> $id,count>${logs.size}")
+                val unknownChannels = playlistItems
+                    .filter { it.channel.id != it.videoOwnerChannelId }
+                    .map { it.videoOwnerChannelId }
+                if (unknownChannels.isNotEmpty()) {
+                    liveRepository.fetchChannelList(unknownChannels)
+                }
+                liveRepository.fetchVideoList(ids)
+                Log.d(TAG, "fetchLiveStreams: channel> ${detail.id},count>${ids.size}")
             }
         }
         task.awaitAll()

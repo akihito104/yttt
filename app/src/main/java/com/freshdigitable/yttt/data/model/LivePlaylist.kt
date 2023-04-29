@@ -1,5 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
+import java.time.Instant
+
 interface LivePlaylist {
     val id: Id
 
@@ -14,6 +16,8 @@ interface LivePlaylistItem {
     val thumbnailUrl: String
     val videoId: LiveVideo.Id
     val description: String
+    val videoOwnerChannelId: LiveChannel.Id
+    val publishedAt: Instant
 
     data class Id(override val value: String) : IdBase<String>
 }
@@ -26,4 +30,6 @@ data class LivePlaylistItemEntity(
     override val thumbnailUrl: String,
     override val videoId: LiveVideo.Id,
     override val description: String,
+    override val videoOwnerChannelId: LiveChannel.Id,
+    override val publishedAt: Instant,
 ) : LivePlaylistItem

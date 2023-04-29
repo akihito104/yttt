@@ -249,7 +249,8 @@ fun VideoListItem(item: LivePlaylistItem) {
             }
         }
         Text(
-            text = item.title, modifier = Modifier
+            text = item.title,
+            modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp),
             fontSize = 14.sp,
@@ -325,7 +326,9 @@ private fun LazyColumnPreview() {
                         ),
                         videoId = LiveVideo.Id("f"),
                         thumbnailUrl = "",
-                        description = "description"
+                        description = "description",
+                        videoOwnerChannelId = LiveChannel.Id("e"),
+                        publishedAt = Instant.now(),
                     ) {
                         override fun toString(): String = "id: $id"
                     }

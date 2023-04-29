@@ -125,11 +125,12 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
 
     suspend fun fetchPlaylistItems(
         id: LivePlaylist.Id,
+        maxResult: Long = 20,
         pageToken: String? = null,
     ): List<LivePlaylistItem> = withContext(Dispatchers.IO) {
         youtube.playlistItems().list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
             .setPlaylistId(id.value)
-            .setMaxResults(20)
+            .setMaxResults(maxResult)
             .setPageToken(pageToken)
             .execute()
             .items
@@ -265,7 +266,9 @@ private fun PlaylistItem.toLivePlaylistItem(): LivePlaylistItem =
             title = snippet.channelTitle,
             iconUrl = "",
         ),
-        description = "video description",
+        description = snippet.description,
+        videoOwnerChannelId = LiveChannel.Id(snippet.videoOwnerChannelId),
+        publishedAt = snippet.publishedAt.toInstant(),
     ) {
         override fun toString(): String = toPrettyString()
     }
