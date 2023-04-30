@@ -62,6 +62,24 @@ class YouTubeLiveRepository @Inject constructor(
         return res
     }
 
+    suspend fun fetchVideoListByPlaylistId(
+        id: LivePlaylist.Id,
+        maxResult: Long = 10,
+    ): List<LiveVideo> {
+        val playlistItems = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
+        val uploadedAtAnotherChannel = playlistItems.filter { it.channel.id != it.videoOwnerChannelId }
+            .map { it.videoOwnerChannelId }
+        if (uploadedAtAnotherChannel.isNotEmpty()) {
+            fetchChannelList(uploadedAtAnotherChannel)
+        }
+
+        val videoIds = playlistItems.map { it.videoId }.toSet()
+        val cachedVideo = localSource.fetchVideoList(videoIds)
+        val remoteVideoIds = videoIds - cachedVideo.map { it.id }.toSet()
+        val remoteVideo = fetchVideoList(remoteVideoIds)
+        return cachedVideo + remoteVideo
+    }
+
     suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo {
         return videoRemote[id] ?: fetchVideoList(listOf(id)).first()
     }
@@ -101,17 +119,11 @@ class YouTubeLiveRepository @Inject constructor(
         return remote
     }
 
-    private val playlistItems = mutableMapOf<LivePlaylist.Id, List<LivePlaylistItem>>()
     suspend fun fetchPlaylistItems(
         id: LivePlaylist.Id,
         maxResult: Long = 20,
     ): List<LivePlaylistItem> {
-        if (playlistItems[id] != null) {
-            return requireNotNull(playlistItems[id])
-        }
-        val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
-        playlistItems[items.first().playlistId] = items
-        return items
+        return remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
     }
 
     companion object {

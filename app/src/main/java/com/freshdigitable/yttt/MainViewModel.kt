@@ -21,8 +21,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.Period
 import javax.inject.Inject
 
 @HiltViewModel
@@ -91,24 +89,10 @@ class MainViewModel @Inject constructor(
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
         val channelDetails = liveRepository.fetchChannelList(channelIds)
-        val publishedPeriod = Instant.now() - Period.ofDays(14)
-        val task = channelDetails.map { detail ->
+        val task = channelDetails.mapNotNull { it.uploadedPlayList }.map { id ->
             viewModelScope.async {
-                val id = detail.uploadedPlayList ?: return@async
-                val playlistItems = liveRepository.fetchPlaylistItems(id, maxResult = 10)
-                val ids = playlistItems.filter { it.publishedAt.isAfter(publishedPeriod) }
-                    .map { it.videoId } - currentVideo
-                if (ids.isEmpty()) {
-                    return@async
-                }
-                val unknownChannels = playlistItems
-                    .filter { it.channel.id != it.videoOwnerChannelId }
-                    .map { it.videoOwnerChannelId }
-                if (unknownChannels.isNotEmpty()) {
-                    liveRepository.fetchChannelList(unknownChannels)
-                }
-                liveRepository.fetchVideoList(ids)
-                Log.d(TAG, "fetchLiveStreams: channel> ${detail.id},count>${ids.size}")
+                val videos = liveRepository.fetchVideoListByPlaylistId(id)
+                Log.d(TAG, "fetchLiveStreams: playlistId> $id,count>${videos.size}")
             }
         }
         task.awaitAll()
