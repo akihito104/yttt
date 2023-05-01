@@ -39,7 +39,11 @@ class ChannelViewModel @Inject constructor(
         id: LivePlaylist.Id,
     ): LiveData<List<LivePlaylistItem>> = flow {
         emit(emptyList())
-        val items = repository.fetchPlaylistItems(id)
+        val items = try {
+            repository.fetchPlaylistItems(id)
+        } catch (e: Exception) {
+            emptyList()
+        }
         emit(items)
     }.asLiveData(viewModelScope.coroutineContext)
 }
