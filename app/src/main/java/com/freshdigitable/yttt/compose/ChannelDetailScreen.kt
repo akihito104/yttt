@@ -33,11 +33,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.map
+import androidx.lifecycle.switchMap
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.ChannelPage
 import com.freshdigitable.yttt.ChannelViewModel
 import com.freshdigitable.yttt.CustomCrop
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
@@ -61,15 +65,25 @@ fun ChannelDetailScreen(
     id: LiveChannel.Id,
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
-    val detail = viewModel.fetchChannel(id).observeAsState()
-    ChannelDetailScreen(channelDetail = { detail.value }) { page ->
+    val detail = viewModel.fetchChannel(id)
+    val emptyState = MutableLiveData(emptyList<LivePlaylistItem>())
+    val items = detail.map { it?.uploadedPlayList }
+        .switchMap {
+            if (it != null) {
+                viewModel.fetchPlaylistItems(it)
+            } else {
+                emptyState
+            }
+        }
+    val detailState = detail.observeAsState()
+    ChannelDetailScreen(channelDetail = { detailState.value }) { page ->
         when (page) {
             ChannelPage.ABOUT -> PlainTextPage {
-                detail.value?.description ?: ""
+                detailState.value?.description ?: ""
             }
 
             ChannelPage.DEBUG_CHANNEL -> PlainTextPage {
-                detail.value?.toString() ?: ""
+                detailState.value?.toString() ?: ""
             }
 
             ChannelPage.DEBUG_CHANNEL_SECTION -> {
@@ -81,13 +95,12 @@ fun ChannelDetailScreen(
             }
 
             ChannelPage.UPLOADED -> {
-                val playlist = detail.value?.uploadedPlayList
-                if (playlist == null) {
-                    VideoList { emptyList() }
-                } else {
-                    val items = viewModel.fetchPlaylistItems(playlist).observeAsState(emptyList())
-                    VideoList { items.value }
-                }
+                val itemsState = items.observeAsState(emptyList())
+                PlainListPage(
+                    listProvider = { itemsState.value },
+                    idProvider = { it.id },
+                    content = { VideoListItem(item = it) },
+                )
             }
         }
     }
@@ -209,15 +222,19 @@ private fun PlainTextPage(
 }
 
 @Composable
-fun VideoList(items: () -> List<LivePlaylistItem>) {
+fun <T> PlainListPage(
+    listProvider: () -> List<T>,
+    idProvider: (T) -> IdBase<String>,
+    content: @Composable (T) -> Unit,
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         content = {
             itemsIndexed(
-                items = items(),
-                key = { _, item -> item.id.value },
-            ) { _, item -> VideoListItem(item = item) }
+                items = listProvider(),
+                key = { _, item -> idProvider(item).value },
+            ) { _, item -> content(item) }
         },
     )
 }
@@ -312,8 +329,8 @@ fun ChannelScreenPreview() {
 @Composable
 private fun LazyColumnPreview() {
     MdcTheme {
-        VideoList(
-            items = {
+        PlainListPage(
+            listProvider = {
                 listOf("a", "b", "c").mapIndexed { i, title ->
                     object : LivePlaylistItem by LivePlaylistItemEntity(
                         id = LivePlaylistItem.Id(title),
@@ -333,7 +350,9 @@ private fun LazyColumnPreview() {
                         override fun toString(): String = "id: $id"
                     }
                 }
-            }
+            },
+            idProvider = { it.id },
+            content = { VideoListItem(item = it) },
         )
     }
 }
