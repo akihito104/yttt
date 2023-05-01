@@ -16,6 +16,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
+import com.freshdigitable.yttt.data.model.LiveVideo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flow
 import java.security.MessageDigest
@@ -45,6 +46,16 @@ class ChannelViewModel @Inject constructor(
             emptyList()
         }
         emit(items)
+    }.asLiveData(viewModelScope.coroutineContext)
+
+    fun fetchActivities(id: LiveChannel.Id): LiveData<List<LiveVideo>> = flow {
+        emit(emptyList())
+        val logs = repository.fetchLiveChannelLogs(id, maxResult = 20)
+        val videos = repository.fetchVideoList(logs.map { it.videoId })
+            .map { v -> v to logs.find { v.id == it.videoId } }
+            .sortedBy { it.second?.dateTime }
+            .map { it.first }
+        emit(videos)
     }.asLiveData(viewModelScope.coroutineContext)
 }
 
@@ -88,6 +99,6 @@ class CustomCrop(
 }
 
 enum class ChannelPage {
-    ABOUT, UPLOADED, DEBUG_CHANNEL, DEBUG_CHANNEL_SECTION
+    ABOUT, UPLOADED, ACTIVITIES, DEBUG_CHANNEL, DEBUG_CHANNEL_SECTION
     ;
 }

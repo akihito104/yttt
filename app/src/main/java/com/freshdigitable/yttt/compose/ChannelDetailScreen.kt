@@ -99,7 +99,16 @@ fun ChannelDetailScreen(
                 PlainListPage(
                     listProvider = { itemsState.value },
                     idProvider = { it.id },
-                    content = { VideoListItem(item = it) },
+                    content = { VideoListItem(thumbnailUrl = it.thumbnailUrl, title = it.title) },
+                )
+            }
+
+            ChannelPage.ACTIVITIES -> {
+                val logs = viewModel.fetchActivities(id).observeAsState(emptyList())
+                PlainListPage(
+                    listProvider = { logs.value },
+                    idProvider = { it.id },
+                    content = { VideoListItem(thumbnailUrl = it.thumbnailUrl, title = it.title) },
                 )
             }
         }
@@ -241,7 +250,10 @@ fun <T> PlainListPage(
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun VideoListItem(item: LivePlaylistItem) {
+fun VideoListItem(
+    thumbnailUrl: String,
+    title: String,
+) {
     Row(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -249,7 +261,7 @@ fun VideoListItem(item: LivePlaylistItem) {
                 .aspectRatio(16f / 9f)
                 .align(Alignment.Top),
         ) {
-            if (item.thumbnailUrl.isEmpty()) {
+            if (thumbnailUrl.isEmpty()) {
                 Image(
                     imageVector = Icons.Filled.PlayArrow,
                     contentDescription = "",
@@ -259,14 +271,14 @@ fun VideoListItem(item: LivePlaylistItem) {
                 )
             } else {
                 GlideImage(
-                    model = item.thumbnailUrl,
+                    model = thumbnailUrl,
                     contentDescription = "",
                     modifier = Modifier.fillMaxSize(),
                 )
             }
         }
         Text(
-            text = item.title,
+            text = title,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp),
@@ -352,7 +364,7 @@ private fun LazyColumnPreview() {
                 }
             },
             idProvider = { it.id },
-            content = { VideoListItem(item = it) },
+            content = { VideoListItem(thumbnailUrl = it.thumbnailUrl, title = it.title) },
         )
     }
 }
