@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +40,7 @@ import androidx.lifecycle.map
 import androidx.lifecycle.switchMap
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.freshdigitable.yttt.ChannelDetailChannelSection
 import com.freshdigitable.yttt.ChannelPage
 import com.freshdigitable.yttt.ChannelViewModel
 import com.freshdigitable.yttt.CustomCrop
@@ -45,6 +48,7 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
+import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
@@ -86,12 +90,13 @@ fun ChannelDetailScreen(
                 detailState.value?.toString() ?: ""
             }
 
-            ChannelPage.DEBUG_CHANNEL_SECTION -> {
-                val sectionState = viewModel.fetchChannelSection(id).observeAsState()
-                PlainTextPage {
-                    val section = sectionState.value
-                    section?.toString() ?: ""
-                }
+            ChannelPage.CHANNEL_SECTION -> {
+                val sectionState = viewModel.fetchChannelSection(id).observeAsState(emptyList())
+                PlainListPage(
+                    listProvider = { sectionState.value },
+                    idProvider = { it.id },
+                    content = { cs -> ChannelSectionContent(cs) },
+                )
             }
 
             ChannelPage.UPLOADED -> {
@@ -283,6 +288,96 @@ fun VideoListItem(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp),
             fontSize = 14.sp,
+        )
+    }
+}
+
+@Composable
+private fun ChannelSectionContent(cs: LiveChannelSection) {
+    Column {
+        Text(text = cs.title ?: cs.type.name)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            content = {
+                val content = cs.content
+                items(count = content?.item?.size ?: 0) { i ->
+                    when (content) {
+                        is ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist ->
+                            SinglePlaylistContent(
+                                item = content.item[i],
+                                modifier = Modifier.fillParentMaxWidth(0.4f),
+                            )
+
+                        is ChannelDetailChannelSection.ChannelDetailContent.ChannelList ->
+                            MultiChannelContent(
+                                item = content.item[i],
+                                modifier = Modifier.fillParentMaxWidth(0.3f),
+                            )
+
+                        is ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist ->
+                            MultiPlaylistContent(
+                                item = content.item[i],
+                                modifier = Modifier.fillParentMaxWidth(0.4f),
+                            )
+                    }
+                }
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun SinglePlaylistContent(item: LivePlaylistItem, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        GlideImage(
+            model = item.thumbnailUrl,
+            contentDescription = "",
+            modifier = Modifier.aspectRatio(16 / 9f),
+        )
+        Text(
+            text = item.title,
+            maxLines = 2,
+            fontSize = 12.sp,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun MultiPlaylistContent(item: LivePlaylist, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        GlideImage(
+            model = item.thumbnailUrl,
+            contentDescription = "",
+            modifier = Modifier.aspectRatio(16 / 9f),
+        )
+        Text(
+            text = item.title,
+            maxLines = 2,
+            fontSize = 12.sp,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+fun MultiChannelContent(item: LiveChannel, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        LiveChannelIcon(
+            iconUrl = item.iconUrl,
+            iconSize = 56.dp,
+            modifier = Modifier.padding(vertical = 8.dp),
+        )
+        Text(
+            text = item.title,
+            maxLines = 2,
+            fontSize = 12.sp,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

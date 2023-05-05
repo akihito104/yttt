@@ -4,12 +4,14 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
+import com.freshdigitable.yttt.ChannelDetailChannelSection.ChannelDetailContent
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
@@ -19,6 +21,7 @@ import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LiveVideo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flow
+import java.io.IOException
 import java.security.MessageDigest
 import javax.inject.Inject
 
@@ -33,8 +36,43 @@ class ChannelViewModel @Inject constructor(
 
     fun fetchChannelSection(id: LiveChannel.Id): LiveData<List<LiveChannelSection>> = flow {
         val channelSection = repository.fetchChannelSection(id)
+            .mapNotNull { cs ->
+                try {
+                    fetchSectionItems(cs)
+                } catch (e: IOException) {
+                    Log.e("ChannelViewModel", "fetchChannelSection: error>${cs.title} ", e)
+                    null
+                }
+            }
+            .sortedBy { it.position }
         emit(channelSection)
     }.asLiveData(viewModelScope.coroutineContext)
+
+    private suspend fun fetchSectionItems(cs: LiveChannelSection): ChannelDetailChannelSection {
+        val content = cs.content
+        val c = if (content is LiveChannelSection.Content.Playlist) {
+            if (cs.type == LiveChannelSection.Type.MULTIPLE_PLAYLIST ||
+                cs.type == LiveChannelSection.Type.ALL_PLAYLIST
+            ) {
+                val item = repository.fetchPlaylist(content.item)
+                ChannelDetailContent.MultiPlaylist(item)
+            } else {
+                val p = repository.fetchPlaylist(content.item)
+                val item = repository.fetchPlaylistItems(content.item.first())
+                return ChannelDetailChannelSection(
+                    cs,
+                    _title = p.first().title,
+                    content = ChannelDetailContent.SinglePlaylist(item),
+                )
+            }
+        } else if (content is LiveChannelSection.Content.Channels) {
+            val item = repository.fetchChannelList(content.item)
+            ChannelDetailContent.ChannelList(item)
+        } else {
+            ChannelDetailContent.SinglePlaylist(emptyList())
+        }
+        return ChannelDetailChannelSection(cs, content = c)
+    }
 
     fun fetchPlaylistItems(
         id: LivePlaylist.Id,
@@ -99,6 +137,25 @@ class CustomCrop(
 }
 
 enum class ChannelPage {
-    ABOUT, UPLOADED, ACTIVITIES, DEBUG_CHANNEL, DEBUG_CHANNEL_SECTION
+    ABOUT, CHANNEL_SECTION, UPLOADED, ACTIVITIES, DEBUG_CHANNEL,
     ;
+}
+
+class ChannelDetailChannelSection(
+    channelSection: LiveChannelSection,
+    _title: String? = null,
+    override val content: ChannelDetailContent<*>?,
+) : LiveChannelSection by channelSection {
+    override val title: String? = _title ?: channelSection.title
+
+    sealed class ChannelDetailContent<T> : LiveChannelSection.Content<T> {
+        data class MultiPlaylist(override val item: List<LivePlaylist>) :
+            ChannelDetailContent<LivePlaylist>()
+
+        data class SinglePlaylist(override val item: List<LivePlaylistItem>) :
+            ChannelDetailContent<LivePlaylistItem>()
+
+        data class ChannelList(override val item: List<LiveChannel>) :
+            ChannelDetailContent<LiveChannel>()
+    }
 }

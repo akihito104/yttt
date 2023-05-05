@@ -69,7 +69,7 @@ class YouTubeLiveRepository @Inject constructor(
         val playlistItems = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
         val uploadedAtAnotherChannel = playlistItems
             .filter { it.channel.id != it.videoOwnerChannelId }
-            .map { it.videoOwnerChannelId }
+            .mapNotNull { it.videoOwnerChannelId }
         if (uploadedAtAnotherChannel.isNotEmpty()) {
             fetchChannelList(uploadedAtAnotherChannel)
         }
@@ -118,6 +118,10 @@ class YouTubeLiveRepository @Inject constructor(
         val remote = remoteSource.fetchChannelSection(id)
         localSource.addChannelSection(remote)
         return remote
+    }
+
+    suspend fun fetchPlaylist(ids: Collection<LivePlaylist.Id>): List<LivePlaylist> {
+        return remoteSource.fetchPlaylist(ids)
     }
 
     suspend fun fetchPlaylistItems(
