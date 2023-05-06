@@ -1,7 +1,10 @@
 package com.freshdigitable.yttt.compose
 
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -59,10 +62,14 @@ sealed class MainNavRoute(
     object TimetableTab : MainNavRoute(path = "ttt") {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            TimetableTabScreen(onListItemClicked = {
-                val route = VideoDetail.parseRoute(it)
-                navController.navigate(route)
-            })
+            val activity = LocalContext.current as AppCompatActivity
+            TimetableTabScreen(
+                viewModel = hiltViewModel(viewModelStoreOwner = activity),
+                onListItemClicked = {
+                    val route = VideoDetail.parseRoute(it)
+                    navController.navigate(route)
+                },
+            )
         }
     }
 
