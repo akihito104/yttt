@@ -5,8 +5,12 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
+import androidx.lifecycle.distinctUntilChanged
+import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.compose.TabData
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.AccountRepository.Companion.getNewChooseAccountIntent
 import com.freshdigitable.yttt.data.GoogleService
@@ -21,6 +25,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -76,6 +82,15 @@ class MainViewModel @Inject constructor(
     }.asLiveData(viewModelScope.coroutineContext)
     val upcoming: LiveData<List<LiveVideo>> = videos.map { v ->
         v.filter { it.isUpcoming() }.sortedBy { it.scheduledStartDateTime }
+    }.asLiveData(viewModelScope.coroutineContext)
+    val tabs: LiveData<List<TabData>> = merge(
+        *(TimetablePage.values().map { p ->
+            p.bind(this).map { it.size }.distinctUntilChanged().map { TabData(p, it) }.asFlow()
+        }.toTypedArray())
+    ).scan(emptyList<TabData>()) { accumulator, value ->
+        val map = accumulator.associateBy { it.index }.toMutableMap()
+        map[value.index] = value
+        map.values.sortedBy { it.index }
     }.asLiveData(viewModelScope.coroutineContext)
 
     private suspend fun fetchLiveStreams() {
