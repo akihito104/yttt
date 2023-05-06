@@ -11,8 +11,10 @@ import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.AccountRepository.Companion.getNewChooseAccountIntent
 import com.freshdigitable.yttt.data.GoogleService
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
+import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.android.gms.common.GoogleApiAvailability
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -80,26 +82,34 @@ class MainViewModel @Inject constructor(
         val first = liveRepository.findAllUnfinishedVideos()
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .map { it.id }.distinct()
-        val currentVideo = liveRepository.fetchVideoList(first)
+        val currentVideo = liveRepository.fetchVideoList(first).map { it.id }.toSet()
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
-        val removed = first.subtract(currentVideo.map { it.id }.toSet())
+        val removed = first.subtract(currentVideo)
         Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
         liveRepository.deleteVideo(removed)
 
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
-        val task = channelIds.map { id ->
-            viewModelScope.async {
-                val logs = liveRepository.fetchLiveChannelLogs(id)
-                if (logs.isEmpty()) {
-                    return@async
-                }
-                liveRepository.fetchVideoList(logs.map { it.videoId })
-                Log.d(TAG, "fetchLiveStreams: channel> $id,count>${logs.size}")
-            }
+        val channelDetails = liveRepository.fetchChannelList(channelIds)
+        val task = channelDetails.map { channelDetail ->
+            viewModelScope.async { fetchVideoTask(channelDetail) }
         }
         task.awaitAll()
         Log.d(TAG, "fetchLiveStreams: end")
+    }
+
+    private suspend fun fetchVideoTask(channelDetail: LiveChannelDetail) {
+        val id = channelDetail.uploadedPlayList ?: return
+        try {
+            val videos = liveRepository.fetchVideoListByPlaylistId(id)
+            Log.d(TAG, "fetchLiveStreams: playlistId> $id,count>${videos.size}")
+        } catch (e: Exception) {
+            if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
+                Log.d(TAG, "fetchLiveStreams(reload ${channelDetail.customUrl}) did not update.")
+            } else {
+                Log.e(TAG, "fetchLiveStreams: channel>$channelDetail", e)
+            }
+        }
     }
 
     companion object {

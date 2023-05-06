@@ -4,6 +4,8 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelSection
+import com.freshdigitable.yttt.data.model.LivePlaylist
+import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
@@ -60,6 +62,25 @@ class YouTubeLiveRepository @Inject constructor(
         return res
     }
 
+    suspend fun fetchVideoListByPlaylistId(
+        id: LivePlaylist.Id,
+        maxResult: Long = 10,
+    ): List<LiveVideo> {
+        val playlistItems = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
+        val uploadedAtAnotherChannel = playlistItems
+            .filter { it.channel.id != it.videoOwnerChannelId }
+            .mapNotNull { it.videoOwnerChannelId }
+        if (uploadedAtAnotherChannel.isNotEmpty()) {
+            fetchChannelList(uploadedAtAnotherChannel)
+        }
+
+        val videoIds = playlistItems.map { it.videoId }.toSet()
+        val cachedVideo = localSource.fetchVideoList(videoIds)
+        val remoteVideoIds = videoIds - cachedVideo.map { it.id }.toSet()
+        val remoteVideo = fetchVideoList(remoteVideoIds)
+        return cachedVideo + remoteVideo
+    }
+
     suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo {
         return videoRemote[id] ?: fetchVideoList(listOf(id)).first()
     }
@@ -83,7 +104,8 @@ class YouTubeLiveRepository @Inject constructor(
         if (cache.size == ids.size) {
             return cache
         }
-        val remote = remoteSource.fetchChannelList(ids)
+        val needed = ids - cache.map { it.id }.toSet()
+        val remote = remoteSource.fetchChannelList(needed)
         localSource.addChannelList(remote)
         return remote
     }
@@ -96,6 +118,17 @@ class YouTubeLiveRepository @Inject constructor(
         val remote = remoteSource.fetchChannelSection(id)
         localSource.addChannelSection(remote)
         return remote
+    }
+
+    suspend fun fetchPlaylist(ids: Collection<LivePlaylist.Id>): List<LivePlaylist> {
+        return remoteSource.fetchPlaylist(ids)
+    }
+
+    suspend fun fetchPlaylistItems(
+        id: LivePlaylist.Id,
+        maxResult: Long = 20,
+    ): List<LivePlaylistItem> {
+        return remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
     }
 
     companion object {

@@ -8,15 +8,17 @@ import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.TypeConverter
 import androidx.room.TypeConverters
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelAddition
+import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelLog
+import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import dagger.Module
@@ -24,11 +26,13 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import java.math.BigInteger
 import java.time.Instant
 
 @Database(
     entities = [
         LiveChannelTable::class,
+        LiveChannelAdditionTable::class,
         LiveChannelLogTable::class,
         LiveSubscriptionTable::class,
         LiveVideoTable::class,
@@ -36,13 +40,15 @@ import java.time.Instant
     views = [
         LiveVideoDbView::class,
         LiveSubscriptionDbView::class,
+        LiveChannelDetailDbView::class,
     ],
-    version = 5,
+    version = 6,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
+        AutoMigration(from = 5, to = 6),
     ]
 )
 @TypeConverters(
@@ -51,6 +57,8 @@ import java.time.Instant
     LiveSubscriptionIdConverter::class,
     LiveVideoIdConverter::class,
     LiveChannelLogIdConverter::class,
+    LivePlaylistIdConverter::class,
+    BigIntegerConverter::class,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract val dao: AppDao
@@ -128,6 +136,61 @@ data class LiveChannelTable(
 ) : LiveChannel
 
 @Entity(
+    tableName = "channel_addition",
+    foreignKeys = [
+        ForeignKey(
+            entity = LiveChannelTable::class,
+            parentColumns = ["id"],
+            childColumns = ["id"],
+        ),
+    ],
+)
+data class LiveChannelAdditionTable(
+    @PrimaryKey
+    @ColumnInfo(name = "id")
+    val id: LiveChannel.Id,
+    @ColumnInfo(name = "banner_url")
+    override val bannerUrl: String?,
+    @ColumnInfo(name = "subscriber_count")
+    override val subscriberCount: BigInteger,
+    @ColumnInfo(name = "is_subscriber_hidden")
+    override val isSubscriberHidden: Boolean,
+    @ColumnInfo(name = "video_count")
+    override val videoCount: BigInteger,
+    @ColumnInfo(name = "view_count")
+    override val viewsCount: BigInteger,
+    @ColumnInfo(name = "published_at")
+    override val publishedAt: Instant,
+    @ColumnInfo(name = "custom_url")
+    override val customUrl: String,
+    @ColumnInfo(name = "keywords")
+    val keywordsRaw: String,
+    @ColumnInfo(name = "description")
+    override val description: String?,
+    @ColumnInfo(name = "uploaded_playlist_id")
+    override val uploadedPlayList: LivePlaylist.Id?,
+) : LiveChannelAddition {
+    override val keywords: Collection<String>
+        get() = keywordsRaw.split(",", " ")
+}
+
+@DatabaseView(
+    "SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id",
+    viewName = "channel_detail",
+)
+data class LiveChannelDetailDbView(
+    @ColumnInfo(name = "title")
+    override val title: String,
+    @ColumnInfo(name = "icon")
+    override val iconUrl: String,
+    @Embedded
+    val addition: LiveChannelAdditionTable,
+) : LiveChannelDetail, LiveChannel, LiveChannelAddition by addition {
+    @Ignore
+    override val id: LiveChannel.Id = addition.id
+}
+
+@Entity(
     tableName = "subscription",
     foreignKeys = [
         ForeignKey(
@@ -197,36 +260,6 @@ data class LiveChannelLogTable(
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     override val thumbnailUrl: String = "",
 ) : LiveChannelLog
-
-abstract class Converter<S, O>(
-    private val serialize: (O) -> S,
-    private val createObject: (S) -> O,
-) {
-    @TypeConverter
-    fun toSerial(value: O?): S? = value?.let { serialize(it) }
-
-    @TypeConverter
-    fun toObject(value: S?): O? = value?.let { createObject(it) }
-}
-
-class InstantConverter : Converter<Long, Instant>(
-    serialize = { it.toEpochMilli() },
-    createObject = { Instant.ofEpochMilli(it) },
-)
-
-abstract class IdConverter<E : IdBase<String>>(createObject: (String) -> E) :
-    Converter<String, E>(serialize = { it.value }, createObject = createObject)
-
-class LiveChannelIdConverter : IdConverter<LiveChannel.Id>(createObject = { LiveChannel.Id(it) })
-
-class LiveSubscriptionIdConverter : IdConverter<LiveSubscription.Id>(
-    createObject = { LiveSubscription.Id(it) }
-)
-
-class LiveVideoIdConverter : IdConverter<LiveVideo.Id>(createObject = { LiveVideo.Id(it) })
-
-class LiveChannelLogIdConverter :
-    IdConverter<LiveChannelLog.Id>(createObject = { LiveChannelLog.Id(it) })
 
 @Module
 @InstallIn(SingletonComponent::class)

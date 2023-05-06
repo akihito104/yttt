@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 import java.math.BigInteger
 import java.time.Instant
+import kotlin.reflect.KClass
 
 interface LiveChannel {
     val id: Id
@@ -20,19 +21,7 @@ data class LiveChannelEntity(
     override val iconUrl: String,
 ) : LiveChannel
 
-interface IdBase<S> {
-    val value: S
-    override fun equals(other: Any?): Boolean
-    override fun hashCode(): Int
-}
-
-interface LiveChannelSection {
-    val channelId: LiveChannel.Id
-    val title: String
-    val position: Long
-}
-
-interface LiveChannelDetail : LiveChannel {
+interface LiveChannelAddition {
     val bannerUrl: String?
     val subscriberCount: BigInteger
     val isSubscriberHidden: Boolean
@@ -42,4 +31,36 @@ interface LiveChannelDetail : LiveChannel {
     val customUrl: String
     val keywords: Collection<String>
     val description: String?
+    val uploadedPlayList: LivePlaylist.Id?
+}
+
+interface LiveChannelDetail : LiveChannel, LiveChannelAddition
+
+interface LiveChannelSection : Comparable<LiveChannelSection> {
+    val id: Id
+    val channelId: LiveChannel.Id
+    val title: String?
+    val position: Long
+    val type: Type
+    val content: Content<*>?
+
+    override fun compareTo(other: LiveChannelSection): Int = (position - other.position).toInt()
+
+    data class Id(override val value: String) : IdBase<String>
+    enum class Type(val metaType: KClass<out Content<*>>) {
+        ALL_PLAYLIST(Content.Playlist::class), COMPLETED_EVENT(Content.Playlist::class),
+        LIVE_EVENT(Content.Playlist::class), MULTIPLE_CHANNEL(Content.Channels::class),
+        MULTIPLE_PLAYLIST(Content.Playlist::class),
+        POPULAR_UPLOAD(Content.Playlist::class), RECENT_UPLOAD(Content.Playlist::class),
+        SINGLE_PLAYLIST(Content.Playlist::class), SUBSCRIPTION(Content.Channels::class),
+        UPCOMING_EVENT(Content.Playlist::class),
+        UNDEFININED(Content.Playlist::class),
+    }
+
+    interface Content<T> {
+        data class Playlist(override val item: List<LivePlaylist.Id>) : Content<LivePlaylist.Id>
+        data class Channels(override val item: List<LiveChannel.Id>) : Content<LiveChannel.Id>
+
+        val item: List<T>
+    }
 }

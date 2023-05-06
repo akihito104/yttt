@@ -67,4 +67,10 @@ interface AppDao {
 
     @Query("SELECT * FROM channel WHERE id = :id")
     suspend fun findChannel(id: LiveChannel.Id): LiveChannelTable?
+
+    @Query("SELECT * FROM channel_detail WHERE id IN (:id)")
+    suspend fun findChannelDetail(id: Collection<LiveChannel.Id>): List<LiveChannelDetailDbView>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addChannelAddition(addition: Collection<LiveChannelAdditionTable>)
 }
