@@ -39,22 +39,22 @@ fun VideoDetailScreen(
     id: LiveVideo.Id,
     viewModel: VideoDetailViewModel = hiltViewModel(),
 ) {
-    val item = viewModel.fetchViewDetail(id).observeAsState().value ?: return
-    VideoDetailScreen(video = item)
+    val item = viewModel.fetchViewDetail(id).observeAsState()
+    VideoDetailScreen(videoProvider = { item.value })
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-private fun VideoDetailScreen(video: LiveVideo) {
-    val statsText = video.statsText
+private fun VideoDetailScreen(videoProvider: () -> LiveVideo?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
             .verticalScroll(rememberScrollState()),
     ) {
+        val video = videoProvider()
         GlideImage(
-            model = video.thumbnailUrl,
+            model = video?.thumbnailUrl ?: "",
             contentDescription = "",
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
@@ -67,9 +67,10 @@ private fun VideoDetailScreen(video: LiveVideo) {
             modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Text(
-                text = video.title,
+                text = video?.title ?: "",
                 fontSize = 18.sp,
             )
+            val statsText = video?.statsText ?: ""
             if (statsText.isNotEmpty()) {
                 Text(
                     text = statsText,
@@ -77,8 +78,8 @@ private fun VideoDetailScreen(video: LiveVideo) {
                 )
             }
             LiveChannelContentView(
-                iconUrl = video.channel.iconUrl,
-                title = video.channel.title,
+                iconUrl = video?.channel?.iconUrl ?: "",
+                title = video?.channel?.title ?: "",
             )
             if (video is LiveVideoDetail) {
                 Text(
@@ -119,21 +120,23 @@ private fun Instant.toLocalFormattedText(format: String): String {
 @Composable
 fun VideoDetailComposePreview() {
     MdcTheme {
-        VideoDetailScreen(video = object : LiveVideoDetail, LiveVideo by LiveVideoEntity(
-            id = LiveVideo.Id("a"),
-            title = "video title",
-            channel = LiveChannelEntity(
-                id = LiveChannel.Id("b"),
-                title = "channel title",
-                iconUrl = "",
-            ),
-            scheduledStartDateTime = Instant.now(),
-            thumbnailUrl = "",
-        ) {
-            override val description: String = "description"
-            override val viewerCount: BigInteger? = BigInteger.valueOf(100)
+        VideoDetailScreen(videoProvider = {
+            object : LiveVideoDetail, LiveVideo by LiveVideoEntity(
+                id = LiveVideo.Id("a"),
+                title = "video title",
+                channel = LiveChannelEntity(
+                    id = LiveChannel.Id("b"),
+                    title = "channel title",
+                    iconUrl = "",
+                ),
+                scheduledStartDateTime = Instant.now(),
+                thumbnailUrl = "",
+            ) {
+                override val description: String = "description"
+                override val viewerCount: BigInteger? = BigInteger.valueOf(100)
 
-            override fun toString(): String = "debug json text"
+                override fun toString(): String = "debug json text"
+            }
         })
     }
 }
