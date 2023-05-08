@@ -13,9 +13,9 @@ fun SubscriptionListScreen(
     viewModel: SubscriptionListViewModel = hiltViewModel(),
     onListItemClicked: (LiveChannel.Id) -> Unit,
 ) {
-    val subs = viewModel.subscriptions.observeAsState().value ?: emptyList()
+    val subs = viewModel.subscriptions.observeAsState(emptyList())
     LazyColumn {
-        itemsIndexed(items = subs, key = { _, item -> item.id.value }) { _, item ->
+        itemsIndexed(items = subs.value, key = { _, item -> item.id.value }) { _, item ->
             LiveChannelListItemView(
                 iconUrl = item.channel.iconUrl,
                 title = item.channel.title,

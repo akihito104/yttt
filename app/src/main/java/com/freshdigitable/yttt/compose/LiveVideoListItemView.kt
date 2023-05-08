@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.compose
 
 import android.content.res.Configuration
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Modifier
@@ -46,14 +49,19 @@ fun LiveVideoListItemView(
                 .fillMaxWidth()
                 .wrapContentHeight()
         ) {
-            GlideImage(
-                model = video.thumbnailUrl,
-                contentDescription = "",
-                modifier = Modifier
-                    .fillMaxWidth(fraction = 0.55f)
-                    .aspectRatio(16f / 9f)
-                    .align(Top)
-            )
+            if (video.thumbnailUrl.isNotEmpty()) {
+                GlideImage(
+                    model = video.thumbnailUrl,
+                    contentDescription = "",
+                    modifier = thumbnailModifier.align(Top)
+                )
+            } else {
+                Image(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = "",
+                    modifier = thumbnailModifier.align(Top),
+                )
+            }
             Column(
                 modifier = Modifier
                     .wrapContentHeight()
@@ -83,6 +91,10 @@ fun LiveVideoListItemView(
         )
     }
 }
+
+private val thumbnailModifier: Modifier = Modifier
+    .fillMaxWidth(fraction = 0.55f)
+    .aspectRatio(16f / 9f)
 
 private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd(E) HH:mm")
 private val Instant.toLocalFormattedText: String
