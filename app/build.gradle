@@ -26,6 +26,12 @@ android {
                 ]
             }
         }
+
+        def twitchPFile = rootProject.file("twitch.properties")
+        def twitchProperties = new Properties()
+        twitchProperties.load(new FileInputStream(twitchPFile))
+        buildConfigField("String", "TWITCH_CLIENT_ID", "\"${twitchProperties["twitch_client_id"]}\"")
+        buildConfigField("String", "TWITCH_REDIRECT_URI", "\"${twitchProperties["twitch_redirect_uri"]}\"")
     }
 
     buildFeatures {
@@ -47,6 +53,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = '1.8'
+    }
+    packagingOptions {
+        exclude("dependencies.txt")
     }
 }
 
@@ -99,6 +108,7 @@ dependencies {
     // https://github.com/bumptech/glide
     implementation 'com.github.bumptech.glide:glide:4.15.0'
     kapt 'com.github.bumptech.glide:compiler:4.15.0'
+    implementation "com.squareup.retrofit2:retrofit:2.9.0"
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

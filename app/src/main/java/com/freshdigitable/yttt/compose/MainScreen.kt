@@ -1,5 +1,7 @@
 package com.freshdigitable.yttt.compose
 
+import android.content.Intent
+import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
@@ -16,10 +18,13 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.util.Consumer
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -33,6 +38,12 @@ fun MainScreen() {
     val scaffoldState = rememberScaffoldState(drawerState = drawerState)
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
+    val activity = LocalContext.current as ComponentActivity
+    DisposableEffect(Unit) {
+        val listener = Consumer<Intent> { navController.handleDeepLink(it) }
+        activity.addOnNewIntentListener(listener)
+        onDispose { activity.removeOnNewIntentListener(listener) }
+    }
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
@@ -46,12 +57,20 @@ fun MainScreen() {
             )
         },
         drawerContent = {
-            DrawerContent(onSubscriptionMenuClicked = {
-                navController.navigateToSubscriptionList()
-                coroutineScope.launch {
-                    drawerState.close()
-                }
-            })
+            DrawerContent(
+                onSubscriptionMenuClicked = {
+                    navController.navigateToSubscriptionList()
+                    coroutineScope.launch {
+                        drawerState.close()
+                    }
+                },
+                onTwitchOauth = {
+                    navController.navigate(MainNavRoute.TwitchLogin.path)
+                    coroutineScope.launch {
+                        drawerState.close()
+                    }
+                },
+            )
         },
     ) { padding ->
         MainNavHost(navController, modifier = Modifier.padding(padding))
@@ -88,10 +107,17 @@ private fun TopAppBarImpl(
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-private fun ColumnScope.DrawerContent(onSubscriptionMenuClicked: () -> Unit) {
+private fun ColumnScope.DrawerContent(
+    onSubscriptionMenuClicked: () -> Unit,
+    onTwitchOauth: () -> Unit,
+) {
     ListItem(
         modifier = Modifier.clickable(onClick = onSubscriptionMenuClicked),
         text = { Text("Subscription") }
+    )
+    ListItem(
+        modifier = Modifier.clickable(onClick = onTwitchOauth),
+        text = { Text(text = "twitch auth") }
     )
 }
 
