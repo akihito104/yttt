@@ -59,7 +59,7 @@ fun MainScreen() {
         drawerContent = {
             DrawerContent(
                 onSubscriptionMenuClicked = {
-                    navController.navigateToSubscriptionList()
+                    navController.navigateToSubscriptionList(it)
                     coroutineScope.launch {
                         drawerState.close()
                     }
@@ -108,12 +108,16 @@ private fun TopAppBarImpl(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun ColumnScope.DrawerContent(
-    onSubscriptionMenuClicked: () -> Unit,
+    onSubscriptionMenuClicked: (SubscriptionPage) -> Unit,
     onTwitchOauth: () -> Unit,
 ) {
     ListItem(
-        modifier = Modifier.clickable(onClick = onSubscriptionMenuClicked),
+        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(SubscriptionPage.YOUTUBE) }),
         text = { Text("Subscription") }
+    )
+    ListItem(
+        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(SubscriptionPage.TWITCH) }),
+        text = { Text("Twitch Subscription") }
     )
     ListItem(
         modifier = Modifier.clickable(onClick = onTwitchOauth),

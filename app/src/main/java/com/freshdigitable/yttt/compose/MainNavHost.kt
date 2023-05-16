@@ -45,7 +45,8 @@ fun MainNavHost(
     }
 }
 
-fun NavHostController.navigateToSubscriptionList() = navigate(Subscription.route)
+fun NavHostController.navigateToSubscriptionList(page: SubscriptionPage) =
+    navigate(Subscription.parseRoute(page))
 
 fun NavGraphBuilder.composableWith(
     navController: NavHostController,
@@ -86,12 +87,22 @@ sealed class MainNavRoute(
     }
 
     object Subscription : MainNavRoute(path = "subscription") {
+        override val pathParam: NavArg = NavArg.SUBSCRIPTION_PAGE
+        fun parseRoute(page: SubscriptionPage): String = super.parseRoute(pathParam to page.name)
+
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            SubscriptionListScreen(onListItemClicked = {
-                val route = ChannelDetail.parseRoute(it)
-                navController.navigate(route)
-            })
+            val arg = requireNotNull(backStackEntry.arguments?.getString(pathParam.argName))
+            val page = SubscriptionPage.values().first { it.name == arg }
+            SubscriptionListScreen(
+                page = page,
+                onListItemClicked = {
+                    if (page == SubscriptionPage.YOUTUBE) {
+                        val route = ChannelDetail.parseRoute(it)
+                        navController.navigate(route)
+                    }
+                },
+            )
         }
     }
 
@@ -184,6 +195,7 @@ enum class NavArg(
 ) {
     CHANNEL_ID("channelId", NavType.StringType),
     VIDEO_ID("videoId", NavType.StringType),
+    SUBSCRIPTION_PAGE("subscription_page", NavType.StringType),
 
     ACCESS_TOKEN("access_token", NavType.StringType, nullable = true),
     TOKEN_TYPE("token_type", NavType.StringType, nullable = true),
