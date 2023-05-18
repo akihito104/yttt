@@ -8,12 +8,17 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
+import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
 import com.google.gson.annotations.SerializedName
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -68,12 +73,24 @@ class TwitchLiveRepository @Inject constructor(
         retrofit.create(TwitchHelixService::class.java)
     }
 
-    suspend fun findUsersById(
+    private val users = mutableMapOf<LiveChannel.Id, LiveChannelDetail>()
+    private val me: LiveChannelDetail? = null
+    private suspend fun findUsersById(
         ids: Collection<LiveChannel.Id>? = null,
-    ): List<LiveChannelDetail> = withContext(Dispatchers.IO) {
-        val response = helix.getUser(id = ids?.map { it.value }).execute()
-        val users = response.body() ?: return@withContext emptyList()
-        users.data.map { TwitchLiveChannel(it) }
+    ): List<LiveChannelDetail> {
+        if (ids == null && me != null) {
+            return listOf(me)
+        }
+        val cache = ids?.mapNotNull { users[it] } ?: emptyList()
+        if (ids != null && cache.size == ids.size) {
+            return cache
+        }
+        val remoteIds = if (ids == null) null else ids - cache.map { it.id }.toSet()
+        return withContext(Dispatchers.IO) {
+            val response = helix.getUser(id = remoteIds?.map { it.value }).execute()
+            val users = response.body() ?: return@withContext emptyList()
+            users.data.map { TwitchLiveChannel(it) } + cache
+        }
     }
 
     suspend fun fetchMe(): LiveChannelDetail? = withContext(Dispatchers.IO) {
@@ -130,6 +147,38 @@ class TwitchLiveRepository @Inject constructor(
         } ?: emptyList()
     }
 
+    private val _videos = MutableStateFlow<Map<LiveVideo.Id, LiveVideo>>(emptyMap())
+    val videos: Flow<List<LiveVideo>> = _videos.map { it.values.toList() }
+    suspend fun fetchFollowedStreams(): List<LiveVideo> {
+        val me = fetchMe() ?: return emptyList()
+        return withContext(Dispatchers.IO) {
+            var token: String?
+            val res = mutableListOf<LiveVideo>()
+            do {
+                val followedStreams = helix.getFollowedStreams(me.id.value).execute()
+                val response = followedStreams.body() ?: break
+                res.addAll(response.data.map {
+                    LiveVideoEntity(
+                        id = LiveVideo.Id(it.id),
+                        title = it.title,
+                        channel = findUsersById(listOf(LiveChannel.Id(it.userId))).firstOrNull()
+                            ?: LiveChannelEntity(
+                                id = LiveChannel.Id(it.userId),
+                                title = it.displayName,
+                                iconUrl = "",
+                            ),
+                        actualStartDateTime = it.startedAt,
+                        thumbnailUrl = it.thumbnailUrl,
+                        scheduledStartDateTime = it.startedAt, // XXX
+                    )
+                })
+                token = response.pagination.cursor
+            } while (token != null)
+            _videos.value = res.associateBy { it.id }
+            res
+        }
+    }
+
     companion object {
         @Suppress("unused")
         private val TAG = TwitchLiveRepository::class.simpleName
@@ -170,6 +219,13 @@ interface TwitchHelixService {
         @Query("first") itemsPerPage: Int? = null,
         @Query("after") cursor: String? = null,
     ): Call<FollowedChannelsResponse>
+
+    @GET("helix/streams/followed")
+    fun getFollowedStreams(
+        @Query("user_id") userId: String,
+        @Query("first") itemsPerPage: Int? = null,
+        @Query("after") cursor: String? = null,
+    ): Call<FollowingStreamsResponse>
 }
 
 class TwitchUserResponse(@SerializedName("data") val data: List<TwitchUser>)
@@ -248,6 +304,49 @@ class FollowedChannelsResponse(
         @SerializedName("followed_at")
         val followedAt: Instant,
     )
+}
 
-    class Pagination(@SerializedName("cursor") val cursor: String?)
+class Pagination(@SerializedName("cursor") val cursor: String?)
+
+class FollowingStreamsResponse(
+    @SerializedName("data")
+    val data: Array<FollowingStream>,
+    @SerializedName("pagination")
+    val pagination: Pagination,
+) {
+    class FollowingStream(
+        @SerializedName("id")
+        val id: String,
+        @SerializedName("user_id")
+        val userId: String,
+        @SerializedName("user_login")
+        val loginName: String,
+        @SerializedName("user_name")
+        val displayName: String,
+        @SerializedName("game_id")
+        val gameId: String,
+        @SerializedName("game_name")
+        val gameName: String,
+        @SerializedName("type")
+        val type: String,
+        @SerializedName("title")
+        val title: String,
+        @SerializedName("viewer_count")
+        val viewerCount: Int,
+        @SerializedName("started_at")
+        val startedAt: Instant,
+        @SerializedName("language")
+        val language: String,
+        @SerializedName("thumbnail_url")
+        val _thumbnailUrl: String,
+        @SerializedName("tags")
+        val tags: Array<String>,
+        @SerializedName("is_mature")
+        val isMature: Boolean,
+    ) {
+        val thumbnailUrl: String
+            get() {
+                return _thumbnailUrl.replace("{width}x{height}", "1920x1080")
+            }
+    }
 }

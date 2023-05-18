@@ -17,16 +17,16 @@ import com.freshdigitable.yttt.data.GoogleService
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.source.TwitchLiveRepository
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,6 +36,7 @@ class MainViewModel @Inject constructor(
     private val liveRepository: YouTubeLiveRepository,
     private val accountRepository: AccountRepository,
     private val googleService: GoogleService,
+    private val twitchRepository: TwitchLiveRepository,
 ) : ViewModel() {
 
     fun getConnectionStatus(): Int = googleService.getConnectionStatusCode()
@@ -68,14 +69,18 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             if (_isLoading.value == false) {
                 _isLoading.postValue(true)
-                fetchLiveStreams()
+                listOf(
+                    async { fetchLiveStreams() },
+                    async { fetchTwitchStream() },
+                ).awaitAll()
                 _isLoading.postValue(false)
             }
         }
     }
 
-    private val videos = liveRepository.videos
-        .distinctUntilChanged()
+    private val videos = combine(liveRepository.videos, twitchRepository.videos) { yt, tw ->
+        yt + tw
+    }.distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
     val onAir: LiveData<List<LiveVideo>> = videos.map { v ->
         v.filter { it.isNowOnAir() }.sortedByDescending { it.actualStartDateTime }
@@ -83,15 +88,12 @@ class MainViewModel @Inject constructor(
     val upcoming: LiveData<List<LiveVideo>> = videos.map { v ->
         v.filter { it.isUpcoming() }.sortedBy { it.scheduledStartDateTime }
     }.asLiveData(viewModelScope.coroutineContext)
-    val tabs: LiveData<List<TabData>> = merge(
-        *(TimetablePage.values().map { p ->
+    val tabs: LiveData<List<TabData>> = combine(
+        TimetablePage.values().map { p ->
             p.bind(this).map { it.size }.distinctUntilChanged().map { TabData(p, it) }.asFlow()
-        }.toTypedArray())
-    ).scan(emptyList<TabData>()) { accumulator, value ->
-        val map = accumulator.associateBy { it.index }.toMutableMap()
-        map[value.index] = value
-        map.values.sortedBy { it.index }
-    }.asLiveData(viewModelScope.coroutineContext)
+        }
+    ) { tabs -> tabs.apply { sortBy { it.index } }.toList() }
+        .asLiveData(viewModelScope.coroutineContext)
 
     private suspend fun fetchLiveStreams() {
         val first = liveRepository.findAllUnfinishedVideos()
@@ -125,6 +127,10 @@ class MainViewModel @Inject constructor(
                 Log.e(TAG, "fetchLiveStreams: channel>$channelDetail", e)
             }
         }
+    }
+
+    private suspend fun fetchTwitchStream() {
+        twitchRepository.fetchFollowedStreams()
     }
 
     companion object {
