@@ -78,16 +78,16 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private val videos = combine(liveRepository.videos, twitchRepository.videos) { yt, tw ->
-        yt + tw
-    }.distinctUntilChanged()
+    private val videos = liveRepository.videos.distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val onAir: LiveData<List<LiveVideo>> = videos.map { v ->
-        v.filter { it.isNowOnAir() }.sortedByDescending { it.actualStartDateTime }
-    }.asLiveData(viewModelScope.coroutineContext)
-    val upcoming: LiveData<List<LiveVideo>> = videos.map { v ->
-        v.filter { it.isUpcoming() }.sortedBy { it.scheduledStartDateTime }
-    }.asLiveData(viewModelScope.coroutineContext)
+    val onAir: LiveData<List<LiveVideo>> = combine(videos, twitchRepository.onAir) { yt, tw ->
+        yt + tw
+    }.map { v -> v.filter { it.isNowOnAir() }.sortedByDescending { it.actualStartDateTime } }
+        .asLiveData(viewModelScope.coroutineContext)
+    val upcoming: LiveData<List<LiveVideo>> = combine(videos, twitchRepository.upcoming) { yt, tw ->
+        yt + tw
+    }.map { v -> v.filter { it.isUpcoming() }.sortedBy { it.scheduledStartDateTime } }
+        .asLiveData(viewModelScope.coroutineContext)
     val tabs: LiveData<List<TabData>> = combine(
         TimetablePage.values().map { p ->
             p.bind(this).map { it.size }.distinctUntilChanged().map { TabData(p, it) }.asFlow()
@@ -131,6 +131,11 @@ class MainViewModel @Inject constructor(
 
     private suspend fun fetchTwitchStream() {
         twitchRepository.fetchFollowedStreams()
+        val me = twitchRepository.fetchMe() ?: return
+        val following = twitchRepository.fetchAllFollowings(me.id)
+        following.map {
+            viewModelScope.async { twitchRepository.fetchFollowedStreamSchedule(it.channel.id) }
+        }.awaitAll()
     }
 
     companion object {

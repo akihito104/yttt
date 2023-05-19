@@ -19,11 +19,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.ResponseBody
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -51,10 +53,16 @@ class TwitchLiveRepository @Inject constructor(
             }
         })
         .create()
+    private val okhttp = OkHttpClient.Builder()
+        .addInterceptor(tokenInterceptor)
+        .addInterceptor(HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        })
+        .build()
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://api.twitch.tv/")
         .addConverterFactory(GsonConverterFactory.create(gson))
-        .client(OkHttpClient.Builder().addInterceptor(tokenInterceptor).build())
+        .client(okhttp)
         .build()
 
     suspend fun getAuthorizeUrl(): String = withContext(Dispatchers.IO) {
@@ -66,11 +74,30 @@ class TwitchLiveRepository @Inject constructor(
             redirectUri = BuildConfig.TWITCH_REDIRECT_URI,
             scope = "user:read:follows",
         ).execute()
-        response.raw().request().url().toString()
+        response.raw().request.url.toString()
     }
 
     private val helix: TwitchHelixService by lazy {
         retrofit.create(TwitchHelixService::class.java)
+    }
+
+    private suspend fun <T> fetch(task: suspend TwitchHelixService.() -> T): T =
+        withContext(Dispatchers.IO) { helix.task() }
+
+    private suspend fun <E, P : Pageable<E>> fetchAll(
+        maxCount: Int? = null,
+        call: TwitchHelixService.(String?) -> Call<P>,
+    ): List<E> = fetch {
+        var cursor: String? = null
+        val items = mutableListOf<E>()
+        do {
+            val response = helix.call(cursor).execute()
+            val body = response.body() ?: break
+            items.addAll(body.getItems())
+            cursor = body.pagination.cursor
+
+        } while (cursor != null && (maxCount == null || maxCount < items.size))
+        items
     }
 
     private val users = mutableMapOf<LiveChannel.Id, LiveChannelDetail>()
@@ -86,9 +113,9 @@ class TwitchLiveRepository @Inject constructor(
             return cache
         }
         val remoteIds = if (ids == null) null else ids - cache.map { it.id }.toSet()
-        return withContext(Dispatchers.IO) {
-            val response = helix.getUser(id = remoteIds?.map { it.value }).execute()
-            val users = response.body() ?: return@withContext emptyList()
+        return fetch {
+            val response = getUser(id = remoteIds?.map { it.value }).execute()
+            val users = response.body() ?: return@fetch emptyList()
             users.data.map { TwitchLiveChannel(it) } + cache
         }
     }
@@ -100,83 +127,81 @@ class TwitchLiveRepository @Inject constructor(
     private val followings = mutableListOf<LiveSubscription>()
     suspend fun fetchAllFollowings(
         userId: LiveChannel.Id,
-    ): List<LiveSubscription> = withContext(Dispatchers.IO) {
+    ): List<LiveSubscription> {
         if (followings.isNotEmpty()) {
-            return@withContext followings
+            return followings
         }
-        var cursor: String?
-        val items = mutableListOf<LiveSubscription>()
-        do {
-            val response = helix.getFollowing(userId = userId.value, itemsPerPage = 100).execute()
-            val body = response.body() ?: break
-            if (body.total <= 0) {
-                break
-            }
-            val userIds = body.data.map { LiveChannel.Id(it.id) }
-            val users = findUsersById(userIds)
-            val itemCount = items.size
-            val subs = body.data.mapIndexed { i, b ->
-                val u = users.first { it.id.value == b.id }
-                LiveSubscriptionEntity(
-                    id = LiveSubscription.Id(b.id),
-                    subscribeSince = b.followedAt,
-                    channel = u,
-                    order = itemCount + i,
-                )
-            }
-            items.addAll(subs)
-            cursor = body.pagination.cursor
-        } while (cursor != null)
-        followings.clear()
-        followings.addAll(items)
-        items
-    }
-
-    suspend fun fetchFollowings(
-        userId: LiveChannel.Id,
-        itemsPerPage: Int? = null
-    ): List<LiveChannel> = withContext(Dispatchers.IO) {
-        val response = helix.getFollowing(userId = userId.value, itemsPerPage = itemsPerPage)
-            .execute()
-        response.body()?.data?.map {
-            LiveChannelEntity(
-                id = LiveChannel.Id(it.id),
-                title = it.displayName,
-                iconUrl = ""
+        val items =
+            fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
+        val userIds = items.map { LiveChannel.Id(it.id) }
+        val users = findUsersById(userIds)
+        return items.mapIndexed { i, b ->
+            LiveSubscriptionEntity(
+                id = LiveSubscription.Id(b.id),
+                subscribeSince = b.followedAt,
+                channel = users.firstOrNull { it.id.value == b.id } ?: LiveChannelEntity(
+                    id = LiveChannel.Id(b.id),
+                    title = b.displayName,
+                    iconUrl = "",
+                ),
+                order = i,
             )
-        } ?: emptyList()
+        }
     }
 
-    private val _videos = MutableStateFlow<Map<LiveVideo.Id, LiveVideo>>(emptyMap())
-    val videos: Flow<List<LiveVideo>> = _videos.map { it.values.toList() }
+    private val _videos = MutableStateFlow<List<LiveVideo>>(emptyList())
+    val onAir: Flow<List<LiveVideo>> = _videos
     suspend fun fetchFollowedStreams(): List<LiveVideo> {
         val me = fetchMe() ?: return emptyList()
-        return withContext(Dispatchers.IO) {
-            var token: String?
-            val res = mutableListOf<LiveVideo>()
-            do {
-                val followedStreams = helix.getFollowedStreams(me.id.value).execute()
-                val response = followedStreams.body() ?: break
-                res.addAll(response.data.map {
-                    LiveVideoEntity(
-                        id = LiveVideo.Id(it.id),
-                        title = it.title,
-                        channel = findUsersById(listOf(LiveChannel.Id(it.userId))).firstOrNull()
-                            ?: LiveChannelEntity(
-                                id = LiveChannel.Id(it.userId),
-                                title = it.displayName,
-                                iconUrl = "",
-                            ),
-                        actualStartDateTime = it.startedAt,
-                        thumbnailUrl = it.thumbnailUrl,
-                        scheduledStartDateTime = it.startedAt, // XXX
-                    )
-                })
-                token = response.pagination.cursor
-            } while (token != null)
-            _videos.value = res.associateBy { it.id }
-            res
+        val items = fetchAll { getFollowedStreams(me.id.value, cursor = it) }
+        val userIds = items.map { LiveChannel.Id(it.userId) }
+        val users = findUsersById(userIds)
+        val res = items.map { v ->
+            LiveVideoEntity(
+                id = LiveVideo.Id(v.id),
+                title = v.title,
+                channel = users.firstOrNull { it.id.value == v.userId } ?: LiveChannelEntity(
+                    id = LiveChannel.Id(v.userId),
+                    title = v.displayName,
+                    iconUrl = "",
+                ),
+                actualStartDateTime = v.startedAt,
+                thumbnailUrl = v.thumbnailUrl,
+                scheduledStartDateTime = v.startedAt, // XXX
+            )
         }
+        _videos.value = res
+        return res
+    }
+
+    private val _upcoming = MutableStateFlow<Map<LiveChannel.Id, List<LiveVideo>>>(emptyMap())
+    val upcoming: Flow<List<LiveVideo>> = _upcoming.map { it.values.flatten() }
+    suspend fun fetchFollowedStreamSchedule(
+        id: LiveChannel.Id,
+        maxCount: Int = 10,
+    ): List<LiveVideo> {
+        val s =
+            fetchAll(maxCount) { getChannelStreamSchedule(broadcasterId = id.value, cursor = it) }
+        val items = s.flatMap { it.segments?.toList() ?: emptyList() }
+        val user = findUsersById(listOf(id)).firstOrNull() ?: LiveChannelEntity(
+            id = id,
+            title = s.first().broadcasterName,
+            iconUrl = ""
+        )
+        val res = items.map { v ->
+            LiveVideoEntity(
+                id = LiveVideo.Id(v.id),
+                title = v.title,
+                scheduledStartDateTime = v.startTime,
+                scheduledEndDateTime = v.endTime,
+                thumbnailUrl = "",
+                channel = user,
+            )
+        }
+        _upcoming.update {
+            it.toMutableMap().apply { this[id] = res }
+        }
+        return res
     }
 
     companion object {
@@ -226,6 +251,23 @@ interface TwitchHelixService {
         @Query("first") itemsPerPage: Int? = null,
         @Query("after") cursor: String? = null,
     ): Call<FollowingStreamsResponse>
+
+    /// https://dev.twitch.tv/docs/api/reference/#get-channel-stream-schedule
+    @GET("helix/schedule")
+    fun getChannelStreamSchedule(
+        @Query("broadcaster_id") broadcasterId: String,
+        @Query("id") segmentId: String? = null,
+        // The UTC date and time
+        // If not specified, the request returns segments starting after the current UTC date and time.
+        // Specify the date and time in RFC3339 format (for example, 2022-09-01T00:00:00Z).
+        @Query("start_time") startTime: Instant? = null,
+        @Query("end_time") endTime: Instant? = null,
+        // The maximum number of items to return per page in the response.
+        // The minimum page size is 1 item per page and the maximum is 25 items per page.
+        // The default is 20.
+        @Query("first") itemsPerPage: Int? = null,
+        @Query("after") cursor: String? = null,
+    ): Call<ChannelStreamScheduleResponse>
 }
 
 class TwitchUserResponse(@SerializedName("data") val data: List<TwitchUser>)
@@ -288,12 +330,13 @@ class TwitchTokenInterceptor @Inject constructor(
 
 class FollowedChannelsResponse(
     @SerializedName("data")
-    val data: List<Broadcaster>,
+    val data: Array<Broadcaster>,
     @SerializedName("pagination")
-    val pagination: Pagination,
+    override val pagination: Pagination,
     @SerializedName("total")
     val total: Int,
-) {
+) : Pageable<FollowedChannelsResponse.Broadcaster> {
+    override fun getItems(): Array<Broadcaster> = data
     class Broadcaster(
         @SerializedName("broadcaster_id")
         val id: String,
@@ -307,13 +350,18 @@ class FollowedChannelsResponse(
 }
 
 class Pagination(@SerializedName("cursor") val cursor: String?)
+interface Pageable<T> {
+    val pagination: Pagination
+    fun getItems(): Array<T>
+}
 
 class FollowingStreamsResponse(
     @SerializedName("data")
     val data: Array<FollowingStream>,
     @SerializedName("pagination")
-    val pagination: Pagination,
-) {
+    override val pagination: Pagination,
+) : Pageable<FollowingStreamsResponse.FollowingStream> {
+    override fun getItems(): Array<FollowingStream> = data
     class FollowingStream(
         @SerializedName("id")
         val id: String,
@@ -345,8 +393,58 @@ class FollowingStreamsResponse(
         val isMature: Boolean,
     ) {
         val thumbnailUrl: String
-            get() {
-                return _thumbnailUrl.replace("{width}x{height}", "1920x1080")
-            }
+            get() = _thumbnailUrl.replace("{width}x{height}", "1920x1080")
     }
+}
+
+class ChannelStreamScheduleResponse(
+    @SerializedName("data")
+    val data: ChannelStreamSchedule,
+    @SerializedName("pagination")
+    override val pagination: Pagination,
+) : Pageable<ChannelStreamScheduleResponse.ChannelStreamSchedule> {
+    override fun getItems(): Array<ChannelStreamSchedule> = arrayOf(data)
+    class ChannelStreamSchedule(
+        @SerializedName("segments")
+        val segments: Array<StreamSchedule>?,
+        @SerializedName("broadcaster_id")
+        val broadcasterId: String,
+        @SerializedName("broadcaster_name")
+        val broadcasterName: String,
+        @SerializedName("broadcaster_login")
+        val broadcasterLogin: String,
+        @SerializedName("vacation")
+        val vacation: Vacation?,
+    )
+
+    class StreamSchedule(
+        @SerializedName("id")
+        val id: String,
+        @SerializedName("start_time")
+        val startTime: Instant,
+        @SerializedName("end_time")
+        val endTime: Instant,
+        @SerializedName("title")
+        val title: String,
+        @SerializedName("canceled_until")
+        val canceledUntil: String?,
+        @SerializedName("category")
+        val category: StreamCategory?,
+        @SerializedName("is_recurring")
+        val isRecurring: Boolean,
+    )
+
+    class StreamCategory(
+        @SerializedName("id")
+        val id: String,
+        @SerializedName("name")
+        val name: String,
+    )
+
+    class Vacation(
+        @SerializedName("start_time")
+        val startTime: Instant,
+        @SerializedName("end_time")
+        val endTime: Instant,
+    )
 }
