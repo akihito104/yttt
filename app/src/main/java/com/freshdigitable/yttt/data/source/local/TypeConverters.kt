@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelLog
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -29,12 +30,16 @@ class InstantConverter : Converter<Long, Instant>(
 abstract class IdConverter<E : IdBase<String>>(createObject: (String) -> E) :
     Converter<String, E>(serialize = { it.value }, createObject = createObject)
 
-class LiveChannelIdConverter : IdConverter<LiveChannel.Id>(createObject = { LiveChannel.Id(it) })
+class LiveChannelIdConverter :
+    IdConverter<LiveChannel.Id>(createObject = { LiveChannel.Id(it, LivePlatform.YOUTUBE) })
+
 class LiveSubscriptionIdConverter : IdConverter<LiveSubscription.Id>(
-    createObject = { LiveSubscription.Id(it) }
+    createObject = { LiveSubscription.Id(it, LivePlatform.YOUTUBE) }
 )
 
-class LiveVideoIdConverter : IdConverter<LiveVideo.Id>(createObject = { LiveVideo.Id(it) })
+class LiveVideoIdConverter :
+    IdConverter<LiveVideo.Id>(createObject = { LiveVideo.Id(it, LivePlatform.YOUTUBE) })
+
 class LiveChannelLogIdConverter :
     IdConverter<LiveChannelLog.Id>(createObject = { LiveChannelLog.Id(it) })
 

@@ -5,10 +5,12 @@ import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.google.gson.GsonBuilder
 import com.google.gson.TypeAdapter
@@ -102,7 +104,7 @@ class TwitchLiveRepository @Inject constructor(
 
     private val users = mutableMapOf<LiveChannel.Id, LiveChannelDetail>()
     private val me: LiveChannelDetail? = null
-    private suspend fun findUsersById(
+    suspend fun findUsersById(
         ids: Collection<LiveChannel.Id>? = null,
     ): List<LiveChannelDetail> {
         if (ids == null && me != null) {
@@ -133,14 +135,14 @@ class TwitchLiveRepository @Inject constructor(
         }
         val items =
             fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
-        val userIds = items.map { LiveChannel.Id(it.id) }
+        val userIds = items.map { LiveChannel.Id(it.id, LivePlatform.TWITCH) }
         val users = findUsersById(userIds)
         return items.mapIndexed { i, b ->
             LiveSubscriptionEntity(
-                id = LiveSubscription.Id(b.id),
+                id = LiveSubscription.Id(b.id, LivePlatform.TWITCH),
                 subscribeSince = b.followedAt,
                 channel = users.firstOrNull { it.id.value == b.id } ?: LiveChannelEntity(
-                    id = LiveChannel.Id(b.id),
+                    id = LiveChannel.Id(b.id, LivePlatform.TWITCH),
                     title = b.displayName,
                     iconUrl = "",
                 ),
@@ -149,28 +151,34 @@ class TwitchLiveRepository @Inject constructor(
         }
     }
 
-    private val _videos = MutableStateFlow<List<LiveVideo>>(emptyList())
-    val onAir: Flow<List<LiveVideo>> = _videos
+    private val _onAir = MutableStateFlow<List<LiveVideo>>(emptyList())
+    val onAir: Flow<List<LiveVideo>> = _onAir
     suspend fun fetchFollowedStreams(): List<LiveVideo> {
         val me = fetchMe() ?: return emptyList()
         val items = fetchAll { getFollowedStreams(me.id.value, cursor = it) }
-        val userIds = items.map { LiveChannel.Id(it.userId) }
+        val userIds = items.map { LiveChannel.Id(it.userId, LivePlatform.TWITCH) }
         val users = findUsersById(userIds)
         val res = items.map { v ->
-            LiveVideoEntity(
-                id = LiveVideo.Id(v.id),
+            object : LiveVideoDetail, LiveVideo by LiveVideoEntity(
+                id = LiveVideo.Id(v.id, LivePlatform.TWITCH),
                 title = v.title,
                 channel = users.firstOrNull { it.id.value == v.userId } ?: LiveChannelEntity(
-                    id = LiveChannel.Id(v.userId),
+                    id = LiveChannel.Id(v.userId, LivePlatform.TWITCH),
                     title = v.displayName,
                     iconUrl = "",
                 ),
                 actualStartDateTime = v.startedAt,
                 thumbnailUrl = v.thumbnailUrl,
                 scheduledStartDateTime = v.startedAt, // XXX
-            )
+            ) {
+                override val description: String
+                    get() = ""
+                override val viewerCount: BigInteger?
+                    get() = BigInteger.valueOf(v.viewerCount.toLong())
+
+            }
         }
-        _videos.value = res
+        _onAir.value = res
         return res
     }
 
@@ -190,7 +198,7 @@ class TwitchLiveRepository @Inject constructor(
         )
         val res = items.map { v ->
             LiveVideoEntity(
-                id = LiveVideo.Id(v.id),
+                id = LiveVideo.Id(v.id, LivePlatform.TWITCH),
                 title = v.title,
                 scheduledStartDateTime = v.startTime,
                 scheduledEndDateTime = v.endTime,
@@ -202,6 +210,12 @@ class TwitchLiveRepository @Inject constructor(
             it.toMutableMap().apply { this[id] = res }
         }
         return res
+    }
+
+    fun fetchStreamDetail(id: LiveVideo.Id): LiveVideo {
+        check(id.platform == LivePlatform.TWITCH)
+        return _onAir.value.firstOrNull { it.id == id } ?: _upcoming.value.values.flatten()
+            .first { it.id == id }
     }
 
     companion object {
@@ -289,7 +303,7 @@ class TwitchUser(
 )
 
 private data class TwitchLiveChannel(private val user: TwitchUser) : LiveChannelDetail {
-    override val id: LiveChannel.Id = LiveChannel.Id(user.id)
+    override val id: LiveChannel.Id = LiveChannel.Id(user.id, LivePlatform.TWITCH)
     override val title: String
         get() = user.displayName
     override val iconUrl: String

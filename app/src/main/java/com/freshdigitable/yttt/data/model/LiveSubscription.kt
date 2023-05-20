@@ -11,7 +11,7 @@ interface LiveSubscription : Comparable<LiveSubscription> {
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
 
-    data class Id(override val value: String) : IdBase<String>
+    data class Id(override val value: String, override val platform: LivePlatform) : IdBase<String>
 
     override fun compareTo(other: LiveSubscription): Int = order - other.order
 }

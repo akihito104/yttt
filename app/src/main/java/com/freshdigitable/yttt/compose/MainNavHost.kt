@@ -20,6 +20,7 @@ import com.freshdigitable.yttt.compose.MainNavRoute.TimetableTab
 import com.freshdigitable.yttt.compose.MainNavRoute.TwitchLogin
 import com.freshdigitable.yttt.compose.MainNavRoute.VideoDetail
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.source.TwitchOauthToken
 
@@ -122,12 +123,18 @@ sealed class MainNavRoute(
         override val pathParam: NavArg = NavArg.VIDEO_ID
 
         fun parseRoute(id: LiveVideo.Id): String =
-            super.parseRoute(pathParam = pathParam to id.value)
+            super.parseRoute(pathParam = pathParam to "${id.platform.name}_${id.value}")
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             val arg = requireNotNull(backStackEntry.arguments?.getString(pathParam.argName))
-            VideoDetailScreen(id = LiveVideo.Id(arg))
+                .split("_")
+            VideoDetailScreen(
+                id = LiveVideo.Id(
+                    value = arg[1],
+                    platform = LivePlatform.values().first { it.name == arg[0] },
+                )
+            )
         }
     }
 
