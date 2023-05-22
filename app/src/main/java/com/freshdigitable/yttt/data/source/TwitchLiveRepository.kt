@@ -218,6 +218,26 @@ class TwitchLiveRepository @Inject constructor(
             .first { it.id == id }
     }
 
+    suspend fun fetchVideosByChannelId(id: LiveChannel.Id, itemCount: Int = 20): List<LiveVideo> {
+        val resp = fetch { getVideoByUserId(userId = id.value, itemsPerPage = itemCount).execute() }
+        val videos = resp.body()?.data ?: emptyArray()
+        return videos.map {
+            LiveVideoEntity(
+                id = LiveVideo.Id(it.id),
+                thumbnailUrl = it.thumbnailUrl.replace("%{width}", "1920")
+                    .replace("%{height}", "1080"),
+                channel = LiveChannelEntity(
+                    id = LiveChannel.Id(it.userId),
+                    title = it.userDisplayName,
+                    iconUrl = "",
+                ),
+                title = it.title,
+                scheduledStartDateTime = null,
+                actualStartDateTime = it.publishedAt,
+            )
+        }
+    }
+
     companion object {
         @Suppress("unused")
         private val TAG = TwitchLiveRepository::class.simpleName
@@ -282,6 +302,21 @@ interface TwitchHelixService {
         @Query("first") itemsPerPage: Int? = null,
         @Query("after") cursor: String? = null,
     ): Call<ChannelStreamScheduleResponse>
+
+    // https://dev.twitch.tv/docs/api/reference/#get-videos
+    @GET("helix/videos")
+    fun getVideoByUserId(
+        @Query("user_id") userId: String,
+        @Query("language") language: String? = null,
+        @Query("period") period: String? = null,
+        @Query("sort") sort: String? = null,
+        @Query("type") type: String? = null,
+        // The maximum number of items to return per page in the response.
+        // The minimum page size is 1 item per page and the maximum is 100. The default is 20.
+        @Query("first") itemsPerPage: Int? = null,
+        @Query("after") nextCursor: String? = null,
+        @Query("before") prevCursor: String? = null,
+    ): Call<VideosResponse>
 }
 
 class TwitchUserResponse(@SerializedName("data") val data: List<TwitchUser>)
@@ -460,5 +495,56 @@ class ChannelStreamScheduleResponse(
         val startTime: Instant,
         @SerializedName("end_time")
         val endTime: Instant,
+    )
+}
+
+class VideosResponse(
+    @SerializedName("data")
+    val data: Array<Video>,
+    @SerializedName("pagination")
+    val pagination: Pagination,
+) {
+    class Video(
+        @SerializedName("id")
+        val id: String,
+        @SerializedName("stream_id")
+        val streamId: String,
+        @SerializedName("user_id")
+        val userId: String,
+        @SerializedName("user_login")
+        val userLoginName: String,
+        @SerializedName("user_name")
+        val userDisplayName: String,
+        @SerializedName("title")
+        val title: String,
+        @SerializedName("description")
+        val description: String,
+        @SerializedName("created_at")
+        val createdAt: Instant,
+        @SerializedName("published_at")
+        val publishedAt: Instant,
+        @SerializedName("url")
+        val url: String,
+        @SerializedName("thumbnail_url")
+        val thumbnailUrl: String,
+        @SerializedName("viewable")
+        val viewable: String,
+        @SerializedName("view_count")
+        val viewCount: Int,
+        @SerializedName("language")
+        val language: String,
+        @SerializedName("type")
+        val type: String,
+        @SerializedName("duration")
+        val duration: String,
+        @SerializedName("muted_segments")
+        val mutedSegments: Array<MutedSegment>,
+    )
+
+    class MutedSegment(
+        @SerializedName("duration")
+        val duration: Int, // [sec.]
+        @SerializedName("offset")
+        val offset: Int, // [sec.]
     )
 }

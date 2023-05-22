@@ -98,10 +98,8 @@ sealed class MainNavRoute(
             SubscriptionListScreen(
                 page = page,
                 onListItemClicked = {
-                    if (page == SubscriptionPage.YOUTUBE) {
-                        val route = ChannelDetail.parseRoute(it)
-                        navController.navigate(route)
-                    }
+                    val route = ChannelDetail.parseRoute(it)
+                    navController.navigate(route)
                 },
             )
         }
@@ -110,12 +108,17 @@ sealed class MainNavRoute(
     object ChannelDetail : MainNavRoute(path = "channel") {
         override val pathParam: NavArg = NavArg.CHANNEL_ID
         fun parseRoute(id: LiveChannel.Id): String =
-            super.parseRoute(pathParam = pathParam to id.value)
+            super.parseRoute(pathParam = pathParam to "${id.platform.name}___${id.value}")
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             val arg = requireNotNull(backStackEntry.arguments?.getString(pathParam.argName))
-            ChannelDetailScreen(id = LiveChannel.Id(arg))
+                .split("___")
+            ChannelDetailScreen(
+                id = LiveChannel.Id(
+                    value = arg[1],
+                    platform = LivePlatform.values().first { it.name == arg[0] }),
+            )
         }
     }
 

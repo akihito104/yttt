@@ -35,9 +35,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.map
-import androidx.lifecycle.switchMap
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.ChannelDetailChannelSection
@@ -70,17 +67,11 @@ fun ChannelDetailScreen(
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
     val detail = viewModel.fetchChannel(id)
-    val emptyState = MutableLiveData(emptyList<LivePlaylistItem>())
-    val items = detail.map { it?.uploadedPlayList }
-        .switchMap {
-            if (it != null) {
-                viewModel.fetchPlaylistItems(it)
-            } else {
-                emptyState
-            }
-        }
+    val items = viewModel.fetchVideoListItems(detail)
     val detailState = detail.observeAsState()
-    ChannelDetailScreen(channelDetail = { detailState.value }) { page ->
+    ChannelDetailScreen(
+        pages = ChannelPage.findByPlatform(id.platform),
+        channelDetail = { detailState.value }) { page ->
         when (page) {
             ChannelPage.ABOUT -> PlainTextPage {
                 detailState.value?.description ?: ""
@@ -123,11 +114,12 @@ fun ChannelDetailScreen(
 @Composable
 private fun ChannelDetailScreen(
     channelDetail: () -> LiveChannelDetail?,
+    pages: Array<ChannelPage> = ChannelPage.values(),
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
         ChannelDetailHeader(channelDetail)
-        ChannelDetailPager(pageContent)
+        ChannelDetailPager(pages, pageContent)
     }
 }
 
@@ -187,6 +179,7 @@ private fun ChannelDetailHeader(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun ChannelDetailPager(
+    pages: Array<ChannelPage> = ChannelPage.values(),
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -196,7 +189,7 @@ private fun ChannelDetailPager(
             edgePadding = 0.dp,
         ) {
             val coroutineScope = rememberCoroutineScope()
-            ChannelPage.values().forEach { p ->
+            pages.forEach { p ->
                 Tab(
                     selected = pagerState.currentPage == p.ordinal,
                     onClick = {
@@ -209,11 +202,11 @@ private fun ChannelDetailPager(
             }
         }
         HorizontalPager(
-            pageCount = ChannelPage.values().size,
+            pageCount = pages.size,
             state = pagerState,
-            key = { i -> ChannelPage.values()[i].ordinal },
+            key = { i -> pages[i].ordinal },
         ) { index ->
-            pageContent(ChannelPage.values()[index])
+            pageContent(pages[index])
         }
     }
 }
@@ -252,6 +245,8 @@ fun <T> PlainListPage(
         },
     )
 }
+
+class VideoListItemEntity(val id: IdBase<String>, val thumbnailUrl: String, val title: String)
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
