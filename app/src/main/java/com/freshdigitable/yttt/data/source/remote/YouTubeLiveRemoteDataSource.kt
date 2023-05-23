@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelLogEntity
 import com.freshdigitable.yttt.data.model.LiveChannelSection
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
@@ -171,11 +172,13 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
     }
 }
 
+private fun liveChannelId(id: String): LiveChannel.Id = LiveChannel.Id(id, LivePlatform.YOUTUBE)
+private fun liveVideoId(id: String): LiveVideo.Id = LiveVideo.Id(id, LivePlatform.YOUTUBE)
 private fun Subscription.toLiveSubscription(order: Int): LiveSubscription = LiveSubscriptionEntity(
-    id = LiveSubscription.Id(id),
+    id = LiveSubscription.Id(id, LivePlatform.YOUTUBE),
     subscribeSince = Instant.ofEpochMilli(snippet.publishedAt.value),
     channel = LiveChannelEntity(
-        id = LiveChannel.Id(snippet.resourceId.channelId),
+        id = liveChannelId(snippet.resourceId.channelId),
         iconUrl = snippet.thumbnails.url,
         title = snippet.title,
     ),
@@ -185,16 +188,16 @@ private fun Subscription.toLiveSubscription(order: Int): LiveSubscription = Live
 private fun Activity.toChannelLog(): LiveChannelLog = LiveChannelLogEntity(
     id = LiveChannelLog.Id(id),
     dateTime = Instant.ofEpochMilli(snippet.publishedAt.value),
-    videoId = LiveVideo.Id(contentDetails.upload.videoId),
-    channelId = LiveChannel.Id(snippet.channelId),
+    videoId = liveVideoId(contentDetails.upload.videoId),
+    channelId = liveChannelId(snippet.channelId),
     thumbnailUrl = snippet.thumbnails.url,
 )
 
 private fun Video.toLiveVideo(): LiveVideoDetail =
     object : LiveVideoDetail, LiveVideo by LiveVideoEntity(
-        id = LiveVideo.Id(id),
+        id = liveVideoId(id),
         channel = LiveChannelEntity(
-            id = LiveChannel.Id(snippet.channelId),
+            id = liveChannelId(snippet.channelId),
             title = snippet.channelTitle,
             iconUrl = "",
         ),
@@ -220,7 +223,7 @@ private val ThumbnailDetails.url: String
 private data class LiveChannelImpl(
     private val channel: Channel,
 ) : LiveChannelDetail, LiveChannel by LiveChannelEntity(
-    id = LiveChannel.Id(channel.id),
+    id = liveChannelId(channel.id),
     title = channel.snippet.title,
     iconUrl = channel.snippet.thumbnails.url,
 ) {
@@ -254,7 +257,7 @@ private data class LiveChannelSectionImpl(
     override val id: LiveChannelSection.Id
         get() = LiveChannelSection.Id(channelSection.id)
     override val channelId: LiveChannel.Id
-        get() = LiveChannel.Id(channelSection.snippet.channelId)
+        get() = liveChannelId(channelSection.snippet.channelId)
     override val title: String?
         get() = channelSection.snippet.title
     override val position: Long
@@ -296,7 +299,7 @@ private data class LiveChannelSectionImpl(
                 )
 
                 LiveChannelSection.Content.Channels::class -> LiveChannelSection.Content.Channels(
-                    contentDetails.channels.map { LiveChannel.Id(it) }
+                    contentDetails.channels.map { liveChannelId(it) }
                 )
 
                 else -> throw IllegalStateException()
@@ -322,14 +325,14 @@ private fun PlaylistItem.toLivePlaylistItem(): LivePlaylistItem =
         playlistId = LivePlaylist.Id(snippet.playlistId),
         title = snippet.title,
         thumbnailUrl = snippet.thumbnails?.url ?: "",
-        videoId = LiveVideo.Id(contentDetails.videoId),
+        videoId = liveVideoId(contentDetails.videoId),
         channel = LiveChannelEntity(
-            id = LiveChannel.Id(snippet.channelId),
+            id = liveChannelId(snippet.channelId),
             title = snippet.channelTitle,
             iconUrl = "",
         ),
         description = snippet.description,
-        videoOwnerChannelId = snippet.videoOwnerChannelId?.let { LiveChannel.Id(it) },
+        videoOwnerChannelId = snippet.videoOwnerChannelId?.let { liveChannelId(it) },
         publishedAt = snippet.publishedAt.toInstant(),
     ) {
         override fun toString(): String = toPrettyString()

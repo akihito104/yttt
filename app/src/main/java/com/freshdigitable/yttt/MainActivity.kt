@@ -55,12 +55,13 @@ class MainActivity : AppCompatActivity() {
             shouldShowRequestPermissionRationale(android.Manifest.permission.GET_ACCOUNTS) -> {
                 TODO("")
             }
+
             else -> getAccountRequestPermission.launch(android.Manifest.permission.GET_ACCOUNTS)
         }
     }
 
-    private fun loadTimeline() {
-        val loggedIn = viewModel.login()
+    private fun loadTimeline(account: String? = null) {
+        val loggedIn = viewModel.login(account)
         check(loggedIn) { "login failure..." }
         viewModel.loadList()
     }
@@ -85,8 +86,7 @@ class MainActivity : AppCompatActivity() {
             }
         }) {
             if (it.isNotEmpty()) {
-                viewModel.login(it)
-                viewModel.loadList()
+                loadTimeline(it)
             }
         }
 

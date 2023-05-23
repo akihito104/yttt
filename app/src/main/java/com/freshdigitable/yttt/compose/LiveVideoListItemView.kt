@@ -21,11 +21,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.load.Key
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.google.accompanist.themeadapter.material.MdcTheme
+import java.security.MessageDigest
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -54,7 +56,9 @@ fun LiveVideoListItemView(
                     model = video.thumbnailUrl,
                     contentDescription = "",
                     modifier = thumbnailModifier.align(Top)
-                )
+                ) {
+                    it.signature(ThumbnailKey(video.id.value))
+                }
             } else {
                 Image(
                     imageVector = Icons.Filled.PlayArrow,
@@ -120,5 +124,11 @@ private fun LiveVideoListItemViewPreview() {
                 thumbnailUrl = "",
             )
         ) {}
+    }
+}
+
+private data class ThumbnailKey(val id: String) : Key {
+    override fun updateDiskCacheKey(messageDigest: MessageDigest) {
+        messageDigest.update(id.toByteArray(Key.CHARSET))
     }
 }

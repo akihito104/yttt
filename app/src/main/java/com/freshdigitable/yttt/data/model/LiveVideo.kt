@@ -20,7 +20,10 @@ interface LiveVideo {
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
 
-    data class Id(override val value: String) : IdBase<String>
+    data class Id(
+        override val value: String,
+        override val platform: LivePlatform = LivePlatform.YOUTUBE,
+    ) : IdBase<String>
 }
 
 data class LiveVideoEntity(

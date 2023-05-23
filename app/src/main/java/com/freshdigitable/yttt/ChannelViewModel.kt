@@ -6,19 +6,26 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
+import androidx.lifecycle.liveData
+import androidx.lifecycle.map
+import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
 import com.freshdigitable.yttt.ChannelDetailChannelSection.ChannelDetailContent
+import com.freshdigitable.yttt.compose.VideoListItemEntity
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelSection
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.source.TwitchLiveRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flow
 import java.io.IOException
@@ -28,13 +35,21 @@ import javax.inject.Inject
 @HiltViewModel
 class ChannelViewModel @Inject constructor(
     private val repository: YouTubeLiveRepository,
+    private val twitchRepository: TwitchLiveRepository,
 ) : ViewModel() {
     fun fetchChannel(id: LiveChannel.Id): LiveData<LiveChannelDetail?> = flow {
-        val channel = repository.fetchChannelList(listOf(id)).firstOrNull()
+        val channel = when (id.platform) {
+            LivePlatform.YOUTUBE -> repository.fetchChannelList(listOf(id))
+            LivePlatform.TWITCH -> twitchRepository.findUsersById(listOf(id))
+        }.firstOrNull()
         emit(channel)
     }.asLiveData(viewModelScope.coroutineContext)
 
     fun fetchChannelSection(id: LiveChannel.Id): LiveData<List<LiveChannelSection>> = flow {
+        if (id.platform != LivePlatform.YOUTUBE) {
+            emit(emptyList())
+            return@flow
+        }
         val channelSection = repository.fetchChannelSection(id)
             .mapNotNull { cs ->
                 try {
@@ -74,7 +89,7 @@ class ChannelViewModel @Inject constructor(
         return ChannelDetailChannelSection(cs, content = c)
     }
 
-    fun fetchPlaylistItems(
+    private fun fetchPlaylistItems(
         id: LivePlaylist.Id,
     ): LiveData<List<LivePlaylistItem>> = flow {
         emit(emptyList())
@@ -86,8 +101,46 @@ class ChannelViewModel @Inject constructor(
         emit(items)
     }.asLiveData(viewModelScope.coroutineContext)
 
+    fun fetchVideoListItems(
+        detail: LiveData<LiveChannelDetail?>,
+    ): LiveData<List<VideoListItemEntity>> {
+        return detail.switchMap { d ->
+            val id = d?.id ?: return@switchMap emptyState
+            when (id.platform) {
+                LivePlatform.YOUTUBE -> {
+                    val pId = d.uploadedPlayList ?: return@switchMap emptyState
+                    fetchPlaylistItems(pId).map { items ->
+                        items.map {
+                            VideoListItemEntity(
+                                id = it.id,
+                                thumbnailUrl = it.thumbnailUrl,
+                                title = it.title
+                            )
+                        }
+                    }
+                }
+
+                LivePlatform.TWITCH -> {
+                    liveData {
+                        val res = twitchRepository.fetchVideosByChannelId(id).map {
+                            VideoListItemEntity(
+                                id = it.id,
+                                thumbnailUrl = it.thumbnailUrl,
+                                title = it.title
+                            )
+                        }
+                        emit(res)
+                    }
+                }
+            }
+        }
+    }
+
     fun fetchActivities(id: LiveChannel.Id): LiveData<List<LiveVideo>> = flow {
         emit(emptyList())
+        if (id.platform != LivePlatform.YOUTUBE) {
+            return@flow
+        }
         val logs = repository.fetchLiveChannelLogs(id, maxResult = 20)
         val videos = repository.fetchVideoList(logs.map { it.videoId })
             .map { v -> v to logs.find { v.id == it.videoId } }
@@ -95,6 +148,10 @@ class ChannelViewModel @Inject constructor(
             .map { it.first }
         emit(videos)
     }.asLiveData(viewModelScope.coroutineContext)
+
+    companion object {
+        private val emptyState = MutableLiveData(emptyList<VideoListItemEntity>())
+    }
 }
 
 class CustomCrop(
@@ -136,9 +193,17 @@ class CustomCrop(
     }
 }
 
-enum class ChannelPage {
-    ABOUT, CHANNEL_SECTION, UPLOADED, ACTIVITIES, DEBUG_CHANNEL,
+enum class ChannelPage(val platform: Array<LivePlatform> = LivePlatform.values()) {
+    ABOUT, CHANNEL_SECTION(arrayOf(LivePlatform.YOUTUBE)), UPLOADED,
+    ACTIVITIES(arrayOf(LivePlatform.YOUTUBE)), DEBUG_CHANNEL,
     ;
+
+    companion object {
+        fun findByPlatform(platform: LivePlatform): Array<ChannelPage> {
+            return ChannelPage.values().filter { p -> p.platform.any { it == platform } }
+                .toTypedArray()
+        }
+    }
 }
 
 class ChannelDetailChannelSection(

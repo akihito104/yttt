@@ -33,8 +33,16 @@ class AccountRepository @Inject constructor(
         credential.selectedAccountName = account
     }
 
+    fun getTwitchToken(): String? = pref.getString(PREF_TWITCH_TOKEN, null)
+    fun putTwitchToken(token: String) {
+        pref.edit {
+            putString(PREF_TWITCH_TOKEN, token)
+        }
+    }
+
     companion object {
         private const val PREF_ACCOUNT_NAME = "accountName"
+        private const val PREF_TWITCH_TOKEN = "twitchToken"
         fun AccountRepository.getNewChooseAccountIntent(): Intent =
             credential.newChooseAccountIntent()
     }
