@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.compose
 
+import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -46,7 +47,7 @@ fun MainNavHost(
     }
 }
 
-fun NavHostController.navigateToSubscriptionList(page: SubscriptionPage) =
+fun NavHostController.navigateToSubscriptionList(page: LivePlatform) =
     navigate(Subscription.parseRoute(page))
 
 fun NavGraphBuilder.composableWith(
@@ -55,16 +56,15 @@ fun NavGraphBuilder.composableWith(
 ) {
     composable(
         navRoute.route,
-        arguments = (listOfNotNull(navRoute.pathParam) + (navRoute.queryParams ?: emptyArray()))
-            .map { navArg ->
-                navArgument(navArg.argName) {
-                    type = navArg.type
-                    navArg.nullable?.let {
-                        this.nullable = it
-                        this.defaultValue = navArg.defaultValue
-                    }
+        arguments = navRoute.params?.map { navArg ->
+            navArgument(navArg.argName) {
+                type = navArg.type
+                navArg.nullable?.let {
+                    this.nullable = it
+                    this.defaultValue = navArg.defaultValue
                 }
-            },
+            }
+        } ?: emptyList(),
         deepLinks = navRoute.deepLinks,
         content = { navRoute.Content(navController = navController, backStackEntry = it) },
     )
@@ -88,15 +88,19 @@ sealed class MainNavRoute(
     }
 
     object Subscription : MainNavRoute(path = "subscription") {
-        override val pathParam: NavArg = NavArg.SUBSCRIPTION_PAGE
-        fun parseRoute(page: SubscriptionPage): String = super.parseRoute(pathParam to page.name)
+        override val params: Array<Page> = arrayOf(Page)
+
+        object Page : NavArg.PathParam<LivePlatform> {
+            override val argName: String = "subscription_page"
+            override val type: NavType<LivePlatform> = NavType.EnumType(LivePlatform::class.java)
+        }
+
+        fun parseRoute(page: LivePlatform): String = super.parseRoute(Page to page)
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val arg = requireNotNull(backStackEntry.arguments?.getString(pathParam.argName))
-            val page = SubscriptionPage.values().first { it.name == arg }
             SubscriptionListScreen(
-                page = page,
+                page = Page.getValue(backStackEntry.arguments),
                 onListItemClicked = {
                     val route = ChannelDetail.parseRoute(it)
                     navController.navigate(route)
@@ -106,89 +110,122 @@ sealed class MainNavRoute(
     }
 
     object ChannelDetail : MainNavRoute(path = "channel") {
-        override val pathParam: NavArg = NavArg.CHANNEL_ID
-        fun parseRoute(id: LiveChannel.Id): String =
-            super.parseRoute(pathParam = pathParam to "${id.platform.name}___${id.value}")
+        override val params: Array<Params<*>> = arrayOf(Params.Platform, Params.ChannelId)
+
+        sealed class Params<T>(
+            override val argName: String,
+            override val type: NavType<T>,
+        ) : NavArg.PathParam<T> {
+            object ChannelId : Params<String>("channel_id", NavType.StringType.nonNull())
+
+            object Platform :
+                Params<LivePlatform>("platform", NavType.EnumType(LivePlatform::class.java))
+        }
+
+        fun parseRoute(id: LiveChannel.Id): String = super.parseRoute(
+            Params.Platform to id.platform, Params.ChannelId to id.value,
+        )
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val arg = requireNotNull(backStackEntry.arguments?.getString(pathParam.argName))
-                .split("___")
             ChannelDetailScreen(
                 id = LiveChannel.Id(
-                    value = arg[1],
-                    platform = LivePlatform.values().first { it.name == arg[0] }),
+                    value = Params.ChannelId.getValue(backStackEntry.arguments),
+                    platform = Params.Platform.getValue(backStackEntry.arguments),
+                ),
             )
         }
     }
 
     object VideoDetail : MainNavRoute(path = "videoDetail") {
-        override val pathParam: NavArg = NavArg.VIDEO_ID
+        override val params: Array<Params<*>> = arrayOf(Params.Platform, Params.VideoId)
 
-        fun parseRoute(id: LiveVideo.Id): String =
-            super.parseRoute(pathParam = pathParam to "${id.platform.name}_${id.value}")
+        sealed class Params<T>(
+            override val argName: String,
+            override val type: NavType<T>,
+        ) : NavArg.PathParam<T> {
+            object VideoId : Params<String>("video_id", NavType.StringType.nonNull())
+
+            object Platform :
+                Params<LivePlatform>("platform", NavType.EnumType(LivePlatform::class.java))
+        }
+
+        fun parseRoute(id: LiveVideo.Id): String = super.parseRoute(
+            Params.Platform to id.platform, Params.VideoId to id.value,
+        )
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val arg = requireNotNull(backStackEntry.arguments?.getString(pathParam.argName))
-                .split("_")
             VideoDetailScreen(
                 id = LiveVideo.Id(
-                    value = arg[1],
-                    platform = LivePlatform.values().first { it.name == arg[0] },
+                    value = Params.VideoId.getValue(backStackEntry.arguments),
+                    platform = Params.Platform.getValue(backStackEntry.arguments),
                 )
             )
         }
     }
 
     object TwitchLogin : MainNavRoute(path = "twitch_login") {
-        override val queryParams: Array<out NavArg> = arrayOf(
-            NavArg.ACCESS_TOKEN,
-            NavArg.SCOPE,
-            NavArg.STATE,
-            NavArg.TOKEN_TYPE,
+        override val params: Array<Params> = arrayOf(
+            Params.AccessToken, Params.TokenType, Params.Scope, Params.State,
         )
+
+        sealed class Params(override val argName: String) : NavArg.QueryParam<String?> {
+            object TokenType : Params("token_type")
+            object State : Params("state")
+            object AccessToken : Params("access_token")
+            object Scope : Params("scope")
+
+            override val type: NavType<String?> = NavType.StringType
+            override val defaultValue: String? = null
+        }
+
         override val deepLinks = listOf(navDeepLink {
-            uriPattern = "https://$path/#${queryParams.joinToString("&") { it.argFormat }}"
+            uriPattern = "https://$path/#${params.joinToString("&") { it.getArgFormat() }}"
         })
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val p = queryParams.associateWith { backStackEntry.arguments?.getString(it.argName) }
+            val p = params.associateWith { it.getValue(backStackEntry.arguments) }
             val token = if (p.values.all { it != null }) {
                 TwitchOauthToken(
-                    tokenType = requireNotNull(p[NavArg.TOKEN_TYPE]),
-                    state = requireNotNull(p[NavArg.STATE]),
-                    accessToken = requireNotNull(p[NavArg.ACCESS_TOKEN]),
-                    scope = requireNotNull(p[NavArg.SCOPE]),
+                    tokenType = requireNotNull(p[Params.TokenType]),
+                    state = requireNotNull(p[Params.State]),
+                    accessToken = requireNotNull(p[Params.AccessToken]),
+                    scope = requireNotNull(p[Params.Scope]),
                 )
             } else null
             TwitchOauthScreen(token = token)
         }
     }
 
-    open val pathParam: NavArg? = null
-    open val queryParams: Array<out NavArg>? = null
+    open val params: Array<out NavArg<*>>? = null
+    private val pathParams: List<NavArg.PathParam<Any>>?
+        get() = params?.filterIsInstance<NavArg.PathParam<Any>>()
+    private val queryParams: List<NavArg.QueryParam<Any>>?
+        get() = params?.filterIsInstance<NavArg.QueryParam<Any>>()
     open val deepLinks: List<NavDeepLink> = emptyList()
 
     val route: String
         get() {
-            val pp = pathParam?.let { "{${it.argName}}" }
+            val pp = pathParams?.joinToString("/") { it.getArgFormat() }
             val p = listOfNotNull(path, pp).joinToString("/")
-            val q = queryParams?.joinToString("&") { it.argFormat }
+            val q = queryParams?.joinToString("&") { it.getArgFormat() }
             return listOfNotNull(p, q).joinToString("?")
         }
 
-    fun parseRoute(
-        pathParam: Pair<NavArg, Any?>? = null,
-        vararg queryParams: Pair<NavArg, Any?>
-    ): String {
-        val pp = pathParam?.second ?: pathParam?.first?.defaultValue
+    fun parseRoute(vararg params: Pair<NavArg<*>, Any>): String {
+        val pp = pathParams?.joinToString("/") { p ->
+            val (_, value) = params.first { it.first == p }
+            p.parsePath(value)
+        }
         val p = listOfNotNull(path, pp).joinToString("/")
-        val q = if (queryParams.isEmpty()) {
+        val qp = queryParams
+        val q = if (qp.isNullOrEmpty()) {
             null
         } else {
-            queryParams.joinToString("&") { "${it.first.argName}=${it.second}" }
+            params.map { (arg, v) -> arg.asNavArg() to v }.filter { qp.contains(it.first) }
+                .joinToString("&") { it.first.parsePath(it.second) }
         }
         return listOfNotNull(p, q).joinToString("?")
     }
@@ -197,21 +234,38 @@ sealed class MainNavRoute(
     abstract fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry)
 }
 
-enum class NavArg(
-    val argName: String,
-    val type: NavType<*>,
-    val nullable: Boolean? = null,
-    val defaultValue: Any? = null,
-) {
-    CHANNEL_ID("channelId", NavType.StringType),
-    VIDEO_ID("videoId", NavType.StringType),
-    SUBSCRIPTION_PAGE("subscription_page", NavType.StringType),
+interface NavArg<T> {
+    val argName: String
+    val type: NavType<T>
+    val nullable: Boolean?
+    val defaultValue: T?
 
-    ACCESS_TOKEN("access_token", NavType.StringType, nullable = true),
-    TOKEN_TYPE("token_type", NavType.StringType, nullable = true),
-    SCOPE("scope", NavType.StringType, nullable = true),
-    STATE("state", NavType.StringType, nullable = true),
-    ;
+    fun getValue(bundle: Bundle?): T? {
+        if (bundle == null) {
+            return null
+        }
+        return type[bundle, argName]
+    }
 
-    val argFormat: String = "$argName={$argName}"
+    fun getArgFormat(): String
+    fun parsePath(value: T): String = if (value is Enum<*>) value.name else value.toString()
+
+    interface PathParam<T> : NavArg<T> {
+        override val nullable: Boolean? get() = null
+        override val defaultValue: T? get() = null
+        override fun getValue(bundle: Bundle?): T = requireNotNull(super.getValue(bundle))
+        override fun getArgFormat(): String = "{$argName}"
+    }
+
+    interface QueryParam<T> : NavArg<T> {
+        override val nullable: Boolean? get() = true
+        override fun getArgFormat(): String = "$argName={$argName}"
+        override fun parsePath(value: T): String = "$argName=${super.parsePath(value)}"
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun asNavArg(): NavArg<Any> = this as NavArg<Any>
 }
+
+@Suppress("UNCHECKED_CAST")
+private fun <T> NavType<T?>.nonNull(): NavType<T> = this as NavType<T>

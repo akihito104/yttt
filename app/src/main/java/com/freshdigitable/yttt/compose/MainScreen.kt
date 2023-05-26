@@ -29,6 +29,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.R
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 
@@ -108,15 +109,15 @@ private fun TopAppBarImpl(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun ColumnScope.DrawerContent(
-    onSubscriptionMenuClicked: (SubscriptionPage) -> Unit,
+    onSubscriptionMenuClicked: (LivePlatform) -> Unit,
     onTwitchOauth: () -> Unit,
 ) {
     ListItem(
-        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(SubscriptionPage.YOUTUBE) }),
+        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(LivePlatform.YOUTUBE) }),
         text = { Text("Subscription") }
     )
     ListItem(
-        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(SubscriptionPage.TWITCH) }),
+        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(LivePlatform.TWITCH) }),
         text = { Text("Twitch Subscription") }
     )
     ListItem(

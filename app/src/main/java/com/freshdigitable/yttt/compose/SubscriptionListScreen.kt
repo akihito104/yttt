@@ -7,17 +7,18 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.SubscriptionListViewModel
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveSubscription
 
 @Composable
 fun SubscriptionListScreen(
     viewModel: SubscriptionListViewModel = hiltViewModel(),
-    page: SubscriptionPage,
+    page: LivePlatform,
     onListItemClicked: (LiveChannel.Id) -> Unit,
 ) {
     val subs = when (page) {
-        SubscriptionPage.YOUTUBE -> viewModel.subscriptions.observeAsState(emptyList())
-        SubscriptionPage.TWITCH -> viewModel.twitchSubs.observeAsState(emptyList())
+        LivePlatform.YOUTUBE -> viewModel.subscriptions.observeAsState(emptyList())
+        LivePlatform.TWITCH -> viewModel.twitchSubs.observeAsState(emptyList())
     }
     ListPage(
         itemProvider = { subs.value },
@@ -39,8 +40,4 @@ private fun ListPage(
             )
         }
     }
-}
-
-enum class SubscriptionPage {
-    YOUTUBE, TWITCH,
 }
