@@ -209,9 +209,9 @@ sealed class MainNavRoute(
     val route: String
         get() {
             val pp = pathParams?.joinToString("/") { it.getArgFormat() }
-            val p = listOfNotNull(path, pp).joinToString("/")
+            val p = listOfNotNull(path, if (pp.isNullOrEmpty()) null else pp).joinToString("/")
             val q = queryParams?.joinToString("&") { it.getArgFormat() }
-            return listOfNotNull(p, q).joinToString("?")
+            return listOfNotNull(p, if (q.isNullOrEmpty()) null else q).joinToString("?")
         }
 
     fun parseRoute(vararg params: Pair<NavArg<*>, Any>): String {
@@ -219,7 +219,7 @@ sealed class MainNavRoute(
             val (_, value) = params.first { it.first == p }
             p.parsePath(value)
         }
-        val p = listOfNotNull(path, pp).joinToString("/")
+        val p = listOfNotNull(path, if (pp.isNullOrEmpty()) null else pp).joinToString("/")
         val qp = queryParams
         val q = if (qp.isNullOrEmpty()) {
             null
@@ -227,7 +227,7 @@ sealed class MainNavRoute(
             params.map { (arg, v) -> arg.asNavArg() to v }.filter { qp.contains(it.first) }
                 .joinToString("&") { it.first.parsePath(it.second) }
         }
-        return listOfNotNull(p, q).joinToString("?")
+        return listOfNotNull(p, if (q.isNullOrEmpty()) null else q).joinToString("?")
     }
 
     @Composable
