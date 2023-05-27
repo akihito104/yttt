@@ -59,18 +59,24 @@ fun MainScreen() {
         },
         drawerContent = {
             DrawerContent(
-                onSubscriptionMenuClicked = {
-                    navController.navigateToSubscriptionList(it)
+                items = DrawerMenuItem.values().toList(),
+                onClicked = {
+                    when (it) {
+                        DrawerMenuItem.SUBSCRIPTION_YOUTUBE ->
+                            navController.navigateToSubscriptionList(LivePlatform.YOUTUBE)
+
+                        DrawerMenuItem.SUBSCRIPTION_TWITCH ->
+                            navController.navigateToSubscriptionList(LivePlatform.TWITCH)
+
+                        DrawerMenuItem.AUTH_TWITCH ->
+                            navController.navigate(MainNavRoute.TwitchLogin.path)
+                    }
+                },
+                onEnd = {
                     coroutineScope.launch {
                         drawerState.close()
                     }
-                },
-                onTwitchOauth = {
-                    navController.navigate(MainNavRoute.TwitchLogin.path)
-                    coroutineScope.launch {
-                        drawerState.close()
-                    }
-                },
+                }
             )
         },
     ) { padding ->
@@ -109,21 +115,33 @@ private fun TopAppBarImpl(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun ColumnScope.DrawerContent(
-    onSubscriptionMenuClicked: (LivePlatform) -> Unit,
-    onTwitchOauth: () -> Unit,
+    items: Collection<DrawerMenuItem>,
+    onClicked: (DrawerMenuItem) -> Unit,
+    onEnd: () -> Unit,
 ) {
-    ListItem(
-        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(LivePlatform.YOUTUBE) }),
-        text = { Text("Subscription") }
-    )
-    ListItem(
-        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(LivePlatform.TWITCH) }),
-        text = { Text("Twitch Subscription") }
-    )
-    ListItem(
-        modifier = Modifier.clickable(onClick = onTwitchOauth),
-        text = { Text(text = "twitch auth") }
-    )
+    items.forEach {
+        ListItem(
+            text = { Text(it.text()) },
+            modifier = Modifier.clickable(onClick = {
+                onClicked(it)
+                onEnd()
+            }),
+        )
+    }
+}
+
+private enum class DrawerMenuItem(
+    val text: @Composable () -> String,
+) {
+    SUBSCRIPTION_YOUTUBE(
+        text = { "YouTube Subscriptions" },
+    ),
+    SUBSCRIPTION_TWITCH(
+        text = { "Twitch Followings" },
+    ),
+    AUTH_TWITCH(
+        text = { "Twitch auth" },
+    ),
 }
 
 @Preview
