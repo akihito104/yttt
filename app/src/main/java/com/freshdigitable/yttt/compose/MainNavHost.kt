@@ -1,78 +1,29 @@
 package com.freshdigitable.yttt.compose
 
-import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavDeepLink
-import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
 import androidx.navigation.navDeepLink
-import com.freshdigitable.yttt.compose.MainNavRoute.ChannelDetail
 import com.freshdigitable.yttt.compose.MainNavRoute.Subscription
-import com.freshdigitable.yttt.compose.MainNavRoute.TimetableTab
-import com.freshdigitable.yttt.compose.MainNavRoute.TwitchLogin
-import com.freshdigitable.yttt.compose.MainNavRoute.VideoDetail
+import com.freshdigitable.yttt.compose.navigation.NavArg
+import com.freshdigitable.yttt.compose.navigation.NavRoute
+import com.freshdigitable.yttt.compose.navigation.nonNull
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.source.TwitchOauthToken
 
-@Composable
-fun MainNavHost(
-    navController: NavHostController,
-    modifier: Modifier = Modifier,
-) {
-    NavHost(
-        modifier = modifier,
-        navController = navController,
-        startDestination = TimetableTab.route,
-    ) {
-        listOf(
-            TimetableTab,
-            Subscription,
-            ChannelDetail,
-            VideoDetail,
-            TwitchLogin,
-        ).forEach {
-            composableWith(navController, it)
-        }
+sealed class MainNavRoute(path: String) : NavRoute(path) {
+    companion object {
+        val startDestination: NavRoute = TimetableTab
+        val routes: Collection<NavRoute> =
+            setOf(TimetableTab, Subscription, ChannelDetail, VideoDetail, TwitchLogin)
     }
-}
 
-fun NavHostController.navigateToSubscriptionList(page: LivePlatform) =
-    navigate(Subscription.parseRoute(page))
-
-fun NavGraphBuilder.composableWith(
-    navController: NavHostController,
-    navRoute: MainNavRoute,
-) {
-    composable(
-        navRoute.route,
-        arguments = navRoute.params?.map { navArg ->
-            navArgument(navArg.argName) {
-                type = navArg.type
-                navArg.nullable?.let {
-                    this.nullable = it
-                    this.defaultValue = navArg.defaultValue
-                }
-            }
-        } ?: emptyList(),
-        deepLinks = navRoute.deepLinks,
-        content = { navRoute.Content(navController = navController, backStackEntry = it) },
-    )
-}
-
-sealed class MainNavRoute(
-    val path: String,
-) {
     object TimetableTab : MainNavRoute(path = "ttt") {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
@@ -198,74 +149,9 @@ sealed class MainNavRoute(
             TwitchOauthScreen(token = token)
         }
     }
-
-    open val params: Array<out NavArg<*>>? = null
-    private val pathParams: List<NavArg.PathParam<Any>>?
-        get() = params?.filterIsInstance<NavArg.PathParam<Any>>()
-    private val queryParams: List<NavArg.QueryParam<Any>>?
-        get() = params?.filterIsInstance<NavArg.QueryParam<Any>>()
-    open val deepLinks: List<NavDeepLink> = emptyList()
-
-    val route: String
-        get() {
-            val pp = pathParams?.joinToString("/") { it.getArgFormat() }
-            val p = listOfNotNull(path, if (pp.isNullOrEmpty()) null else pp).joinToString("/")
-            val q = queryParams?.joinToString("&") { it.getArgFormat() }
-            return listOfNotNull(p, if (q.isNullOrEmpty()) null else q).joinToString("?")
-        }
-
-    fun parseRoute(vararg params: Pair<NavArg<*>, Any>): String {
-        val pp = pathParams?.joinToString("/") { p ->
-            val (_, value) = params.first { it.first == p }
-            p.parsePath(value)
-        }
-        val p = listOfNotNull(path, if (pp.isNullOrEmpty()) null else pp).joinToString("/")
-        val qp = queryParams
-        val q = if (qp.isNullOrEmpty()) {
-            null
-        } else {
-            params.map { (arg, v) -> arg.asNavArg() to v }.filter { qp.contains(it.first) }
-                .joinToString("&") { it.first.parsePath(it.second) }
-        }
-        return listOfNotNull(p, if (q.isNullOrEmpty()) null else q).joinToString("?")
-    }
-
-    @Composable
-    abstract fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry)
 }
 
-interface NavArg<T> {
-    val argName: String
-    val type: NavType<T>
-    val nullable: Boolean?
-    val defaultValue: T?
+fun NavHostController.navigateToSubscriptionList(page: LivePlatform) =
+    navigate(Subscription.parseRoute(page))
 
-    fun getValue(bundle: Bundle?): T? {
-        if (bundle == null) {
-            return null
-        }
-        return type[bundle, argName]
-    }
-
-    fun getArgFormat(): String
-    fun parsePath(value: T): String = if (value is Enum<*>) value.name else value.toString()
-
-    interface PathParam<T> : NavArg<T> {
-        override val nullable: Boolean? get() = null
-        override val defaultValue: T? get() = null
-        override fun getValue(bundle: Bundle?): T = requireNotNull(super.getValue(bundle))
-        override fun getArgFormat(): String = "{$argName}"
-    }
-
-    interface QueryParam<T> : NavArg<T> {
-        override val nullable: Boolean? get() = true
-        override fun getArgFormat(): String = "$argName={$argName}"
-        override fun parsePath(value: T): String = "$argName=${super.parsePath(value)}"
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    fun asNavArg(): NavArg<Any> = this as NavArg<Any>
-}
-
-@Suppress("UNCHECKED_CAST")
-private fun <T> NavType<T?>.nonNull(): NavType<T> = this as NavType<T>
+fun NavHostController.navigateToTwitchLogin() = navigate(MainNavRoute.TwitchLogin.path)

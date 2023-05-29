@@ -26,9 +26,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.util.Consumer
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.R
+import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
@@ -70,8 +72,7 @@ fun MainScreen() {
                         DrawerMenuItem.SUBSCRIPTION_TWITCH ->
                             navController.navigateToSubscriptionList(LivePlatform.TWITCH)
 
-                        DrawerMenuItem.AUTH_TWITCH ->
-                            navController.navigate(MainNavRoute.TwitchLogin.path)
+                        DrawerMenuItem.AUTH_TWITCH -> navController.navigateToTwitchLogin()
                     }
                     coroutineScope.launch {
                         drawerState.close()
@@ -80,7 +81,13 @@ fun MainScreen() {
             )
         },
     ) { padding ->
-        MainNavHost(navController, modifier = Modifier.padding(padding))
+        NavHost(
+            modifier = Modifier.padding(padding),
+            navController = navController,
+            startDestination = MainNavRoute.startDestination.route,
+        ) {
+            composableWith(navController = navController, navRoutes = MainNavRoute.routes)
+        }
     }
 }
 
