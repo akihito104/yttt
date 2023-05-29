@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.util.Consumer
-import androidx.navigation.NavController
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.R
@@ -48,13 +48,15 @@ fun MainScreen() {
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
+            val backStack = navController.currentBackStackEntryAsState()
             TopAppBarImpl(
-                navController,
+                currentBackStackEntryProvider = { backStack.value },
                 onMenuIconClicked = {
                     coroutineScope.launch {
                         drawerState.open()
                     }
                 },
+                onUpClicked = { navController.navigateUp() },
             )
         },
         drawerContent = {
@@ -71,12 +73,10 @@ fun MainScreen() {
                         DrawerMenuItem.AUTH_TWITCH ->
                             navController.navigate(MainNavRoute.TwitchLogin.path)
                     }
-                },
-                onEnd = {
                     coroutineScope.launch {
                         drawerState.close()
                     }
-                }
+                },
             )
         },
     ) { padding ->
@@ -86,14 +86,15 @@ fun MainScreen() {
 
 @Composable
 private fun TopAppBarImpl(
-    navController: NavController,
+    currentBackStackEntryProvider: () -> NavBackStackEntry?,
     onMenuIconClicked: () -> Unit,
+    onUpClicked: () -> Unit,
 ) {
-    val backStack = navController.currentBackStackEntryAsState().value
     TopAppBar(
         title = { Text(stringResource(id = R.string.app_name)) },
         navigationIcon = {
-            if (backStack == null || backStack.destination.route == "ttt") {
+            val backStack = currentBackStackEntryProvider()
+            if (backStack == null || backStack.destination.route == MainNavRoute.TimetableTab.route) {
                 Icon(
                     Icons.Filled.Menu,
                     contentDescription = "",
@@ -103,9 +104,7 @@ private fun TopAppBarImpl(
                 Icon(
                     Icons.Filled.ArrowBack,
                     contentDescription = "",
-                    modifier = Modifier.clickable(onClick = {
-                        navController.navigateUp()
-                    }),
+                    modifier = Modifier.clickable(onClick = onUpClicked),
                 )
             }
         },
@@ -117,15 +116,11 @@ private fun TopAppBarImpl(
 private fun ColumnScope.DrawerContent(
     items: Collection<DrawerMenuItem>,
     onClicked: (DrawerMenuItem) -> Unit,
-    onEnd: () -> Unit,
 ) {
     items.forEach {
         ListItem(
             text = { Text(it.text()) },
-            modifier = Modifier.clickable(onClick = {
-                onClicked(it)
-                onEnd()
-            }),
+            modifier = Modifier.clickable(onClick = { onClicked(it) }),
         )
     }
 }
