@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 6,
-    "identityHash": "ad459f0bf1087dc3f9a95340836c407d",
+    "identityHash": "774fdc6e3af3d2e54b119c0461a7ed54",
     "entities": [
       {
         "tableName": "channel",
@@ -375,7 +375,7 @@
     "views": [
       {
         "viewName": "video_view",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, c.title AS channel_title, c.icon AS channel_icon FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id WHERE v.visible == TRUE"
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, c.title AS channel_title, c.icon AS channel_icon FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id WHERE v.visible == 1"
       },
       {
         "viewName": "subscription_view",
@@ -388,7 +388,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ad459f0bf1087dc3f9a95340836c407d')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '774fdc6e3af3d2e54b119c0461a7ed54')"
     ]
   }
 }
