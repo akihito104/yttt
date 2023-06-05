@@ -1,9 +1,6 @@
 package com.freshdigitable.yttt.compose
 
-import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -19,17 +16,15 @@ import com.freshdigitable.yttt.data.source.TwitchOauthToken
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {
-        val startDestination: NavRoute = TimetableTab
+        val startDestination: NavRoute = Auth
         val routes: Collection<NavRoute> =
-            setOf(TimetableTab, Subscription, ChannelDetail, VideoDetail, TwitchLogin)
+            setOf(Auth, TimetableTab, Subscription, ChannelDetail, VideoDetail, TwitchLogin)
     }
 
     object TimetableTab : MainNavRoute(path = "ttt") {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val activity = LocalContext.current as AppCompatActivity
             TimetableTabScreen(
-                viewModel = hiltViewModel(viewModelStoreOwner = activity),
                 onListItemClicked = {
                     val route = VideoDetail.parseRoute(it)
                     navController.navigate(route)
@@ -112,6 +107,24 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                     value = Params.VideoId.getValue(backStackEntry.arguments),
                     platform = Params.Platform.getValue(backStackEntry.arguments),
                 )
+            )
+        }
+    }
+
+    object Auth : MainNavRoute(path = "auth") {
+        override val params: Array<out NavArg<*>> = emptyArray()
+
+        @Composable
+        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+            AuthScreen(
+                onSetupCompleted = {
+                    navController.navigate(TimetableTab.route) {
+                        popUpTo(Auth.route) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                },
             )
         }
     }

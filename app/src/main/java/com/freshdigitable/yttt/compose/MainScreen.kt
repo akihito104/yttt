@@ -101,12 +101,15 @@ private fun TopAppBarImpl(
         title = { Text(stringResource(id = R.string.app_name)) },
         navigationIcon = {
             val backStack = currentBackStackEntryProvider()
-            if (backStack == null || backStack.destination.route == MainNavRoute.TimetableTab.route) {
+            val route = backStack?.destination?.route
+            if (backStack == null || route == MainNavRoute.TimetableTab.route) {
                 Icon(
                     Icons.Filled.Menu,
                     contentDescription = "",
                     modifier = Modifier.clickable(onClick = onMenuIconClicked),
                 )
+            } else if (route == MainNavRoute.Auth.route) {
+                // nop
             } else {
                 Icon(
                     Icons.Filled.ArrowBack,
