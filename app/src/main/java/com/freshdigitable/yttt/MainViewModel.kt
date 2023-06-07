@@ -10,6 +10,7 @@ import androidx.lifecycle.distinctUntilChanged
 import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TabData
+import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -24,15 +25,23 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val liveRepository: YouTubeLiveRepository,
     private val twitchRepository: TwitchLiveRepository,
+    private val accountRepository: AccountRepository,
 ) : ViewModel() {
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
+    val canUpdate: Boolean
+        get() {
+            val lastUpdateDatetime = liveRepository.lastUpdateDatetime ?: return true
+            return (lastUpdateDatetime + Duration.ofMinutes(30)) <= Instant.now()
+        }
 
     fun loadList() {
         viewModelScope.launch {
@@ -65,6 +74,9 @@ class MainViewModel @Inject constructor(
         .asLiveData(viewModelScope.coroutineContext)
 
     private suspend fun fetchLiveStreams() {
+        if (!accountRepository.hasAccount()) {
+            return
+        }
         val first = liveRepository.findAllUnfinishedVideos()
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .map { it.id }.distinct()
@@ -81,6 +93,7 @@ class MainViewModel @Inject constructor(
             viewModelScope.async { fetchVideoTask(channelDetail) }
         }
         task.awaitAll()
+        liveRepository.lastUpdateDatetime = Instant.now()
         Log.d(TAG, "fetchLiveStreams: end")
     }
 
@@ -99,6 +112,9 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun fetchTwitchStream() {
+        if (accountRepository.getTwitchToken() == null) {
+            return
+        }
         twitchRepository.fetchFollowedStreams()
         val me = twitchRepository.fetchMe() ?: return
         val following = twitchRepository.fetchAllFollowings(me.id)

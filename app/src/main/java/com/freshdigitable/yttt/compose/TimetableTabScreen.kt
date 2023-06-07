@@ -12,6 +12,7 @@ import androidx.compose.material.Tab
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,6 +31,11 @@ fun TimetableTabScreen(
     viewModel: MainViewModel = hiltViewModel(),
     onListItemClicked: (LiveVideo.Id) -> Unit,
 ) {
+    LaunchedEffect(Unit) {
+        if (viewModel.canUpdate) {
+            viewModel.loadList()
+        }
+    }
     val tabData = viewModel.tabs.observeAsState(TimetablePage.values().map { TabData(it, 0) })
     TimetableTabScreen(
         tabDataProvider = { tabData.value },
