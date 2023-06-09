@@ -6,7 +6,10 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration.UI_MODE_NIGHT_NO
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +22,9 @@ import androidx.compose.material.ListItem
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.AuthViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
@@ -43,11 +50,14 @@ fun AuthScreen(
         return
     }
     val googleServiceState = viewModel.googleServiceState.collectAsState(initial = null)
-    AuthScreen(
+    val holder = rememberYouTubeAuthStateHolder(
         pickAccountIntentProvider = { viewModel.createPickAccountIntent() },
-        login = { viewModel.login(it) },
         googleApiAvailabilityProvider = { viewModel.googleApiAvailability },
+        login = { viewModel.login(it) },
         hasGoogleAccount = { viewModel.hasAccount() },
+    )
+    AuthScreen(
+        holder = holder,
         googleServiceStateProvider = { googleServiceState.value },
         onSetupCompleted = onSetupCompleted,
     )
@@ -55,10 +65,7 @@ fun AuthScreen(
 
 @Composable
 private fun AuthScreen(
-    pickAccountIntentProvider: () -> Intent,
-    login: (String?) -> Unit,
-    googleApiAvailabilityProvider: () -> GoogleApiAvailability,
-    hasGoogleAccount: () -> Boolean,
+    holder: YouTubeAuthStateHolder,
     googleServiceStateProvider: () -> AuthViewModel.AuthState?,
     onSetupCompleted: () -> Unit,
 ) {
@@ -68,15 +75,15 @@ private fun AuthScreen(
         modifier = Modifier.fillMaxSize(),
     ) {
         YouTubeListItem(
-            pickAccountIntentProvider = pickAccountIntentProvider,
-            login = login,
-            googleApiAvailabilityProvider = googleApiAvailabilityProvider,
-            hasGoogleAccount = hasGoogleAccount,
+            holder = holder,
             googleServiceStateProvider = googleServiceStateProvider,
         )
         TwitchListItem()
+        val completeButtonEnabled by remember {
+            derivedStateOf { googleServiceStateProvider() == AuthViewModel.AuthState.Succeeded }
+        }
         Button(
-            enabled = googleServiceStateProvider() is AuthViewModel.AuthState.Succeeded,
+            enabled = completeButtonEnabled,
             onClick = onSetupCompleted,
         ) {
             Text("complete setup")
@@ -84,71 +91,26 @@ private fun AuthScreen(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalPermissionsApi::class)
 @Composable
 fun YouTubeListItem(
-    pickAccountIntentProvider: () -> Intent,
-    login: (String?) -> Unit,
-    googleApiAvailabilityProvider: () -> GoogleApiAvailability,
-    hasGoogleAccount: () -> Boolean,
-    googleServiceStateProvider: () -> AuthViewModel.AuthState?
+    holder: YouTubeAuthStateHolder,
+    googleServiceStateProvider: () -> AuthViewModel.AuthState?,
 ) {
-    val accountPicker = rememberLauncherForActivityResult(
-        contract = pickAccountContract(pickAccountIntentProvider),
-    ) {
-        if (it.isNotEmpty()) {
-            login(it)
-        }
-    }
-    val dialogState = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult(),
-    ) {
-        if (it.resultCode == AppCompatActivity.RESULT_OK) {
-            if (!hasGoogleAccount()) {
-                accountPicker.launch(Unit)
-            } else {
-                login(null)
-            }
-        }
-    }
     val googleServiceState = googleServiceStateProvider()
     if (googleServiceState is AuthViewModel.AuthState.ServiceConnectionRecoverable) {
         val activity = LocalContext.current as Activity
-        googleApiAvailabilityProvider().showErrorDialogFragment(
-            activity,
-            googleServiceState.code,
-            dialogState,
-            null,
-        )
+        holder.showDialog(activity, googleServiceState.code)
     }
     val hasNoAccount = googleServiceState is AuthViewModel.AuthState.HasNoAccount
-    val permissionState = if (hasNoAccount) {
-        rememberPermissionState(permission = Manifest.permission.GET_ACCOUNTS) {
-            if (it) accountPicker.launch(Unit)
+    AuthListItem(
+        title = "YouTube",
+        enabled = hasNoAccount,
+        buttonText = googleServiceState.stateText(),
+    ) {
+        if (hasNoAccount) {
+            holder.launchPermissionRequestOrPickAccount()
         }
-    } else null
-    ListItem(
-        text = {
-            Text("YouTube")
-        },
-        trailing = {
-            Button(
-                enabled = hasNoAccount,
-                onClick = {
-                    if (googleServiceState == AuthViewModel.AuthState.HasNoAccount) {
-                        checkNotNull(permissionState)
-                        when {
-                            permissionState.status.isGranted -> accountPicker.launch(Unit)
-                            permissionState.status.shouldShowRationale -> TODO()
-                            else -> permissionState.launchPermissionRequest()
-                        }
-                    }
-                },
-            ) {
-                Text(googleServiceState.stateText())
-            }
-        },
-    )
+    }
 }
 
 @Composable
@@ -175,17 +137,104 @@ private fun pickAccountContract(
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
+@OptIn(ExperimentalPermissionsApi::class)
+@Composable
+private fun rememberYouTubeAuthStateHolder(
+    pickAccountIntentProvider: () -> Intent,
+    login: (String?) -> Unit,
+    googleApiAvailabilityProvider: () -> GoogleApiAvailability,
+    hasGoogleAccount: () -> Boolean,
+): YouTubeAuthStateHolder {
+    if (hasGoogleAccount()) {
+        return YouTubeAuthStateHolder(googleApiAvailability = googleApiAvailabilityProvider())
+    }
+    val accountPicker = rememberLauncherForActivityResult(
+        contract = pickAccountContract(pickAccountIntentProvider),
+    ) {
+        if (it.isNotEmpty()) {
+            login(it)
+        }
+    }
+    val permissionState = rememberPermissionState(permission = Manifest.permission.GET_ACCOUNTS) {
+        if (it) accountPicker.launch(Unit)
+    }
+    val dialogState = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+    ) {
+        if (it.resultCode == AppCompatActivity.RESULT_OK) {
+            if (!hasGoogleAccount()) {
+                YouTubeAuthStateHolder
+                    .launchPermissionRequestOrPickAccount(permissionState, accountPicker)
+            } else {
+                login(null)
+            }
+        }
+    }
+    val youTubeAuthStateHolder = remember {
+        YouTubeAuthStateHolder(
+            accountPicker = accountPicker,
+            permissionState = permissionState,
+            dialogState = dialogState,
+            googleApiAvailability = googleApiAvailabilityProvider(),
+        )
+    }
+    return youTubeAuthStateHolder
+}
+
+class YouTubeAuthStateHolder @OptIn(ExperimentalPermissionsApi::class) constructor(
+    private val accountPicker: ManagedActivityResultLauncher<Unit, String>? = null,
+    private val permissionState: PermissionState? = null,
+    private val dialogState: ManagedActivityResultLauncher<IntentSenderRequest, ActivityResult>? = null,
+    private val googleApiAvailability: GoogleApiAvailability,
+) {
+    fun showDialog(activity: Activity, code: Int) {
+        checkNotNull(dialogState)
+        googleApiAvailability.showErrorDialogFragment(activity, code, dialogState, null)
+    }
+
+    @OptIn(ExperimentalPermissionsApi::class)
+    fun launchPermissionRequestOrPickAccount() {
+        checkNotNull(permissionState)
+        checkNotNull(accountPicker)
+        Companion.launchPermissionRequestOrPickAccount(permissionState, accountPicker)
+    }
+
+    companion object {
+        @OptIn(ExperimentalPermissionsApi::class)
+        fun launchPermissionRequestOrPickAccount(
+            permissionState: PermissionState,
+            accountPicker: ManagedActivityResultLauncher<Unit, String>,
+        ) {
+            when {
+                permissionState.status.isGranted -> accountPicker.launch(Unit)
+                permissionState.status.shouldShowRationale -> TODO()
+                else -> permissionState.launchPermissionRequest()
+            }
+        }
+    }
+}
+
 @Composable
 fun TwitchListItem() {
+    AuthListItem(title = "Twitch", enabled = false, buttonText = "auth") {}
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun AuthListItem(
+    title: String,
+    enabled: Boolean,
+    buttonText: String,
+    onClick: () -> Unit,
+) {
     ListItem(
-        text = { Text("Twitch") },
+        text = { Text(title) },
         trailing = {
             Button(
-                enabled = false,
-                onClick = { /*TODO*/ },
+                enabled = enabled,
+                onClick = onClick,
             ) {
-                Text(text = "auth")
+                Text(text = buttonText)
             }
         }
     )
@@ -196,12 +245,14 @@ fun TwitchListItem() {
 private fun AuthScreenPreview() {
     MdcTheme {
         AuthScreen(
-            hasGoogleAccount = { true },
-            pickAccountIntentProvider = { Intent() },
-            login = {},
-            googleApiAvailabilityProvider = { GoogleApiAvailability.getInstance() },
-            googleServiceStateProvider = { null },
-            onSetupCompleted = {}
+            holder = rememberYouTubeAuthStateHolder(
+                pickAccountIntentProvider = { Intent() },
+                googleApiAvailabilityProvider = { GoogleApiAvailability.getInstance() },
+                hasGoogleAccount = { true },
+                login = {},
+            ),
+            googleServiceStateProvider = { AuthViewModel.AuthState.Succeeded },
+            onSetupCompleted = {},
         )
     }
 }
