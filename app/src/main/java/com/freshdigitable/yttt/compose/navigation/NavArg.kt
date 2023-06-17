@@ -11,9 +11,9 @@ interface NavArg<T> {
 
     fun getValue(bundle: Bundle?): T? {
         if (bundle == null) {
-            return null
+            return if (nullable == false) defaultValue else null
         }
-        return type[bundle, argName]
+        return type[bundle, argName] ?: if (nullable == false) defaultValue else null
     }
 
     fun getArgFormat(): String

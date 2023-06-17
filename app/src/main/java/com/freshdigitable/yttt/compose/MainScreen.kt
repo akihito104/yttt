@@ -19,6 +19,7 @@ import androidx.compose.material.rememberDrawerState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,7 +37,7 @@ import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 
 @Composable
-fun MainScreen() {
+fun MainScreen(shouldAuth: Boolean = false) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scaffoldState = rememberScaffoldState(drawerState = drawerState)
     val navController = rememberNavController()
@@ -81,10 +82,13 @@ fun MainScreen() {
             )
         },
     ) { padding ->
+        val startDestination = remember(shouldAuth) {
+            if (shouldAuth) MainNavRoute.Auth else MainNavRoute.TimetableTab
+        }
         NavHost(
             modifier = Modifier.padding(padding),
             navController = navController,
-            startDestination = MainNavRoute.startDestination.route,
+            startDestination = startDestination.route,
         ) {
             composableWith(navController = navController, navRoutes = MainNavRoute.routes)
         }
@@ -108,7 +112,7 @@ private fun TopAppBarImpl(
                     contentDescription = "",
                     modifier = Modifier.clickable(onClick = onMenuIconClicked),
                 )
-            } else if (route == MainNavRoute.Auth.route) {
+            } else if (route?.startsWith(MainNavRoute.Auth.path) == true) {
                 // nop
             } else {
                 Icon(

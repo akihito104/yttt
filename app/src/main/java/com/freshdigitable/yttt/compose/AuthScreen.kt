@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,17 +39,15 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.google.accompanist.themeadapter.material.MdcTheme
 import com.google.android.gms.common.GoogleApiAvailability
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
     viewModel: AuthViewModel = hiltViewModel(),
+    twitchOauthViewModel: TwitchOauthViewModel = hiltViewModel(),
+    onStartLoginTwitch: (String) -> Unit,
     onSetupCompleted: () -> Unit,
 ) {
-    if (viewModel.hasAccount()) {
-        viewModel.login()
-        onSetupCompleted()
-        return
-    }
     val googleServiceState = viewModel.googleServiceState.collectAsState(initial = null)
     val holder = rememberYouTubeAuthStateHolder(
         pickAccountIntentProvider = { viewModel.createPickAccountIntent() },
@@ -59,6 +58,9 @@ fun AuthScreen(
     AuthScreen(
         holder = holder,
         googleServiceStateProvider = { googleServiceState.value },
+        onStartLoginTwitch = onStartLoginTwitch,
+        hasTwitchTokenProvider = { twitchOauthViewModel.hasToken() },
+        twitchAuthorizeUriProvider = { twitchOauthViewModel.getAuthorizeUrl() },
         onSetupCompleted = onSetupCompleted,
     )
 }
@@ -67,6 +69,9 @@ fun AuthScreen(
 private fun AuthScreen(
     holder: YouTubeAuthStateHolder,
     googleServiceStateProvider: () -> AuthViewModel.AuthState?,
+    twitchAuthorizeUriProvider: suspend () -> String,
+    hasTwitchTokenProvider: () -> Boolean,
+    onStartLoginTwitch: (String) -> Unit,
     onSetupCompleted: () -> Unit,
 ) {
     Column(
@@ -78,9 +83,16 @@ private fun AuthScreen(
             holder = holder,
             googleServiceStateProvider = googleServiceStateProvider,
         )
-        TwitchListItem()
+        TwitchListItem(
+            authorizeUriProvider = twitchAuthorizeUriProvider,
+            hasTwitchTokenProvider = hasTwitchTokenProvider,
+            onStartLoginTwitch = onStartLoginTwitch,
+        )
         val completeButtonEnabled by remember {
-            derivedStateOf { googleServiceStateProvider() == AuthViewModel.AuthState.Succeeded }
+            derivedStateOf {
+                googleServiceStateProvider() == AuthViewModel.AuthState.Succeeded ||
+                    hasTwitchTokenProvider()
+            }
         }
         Button(
             enabled = completeButtonEnabled,
@@ -215,8 +227,20 @@ class YouTubeAuthStateHolder @OptIn(ExperimentalPermissionsApi::class) construct
 }
 
 @Composable
-fun TwitchListItem() {
-    AuthListItem(title = "Twitch", enabled = false, buttonText = "auth") {}
+fun TwitchListItem(
+    authorizeUriProvider: suspend () -> String,
+    hasTwitchTokenProvider: () -> Boolean,
+    onStartLoginTwitch: (String) -> Unit,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val hasTwitchToken = hasTwitchTokenProvider()
+    val buttonText = if (hasTwitchToken) "connected" else "auth"
+    AuthListItem(title = "Twitch", enabled = !hasTwitchToken, buttonText = buttonText) {
+        coroutineScope.launch {
+            val authorizeUri = authorizeUriProvider()
+            onStartLoginTwitch(authorizeUri)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -253,6 +277,9 @@ private fun AuthScreenPreview() {
             ),
             googleServiceStateProvider = { AuthViewModel.AuthState.Succeeded },
             onSetupCompleted = {},
+            onStartLoginTwitch = {},
+            twitchAuthorizeUriProvider = { "" },
+            hasTwitchTokenProvider = { true },
         )
     }
 }
