@@ -31,7 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.freshdigitable.yttt.AuthViewModel
+import com.freshdigitable.yttt.TwitchOauthViewModel
+import com.freshdigitable.yttt.YouTubeOauthViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
@@ -43,35 +44,34 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
-    viewModel: AuthViewModel = hiltViewModel(),
+    viewModel: YouTubeOauthViewModel = hiltViewModel(),
     twitchOauthViewModel: TwitchOauthViewModel = hiltViewModel(),
     onStartLoginTwitch: (String) -> Unit,
     onSetupCompleted: () -> Unit,
 ) {
     val googleServiceState = viewModel.googleServiceState.collectAsState(initial = null)
-    val holder = rememberYouTubeAuthStateHolder(
-        pickAccountIntentProvider = { viewModel.createPickAccountIntent() },
-        googleApiAvailabilityProvider = { viewModel.googleApiAvailability },
-        login = { viewModel.login(it) },
-        hasGoogleAccount = { viewModel.hasAccount() },
-    )
     AuthScreen(
-        holder = holder,
+        youTubeAuthStateHolder = rememberYouTubeAuthStateHolder(
+            pickAccountIntentProvider = { viewModel.createPickAccountIntent() },
+            googleApiAvailabilityProvider = { viewModel.googleApiAvailability },
+            login = { viewModel.login(it) },
+            hasGoogleAccount = { viewModel.hasAccount() },
+        ),
+        twitchAuthStateHolder = rememberTwitchAuthStateHolder(
+            authorizeUriProvider = { twitchOauthViewModel.getAuthorizeUrl() },
+            hasTwitchTokenProvider = { twitchOauthViewModel.hasToken() },
+            onStartLoginTwitch = onStartLoginTwitch,
+        ),
         googleServiceStateProvider = { googleServiceState.value },
-        onStartLoginTwitch = onStartLoginTwitch,
-        hasTwitchTokenProvider = { twitchOauthViewModel.hasToken() },
-        twitchAuthorizeUriProvider = { twitchOauthViewModel.getAuthorizeUrl() },
         onSetupCompleted = onSetupCompleted,
     )
 }
 
 @Composable
 private fun AuthScreen(
-    holder: YouTubeAuthStateHolder,
-    googleServiceStateProvider: () -> AuthViewModel.AuthState?,
-    twitchAuthorizeUriProvider: suspend () -> String,
-    hasTwitchTokenProvider: () -> Boolean,
-    onStartLoginTwitch: (String) -> Unit,
+    youTubeAuthStateHolder: YouTubeAuthStateHolder,
+    twitchAuthStateHolder: TwitchAuthStateHolder,
+    googleServiceStateProvider: () -> YouTubeOauthViewModel.AuthState?,
     onSetupCompleted: () -> Unit,
 ) {
     Column(
@@ -80,18 +80,16 @@ private fun AuthScreen(
         modifier = Modifier.fillMaxSize(),
     ) {
         YouTubeListItem(
-            holder = holder,
+            holder = youTubeAuthStateHolder,
             googleServiceStateProvider = googleServiceStateProvider,
         )
         TwitchListItem(
-            authorizeUriProvider = twitchAuthorizeUriProvider,
-            hasTwitchTokenProvider = hasTwitchTokenProvider,
-            onStartLoginTwitch = onStartLoginTwitch,
+            holder = twitchAuthStateHolder,
         )
         val completeButtonEnabled by remember {
             derivedStateOf {
-                googleServiceStateProvider() == AuthViewModel.AuthState.Succeeded ||
-                    hasTwitchTokenProvider()
+                googleServiceStateProvider() == YouTubeOauthViewModel.AuthState.Succeeded ||
+                    twitchAuthStateHolder.hasTwitchTokenProvider()
             }
         }
         Button(
@@ -106,14 +104,14 @@ private fun AuthScreen(
 @Composable
 fun YouTubeListItem(
     holder: YouTubeAuthStateHolder,
-    googleServiceStateProvider: () -> AuthViewModel.AuthState?,
+    googleServiceStateProvider: () -> YouTubeOauthViewModel.AuthState?,
 ) {
     val googleServiceState = googleServiceStateProvider()
-    if (googleServiceState is AuthViewModel.AuthState.ServiceConnectionRecoverable) {
+    if (googleServiceState is YouTubeOauthViewModel.AuthState.ServiceConnectionRecoverable) {
         val activity = LocalContext.current as Activity
         holder.showDialog(activity, googleServiceState.code)
     }
-    val hasNoAccount = googleServiceState is AuthViewModel.AuthState.HasNoAccount
+    val hasNoAccount = googleServiceState is YouTubeOauthViewModel.AuthState.HasNoAccount
     AuthListItem(
         title = "YouTube",
         enabled = hasNoAccount,
@@ -126,12 +124,12 @@ fun YouTubeListItem(
 }
 
 @Composable
-private fun AuthViewModel.AuthState?.stateText(): String {
+private fun YouTubeOauthViewModel.AuthState?.stateText(): String {
     return when (this) {
-        AuthViewModel.AuthState.HasNoAccount -> "auth"
-        AuthViewModel.AuthState.ServiceConnectionFailed -> "service denied"
-        is AuthViewModel.AuthState.ServiceConnectionRecoverable -> ""
-        AuthViewModel.AuthState.Succeeded -> "connected"
+        YouTubeOauthViewModel.AuthState.HasNoAccount -> "auth"
+        YouTubeOauthViewModel.AuthState.ServiceConnectionFailed -> "service denied"
+        is YouTubeOauthViewModel.AuthState.ServiceConnectionRecoverable -> ""
+        YouTubeOauthViewModel.AuthState.Succeeded -> "connected"
         else -> "auth"
     }
 }
@@ -228,24 +226,39 @@ class YouTubeAuthStateHolder @OptIn(ExperimentalPermissionsApi::class) construct
 
 @Composable
 fun TwitchListItem(
-    authorizeUriProvider: suspend () -> String,
-    hasTwitchTokenProvider: () -> Boolean,
-    onStartLoginTwitch: (String) -> Unit,
+    holder: TwitchAuthStateHolder,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val hasTwitchToken = hasTwitchTokenProvider()
+    val hasTwitchToken = holder.hasTwitchTokenProvider()
     val buttonText = if (hasTwitchToken) "connected" else "auth"
     AuthListItem(title = "Twitch", enabled = !hasTwitchToken, buttonText = buttonText) {
         coroutineScope.launch {
-            val authorizeUri = authorizeUriProvider()
-            onStartLoginTwitch(authorizeUri)
+            val authorizeUri = holder.authorizeUriProvider()
+            holder.onStartLoginTwitch(authorizeUri)
         }
     }
 }
 
+@Composable
+private fun rememberTwitchAuthStateHolder(
+    authorizeUriProvider: suspend () -> String,
+    hasTwitchTokenProvider: () -> Boolean,
+    onStartLoginTwitch: (String) -> Unit,
+): TwitchAuthStateHolder {
+    return remember {
+        TwitchAuthStateHolder(authorizeUriProvider, hasTwitchTokenProvider, onStartLoginTwitch)
+    }
+}
+
+class TwitchAuthStateHolder(
+    val authorizeUriProvider: suspend () -> String,
+    val hasTwitchTokenProvider: () -> Boolean,
+    val onStartLoginTwitch: (String) -> Unit,
+)
+
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun AuthListItem(
+private fun AuthListItem(
     title: String,
     enabled: Boolean,
     buttonText: String,
@@ -260,7 +273,7 @@ fun AuthListItem(
             ) {
                 Text(text = buttonText)
             }
-        }
+        },
     )
 }
 
@@ -269,17 +282,19 @@ fun AuthListItem(
 private fun AuthScreenPreview() {
     MdcTheme {
         AuthScreen(
-            holder = rememberYouTubeAuthStateHolder(
+            youTubeAuthStateHolder = rememberYouTubeAuthStateHolder(
                 pickAccountIntentProvider = { Intent() },
                 googleApiAvailabilityProvider = { GoogleApiAvailability.getInstance() },
                 hasGoogleAccount = { true },
                 login = {},
             ),
-            googleServiceStateProvider = { AuthViewModel.AuthState.Succeeded },
+            twitchAuthStateHolder = rememberTwitchAuthStateHolder(
+                authorizeUriProvider = { "" },
+                hasTwitchTokenProvider = { false },
+                onStartLoginTwitch = {}
+            ),
+            googleServiceStateProvider = { YouTubeOauthViewModel.AuthState.Succeeded },
             onSetupCompleted = {},
-            onStartLoginTwitch = {},
-            twitchAuthorizeUriProvider = { "" },
-            hasTwitchTokenProvider = { true },
         )
     }
 }

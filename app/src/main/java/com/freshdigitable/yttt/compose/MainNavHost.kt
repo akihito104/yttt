@@ -13,6 +13,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.navDeepLink
+import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.compose.MainNavRoute.Subscription
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute

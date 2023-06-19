@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
-class AuthViewModel @Inject constructor(
+class YouTubeOauthViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val googleService: GoogleService,
 ) : ViewModel() {
