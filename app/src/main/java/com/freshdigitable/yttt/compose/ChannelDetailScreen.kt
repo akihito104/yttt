@@ -179,7 +179,7 @@ private fun ChannelDetailHeader(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun ChannelDetailPager(
-    pages: Array<ChannelPage> = ChannelPage.values(),
+    pages: Array<ChannelPage>,
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -189,12 +189,12 @@ private fun ChannelDetailPager(
             edgePadding = 0.dp,
         ) {
             val coroutineScope = rememberCoroutineScope()
-            pages.forEach { p ->
+            pages.forEachIndexed { i, p ->
                 Tab(
-                    selected = pagerState.currentPage == p.ordinal,
+                    selected = pagerState.currentPage == i,
                     onClick = {
                         coroutineScope.launch {
-                            pagerState.animateScrollToPage(p.ordinal)
+                            pagerState.animateScrollToPage(i)
                         }
                     },
                     text = { Text(text = p.name) }

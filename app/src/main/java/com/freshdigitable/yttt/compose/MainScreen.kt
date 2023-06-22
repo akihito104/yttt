@@ -25,10 +25,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.util.Consumer
-import androidx.navigation.NavController
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.R
+import com.freshdigitable.yttt.compose.navigation.composableWith
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 
@@ -47,25 +50,30 @@ fun MainScreen() {
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
+            val backStack = navController.currentBackStackEntryAsState()
             TopAppBarImpl(
-                navController,
+                currentBackStackEntryProvider = { backStack.value },
                 onMenuIconClicked = {
                     coroutineScope.launch {
                         drawerState.open()
                     }
                 },
+                onUpClicked = { navController.navigateUp() },
             )
         },
         drawerContent = {
             DrawerContent(
-                onSubscriptionMenuClicked = {
-                    navController.navigateToSubscriptionList(it)
-                    coroutineScope.launch {
-                        drawerState.close()
+                items = DrawerMenuItem.values().toList(),
+                onClicked = {
+                    when (it) {
+                        DrawerMenuItem.SUBSCRIPTION_YOUTUBE ->
+                            navController.navigateToSubscriptionList(LivePlatform.YOUTUBE)
+
+                        DrawerMenuItem.SUBSCRIPTION_TWITCH ->
+                            navController.navigateToSubscriptionList(LivePlatform.TWITCH)
+
+                        DrawerMenuItem.AUTH_TWITCH -> navController.navigateToTwitchLogin()
                     }
-                },
-                onTwitchOauth = {
-                    navController.navigate(MainNavRoute.TwitchLogin.path)
                     coroutineScope.launch {
                         drawerState.close()
                     }
@@ -73,20 +81,27 @@ fun MainScreen() {
             )
         },
     ) { padding ->
-        MainNavHost(navController, modifier = Modifier.padding(padding))
+        NavHost(
+            modifier = Modifier.padding(padding),
+            navController = navController,
+            startDestination = MainNavRoute.startDestination.route,
+        ) {
+            composableWith(navController = navController, navRoutes = MainNavRoute.routes)
+        }
     }
 }
 
 @Composable
 private fun TopAppBarImpl(
-    navController: NavController,
+    currentBackStackEntryProvider: () -> NavBackStackEntry?,
     onMenuIconClicked: () -> Unit,
+    onUpClicked: () -> Unit,
 ) {
-    val backStack = navController.currentBackStackEntryAsState().value
     TopAppBar(
         title = { Text(stringResource(id = R.string.app_name)) },
         navigationIcon = {
-            if (backStack == null || backStack.destination.route == "ttt") {
+            val backStack = currentBackStackEntryProvider()
+            if (backStack == null || backStack.destination.route == MainNavRoute.TimetableTab.route) {
                 Icon(
                     Icons.Filled.Menu,
                     contentDescription = "",
@@ -96,9 +111,7 @@ private fun TopAppBarImpl(
                 Icon(
                     Icons.Filled.ArrowBack,
                     contentDescription = "",
-                    modifier = Modifier.clickable(onClick = {
-                        navController.navigateUp()
-                    }),
+                    modifier = Modifier.clickable(onClick = onUpClicked),
                 )
             }
         },
@@ -108,21 +121,29 @@ private fun TopAppBarImpl(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun ColumnScope.DrawerContent(
-    onSubscriptionMenuClicked: (SubscriptionPage) -> Unit,
-    onTwitchOauth: () -> Unit,
+    items: Collection<DrawerMenuItem>,
+    onClicked: (DrawerMenuItem) -> Unit,
 ) {
-    ListItem(
-        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(SubscriptionPage.YOUTUBE) }),
-        text = { Text("Subscription") }
-    )
-    ListItem(
-        modifier = Modifier.clickable(onClick = { onSubscriptionMenuClicked(SubscriptionPage.TWITCH) }),
-        text = { Text("Twitch Subscription") }
-    )
-    ListItem(
-        modifier = Modifier.clickable(onClick = onTwitchOauth),
-        text = { Text(text = "twitch auth") }
-    )
+    items.forEach {
+        ListItem(
+            text = { Text(it.text()) },
+            modifier = Modifier.clickable(onClick = { onClicked(it) }),
+        )
+    }
+}
+
+private enum class DrawerMenuItem(
+    val text: @Composable () -> String,
+) {
+    SUBSCRIPTION_YOUTUBE(
+        text = { "YouTube Subscriptions" },
+    ),
+    SUBSCRIPTION_TWITCH(
+        text = { "Twitch Followings" },
+    ),
+    AUTH_TWITCH(
+        text = { "Twitch auth" },
+    ),
 }
 
 @Preview
