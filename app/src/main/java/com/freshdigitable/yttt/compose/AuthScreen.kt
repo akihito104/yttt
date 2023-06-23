@@ -47,7 +47,7 @@ fun AuthScreen(
     viewModel: YouTubeOauthViewModel = hiltViewModel(),
     twitchOauthViewModel: TwitchOauthViewModel = hiltViewModel(),
     onStartLoginTwitch: (String) -> Unit,
-    onSetupCompleted: () -> Unit,
+    onSetupCompleted: (() -> Unit)?,
 ) {
     val googleServiceState = viewModel.googleServiceState.collectAsState(initial = null)
     AuthScreen(
@@ -72,7 +72,7 @@ private fun AuthScreen(
     youTubeAuthStateHolder: YouTubeAuthStateHolder,
     twitchAuthStateHolder: TwitchAuthStateHolder,
     googleServiceStateProvider: () -> YouTubeOauthViewModel.AuthState?,
-    onSetupCompleted: () -> Unit,
+    onSetupCompleted: (() -> Unit)?,
 ) {
     Column(
         verticalArrangement = Arrangement.Center,
@@ -92,11 +92,13 @@ private fun AuthScreen(
                     twitchAuthStateHolder.hasTwitchTokenProvider()
             }
         }
-        Button(
-            enabled = completeButtonEnabled,
-            onClick = onSetupCompleted,
-        ) {
-            Text("complete setup")
+        if (onSetupCompleted != null) {
+            Button(
+                enabled = completeButtonEnabled,
+                onClick = onSetupCompleted,
+            ) {
+                Text("complete setup")
+            }
         }
     }
 }

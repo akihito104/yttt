@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.compose
 
 import android.content.Intent
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ColumnScope
@@ -31,6 +32,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.R
+import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.google.accompanist.themeadapter.material.MdcTheme
@@ -44,7 +46,11 @@ fun MainScreen(shouldAuth: Boolean = false) {
     val coroutineScope = rememberCoroutineScope()
     val activity = LocalContext.current as ComponentActivity
     DisposableEffect(Unit) {
-        val listener = Consumer<Intent> { navController.handleDeepLink(it) }
+        Log.d("MainScreen", "DisposableEffect: ")
+        val listener = Consumer<Intent> {
+            val handled = navController.handleDeepLink(it)
+            Log.d("MainScreen", "handleDeepLink(handled>$handled): ${it.data}")
+        }
         activity.addOnNewIntentListener(listener)
         onDispose { activity.removeOnNewIntentListener(listener) }
     }
@@ -73,7 +79,8 @@ fun MainScreen(shouldAuth: Boolean = false) {
                         DrawerMenuItem.SUBSCRIPTION_TWITCH ->
                             navController.navigateToSubscriptionList(LivePlatform.TWITCH)
 
-                        DrawerMenuItem.AUTH_TWITCH -> navController.navigateToTwitchLogin()
+                        DrawerMenuItem.AUTH_STATUS ->
+                            navController.navigateToAuth(MainNavRoute.Auth.Modes.MENU)
                     }
                     coroutineScope.launch {
                         drawerState.close()
@@ -106,14 +113,19 @@ private fun TopAppBarImpl(
         navigationIcon = {
             val backStack = currentBackStackEntryProvider()
             val route = backStack?.destination?.route
+            if (backStack.match(
+                    MainNavRoute.Auth,
+                    MainNavRoute.Auth.Mode to { it == null || it == MainNavRoute.Auth.Modes.INIT.name },
+                )
+            ) {
+                return@TopAppBar
+            }
             if (backStack == null || route == MainNavRoute.TimetableTab.route) {
                 Icon(
                     Icons.Filled.Menu,
                     contentDescription = "",
                     modifier = Modifier.clickable(onClick = onMenuIconClicked),
                 )
-            } else if (route?.startsWith(MainNavRoute.Auth.path) == true) {
-                // nop
             } else {
                 Icon(
                     Icons.Filled.ArrowBack,
@@ -123,6 +135,15 @@ private fun TopAppBarImpl(
             }
         },
     )
+}
+
+private fun <K : NavArg<*>> NavBackStackEntry?.match(
+    route: MainNavRoute,
+    vararg args: Pair<K, (Any?) -> Boolean>,
+): Boolean {
+    if (this == null) return false
+    if (this.destination.route != route.route) return false
+    return args.all { (k, v) -> v(k.getValue(this.arguments)) }
 }
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -148,8 +169,8 @@ private enum class DrawerMenuItem(
     SUBSCRIPTION_TWITCH(
         text = { "Twitch Followings" },
     ),
-    AUTH_TWITCH(
-        text = { "Twitch auth" },
+    AUTH_STATUS(
+        text = { "Auth status" },
     ),
 }
 

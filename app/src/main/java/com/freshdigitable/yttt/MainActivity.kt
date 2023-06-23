@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.setContent
@@ -15,9 +16,9 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("MainActivity", "onCreate: ${intent.data}")
-        val isTwitchOauth = intent.data?.toString()?.startsWith("https://twitch_login/") == true
-        val startDestination = if (isTwitchOauth) LaunchNavRoute.Main else LaunchNavRoute.Splash
+        Log.d("MainActivity", "onCreate(${this}): ${intent.data}")
+        val startDestination =
+            if (intent.isTwitchOauth) LaunchNavRoute.Main else LaunchNavRoute.Splash
         setContent {
             MdcTheme {
                 val navController = rememberNavController()
@@ -26,5 +27,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        private val Intent.isTwitchOauth: Boolean
+            get() = data?.toString()?.startsWith("https://twitch_login/") == true
     }
 }

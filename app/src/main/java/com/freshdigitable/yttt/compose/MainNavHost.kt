@@ -120,22 +120,39 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     }
 
     object Auth : MainNavRoute(path = "auth") {
-        override val params: Array<out NavArg<*>> = emptyArray()
+        override val params: Array<out NavArg<*>> = arrayOf(Mode)
+
+        object Mode : NavArg.QueryParam<String> {
+            override val argName: String = "mode"
+            override val type: NavType<String> = NavType.StringType.nonNull()
+            override val defaultValue: String = Modes.INIT.name
+        }
+
+        enum class Modes { INIT, MENU, }
+
+        fun parseRoute(mode: Modes): String = super.parseRoute(Mode to mode.name)
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+            val isFromMenu = Mode.getValue(backStackEntry.arguments) == Modes.MENU.name
             val context = LocalContext.current
             AuthScreen(
                 onStartLoginTwitch = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it))
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
+                    }
                     context.startActivity(intent)
                 },
-                onSetupCompleted = {
-                    navController.navigate(TimetableTab.route) {
-                        popUpTo(Auth.route) {
-                            inclusive = true
+                onSetupCompleted = if (isFromMenu) {
+                    null
+                } else {
+                    {
+                        navController.navigate(TimetableTab.route) {
+                            popUpTo(Auth.route) {
+                                inclusive = true
+                            }
+                            launchSingleTop = true
                         }
-                        launchSingleTop = true
                     }
                 },
             )
@@ -144,7 +161,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
 
     object TwitchLogin : MainNavRoute(path = "twitch_login") {
         override val params: Array<Params> = arrayOf(
-            Params.AccessToken, Params.TokenType, Params.Scope, Params.State,
+            Params.AccessToken, Params.Scope, Params.State, Params.TokenType,
         )
 
         sealed class Params(override val argName: String) : NavArg.QueryParam<String?> {
@@ -177,14 +194,19 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                     scope = requireNotNull(p[Params.Scope]),
                 )
                 Log.d("TwitchLogin", "token: $token")
-                val viewModel = hiltViewModel<TwitchOauthViewModel>()
+                val viewModel = hiltViewModel<TwitchOauthViewModel>(backStackEntry)
                 viewModel.putToken(token)
-                Log.d("TwitchLogin", "currentDest: ${navController.currentDestination?.route}")
-                val authBackStack = navController.backQueue
-                    .firstOrNull { it.destination.route?.startsWith(Auth.path) == true }
-                    ?: throw IllegalStateException()
+                val currentRoute = navController.currentDestination?.route
+                Log.d("TwitchLogin", "currentDest: $currentRoute")
+                if (currentRoute != route) {
+                    return
+                }
+                val authBackStack = navController.previousBackStackEntry
+                    ?: throw IllegalStateException("prevDestination: null")
+                val nextRoute = authBackStack.destination.route
+                check(nextRoute == Auth.route) { "prevDestination: ${authBackStack.destination}" }
                 navController.popBackStack(
-                    route = requireNotNull(authBackStack.destination.route),
+                    route = nextRoute,
                     inclusive = false,
                     saveState = false,
                 )
@@ -211,4 +233,5 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
 fun NavHostController.navigateToSubscriptionList(page: LivePlatform) =
     navigate(Subscription.parseRoute(page))
 
-fun NavHostController.navigateToTwitchLogin() = navigate(MainNavRoute.TwitchLogin.path)
+fun NavHostController.navigateToAuth(mode: MainNavRoute.Auth.Modes) =
+    navigate(MainNavRoute.Auth.parseRoute(mode))
