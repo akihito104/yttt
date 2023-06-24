@@ -3,10 +3,8 @@ package com.freshdigitable.yttt.compose
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
-import com.freshdigitable.yttt.compose.navigation.nonNull
 
 sealed class LaunchNavRoute(path: String) : NavRoute(path) {
     companion object {
@@ -34,11 +32,9 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
     object Main : LaunchNavRoute("main") {
         override val params: Array<out NavArg<*>> = arrayOf(Destination)
 
-        object Destination : NavArg.QueryParam<String> {
-            override val argName: String = "dest"
-            override val type: NavType<String> = NavType.StringType.nonNull()
-            override val defaultValue: String = Destinations.AUTH.name
-        }
+        object Destination : NavArg.QueryParam<String> by NavArg.QueryParam.nonNullString(
+            "dest", Destinations.AUTH.name,
+        )
 
         enum class Destinations { AUTH, TIMETABLE }
 

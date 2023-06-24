@@ -11,13 +11,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.navDeepLink
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.compose.MainNavRoute.Subscription
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
-import com.freshdigitable.yttt.compose.navigation.nonNull
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -44,10 +42,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object Subscription : MainNavRoute(path = "subscription") {
         override val params: Array<Page> = arrayOf(Page)
 
-        object Page : NavArg.PathParam<LivePlatform> {
-            override val argName: String = "subscription_page"
-            override val type: NavType<LivePlatform> = NavType.EnumType(LivePlatform::class.java)
-        }
+        object Page : NavArg.PathParam<LivePlatform> by NavArg.PathParam.enum("subscription_page")
 
         fun parseRoute(page: LivePlatform): String = super.parseRoute(Page to page)
 
@@ -66,14 +61,12 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object ChannelDetail : MainNavRoute(path = "channel") {
         override val params: Array<Params<*>> = arrayOf(Params.Platform, Params.ChannelId)
 
-        sealed class Params<T>(
-            override val argName: String,
-            override val type: NavType<T>,
-        ) : NavArg.PathParam<T> {
-            object ChannelId : Params<String>("channel_id", NavType.StringType.nonNull())
+        sealed class Params<T> : NavArg.PathParam<T> {
+            object ChannelId : Params<String>(),
+                NavArg.PathParam<String> by NavArg.PathParam.string("channel_id")
 
-            object Platform :
-                Params<LivePlatform>("platform", NavType.EnumType(LivePlatform::class.java))
+            object Platform : Params<LivePlatform>(),
+                NavArg.PathParam<LivePlatform> by NavArg.PathParam.enum("platform")
         }
 
         fun parseRoute(id: LiveChannel.Id): String = super.parseRoute(
@@ -94,14 +87,12 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object VideoDetail : MainNavRoute(path = "videoDetail") {
         override val params: Array<Params<*>> = arrayOf(Params.Platform, Params.VideoId)
 
-        sealed class Params<T>(
-            override val argName: String,
-            override val type: NavType<T>,
-        ) : NavArg.PathParam<T> {
-            object VideoId : Params<String>("video_id", NavType.StringType.nonNull())
+        sealed class Params<T> : NavArg.PathParam<T> {
+            object VideoId : Params<String>(),
+                NavArg.PathParam<String> by NavArg.PathParam.string("video_id")
 
-            object Platform :
-                Params<LivePlatform>("platform", NavType.EnumType(LivePlatform::class.java))
+            object Platform : Params<LivePlatform>(),
+                NavArg.PathParam<LivePlatform> by NavArg.PathParam.enum("platform")
         }
 
         fun parseRoute(id: LiveVideo.Id): String = super.parseRoute(
@@ -122,11 +113,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object Auth : MainNavRoute(path = "auth") {
         override val params: Array<out NavArg<*>> = arrayOf(Mode)
 
-        object Mode : NavArg.QueryParam<String> {
-            override val argName: String = "mode"
-            override val type: NavType<String> = NavType.StringType.nonNull()
-            override val defaultValue: String = Modes.INIT.name
-        }
+        object Mode : NavArg.QueryParam<String> by NavArg.QueryParam.nonNullString(
+            "mode", Modes.INIT.name,
+        )
 
         enum class Modes { INIT, MENU, }
 
@@ -164,14 +153,12 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
             Params.AccessToken, Params.Scope, Params.State, Params.TokenType,
         )
 
-        sealed class Params(override val argName: String) : NavArg.QueryParam<String?> {
+        sealed class Params(override val argName: String) :
+            NavArg.QueryParam<String?> by NavArg.QueryParam.string(argName) {
             object TokenType : Params("token_type")
             object State : Params("state")
             object AccessToken : Params("access_token")
             object Scope : Params("scope")
-
-            override val type: NavType<String?> = NavType.StringType
-            override val defaultValue: String? = null
         }
 
         override val deepLinks = listOf(navDeepLink {
