@@ -16,23 +16,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.liveData
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import com.freshdigitable.yttt.data.AccountRepository
+import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.source.TwitchLiveRepository
 import com.freshdigitable.yttt.data.source.TwitchOauthToken
 import com.google.accompanist.themeadapter.material.MdcTheme
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import java.math.BigInteger
 import java.time.Instant
-import javax.inject.Inject
 
 @Composable
 fun TwitchOauthScreen(
@@ -129,28 +123,5 @@ private fun TwitchOauthScreenPreview() {
 
                 }
             })
-    }
-}
-
-@HiltViewModel
-class TwitchOauthViewModel @Inject constructor(
-    private val twitchRepository: TwitchLiveRepository,
-    private val accountRepository: AccountRepository,
-) : ViewModel() {
-    fun hasToken(): Boolean = accountRepository.getTwitchToken() != null
-    suspend fun getAuthorizeUrl(): String = twitchRepository.getAuthorizeUrl()
-
-    fun putToken(token: TwitchOauthToken) {
-        accountRepository.putTwitchToken(token.accessToken)
-    }
-
-    fun getMe(): LiveData<LiveChannelDetail> = liveData {
-        val user = twitchRepository.fetchMe() ?: throw IllegalStateException()
-        emit(user)
-    }
-
-    companion object {
-        @Suppress("unused")
-        private val TAG = TwitchOauthViewModel::class.simpleName
     }
 }

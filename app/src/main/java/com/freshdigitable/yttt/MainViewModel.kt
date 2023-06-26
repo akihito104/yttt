@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt
 
-import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -12,13 +11,10 @@ import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TabData
 import com.freshdigitable.yttt.data.AccountRepository
-import com.freshdigitable.yttt.data.AccountRepository.Companion.getNewChooseAccountIntent
-import com.freshdigitable.yttt.data.GoogleService
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.source.TwitchLiveRepository
-import com.google.android.gms.common.GoogleApiAvailability
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -29,41 +25,23 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val liveRepository: YouTubeLiveRepository,
-    private val accountRepository: AccountRepository,
-    private val googleService: GoogleService,
     private val twitchRepository: TwitchLiveRepository,
+    private val accountRepository: AccountRepository,
 ) : ViewModel() {
-
-    fun getConnectionStatus(): Int = googleService.getConnectionStatusCode()
-
-    fun isUserResolvableError(statusCode: Int): Boolean =
-        googleService.isUserResolvableError(statusCode)
-
-    val googleApiAvailability: GoogleApiAvailability get() = googleService.googleApiAvailability
-
-    fun hasAccount(): Boolean = accountRepository.hasAccount()
-
-    fun login(account: String? = null): Boolean {
-        if (account != null) {
-            accountRepository.putAccount(account)
-        }
-        val accountName = accountRepository.getAccount()
-        if (accountName != null) {
-            accountRepository.setSelectedAccountName(accountName)
-            return true
-        }
-        return false
-    }
-
-    fun createPickAccountIntent(): Intent = accountRepository.getNewChooseAccountIntent()
-
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
+    val canUpdate: Boolean
+        get() {
+            val lastUpdateDatetime = liveRepository.lastUpdateDatetime ?: return true
+            return (lastUpdateDatetime + Duration.ofMinutes(30)) <= Instant.now()
+        }
 
     fun loadList() {
         viewModelScope.launch {
@@ -96,6 +74,9 @@ class MainViewModel @Inject constructor(
         .asLiveData(viewModelScope.coroutineContext)
 
     private suspend fun fetchLiveStreams() {
+        if (!accountRepository.hasAccount()) {
+            return
+        }
         val first = liveRepository.findAllUnfinishedVideos()
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .map { it.id }.distinct()
@@ -112,6 +93,7 @@ class MainViewModel @Inject constructor(
             viewModelScope.async { fetchVideoTask(channelDetail) }
         }
         task.awaitAll()
+        liveRepository.lastUpdateDatetime = Instant.now()
         Log.d(TAG, "fetchLiveStreams: end")
     }
 
@@ -130,6 +112,9 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun fetchTwitchStream() {
+        if (accountRepository.getTwitchToken() == null) {
+            return
+        }
         twitchRepository.fetchFollowedStreams()
         val me = twitchRepository.fetchMe() ?: return
         val following = twitchRepository.fetchAllFollowings(me.id)

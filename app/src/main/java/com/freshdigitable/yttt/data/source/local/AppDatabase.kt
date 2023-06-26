@@ -102,7 +102,7 @@ class LiveVideoTable(
         "v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, " +
         "c.title AS channel_title, c.icon AS channel_icon " +
         "FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id " +
-        "WHERE v.visible == TRUE",
+        "WHERE v.visible == 1",
     viewName = "video_view",
 )
 data class LiveVideoDbView(
