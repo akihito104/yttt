@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -21,14 +22,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.MainViewModel
+import com.freshdigitable.yttt.OnAirListViewModel
 import com.freshdigitable.yttt.TimetablePage
+import com.freshdigitable.yttt.UpcomingListViewModel
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.accompanist.themeadapter.material.MdcTheme
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 @Composable
 fun TimetableTabScreen(
     viewModel: MainViewModel = hiltViewModel(),
+    onAirViewModel: OnAirListViewModel = hiltViewModel(),
+    upcomingViewModel: UpcomingListViewModel = hiltViewModel(),
     onListItemClicked: (LiveVideo.Id) -> Unit,
 ) {
     LaunchedEffect(Unit) {
@@ -36,18 +42,27 @@ fun TimetableTabScreen(
             viewModel.loadList()
         }
     }
-    val tabData = viewModel.tabs.observeAsState(TimetablePage.values().map { TabData(it, 0) })
+    val onAir = onAirViewModel.items.collectAsState(emptyList())
+    val upcoming = upcomingViewModel.items.collectAsState(emptyMap())
+    val tabData = combine(onAirViewModel.tabData, upcomingViewModel.tabData) { items ->
+        items.toList()
+    }.collectAsState(initial = TimetablePage.values().map { TabData(it, 0) })
     TimetableTabScreen(
         tabDataProvider = { tabData.value },
     ) { index ->
         val refreshing = viewModel.isLoading.observeAsState(false)
-        val list = TimetablePage.values()[index].bind(viewModel).observeAsState(emptyList())
         TimetableScreen(
             refreshingProvider = { refreshing.value },
             onRefresh = viewModel::loadList,
-            listItemProvider = { list.value },
-            onListItemClicked = onListItemClicked,
-        )
+        ) {
+            when (TimetablePage.values()[index]) {
+                TimetablePage.OnAir ->
+                    simpleContent(itemsProvider = { onAir.value }, onListItemClicked)
+
+                TimetablePage.Upcoming ->
+                    groupedContent(itemsProvider = { upcoming.value }, onListItemClicked)
+            }
+        }
     }
 }
 
@@ -90,8 +105,6 @@ class TabData(
     private val page: TimetablePage,
     private val count: Int
 ) {
-    val index: Int = page.ordinal
-
     @Composable
     @ReadOnlyComposable
     fun text(): String = stringResource(id = page.textRes, count)

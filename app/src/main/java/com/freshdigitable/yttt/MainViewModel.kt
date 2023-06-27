@@ -4,22 +4,21 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asFlow
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.distinctUntilChanged
-import androidx.lifecycle.map
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TabData
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
+import com.freshdigitable.yttt.data.model.toLocalDateTime
 import com.freshdigitable.yttt.data.source.TwitchLiveRepository
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -27,6 +26,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -55,23 +55,6 @@ class MainViewModel @Inject constructor(
             }
         }
     }
-
-    private val videos = liveRepository.videos.distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-    val onAir: LiveData<List<LiveVideo>> = combine(videos, twitchRepository.onAir) { yt, tw ->
-        yt + tw
-    }.map { v -> v.filter { it.isNowOnAir() }.sortedByDescending { it.actualStartDateTime } }
-        .asLiveData(viewModelScope.coroutineContext)
-    val upcoming: LiveData<List<LiveVideo>> = combine(videos, twitchRepository.upcoming) { yt, tw ->
-        yt + tw
-    }.map { v -> v.filter { it.isUpcoming() }.sortedBy { it.scheduledStartDateTime } }
-        .asLiveData(viewModelScope.coroutineContext)
-    val tabs: LiveData<List<TabData>> = combine(
-        TimetablePage.values().map { p ->
-            p.bind(this).map { it.size }.distinctUntilChanged().map { TabData(p, it) }.asFlow()
-        }
-    ) { tabs -> tabs.apply { sortBy { it.index } }.toList() }
-        .asLiveData(viewModelScope.coroutineContext)
 
     private suspend fun fetchLiveStreams() {
         if (!accountRepository.hasAccount()) {
@@ -126,4 +109,46 @@ class MainViewModel @Inject constructor(
     companion object {
         private val TAG = MainViewModel::class.java.simpleName
     }
+}
+
+@HiltViewModel
+class OnAirListViewModel @Inject constructor(
+    liveRepository: YouTubeLiveRepository,
+    twitchRepository: TwitchLiveRepository,
+) : ViewModel() {
+    val items: StateFlow<List<LiveVideo>> =
+        combine(liveRepository.videos, twitchRepository.onAir) { yt, tw -> yt + tw }
+            .map { v ->
+                v.filter { it.isNowOnAir() }
+                    .sortedByDescending { it.actualStartDateTime }
+            }
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val tabData: StateFlow<TabData> = items.map { it.size }
+        .distinctUntilChanged()
+        .map { TabData(TimetablePage.OnAir, it) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, TabData(TimetablePage.OnAir, 0))
+}
+
+@HiltViewModel
+class UpcomingListViewModel @Inject constructor(
+    liveRepository: YouTubeLiveRepository,
+    twitchRepository: TwitchLiveRepository,
+) : ViewModel() {
+    val items: StateFlow<Map<String, List<LiveVideo>>> =
+        combine(liveRepository.videos, twitchRepository.upcoming) { yt, tw -> yt + tw }
+            .map { v ->
+                v.filter { it.isUpcoming() }
+                    .sortedBy { it.scheduledStartDateTime }
+                    .groupBy {
+                        it.scheduledStartDateTime?.toLocalDateTime()?.truncatedTo(ChronoUnit.DAYS)
+                            ?.format(dateWeekdayFormatter) ?: ""
+                    }
+            }
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
+    val tabData: StateFlow<TabData> = items.map { items ->
+        items.values.map { it.size }.fold(0) { acc, i -> acc + i }
+    }
+        .distinctUntilChanged()
+        .map { TabData(TimetablePage.Upcoming, it) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, TabData(TimetablePage.Upcoming, 0))
 }

@@ -2,8 +2,10 @@ package com.freshdigitable.yttt.compose
 
 import android.content.res.Configuration
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,12 +29,15 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.model.dateTimeFormatter
+import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
+import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.google.accompanist.themeadapter.material.MdcTheme
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
@@ -77,7 +83,8 @@ fun LiveVideoListItemView(
                     title = video.channel.title,
                 )
                 Text(
-                    text = video.scheduledStartDateTime?.toLocalFormattedText ?: "",
+                    text = video.scheduledStartDateTime?.toLocalFormattedText(dateTimeFormatter)
+                        ?: "",
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -96,16 +103,21 @@ fun LiveVideoListItemView(
     }
 }
 
+@Composable
+fun LiveVideoHeaderView(label: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(color = Color.Cyan)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(text = label)
+    }
+}
+
 private val thumbnailModifier: Modifier = Modifier
     .fillMaxWidth(fraction = 0.55f)
     .aspectRatio(16f / 9f)
-
-private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd(E) HH:mm")
-private val Instant.toLocalFormattedText: String
-    get() {
-        val localDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
-        return localDateTime.format(dateTimeFormatter)
-    }
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
@@ -124,6 +136,17 @@ private fun LiveVideoListItemViewPreview() {
                 thumbnailUrl = "",
             )
         ) {}
+    }
+}
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun LiveVideoHeaderViewPreview() {
+    MdcTheme {
+        LiveVideoHeaderView(
+            label = LocalDateTime.now(ZoneId.systemDefault())
+                .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter)
+        )
     }
 }
 
