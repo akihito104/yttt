@@ -77,11 +77,33 @@ fun LazyListScope.groupedContent(
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
-private fun TimetableScreenPreview() {
+private fun SimpleTimetableScreenPreview() {
     MdcTheme {
         TimetableScreen(
             refreshingProvider = { false },
             onRefresh = {},
-        ) {}
+        ) {
+            simpleContent(
+                itemsProvider = { listOf(liveVideoSample) },
+                onListItemClicked = {},
+            )
+        }
+    }
+}
+
+@Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
+@Composable
+private fun GroupedTimetableScreenPreview() {
+    val items = mapOf("2023/06/29(木)" to listOf(liveVideoSample))
+    MdcTheme {
+        TimetableScreen(
+            refreshingProvider = { false },
+            onRefresh = {},
+        ) {
+            groupedContent(
+                itemsProvider = { items },
+                onListItemClicked = {},
+            )
+        }
     }
 }
