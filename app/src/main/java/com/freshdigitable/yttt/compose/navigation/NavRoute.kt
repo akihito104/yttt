@@ -37,8 +37,8 @@ abstract class NavRoute(
         val q = if (qp.isNullOrEmpty()) {
             null
         } else {
-            params.map { (arg, v) -> arg.asNavArg() to v }.filter { qp.contains(it.first) }
-                .joinToString("&") { it.first.parsePath(it.second) }
+            params.filter { qp.contains(it.first) }
+                .joinToString("&") { it.first.asNavArg().parsePath(it.second) }
         }
         return listOfNotNull(p, if (q.isNullOrEmpty()) null else q).joinToString("?")
     }
