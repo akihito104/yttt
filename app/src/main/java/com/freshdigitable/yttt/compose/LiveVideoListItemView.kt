@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material.LocalContentAlpha
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
@@ -20,6 +22,7 @@ import androidx.compose.material.primarySurface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,8 +71,9 @@ fun LiveVideoListItemView(
                 }
             } else {
                 Image(
-                    imageVector = Icons.Filled.PlayArrow,
+                    imageVector = Icons.Default.PlayArrow,
                     contentDescription = "",
+                    colorFilter = ColorFilter.tint(LocalContentColor.current.copy(LocalContentAlpha.current)),
                     modifier = thumbnailModifier.align(Top),
                 )
             }
@@ -130,6 +134,14 @@ private data class ThumbnailKey(val id: String) : Key {
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
 private fun LiveVideoListItemViewPreview() {
+    MdcTheme {
+        LiveVideoListItemView(liveVideoSample) {}
+    }
+}
+
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun LiveVideoListItemViewPreviewDark() {
     MdcTheme {
         LiveVideoListItemView(liveVideoSample) {}
     }
