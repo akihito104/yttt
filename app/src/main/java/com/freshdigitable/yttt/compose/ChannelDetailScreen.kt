@@ -50,15 +50,14 @@ import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.dateFormatter
+import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 import java.math.BigInteger
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.*
 
 @Composable
@@ -137,7 +136,7 @@ private fun ChannelDetailHeader(
         subscriberCount,
         "Videos:${channelDetail.videoCount}",
         "Views:${channelDetail.viewsCount.toStringWithComma}",
-        "Published:${channelDetail.publishedAt.toLocalFormattedText}",
+        "Published:${channelDetail.publishedAt.toLocalFormattedText(dateFormatter)}",
     ).joinToString("・")
     Column {
         if (channelDetail.bannerUrl?.isNotEmpty() == true) {
@@ -377,12 +376,6 @@ fun MultiChannelContent(item: LiveChannel, modifier: Modifier = Modifier) {
     }
 }
 
-private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd")
-private val Instant.toLocalFormattedText: String
-    get() {
-        val localDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
-        return localDateTime.format(dateTimeFormatter)
-    }
 private val BigInteger.toStringWithComma: String
     get() = NumberFormat.getNumberInstance(Locale.US).format(this)
 private val BigInteger.toStringWithUnitPrefix: String

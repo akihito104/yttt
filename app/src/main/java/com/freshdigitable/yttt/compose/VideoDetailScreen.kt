@@ -26,12 +26,12 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.model.dateTimeFormatter
+import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
+import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.google.accompanist.themeadapter.material.MdcTheme
 import java.math.BigInteger
 import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 
 @Composable
@@ -98,23 +98,19 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideo?) {
 private val LiveVideo.statsText: String
     get() {
         val time = if (isNowOnAir()) {
-            "Started:${requireNotNull(actualStartDateTime).toLocalFormattedText(startedFormat)}"
+            "Started:${
+                requireNotNull(actualStartDateTime).toLocalFormattedText(dateTimeSecondFormatter)
+            }"
         } else if (isUpcoming()) {
-            "Starting:${requireNotNull(scheduledStartDateTime).toLocalFormattedText(startingFormat)}"
+            "Starting:${
+                requireNotNull(scheduledStartDateTime).toLocalFormattedText(dateTimeFormatter)
+            }"
         } else null
         val count =
             if ((this as? LiveVideoDetail)?.viewerCount != null) "Viewers:${viewerCount.toString()}"
             else null
         return listOfNotNull(time, count).joinToString("・")
     }
-
-private const val startedFormat = "yyyy/MM/dd(E) HH:mm:ss"
-private const val startingFormat = "yyyy/MM/dd(E) HH:mm"
-private fun Instant.toLocalFormattedText(format: String): String {
-    val dateTimeFormatter = DateTimeFormatter.ofPattern(format)
-    val localDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
-    return localDateTime.format(dateTimeFormatter)
-}
 
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
 @Composable

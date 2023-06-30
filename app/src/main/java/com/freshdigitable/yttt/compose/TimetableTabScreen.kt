@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.ScrollableTabRow
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -21,14 +23,19 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.MainViewModel
+import com.freshdigitable.yttt.OnAirListViewModel
 import com.freshdigitable.yttt.TimetablePage
+import com.freshdigitable.yttt.UpcomingListViewModel
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.google.accompanist.themeadapter.material.MdcTheme
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 @Composable
 fun TimetableTabScreen(
     viewModel: MainViewModel = hiltViewModel(),
+    onAirViewModel: OnAirListViewModel = hiltViewModel(),
+    upcomingViewModel: UpcomingListViewModel = hiltViewModel(),
     onListItemClicked: (LiveVideo.Id) -> Unit,
 ) {
     LaunchedEffect(Unit) {
@@ -36,17 +43,30 @@ fun TimetableTabScreen(
             viewModel.loadList()
         }
     }
-    val tabData = viewModel.tabs.observeAsState(TimetablePage.values().map { TabData(it, 0) })
+    val tabData = combine(onAirViewModel.tabData, upcomingViewModel.tabData) { items ->
+        items.toList()
+    }.collectAsState(initial = TimetablePage.values().map { TabData(it, 0) })
+    val refreshing = viewModel.isLoading.observeAsState(false)
+    val listContents: List<LazyListScope.() -> Unit> = TimetablePage.values().map {
+        when (it) {
+            TimetablePage.OnAir -> {
+                val onAir = onAirViewModel.items.collectAsState(emptyList())
+                return@map { simpleContent(itemsProvider = { onAir.value }, onListItemClicked) }
+            }
+
+            TimetablePage.Upcoming -> {
+                val upcoming = upcomingViewModel.items.collectAsState(emptyMap())
+                return@map { groupedContent(itemsProvider = { upcoming.value }, onListItemClicked) }
+            }
+        }
+    }
     TimetableTabScreen(
         tabDataProvider = { tabData.value },
     ) { index ->
-        val refreshing = viewModel.isLoading.observeAsState(false)
-        val list = TimetablePage.values()[index].bind(viewModel).observeAsState(emptyList())
         TimetableScreen(
             refreshingProvider = { refreshing.value },
             onRefresh = viewModel::loadList,
-            listItemProvider = { list.value },
-            onListItemClicked = onListItemClicked,
+            listContent = listContents[index],
         )
     }
 }
@@ -90,8 +110,6 @@ class TabData(
     private val page: TimetablePage,
     private val count: Int
 ) {
-    val index: Int = page.ordinal
-
     @Composable
     @ReadOnlyComposable
     fun text(): String = stringResource(id = page.textRes, count)
