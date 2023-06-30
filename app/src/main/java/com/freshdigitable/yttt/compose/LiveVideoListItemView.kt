@@ -116,7 +116,10 @@ fun LiveVideoHeaderView(label: String) {
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
-            Text(text = label)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.subtitle2,
+            )
         }
     }
 }
