@@ -94,7 +94,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.1"
     // https://developers.google.com/android/guides/setup
     implementation "com.google.android.gms:play-services-base:18.2.0"
-    implementation 'com.google.android.gms:play-services-auth:20.5.0'
+    implementation 'com.google.android.gms:play-services-auth:20.6.0'
     //https://github.com/googleapis/google-api-java-client
     implementation('com.google.api-client:google-api-client-android:2.2.0') {
         exclude group: 'org.apache.httpcomponents'
