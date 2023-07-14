@@ -90,7 +90,7 @@ dependencies {
 
     implementation 'androidx.core:core-ktx:1.10.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation("androidx.activity:activity-ktx:1.7.0")
+    implementation("androidx.activity:activity-ktx:1.7.2")
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.1"
     // https://developers.google.com/android/guides/setup
     implementation "com.google.android.gms:play-services-base:18.2.0"
