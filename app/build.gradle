@@ -29,9 +29,15 @@ android {
 
         def twitchPFile = rootProject.file("twitch.properties")
         def twitchProperties = new Properties()
-        twitchProperties.load(new FileInputStream(twitchPFile))
-        buildConfigField("String", "TWITCH_CLIENT_ID", "\"${twitchProperties["twitch_client_id"]}\"")
-        buildConfigField("String", "TWITCH_REDIRECT_URI", "\"${twitchProperties["twitch_redirect_uri"]}\"")
+        if (twitchPFile.exists()) {
+            try (def inputStream = new FileInputStream(twitchPFile)) {
+                twitchProperties.load(inputStream)
+            }
+        }
+        buildConfigField("String", "TWITCH_CLIENT_ID",
+                "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\"")
+        buildConfigField("String", "TWITCH_REDIRECT_URI",
+                "\"${twitchProperties.getOrDefault("twitch_redirect_uri", "")}\"")
     }
 
     buildFeatures {
