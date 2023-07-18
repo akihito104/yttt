@@ -29,9 +29,15 @@ android {
 
         def twitchPFile = rootProject.file("twitch.properties")
         def twitchProperties = new Properties()
-        twitchProperties.load(new FileInputStream(twitchPFile))
-        buildConfigField("String", "TWITCH_CLIENT_ID", "\"${twitchProperties["twitch_client_id"]}\"")
-        buildConfigField("String", "TWITCH_REDIRECT_URI", "\"${twitchProperties["twitch_redirect_uri"]}\"")
+        if (twitchPFile.exists()) {
+            try (def inputStream = new FileInputStream(twitchPFile)) {
+                twitchProperties.load(inputStream)
+            }
+        }
+        buildConfigField("String", "TWITCH_CLIENT_ID",
+                "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\"")
+        buildConfigField("String", "TWITCH_REDIRECT_URI",
+                "\"${twitchProperties.getOrDefault("twitch_redirect_uri", "")}\"")
     }
 
     buildFeatures {
@@ -60,11 +66,11 @@ android {
 }
 
 dependencies {
-    def room_version = "2.5.1"
-    def nav_version = "2.5.3"
+    def room_version = "2.5.2"
+    def nav_version = "2.6.0"
     def accompanist_version = "0.30.1" // for compose 1.4
 
-    def composeBom = platform('androidx.compose:compose-bom:2023.03.00')
+    def composeBom = platform('androidx.compose:compose-bom:2023.05.01')
     implementation composeBom
     implementation "androidx.compose.runtime:runtime-livedata"
     implementation "androidx.navigation:navigation-compose:$nav_version"
@@ -82,13 +88,13 @@ dependencies {
     implementation 'androidx.compose.ui:ui-tooling-preview'
     debugImplementation 'androidx.compose.ui:ui-tooling'
 
-    implementation 'androidx.core:core-ktx:1.10.0'
+    implementation 'androidx.core:core-ktx:1.10.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation("androidx.activity:activity-ktx:1.7.0")
+    implementation("androidx.activity:activity-ktx:1.7.2")
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.1"
     // https://developers.google.com/android/guides/setup
     implementation "com.google.android.gms:play-services-base:18.2.0"
-    implementation 'com.google.android.gms:play-services-auth:20.5.0'
+    implementation 'com.google.android.gms:play-services-auth:20.6.0'
     //https://github.com/googleapis/google-api-java-client
     implementation('com.google.api-client:google-api-client-android:2.2.0') {
         exclude group: 'org.apache.httpcomponents'
