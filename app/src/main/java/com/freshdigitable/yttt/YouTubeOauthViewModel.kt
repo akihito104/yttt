@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -44,16 +45,16 @@ class YouTubeOauthViewModel @Inject constructor(
 
     fun hasAccount(): Boolean = accountRepository.hasAccount()
 
-    fun login(account: String? = null): Boolean {
-        if (account != null) {
-            accountRepository.putAccount(account)
+    fun login(account: String? = null) {
+        viewModelScope.launch {
+            if (account != null) {
+                accountRepository.putAccount(account)
+            }
+            val accountName = accountRepository.getAccount()
+            if (accountName != null) {
+                accountRepository.setSelectedAccountName(accountName)
+            }
         }
-        val accountName = accountRepository.getAccount()
-        if (accountName != null) {
-            accountRepository.setSelectedAccountName(accountName)
-            return true
-        }
-        return false
     }
 
     fun createPickAccountIntent(): Intent = accountRepository.getNewChooseAccountIntent()

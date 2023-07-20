@@ -3,11 +3,13 @@ package com.freshdigitable.yttt
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.source.TwitchLiveRepository
 import com.freshdigitable.yttt.data.source.TwitchOauthToken
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
@@ -19,7 +21,9 @@ class TwitchOauthViewModel @Inject constructor(
     suspend fun getAuthorizeUrl(): String = twitchRepository.getAuthorizeUrl()
 
     fun putToken(token: TwitchOauthToken) {
-        accountRepository.putTwitchToken(token.accessToken)
+        viewModelScope.launch {
+            accountRepository.putTwitchToken(token.accessToken)
+        }
     }
 
     fun getMe(): LiveData<LiveChannelDetail> = liveData {
