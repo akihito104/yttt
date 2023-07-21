@@ -46,15 +46,15 @@ class YouTubeOauthViewModel @Inject constructor(
     fun hasAccount(): Boolean = accountRepository.hasAccount()
 
     fun login(account: String? = null) {
-        viewModelScope.launch {
-            if (account != null) {
+        if (account != null) {
+            viewModelScope.launch {
                 accountRepository.putAccount(account)
             }
-            val accountName = accountRepository.getAccount()
-            if (accountName != null) {
-                accountRepository.setSelectedAccountName(accountName)
-            }
         }
+        val a = checkNotNull(accountRepository.getAccount() ?: account) {
+            "login: accountName is not set."
+        }
+        accountRepository.setSelectedAccountName(a)
     }
 
     fun createPickAccountIntent(): Intent = accountRepository.getNewChooseAccountIntent()
