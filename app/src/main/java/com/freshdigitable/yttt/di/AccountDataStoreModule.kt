@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.freshdigitable.yttt.data.source.AccountLocalDataSource
 import com.freshdigitable.yttt.data.source.local.AccountAndroidDataStore
+import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,7 +38,7 @@ object AccountDataStoreModule {
     }
 
     @Provides
-    fun provideAccountLocalDataSource(dataStore: DataStore<Preferences>): AccountLocalDataSource {
+    fun provideAccountLocalDataSource(dataStore: AndroidPreferencesDataStore): AccountLocalDataSource {
         return AccountAndroidDataStore(dataStore = dataStore)
     }
 }
