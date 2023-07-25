@@ -24,7 +24,15 @@ import com.freshdigitable.yttt.data.source.TwitchOauthToken
 sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {
         val routes: Collection<NavRoute>
-            get() = setOf(Auth, TimetableTab, Subscription, ChannelDetail, VideoDetail, TwitchLogin)
+            get() = setOf(
+                Auth,
+                TimetableTab,
+                Subscription,
+                ChannelDetail,
+                VideoDetail,
+                TwitchLogin,
+                Settings,
+            )
     }
 
     object TimetableTab : MainNavRoute(path = "ttt") {
@@ -107,6 +115,13 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                     platform = Params.Platform.getValue(backStackEntry.arguments),
                 )
             )
+        }
+    }
+
+    object Settings : MainNavRoute(path = "settings") {
+        @Composable
+        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+            AppSettingsScreen()
         }
     }
 

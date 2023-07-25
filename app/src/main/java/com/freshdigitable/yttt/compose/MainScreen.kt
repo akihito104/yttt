@@ -28,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.util.Consumer
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
@@ -72,16 +73,7 @@ fun MainScreen(shouldAuth: Boolean = false) {
             DrawerContent(
                 items = DrawerMenuItem.values().toList(),
                 onClicked = {
-                    when (it) {
-                        DrawerMenuItem.SUBSCRIPTION_YOUTUBE ->
-                            navController.navigateToSubscriptionList(LivePlatform.YOUTUBE)
-
-                        DrawerMenuItem.SUBSCRIPTION_TWITCH ->
-                            navController.navigateToSubscriptionList(LivePlatform.TWITCH)
-
-                        DrawerMenuItem.AUTH_STATUS ->
-                            navController.navigateToAuth(MainNavRoute.Auth.Modes.MENU)
-                    }
+                    navController.navigate(it)
                     coroutineScope.launch {
                         drawerState.close()
                     }
@@ -172,6 +164,18 @@ private enum class DrawerMenuItem(
     AUTH_STATUS(
         text = { "Auth status" },
     ),
+    APP_SETTING(
+        text = { "Settings" },
+    ),
+}
+
+private fun NavHostController.navigate(item: DrawerMenuItem) {
+    when (item) {
+        DrawerMenuItem.SUBSCRIPTION_YOUTUBE -> navigateToSubscriptionList(LivePlatform.YOUTUBE)
+        DrawerMenuItem.SUBSCRIPTION_TWITCH -> navigateToSubscriptionList(LivePlatform.TWITCH)
+        DrawerMenuItem.AUTH_STATUS -> navigateToAuth(MainNavRoute.Auth.Modes.MENU)
+        DrawerMenuItem.APP_SETTING -> navigate(MainNavRoute.Settings.route)
+    }
 }
 
 @Preview
