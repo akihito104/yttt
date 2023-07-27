@@ -147,10 +147,10 @@ class UpcomingListViewModel @Inject constructor(
     val items: StateFlow<Map<String, List<LiveVideo>>> =
         combine(upcomingItems, extraHourOfDay) { v, t ->
             v.groupBy {
-                it.scheduledStartDateTime?.minus(t)
-                    ?.toLocalDateTime()
-                    ?.truncatedTo(ChronoUnit.DAYS)
-                    ?.format(dateWeekdayFormatter) ?: ""
+                (checkNotNull(it.scheduledStartDateTime) - t)
+                    .toLocalDateTime()
+                    .truncatedTo(ChronoUnit.DAYS)
+                    .format(dateWeekdayFormatter)
             }
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
     val tabData: StateFlow<TabData> = items.map { items ->
