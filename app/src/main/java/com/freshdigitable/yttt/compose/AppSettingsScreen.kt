@@ -42,26 +42,30 @@ private fun AppSettingsScreen(
         var isExpanded by remember { mutableStateOf(false) }
         ListItem(
             text = { Text("time to change the date") },
-            trailing = { Text(text()) },
+            trailing = {
+                Column {
+                    Text(text())
+                    DropdownMenu(
+                        expanded = isExpanded,
+                        onDismissRequest = { isExpanded = false },
+                    ) {
+                        AppSettingsViewModel.changeDateTimeList.forEach {
+                            DropdownMenuItem(
+                                onClick = {
+                                    onClicked(it)
+                                    isExpanded = false
+                                },
+                            ) {
+                                Text(text = "$it:00")
+                            }
+                        }
+                    }
+                }
+            },
             modifier = Modifier.clickable {
                 isExpanded = true
             },
         )
-        DropdownMenu(
-            expanded = isExpanded,
-            onDismissRequest = { isExpanded = false },
-        ) {
-            AppSettingsViewModel.changeDateTimeList.forEach {
-                DropdownMenuItem(
-                    onClick = {
-                        onClicked(it)
-                        isExpanded = false
-                    },
-                ) {
-                    Text(text = "$it:00")
-                }
-            }
-        }
     }
 }
 
