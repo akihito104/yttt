@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.toLocalDateTime
 import com.freshdigitable.yttt.data.source.TwitchLiveRepository
+import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -133,18 +134,25 @@ class OnAirListViewModel @Inject constructor(
 class UpcomingListViewModel @Inject constructor(
     liveRepository: YouTubeLiveRepository,
     twitchRepository: TwitchLiveRepository,
+    prefs: AndroidPreferencesDataStore,
 ) : ViewModel() {
+    private val upcomingItems =
+        combine(liveRepository.videos, twitchRepository.upcoming) { yt, tw ->
+            (yt + tw).filter { it.isUpcoming() }
+                .sortedBy { it.scheduledStartDateTime }
+        }
+    private val extraHourOfDay = prefs.changeDateTime.map {
+        Duration.ofHours(((it ?: 24) - 24).toLong())
+    }
     val items: StateFlow<Map<String, List<LiveVideo>>> =
-        combine(liveRepository.videos, twitchRepository.upcoming) { yt, tw -> yt + tw }
-            .map { v ->
-                v.filter { it.isUpcoming() }
-                    .sortedBy { it.scheduledStartDateTime }
-                    .groupBy {
-                        it.scheduledStartDateTime?.toLocalDateTime()?.truncatedTo(ChronoUnit.DAYS)
-                            ?.format(dateWeekdayFormatter) ?: ""
-                    }
+        combine(upcomingItems, extraHourOfDay) { v, t ->
+            v.groupBy {
+                (checkNotNull(it.scheduledStartDateTime) - t)
+                    .toLocalDateTime()
+                    .truncatedTo(ChronoUnit.DAYS)
+                    .format(dateWeekdayFormatter)
             }
-            .stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
+        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
     val tabData: StateFlow<TabData> = items.map { items ->
         items.values.map { it.size }.fold(0) { acc, i -> acc + i }
     }
