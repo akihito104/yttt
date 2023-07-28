@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,9 +21,12 @@ class YouTubeOauthViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val googleService: GoogleService,
 ) : ViewModel() {
+    private val googleAccount = accountRepository.googleAccount
+    val hasAccount = accountRepository.googleAccount.map { it != null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val googleServiceState: StateFlow<AuthState?> = combine(
         googleService.connectionStatus,
-        accountRepository.googleAccount,
+        googleAccount,
     ) { state, account ->
         if (state == null) {
             googleService.getConnectionStatus()

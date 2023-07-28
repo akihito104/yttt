@@ -26,7 +26,7 @@ internal class AccountAndroidDataStore @Inject constructor(
         dataStore.putAccount(account)
     }
 
-    private val twitchToken: StateFlow<String?> = dataStore.twitchToken
+    override val twitchToken: StateFlow<String?> = dataStore.twitchToken
         .stateIn(coroutineScope, SharingStarted.Eagerly, null)
 
     override fun getTwitchToken(): String? = twitchToken.value
