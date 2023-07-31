@@ -9,10 +9,6 @@ import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.source.TwitchLiveRepository
 import com.freshdigitable.yttt.data.source.TwitchOauthToken
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -21,9 +17,6 @@ class TwitchOauthViewModel @Inject constructor(
     private val twitchRepository: TwitchLiveRepository,
     private val accountRepository: AccountRepository,
 ) : ViewModel() {
-    val hasTokenFlow: StateFlow<Boolean?> = accountRepository.twitchToken.map { it != null }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
-
     fun hasToken(): Boolean = accountRepository.getTwitchToken() != null
     suspend fun getAuthorizeUrl(): String = twitchRepository.getAuthorizeUrl()
 

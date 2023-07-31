@@ -18,9 +18,7 @@ class AccountRepository @Inject constructor(
 ) : AccountDataStore by localDataStore {
     val credential: GoogleAccountCredential = GoogleAccountCredential.usingOAuth2(
         context, listOf(YouTubeScopes.YOUTUBE_READONLY),
-    ).setBackOff(ExponentialBackOff()).apply {
-        if (hasAccount()) selectedAccountName = getAccount()
-    }
+    ).setBackOff(ExponentialBackOff())
 
     fun hasAccount(): Boolean = getAccount() != null
 
