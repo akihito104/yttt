@@ -53,10 +53,10 @@ interface AppDao {
     @Query("SELECT * FROM video_view WHERE id IN (:ids)")
     suspend fun findVideosById(ids: Collection<LiveVideo.Id>): List<LiveVideoDbView>
 
-    @Query("SELECT * FROM video_view WHERE schedule_start_datetime NOTNULL AND actual_end_datetime ISNULL")
+    @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
     suspend fun findAllUnfinishedVideoList(): List<LiveVideoDbView>
 
-    @Query("SELECT * FROM video_view WHERE schedule_start_datetime NOTNULL AND actual_end_datetime ISNULL")
+    @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
     fun watchAllUnfinishedVideos(): Flow<List<LiveVideoDbView>>
 
     @Query("UPDATE video SET visible = 0 WHERE id IN (:ids)")
@@ -73,4 +73,9 @@ interface AppDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelAddition(addition: Collection<LiveChannelAdditionTable>)
+
+    companion object {
+        private const val SQL_FIND_ALL_UNFINISHED_VIDEOS = "SELECT * FROM video_view " +
+            "WHERE (schedule_start_datetime NOTNULL OR actual_start_datetime NOTNULL) AND actual_end_datetime ISNULL"
+    }
 }
