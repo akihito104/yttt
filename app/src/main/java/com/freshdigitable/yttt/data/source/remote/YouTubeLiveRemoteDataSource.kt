@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import android.util.Log
-import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
@@ -17,8 +16,12 @@ import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.source.AccountLocalDataSource
 import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
+import com.google.api.client.http.HttpRequest
+import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
@@ -41,14 +44,11 @@ import javax.inject.Singleton
 
 @Singleton
 class YouTubeLiveRemoteDataSource @Inject constructor(
-    accountRepository: AccountRepository,
+    httpRequestInitializer: HttpRequestInitializer,
 ) : YoutubeLiveDataSource {
     private val youtube = YouTube.Builder(
-        NetHttpTransport(), GsonFactory.getDefaultInstance()
-    ) {
-        Log.d(TAG, "init: ${it.url}")
-        accountRepository.credential.initialize(it)
-    }.build()
+        NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
+    ).build()
 
     override suspend fun fetchAllSubscribe(
         maxResult: Long,
@@ -169,6 +169,18 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
 
         // https://developers.google.com/youtube/v3/docs/videos/list#parameters
         private const val VIDEO_MAX_FETCH_SIZE = 50
+    }
+}
+
+internal class HttpRequestInitializerImpl(
+    private val credential: GoogleAccountCredential,
+    private val dataStore: AccountLocalDataSource,
+) : HttpRequestInitializer {
+    override fun initialize(request: HttpRequest?) {
+        Log.d("YouTubeLiveRemoteDataSource", "init: ${request?.url}")
+        val account = checkNotNull(dataStore.getAccount()) { "google account is null." }
+        credential.selectedAccountName = account
+        credential.initialize(request)
     }
 }
 

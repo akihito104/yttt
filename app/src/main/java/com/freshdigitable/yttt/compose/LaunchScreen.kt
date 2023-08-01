@@ -33,7 +33,7 @@ fun LaunchScreen(
 
 @HiltViewModel
 class LaunchViewModel @Inject constructor(
-    private val accountRepository: AccountRepository,
+    accountRepository: AccountRepository,
 ) : ViewModel() {
     private val hasGoogleAccount = accountRepository.googleAccount.map { it != null }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -53,17 +53,6 @@ class LaunchViewModel @Inject constructor(
             account.onAwait { it }
             onTimeout(timeMillis = 300L) { false }
         }
-        val hasGoogleAccount = checkNotNull(hasGoogleAccount())
-        if (hasGoogleAccount) {
-            login()
-        }
         return canLoadList
-    }
-
-    private fun hasGoogleAccount(): Boolean? = hasGoogleAccount.value
-
-    private fun login() {
-        val account = checkNotNull(accountRepository.getAccount())
-        accountRepository.setSelectedAccountName(account)
     }
 }

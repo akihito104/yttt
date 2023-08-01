@@ -1,10 +1,8 @@
 package com.freshdigitable.yttt
 
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.AccountRepository
-import com.freshdigitable.yttt.data.AccountRepository.Companion.getNewChooseAccountIntent
 import com.freshdigitable.yttt.data.GoogleService
 import com.google.android.gms.common.GoogleApiAvailability
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +17,7 @@ import javax.inject.Inject
 class YouTubeOauthViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val googleService: GoogleService,
+    private val newChooseAccountIntentProvider: NewChooseAccountIntentProvider,
 ) : ViewModel() {
     val googleServiceState: StateFlow<AuthState?> = combine(
         googleService.connectionStatus,
@@ -51,13 +50,9 @@ class YouTubeOauthViewModel @Inject constructor(
                 accountRepository.putAccount(account)
             }
         }
-        val a = checkNotNull(accountRepository.getAccount() ?: account) {
-            "login: accountName is not set."
-        }
-        accountRepository.setSelectedAccountName(a)
     }
 
-    fun createPickAccountIntent(): Intent = accountRepository.getNewChooseAccountIntent()
+    fun createPickAccountIntent(): NewChooseAccountIntentProvider = newChooseAccountIntentProvider
 
     sealed class AuthState {
         object Succeeded : AuthState()

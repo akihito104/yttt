@@ -33,6 +33,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.YouTubeOauthViewModel
+import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
@@ -52,7 +53,7 @@ fun AuthScreen(
     val googleServiceState = viewModel.googleServiceState.collectAsState(initial = null)
     AuthScreen(
         youTubeAuthStateHolder = rememberYouTubeAuthStateHolder(
-            pickAccountIntentProvider = { viewModel.createPickAccountIntent() },
+            pickAccountIntentProvider = viewModel.createPickAccountIntent(),
             googleApiAvailabilityProvider = { viewModel.googleApiAvailability },
             login = { viewModel.login(it) },
             hasGoogleAccount = { viewModel.hasAccount() },
@@ -137,7 +138,7 @@ private fun YouTubeOauthViewModel.AuthState?.stateText(): String {
 }
 
 private fun pickAccountContract(
-    createIntent: () -> Intent,
+    createIntent: NewChooseAccountIntentProvider,
 ): ActivityResultContract<Unit, String> = object : ActivityResultContract<Unit, String>() {
     override fun createIntent(context: Context, input: Unit): Intent = createIntent()
 
@@ -152,7 +153,7 @@ private fun pickAccountContract(
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 private fun rememberYouTubeAuthStateHolder(
-    pickAccountIntentProvider: () -> Intent,
+    pickAccountIntentProvider: NewChooseAccountIntentProvider,
     login: (String?) -> Unit,
     googleApiAvailabilityProvider: () -> GoogleApiAvailability,
     hasGoogleAccount: () -> Boolean,
@@ -285,7 +286,9 @@ private fun AuthScreenPreview() {
     MdcTheme {
         AuthScreen(
             youTubeAuthStateHolder = rememberYouTubeAuthStateHolder(
-                pickAccountIntentProvider = { Intent() },
+                pickAccountIntentProvider = object : NewChooseAccountIntentProvider {
+                    override fun invoke(): Intent = Intent()
+                },
                 googleApiAvailabilityProvider = { GoogleApiAvailability.getInstance() },
                 hasGoogleAccount = { true },
                 login = {},
