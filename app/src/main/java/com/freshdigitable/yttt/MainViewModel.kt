@@ -68,7 +68,7 @@ class MainViewModel @Inject constructor(
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
         val removed = first.subtract(currentVideo)
         Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
-        liveRepository.deleteVideo(removed)
+        liveRepository.updateVideosInvisible(removed)
 
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")

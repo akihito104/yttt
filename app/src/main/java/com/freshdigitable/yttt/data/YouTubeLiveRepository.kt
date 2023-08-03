@@ -90,11 +90,11 @@ class YouTubeLiveRepository @Inject constructor(
         return localSource.findAllUnfinishedVideos()
     }
 
-    suspend fun deleteVideo(removed: Collection<LiveVideo.Id>) {
+    suspend fun updateVideosInvisible(removed: Collection<LiveVideo.Id>) {
         if (removed.isEmpty()) {
             return
         }
-        localSource.deleteVideo(removed)
+        localSource.updateVideosInvisible(removed)
     }
 
     suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannelDetail> {

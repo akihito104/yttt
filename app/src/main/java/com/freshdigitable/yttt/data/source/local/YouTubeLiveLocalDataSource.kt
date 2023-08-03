@@ -87,7 +87,7 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         return database.dao.findAllUnfinishedVideoList()
     }
 
-    suspend fun deleteVideo(removed: Collection<LiveVideo.Id>) {
+    suspend fun updateVideosInvisible(removed: Collection<LiveVideo.Id>) {
         if (removed.isEmpty()) {
             return
         }
