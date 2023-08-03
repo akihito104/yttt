@@ -86,6 +86,10 @@ class YouTubeLiveRepository @Inject constructor(
         return videoRemote[id] ?: fetchVideoList(listOf(id)).first()
     }
 
+    suspend fun removeAllFinishedVideos() {
+        localSource.removeAllFinishedVideos()
+    }
+
     suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
         return localSource.findAllUnfinishedVideos()
     }

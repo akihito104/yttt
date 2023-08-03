@@ -83,6 +83,13 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
+    suspend fun removeAllFinishedVideos() {
+        database.withTransaction {
+            database.dao.removeAllChannelLogs()
+            database.dao.removeAllFinishedVideos()
+        }
+    }
+
     suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
         return database.dao.findAllUnfinishedVideoList()
     }
