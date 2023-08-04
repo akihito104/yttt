@@ -139,7 +139,9 @@ class UpcomingListViewModel @Inject constructor(
 ) : ViewModel() {
     private val upcomingItems =
         combine(liveRepository.videos, twitchRepository.upcoming) { yt, tw ->
-            (yt + tw).filter { it.isUpcoming() }
+            val week = Instant.now().plus(Duration.ofDays(7L))
+            (yt + tw.filter { it.scheduledStartDateTime?.isBefore(week) == true })
+                .filter { it.isUpcoming() }
                 .sortedBy { it.scheduledStartDateTime }
         }
     private val extraHourOfDay = prefs.changeDateTime.map {
