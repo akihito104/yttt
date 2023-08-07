@@ -19,7 +19,7 @@ import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.source.TwitchOauthToken
+import com.freshdigitable.yttt.data.TwitchOauthToken
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {

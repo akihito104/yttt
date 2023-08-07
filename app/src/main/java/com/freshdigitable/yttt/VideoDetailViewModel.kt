@@ -9,7 +9,7 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.source.TwitchLiveRepository
+import com.freshdigitable.yttt.data.TwitchLiveRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigInteger
 import javax.inject.Inject

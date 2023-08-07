@@ -22,7 +22,7 @@ import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.source.TwitchOauthToken
+import com.freshdigitable.yttt.data.TwitchOauthToken
 import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 import java.math.BigInteger

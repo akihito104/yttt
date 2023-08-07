@@ -12,8 +12,10 @@ import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -31,8 +33,8 @@ import javax.inject.Singleton
 class TwitchLiveRemoteDataSource @Inject constructor(
     private val oauth: TwitchOauth,
     private val helix: TwitchHelixService,
-) {
-    suspend fun getAuthorizeUrl(): String = withContext(Dispatchers.IO) {
+) : TwitchLiveDataSource {
+    override suspend fun getAuthorizeUrl(): String = withContext(Dispatchers.IO) {
         val response = oauth.authorizeImplicitly(
             clientId = BuildConfig.TWITCH_CLIENT_ID,
             redirectUri = BuildConfig.TWITCH_REDIRECT_URI,
@@ -60,15 +62,19 @@ class TwitchLiveRemoteDataSource @Inject constructor(
         items
     }
 
-    suspend fun findUsersById(
-        ids: Collection<LiveChannel.Id>? = null,
+    override suspend fun findUsersById(
+        ids: Collection<LiveChannel.Id>?,
     ): List<LiveChannelDetail> = fetch {
         val response = getUser(id = ids?.map { it.value }).execute()
         val users = response.body() ?: return@fetch emptyList()
         users.data.map { TwitchLiveChannel(it) }
     }
 
-    suspend fun fetchAllFollowings(
+    override suspend fun fetchMe(): LiveChannelDetail? {
+        return findUsersById().firstOrNull()
+    }
+
+    override suspend fun fetchAllFollowings(
         userId: LiveChannel.Id,
     ): List<LiveSubscription> {
         val items =
@@ -87,6 +93,11 @@ class TwitchLiveRemoteDataSource @Inject constructor(
                 order = i,
             )
         }
+    }
+
+    override suspend fun fetchFollowedStreams(): List<LiveVideo> {
+        val me = fetchMe() ?: return emptyList()
+        return fetchFollowedStreams(me)
     }
 
     suspend fun fetchFollowedStreams(me: LiveChannelDetail): List<LiveVideo> {
@@ -115,9 +126,9 @@ class TwitchLiveRemoteDataSource @Inject constructor(
         return res
     }
 
-    suspend fun fetchFollowedStreamSchedule(
+    override suspend fun fetchFollowedStreamSchedule(
         id: LiveChannel.Id,
-        maxCount: Int = 10,
+        maxCount: Int,
     ): List<LiveVideo> {
         val s =
             fetchAll(maxCount) { getChannelStreamSchedule(broadcasterId = id.value, cursor = it) }
@@ -140,7 +151,10 @@ class TwitchLiveRemoteDataSource @Inject constructor(
         return res
     }
 
-    suspend fun fetchVideosByChannelId(id: LiveChannel.Id, itemCount: Int = 20): List<LiveVideo> {
+    override suspend fun fetchVideosByChannelId(
+        id: LiveChannel.Id,
+        itemCount: Int,
+    ): List<LiveVideo> {
         val resp = fetch { getVideoByUserId(userId = id.value, itemsPerPage = itemCount).execute() }
         val videos = resp.body()?.data ?: emptyArray()
         return videos.map {
@@ -159,6 +173,10 @@ class TwitchLiveRemoteDataSource @Inject constructor(
             )
         }
     }
+
+    override val onAir: Flow<List<LiveVideo>> = throw AssertionError()
+    override val upcoming: Flow<List<LiveVideo>> = throw AssertionError()
+    override suspend fun fetchStreamDetail(id: LiveVideo.Id): LiveVideo = throw AssertionError()
 }
 
 interface TwitchOauth {

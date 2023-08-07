@@ -7,7 +7,7 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.source.TwitchLiveRepository
+import com.freshdigitable.yttt.data.TwitchLiveRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
