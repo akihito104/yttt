@@ -47,8 +47,14 @@ interface AppDao {
         maxResult: Long? = Long.MAX_VALUE
     ): List<LiveChannelLogTable>
 
+    @Query("DELETE FROM channel_log")
+    suspend fun removeAllChannelLogs()
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addVideos(videos: Collection<LiveVideoTable>)
+
+    @Query("DELETE FROM video WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
+    suspend fun removeAllFinishedVideos()
 
     @Query("SELECT * FROM video_view WHERE id IN (:ids)")
     suspend fun findVideosById(ids: Collection<LiveVideo.Id>): List<LiveVideoDbView>
@@ -75,7 +81,10 @@ interface AppDao {
     suspend fun addChannelAddition(addition: Collection<LiveChannelAdditionTable>)
 
     companion object {
+        private const val CONDITION_UNFINISHED_VIDEOS =
+            "(schedule_start_datetime NOTNULL OR actual_start_datetime NOTNULL) " +
+                "AND actual_end_datetime ISNULL"
         private const val SQL_FIND_ALL_UNFINISHED_VIDEOS = "SELECT * FROM video_view " +
-            "WHERE (schedule_start_datetime NOTNULL OR actual_start_datetime NOTNULL) AND actual_end_datetime ISNULL"
+            "WHERE $CONDITION_UNFINISHED_VIDEOS"
     }
 }

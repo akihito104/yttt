@@ -175,7 +175,6 @@ class TwitchLiveRepository @Inject constructor(
                     get() = ""
                 override val viewerCount: BigInteger?
                     get() = BigInteger.valueOf(v.viewerCount.toLong())
-
             }
         }
         _onAir.value = res
@@ -435,14 +434,14 @@ class FollowingStreamsResponse(
         @SerializedName("language")
         val language: String,
         @SerializedName("thumbnail_url")
-        val _thumbnailUrl: String,
+        val thumbnailUrlBase: String,
         @SerializedName("tags")
         val tags: Array<String>,
         @SerializedName("is_mature")
         val isMature: Boolean,
     ) {
         val thumbnailUrl: String
-            get() = _thumbnailUrl.replace("{width}x{height}", "1920x1080")
+            get() = thumbnailUrlBase.replace("{width}x{height}", "1920x1080")
     }
 }
 

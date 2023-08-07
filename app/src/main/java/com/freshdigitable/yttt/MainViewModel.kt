@@ -68,7 +68,7 @@ class MainViewModel @Inject constructor(
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
         val removed = first.subtract(currentVideo)
         Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
-        liveRepository.deleteVideo(removed)
+        liveRepository.updateVideosInvisible(removed)
 
         val channelIds = liveRepository.fetchAllSubscribe().map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
@@ -78,6 +78,7 @@ class MainViewModel @Inject constructor(
         }
         task.awaitAll()
         liveRepository.lastUpdateDatetime = Instant.now()
+        liveRepository.removeAllFinishedVideos()
         Log.d(TAG, "fetchLiveStreams: end")
     }
 
@@ -138,7 +139,9 @@ class UpcomingListViewModel @Inject constructor(
 ) : ViewModel() {
     private val upcomingItems =
         combine(liveRepository.videos, twitchRepository.upcoming) { yt, tw ->
-            (yt + tw).filter { it.isUpcoming() }
+            val week = Instant.now().plus(Duration.ofDays(7L))
+            (yt + tw.filter { it.scheduledStartDateTime?.isBefore(week) == true })
+                .filter { it.isUpcoming() }
                 .sortedBy { it.scheduledStartDateTime }
         }
     private val extraHourOfDay = prefs.changeDateTime.map {
