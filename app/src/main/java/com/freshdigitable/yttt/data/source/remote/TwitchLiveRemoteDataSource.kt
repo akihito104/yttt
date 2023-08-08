@@ -174,8 +174,8 @@ class TwitchLiveRemoteDataSource @Inject constructor(
         }
     }
 
-    override val onAir: Flow<List<LiveVideo>> = throw AssertionError()
-    override val upcoming: Flow<List<LiveVideo>> = throw AssertionError()
+    override val onAir: Flow<List<LiveVideo>> get() = throw AssertionError()
+    override val upcoming: Flow<List<LiveVideo>> get() = throw AssertionError()
     override suspend fun fetchStreamDetail(id: LiveVideo.Id): LiveVideo = throw AssertionError()
 }
 
