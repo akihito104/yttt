@@ -34,7 +34,9 @@ class TwitchLiveRepository @Inject constructor(
             return cache
         }
         val remoteIds = ids - cache.map { it.id }.toSet()
-        return remoteDataSource.findUsersById(remoteIds)
+        val remote = remoteDataSource.findUsersById(remoteIds)
+        localDataSource.addUsers(remote)
+        return cache + remote
     }
 
     override suspend fun fetchMe(): LiveChannelDetail? {
@@ -50,11 +52,18 @@ class TwitchLiveRepository @Inject constructor(
     override suspend fun fetchAllFollowings(
         userId: LiveChannel.Id,
     ): List<LiveSubscription> {
-        val followings = localDataSource.fetchAllFollowings(userId)
-        if (followings.isNotEmpty()) {
-            return followings
+        val cache = localDataSource.fetchAllFollowings(userId)
+        if (cache.isNotEmpty()) {
+            return cache
         }
-        val res = remoteDataSource.fetchAllFollowings(userId)
+        val remote = remoteDataSource.fetchAllFollowings(userId)
+        val users = findUsersById(remote.map { it.channel.id })
+        val res = remote.map { r ->
+            val u = users.first { it.id == r.channel.id }
+            object : LiveSubscription by r {
+                override val channel: LiveChannel get() = u
+            }
+        }
         localDataSource.addFollowings(userId, res)
         return res
     }

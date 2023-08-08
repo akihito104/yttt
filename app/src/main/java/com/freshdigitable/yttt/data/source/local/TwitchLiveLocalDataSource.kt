@@ -28,6 +28,12 @@ class TwitchLiveLocalDataSource @Inject constructor() : TwitchLiveDataSource {
         return ids.mapNotNull { users[it] }
     }
 
+    suspend fun addUsers(users: Collection<LiveChannelDetail>) {
+        users.forEach {
+            this.users[it.id] = it
+        }
+    }
+
     override suspend fun fetchMe(): LiveChannelDetail? = me
 
     suspend fun setMe(me: LiveChannelDetail?) {
@@ -45,7 +51,7 @@ class TwitchLiveLocalDataSource @Inject constructor() : TwitchLiveDataSource {
         return followings[userId]?.data ?: emptyList()
     }
 
-    fun addFollowings(userId: LiveChannel.Id, followings: List<LiveSubscription>) {
+    suspend fun addFollowings(userId: LiveChannel.Id, followings: List<LiveSubscription>) {
         val data = CachedData(followings, Instant.now() + CACHE_ALIVE_TIME)
         this.followings[userId] = data
     }

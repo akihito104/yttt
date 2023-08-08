@@ -79,13 +79,11 @@ class TwitchLiveRemoteDataSource @Inject constructor(
     ): List<LiveSubscription> {
         val items =
             fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
-        val userIds = items.map { LiveChannel.Id(it.id, LivePlatform.TWITCH) }
-        val users = findUsersById(userIds)
         return items.mapIndexed { i, b ->
             LiveSubscriptionEntity(
                 id = LiveSubscription.Id(b.id, LivePlatform.TWITCH),
                 subscribeSince = b.followedAt,
-                channel = users.firstOrNull { it.id.value == b.id } ?: LiveChannelEntity(
+                channel = LiveChannelEntity(
                     id = LiveChannel.Id(b.id, LivePlatform.TWITCH),
                     title = b.displayName,
                     iconUrl = "",
