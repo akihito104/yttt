@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.BuildConfig
-import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
@@ -12,6 +11,7 @@ import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.source.AccountLocalDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
@@ -180,6 +180,7 @@ class TwitchLiveRemoteDataSource @Inject constructor(
 }
 
 interface TwitchOauth {
+    /// https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
     @GET("oauth2/authorize?response_type=token")
     fun authorizeImplicitly(
         @Query("client_id") clientId: String,
@@ -291,10 +292,10 @@ private data class TwitchLiveChannel(private val user: TwitchUser) : LiveChannel
 
 @Singleton
 class TwitchTokenInterceptor @Inject constructor(
-    private val accountRepository: AccountRepository,
+    private val accountDataSource: AccountLocalDataSource,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = accountRepository.getTwitchToken() ?: return chain.proceed(chain.request())
+        val token = accountDataSource.getTwitchToken() ?: return chain.proceed(chain.request())
         val req = chain.request().newBuilder()
             .header("Authorization", "Bearer $token")
             .header("Client-Id", BuildConfig.TWITCH_CLIENT_ID)

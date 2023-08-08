@@ -46,7 +46,7 @@ class TwitchLiveLocalDataSource @Inject constructor() : TwitchLiveDataSource {
     }
 
     fun addFollowings(userId: LiveChannel.Id, followings: List<LiveSubscription>) {
-        val data = CachedData(followings, Instant.now().plus(Duration.ofHours(12)))
+        val data = CachedData(followings, Instant.now() + CACHE_ALIVE_TIME)
         this.followings[userId] = data
     }
 
@@ -85,6 +85,10 @@ class TwitchLiveLocalDataSource @Inject constructor() : TwitchLiveDataSource {
         id: LiveChannel.Id,
         itemCount: Int
     ): List<LiveVideo> = throw AssertionError()
+
+    companion object {
+        private val CACHE_ALIVE_TIME = Duration.ofHours(12)
+    }
 }
 
 private data class CachedData<E>(
