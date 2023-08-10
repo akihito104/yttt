@@ -113,7 +113,7 @@ class TwitchLiveRemoteDataSource @Inject constructor(
                 ),
                 actualStartDateTime = v.startedAt,
                 thumbnailUrl = v.thumbnailUrl,
-                scheduledStartDateTime = v.startedAt, // XXX
+                scheduledStartDateTime = null,
             ) {
                 override val description: String
                     get() = ""
