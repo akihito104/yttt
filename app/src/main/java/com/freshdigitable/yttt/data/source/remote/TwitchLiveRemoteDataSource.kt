@@ -1,7 +1,6 @@
-package com.freshdigitable.yttt.data.source
+package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.BuildConfig
-import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
@@ -12,25 +11,16 @@ import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
-import com.google.gson.GsonBuilder
-import com.google.gson.TypeAdapter
+import com.freshdigitable.yttt.data.source.AccountLocalDataSource
+import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.google.gson.annotations.SerializedName
-import com.google.gson.stream.JsonReader
-import com.google.gson.stream.JsonWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import okhttp3.Interceptor
-import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.ResponseBody
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Call
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
 import java.math.BigInteger
@@ -40,47 +30,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TwitchLiveRepository @Inject constructor(
-    tokenInterceptor: TwitchTokenInterceptor,
-) {
-    private val gson = GsonBuilder()
-        .registerTypeAdapter(Instant::class.java, object : TypeAdapter<Instant?>() {
-            override fun write(out: JsonWriter?, value: Instant?) {
-                out?.value(value?.toString())
-            }
-
-            override fun read(`in`: JsonReader?): Instant? {
-                val str = `in`?.nextString() ?: return null
-                return Instant.parse(str)
-            }
-        })
-        .create()
-    private val okhttp = OkHttpClient.Builder()
-        .addInterceptor(tokenInterceptor)
-        .addInterceptor(HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
-        })
-        .build()
-    private val retrofit = Retrofit.Builder()
-        .baseUrl("https://api.twitch.tv/")
-        .addConverterFactory(GsonConverterFactory.create(gson))
-        .client(okhttp)
-        .build()
-
-    suspend fun getAuthorizeUrl(): String = withContext(Dispatchers.IO) {
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://id.twitch.tv/")
-            .build()
-        val response = retrofit.create(TwitchOauth::class.java).authorizeImplicitly(
+class TwitchLiveRemoteDataSource @Inject constructor(
+    private val oauth: TwitchOauth,
+    private val helix: TwitchHelixService,
+) : TwitchLiveDataSource {
+    override suspend fun getAuthorizeUrl(): String = withContext(Dispatchers.IO) {
+        val response = oauth.authorizeImplicitly(
             clientId = BuildConfig.TWITCH_CLIENT_ID,
             redirectUri = BuildConfig.TWITCH_REDIRECT_URI,
             scope = "user:read:follows",
         ).execute()
         response.raw().request.url.toString()
-    }
-
-    private val helix: TwitchHelixService by lazy {
-        retrofit.create(TwitchHelixService::class.java)
     }
 
     private suspend fun <T> fetch(task: suspend TwitchHelixService.() -> T): T =
@@ -102,46 +62,28 @@ class TwitchLiveRepository @Inject constructor(
         items
     }
 
-    private val users = mutableMapOf<LiveChannel.Id, LiveChannelDetail>()
-    private val me: LiveChannelDetail? = null
-    suspend fun findUsersById(
-        ids: Collection<LiveChannel.Id>? = null,
-    ): List<LiveChannelDetail> {
-        if (ids == null && me != null) {
-            return listOf(me)
-        }
-        val cache = ids?.mapNotNull { users[it] } ?: emptyList()
-        if (ids != null && cache.size == ids.size) {
-            return cache
-        }
-        val remoteIds = if (ids == null) null else ids - cache.map { it.id }.toSet()
-        return fetch {
-            val response = getUser(id = remoteIds?.map { it.value }).execute()
-            val users = response.body() ?: return@fetch emptyList()
-            users.data.map { TwitchLiveChannel(it) } + cache
-        }
+    override suspend fun findUsersById(
+        ids: Collection<LiveChannel.Id>?,
+    ): List<LiveChannelDetail> = fetch {
+        val response = getUser(id = ids?.map { it.value }).execute()
+        val users = response.body() ?: return@fetch emptyList()
+        users.data.map { TwitchLiveChannel(it) }
     }
 
-    suspend fun fetchMe(): LiveChannelDetail? = withContext(Dispatchers.IO) {
-        findUsersById().firstOrNull()
+    override suspend fun fetchMe(): LiveChannelDetail? {
+        return findUsersById().firstOrNull()
     }
 
-    private val followings = mutableListOf<LiveSubscription>()
-    suspend fun fetchAllFollowings(
+    override suspend fun fetchAllFollowings(
         userId: LiveChannel.Id,
     ): List<LiveSubscription> {
-        if (followings.isNotEmpty()) {
-            return followings
-        }
         val items =
             fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
-        val userIds = items.map { LiveChannel.Id(it.id, LivePlatform.TWITCH) }
-        val users = findUsersById(userIds)
         return items.mapIndexed { i, b ->
             LiveSubscriptionEntity(
                 id = LiveSubscription.Id(b.id, LivePlatform.TWITCH),
                 subscribeSince = b.followedAt,
-                channel = users.firstOrNull { it.id.value == b.id } ?: LiveChannelEntity(
+                channel = LiveChannelEntity(
                     id = LiveChannel.Id(b.id, LivePlatform.TWITCH),
                     title = b.displayName,
                     iconUrl = "",
@@ -151,10 +93,12 @@ class TwitchLiveRepository @Inject constructor(
         }
     }
 
-    private val _onAir = MutableStateFlow<List<LiveVideo>>(emptyList())
-    val onAir: Flow<List<LiveVideo>> = _onAir
-    suspend fun fetchFollowedStreams(): List<LiveVideo> {
+    override suspend fun fetchFollowedStreams(): List<LiveVideo> {
         val me = fetchMe() ?: return emptyList()
+        return fetchFollowedStreams(me)
+    }
+
+    suspend fun fetchFollowedStreams(me: LiveChannelDetail): List<LiveVideo> {
         val items = fetchAll { getFollowedStreams(me.id.value, cursor = it) }
         val userIds = items.map { LiveChannel.Id(it.userId, LivePlatform.TWITCH) }
         val users = findUsersById(userIds)
@@ -169,7 +113,7 @@ class TwitchLiveRepository @Inject constructor(
                 ),
                 actualStartDateTime = v.startedAt,
                 thumbnailUrl = v.thumbnailUrl,
-                scheduledStartDateTime = v.startedAt, // XXX
+                scheduledStartDateTime = null,
             ) {
                 override val description: String
                     get() = ""
@@ -177,15 +121,12 @@ class TwitchLiveRepository @Inject constructor(
                     get() = BigInteger.valueOf(v.viewerCount.toLong())
             }
         }
-        _onAir.value = res
         return res
     }
 
-    private val _upcoming = MutableStateFlow<Map<LiveChannel.Id, List<LiveVideo>>>(emptyMap())
-    val upcoming: Flow<List<LiveVideo>> = _upcoming.map { it.values.flatten() }
-    suspend fun fetchFollowedStreamSchedule(
+    override suspend fun fetchFollowedStreamSchedule(
         id: LiveChannel.Id,
-        maxCount: Int = 10,
+        maxCount: Int,
     ): List<LiveVideo> {
         val s =
             fetchAll(maxCount) { getChannelStreamSchedule(broadcasterId = id.value, cursor = it) }
@@ -205,19 +146,13 @@ class TwitchLiveRepository @Inject constructor(
                 channel = user,
             )
         }
-        _upcoming.update {
-            it.toMutableMap().apply { this[id] = res }
-        }
         return res
     }
 
-    fun fetchStreamDetail(id: LiveVideo.Id): LiveVideo {
-        check(id.platform == LivePlatform.TWITCH)
-        return _onAir.value.firstOrNull { it.id == id } ?: _upcoming.value.values.flatten()
-            .first { it.id == id }
-    }
-
-    suspend fun fetchVideosByChannelId(id: LiveChannel.Id, itemCount: Int = 20): List<LiveVideo> {
+    override suspend fun fetchVideosByChannelId(
+        id: LiveChannel.Id,
+        itemCount: Int,
+    ): List<LiveVideo> {
         val resp = fetch { getVideoByUserId(userId = id.value, itemsPerPage = itemCount).execute() }
         val videos = resp.body()?.data ?: emptyArray()
         return videos.map {
@@ -237,13 +172,13 @@ class TwitchLiveRepository @Inject constructor(
         }
     }
 
-    companion object {
-        @Suppress("unused")
-        private val TAG = TwitchLiveRepository::class.simpleName
-    }
+    override val onAir: Flow<List<LiveVideo>> get() = throw AssertionError()
+    override val upcoming: Flow<List<LiveVideo>> get() = throw AssertionError()
+    override suspend fun fetchStreamDetail(id: LiveVideo.Id): LiveVideo = throw AssertionError()
 }
 
 interface TwitchOauth {
+    /// https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
     @GET("oauth2/authorize?response_type=token")
     fun authorizeImplicitly(
         @Query("client_id") clientId: String,
@@ -252,15 +187,6 @@ interface TwitchOauth {
         @Query("scope") scope: String,
         @Query("state") state: String = UUID.randomUUID().toString(),
     ): Call<ResponseBody>
-}
-
-data class TwitchOauthToken(
-    val accessToken: String,
-    val scope: String,
-    val state: String,
-    val tokenType: String,
-) {
-    companion object
 }
 
 interface TwitchHelixService {
@@ -364,10 +290,10 @@ private data class TwitchLiveChannel(private val user: TwitchUser) : LiveChannel
 
 @Singleton
 class TwitchTokenInterceptor @Inject constructor(
-    private val accountRepository: AccountRepository,
+    private val accountDataSource: AccountLocalDataSource,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = accountRepository.getTwitchToken() ?: return chain.proceed(chain.request())
+        val token = accountDataSource.getTwitchToken() ?: return chain.proceed(chain.request())
         val req = chain.request().newBuilder()
             .header("Authorization", "Bearer $token")
             .header("Client-Id", BuildConfig.TWITCH_CLIENT_ID)

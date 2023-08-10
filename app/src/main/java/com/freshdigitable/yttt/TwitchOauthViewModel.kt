@@ -6,8 +6,8 @@ import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.source.TwitchLiveRepository
-import com.freshdigitable.yttt.data.source.TwitchOauthToken
+import com.freshdigitable.yttt.data.TwitchLiveRepository
+import com.freshdigitable.yttt.data.TwitchOauthToken
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
