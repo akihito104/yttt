@@ -43,7 +43,11 @@ fun TimetableTabScreen(
             viewModel.loadList()
         }
     }
-    val tabData = combine(onAirViewModel.tabData, upcomingViewModel.tabData) { items ->
+    val tabData = combine(
+        onAirViewModel.tabData,
+        upcomingViewModel.tabData,
+        upcomingViewModel.freeChatTab,
+    ) { items ->
         items.toList()
     }.collectAsState(initial = TimetablePage.values().map { TabData(it, 0) })
     val refreshing = viewModel.isLoading.observeAsState(false)
@@ -57,6 +61,11 @@ fun TimetableTabScreen(
             TimetablePage.Upcoming -> {
                 val upcoming = upcomingViewModel.items.collectAsState(emptyMap())
                 return@map { groupedContent(itemsProvider = { upcoming.value }, onListItemClicked) }
+            }
+
+            TimetablePage.FreeChat -> {
+                val freeChat = upcomingViewModel.freeChat.collectAsState(emptyList())
+                return@map { simpleContent({ freeChat.value }, onListItemClicked) }
             }
         }
     }
@@ -124,6 +133,7 @@ private fun TimetableTabScreenPreview() {
                 listOf(
                     TabData(TimetablePage.OnAir, 10),
                     TabData(TimetablePage.Upcoming, 3),
+                    TabData(TimetablePage.FreeChat, 7),
                 )
             },
         ) { Text("page: $it") }

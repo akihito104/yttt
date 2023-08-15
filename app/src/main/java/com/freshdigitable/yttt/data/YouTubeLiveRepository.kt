@@ -136,6 +136,10 @@ class YouTubeLiveRepository @Inject constructor(
         return remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
     }
 
+    override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
+        localSource.addFreeChatItems(ids)
+    }
+
     companion object {
         private val activityMaxPeriod = Period.ofDays(7)
     }

@@ -80,6 +80,9 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelAddition(addition: Collection<LiveChannelAdditionTable>)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addFreeChatItems(ids: Collection<FreeChatTable>)
+
     companion object {
         private const val CONDITION_UNFINISHED_VIDEOS =
             "(schedule_start_datetime NOTNULL OR actual_start_datetime NOTNULL) " +

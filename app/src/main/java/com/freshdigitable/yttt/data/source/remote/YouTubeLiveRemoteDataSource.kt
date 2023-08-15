@@ -160,6 +160,9 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         return withContext(Dispatchers.IO) { params.execute() }
     }
 
+    override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) =
+        throw UnsupportedOperationException()
+
     companion object {
         @Suppress("unused")
         private val TAG = YouTubeLiveRemoteDataSource::class.simpleName

@@ -12,10 +12,11 @@ interface LiveVideo {
     val scheduledEndDateTime: Instant?
     val actualStartDateTime: Instant?
     val actualEndDateTime: Instant?
+    val isFreeChat: Boolean get() = false
 
     fun isLiveStream(): Boolean = scheduledStartDateTime != null
     fun isNowOnAir(): Boolean = actualStartDateTime != null && actualEndDateTime == null
-    fun isUpcoming(): Boolean = isLiveStream() && actualStartDateTime == null
+    fun isUpcoming(): Boolean = isLiveStream() && actualStartDateTime == null && !isFreeChat
 
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
