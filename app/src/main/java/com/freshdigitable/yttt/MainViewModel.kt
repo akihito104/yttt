@@ -18,6 +18,7 @@ import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -122,6 +123,16 @@ class MainViewModel @Inject constructor(
             .filter { v -> regex.any { v.title.contains(it) } }
             .map { it.id }
         liveRepository.addFreeChatItems(freeChat)
+    }
+
+    private val _selectedItem: MutableStateFlow<LiveVideo.Id?> = MutableStateFlow(null)
+    val selectedItem: StateFlow<LiveVideo.Id?> = _selectedItem
+    fun onMenuClicked(id: LiveVideo.Id) {
+        _selectedItem.value = id
+    }
+
+    fun onMenuClosed() {
+        _selectedItem.value = null
     }
 
     companion object {

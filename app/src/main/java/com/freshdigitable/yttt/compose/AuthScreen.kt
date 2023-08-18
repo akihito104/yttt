@@ -31,15 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.YouTubeOauthViewModel
-import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
-import com.google.accompanist.themeadapter.material.MdcTheme
 import com.google.android.gms.common.GoogleApiAvailability
 import kotlinx.coroutines.launch
 
@@ -283,7 +282,7 @@ private fun AuthListItem(
 @Preview(uiMode = UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 private fun AuthScreenPreview() {
-    MdcTheme {
+    AppTheme {
         AuthScreen(
             youTubeAuthStateHolder = rememberYouTubeAuthStateHolder(
                 pickAccountIntentProvider = object : NewChooseAccountIntentProvider {

@@ -7,9 +7,9 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
+import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.LaunchNavRoute
 import com.freshdigitable.yttt.compose.navigation.composableWith
-import com.google.accompanist.themeadapter.material.MdcTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -20,7 +20,7 @@ class MainActivity : AppCompatActivity() {
         val startDestination =
             if (intent.isTwitchOauth) LaunchNavRoute.Main else LaunchNavRoute.Splash
         setContent {
-            MdcTheme {
+            AppTheme {
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = startDestination.route) {
                     composableWith(navController = navController, navRoutes = LaunchNavRoute.routes)

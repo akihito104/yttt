@@ -52,7 +52,6 @@ import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
-import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 import java.math.BigInteger
 import java.text.DecimalFormat
@@ -182,7 +181,7 @@ private fun ChannelDetailPager(
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        val pagerState = rememberPagerState()
+        val pagerState = rememberPagerState { pages.size }
         ScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
             edgePadding = 0.dp,
@@ -201,7 +200,6 @@ private fun ChannelDetailPager(
             }
         }
         HorizontalPager(
-            pageCount = pages.size,
             state = pagerState,
             key = { i -> pages[i].ordinal },
         ) { index ->
@@ -396,7 +394,7 @@ private val unitPrefix = arrayOf("", "k", "M", "G", "T", "P", "E")
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
 fun ChannelScreenPreview() {
-    MdcTheme {
+    AppTheme {
         ChannelDetailScreen({
             object : LiveChannelDetail, LiveChannel by LiveChannelEntity(
                 id = LiveChannel.Id("a"),
@@ -423,7 +421,7 @@ fun ChannelScreenPreview() {
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
 private fun LazyColumnPreview() {
-    MdcTheme {
+    AppTheme {
         PlainListPage(
             listProvider = {
                 listOf("a", "b", "c").mapIndexed { i, title ->

@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.AppSettingsViewModel
-import com.google.accompanist.themeadapter.material.MdcTheme
 
 @Composable
 fun AppSettingsScreen(
@@ -72,7 +71,7 @@ private fun AppSettingsScreen(
 @Preview(uiMode = UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 fun AppSettingsScreenPreview() {
-    MdcTheme {
+    AppTheme {
         AppSettingsScreen(text = { "24:00" }, onClicked = {})
     }
 }
