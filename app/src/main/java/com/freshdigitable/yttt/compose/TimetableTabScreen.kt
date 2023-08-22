@@ -17,6 +17,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -39,6 +40,7 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableTabScreen(
     viewModel: MainViewModel = hiltViewModel(),
@@ -87,27 +89,37 @@ fun TimetableTabScreen(
             listContent = listContents[index],
         )
     }
-    val selectedItem = viewModel.selectedItem.collectAsState(null)
-    if (selectedItem.value != null) {
-        ListItemMenuSheet {
-            viewModel.onMenuClosed()
-        }
-    }
+    val menuItems = viewModel.menuItems.collectAsState(emptyList())
+    val sheetState = rememberModalBottomSheetState()
+    ListItemMenuSheet(
+        menuItemsProvider = { menuItems.value },
+        sheetState = sheetState,
+        onMenuItemClicked = viewModel::onMenuItemClicked,
+        onDismissRequest = viewModel::onMenuClosed,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListItemMenuSheet(onDismissRequest: () -> Unit) {
-    val sheetState = rememberModalBottomSheetState()
+fun ListItemMenuSheet(
+    menuItemsProvider: () -> Collection<TimetableMenuItem>,
+    sheetState: SheetState = rememberModalBottomSheetState(),
+    onMenuItemClicked: (TimetableMenuItem) -> Unit,
+    onDismissRequest: () -> Unit,
+) {
     val coroutineScope = rememberCoroutineScope()
-    ModalBottomSheet(
-        sheetState = sheetState,
-        onDismissRequest = onDismissRequest,
-    ) {
-        MenuContent {
-            coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
-                if (!sheetState.isVisible) {
-                    onDismissRequest()
+    val menuItems = menuItemsProvider()
+    if (menuItems.isNotEmpty()) {
+        ModalBottomSheet(
+            sheetState = sheetState,
+            onDismissRequest = onDismissRequest,
+        ) {
+            MenuContent(menuItems = menuItems) {
+                onMenuItemClicked(it)
+                coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
+                    if (!sheetState.isVisible) {
+                        onDismissRequest()
+                    }
                 }
             }
         }
@@ -115,12 +127,23 @@ fun ListItemMenuSheet(onDismissRequest: () -> Unit) {
 }
 
 @Composable
-private fun ColumnScope.MenuContent(onMenuClicked: () -> Unit) {
-    ListItem(
-        modifier = Modifier.clickable(onClick = onMenuClicked),
-        headlineContent = { Text("check as free chat") },
-    )
+private fun ColumnScope.MenuContent(
+    menuItems: Collection<TimetableMenuItem> = TimetableMenuItem.values().toList(),
+    onMenuClicked: (TimetableMenuItem) -> Unit,
+) {
+    menuItems.forEach { i ->
+        ListItem(
+            modifier = Modifier.clickable(onClick = { onMenuClicked(i) }),
+            headlineContent = { Text(i.text) },
+        )
+    }
     Spacer(modifier = Modifier.navigationBarsPadding())
+}
+
+enum class TimetableMenuItem(val text: String) {
+    ADD_FREE_CHAT("check as free chat"),
+    REMOVE_FREE_CHAT("uncheck as free chat"),
+    ;
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -192,10 +215,14 @@ private fun ModalSheetPreview() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
 private fun ListItemMenuSheetPreview() {
     AppTheme {
-        ListItemMenuSheet {}
+        ListItemMenuSheet(
+            menuItemsProvider = { TimetableMenuItem.values().toList() },
+            onMenuItemClicked = {},
+        ) {}
     }
 }

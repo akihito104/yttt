@@ -6,10 +6,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TabData
+import com.freshdigitable.yttt.compose.TimetableMenuItem
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.toLocalDateTime
@@ -125,14 +127,57 @@ class MainViewModel @Inject constructor(
         liveRepository.addFreeChatItems(freeChat)
     }
 
-    private val _selectedItem: MutableStateFlow<LiveVideo.Id?> = MutableStateFlow(null)
-    val selectedItem: StateFlow<LiveVideo.Id?> = _selectedItem
+    private val _selectedItem: MutableStateFlow<LiveVideo?> = MutableStateFlow(null)
+    val menuItems: StateFlow<List<TimetableMenuItem>> = _selectedItem.map {
+        if (it == null) emptyList()
+        else {
+            listOf(
+                if (it.isFreeChat) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
     fun onMenuClicked(id: LiveVideo.Id) {
-        _selectedItem.value = id
+        viewModelScope.launch {
+            val v = when (id.platform) {
+                LivePlatform.YOUTUBE -> liveRepository.fetchVideoDetail(id)
+                LivePlatform.TWITCH -> twitchRepository.fetchStreamDetail(id)
+            }
+            _selectedItem.value = v
+        }
     }
 
     fun onMenuClosed() {
         _selectedItem.value = null
+    }
+
+    fun onMenuItemClicked(item: TimetableMenuItem) {
+        val id = checkNotNull(_selectedItem.value).id
+        when (item) {
+            TimetableMenuItem.ADD_FREE_CHAT -> {
+                if (id.platform == LivePlatform.YOUTUBE) {
+                    checkAsFreeChat(id)
+                }
+            }
+
+            TimetableMenuItem.REMOVE_FREE_CHAT -> {
+                if (id.platform == LivePlatform.YOUTUBE) {
+                    uncheckAsFreeChat(id)
+                }
+            }
+        }
+    }
+
+    private fun checkAsFreeChat(id: LiveVideo.Id) {
+        viewModelScope.launch {
+            liveRepository.addFreeChatItems(listOf(id))
+        }
+    }
+
+    private fun uncheckAsFreeChat(id: LiveVideo.Id) {
+        viewModelScope.launch {
+            liveRepository.removeFreeChatItems(listOf(id))
+        }
     }
 
     companion object {
@@ -191,7 +236,9 @@ class UpcomingListViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, TabData(TimetablePage.Upcoming, 0))
 
     val freeChat: StateFlow<List<LiveVideo>> = liveRepository.videos
-        .map { v -> v.filter { it.isFreeChat } }
+        .map { v ->
+            v.filter { it.isFreeChat }.distinctBy { it.id }.sortedBy { it.channel.id.value }
+        }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val freeChatTab: StateFlow<TabData> = freeChat.map { it.size }
         .distinctUntilChanged()

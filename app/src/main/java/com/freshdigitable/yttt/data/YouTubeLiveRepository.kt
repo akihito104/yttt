@@ -83,7 +83,17 @@ class YouTubeLiveRepository @Inject constructor(
     }
 
     suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo {
-        return videoRemote[id] ?: fetchVideoList(listOf(id)).first()
+        val detailCache = videoRemote[id]
+        val ids = listOf(id)
+        val cache = localSource.fetchVideoList(ids)
+        if (detailCache != null) {
+            val v = cache.first()
+            return object : LiveVideoDetail by detailCache {
+                override val isFreeChat: Boolean
+                    get() = v.isFreeChat
+            }
+        }
+        return cache.firstOrNull() ?: fetchVideoList(ids).first()
     }
 
     suspend fun removeAllFinishedVideos() {
@@ -138,6 +148,10 @@ class YouTubeLiveRepository @Inject constructor(
 
     override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
         localSource.addFreeChatItems(ids)
+    }
+
+    override suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>) {
+        localSource.removeFreeChatItems(ids)
     }
 
     companion object {

@@ -19,4 +19,5 @@ interface YoutubeLiveDataSource {
     ): List<LiveVideo>
 
     suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>)
+    suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>)
 }

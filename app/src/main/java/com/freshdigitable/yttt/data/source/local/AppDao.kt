@@ -83,6 +83,9 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun addFreeChatItems(ids: Collection<FreeChatTable>)
 
+    @Query("DELETE FROM free_chat WHERE video_id IN(:ids)")
+    suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>)
+
     companion object {
         private const val CONDITION_UNFINISHED_VIDEOS =
             "(schedule_start_datetime NOTNULL OR actual_start_datetime NOTNULL) " +

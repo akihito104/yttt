@@ -51,18 +51,22 @@ fun LiveVideoListItemView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
     onItemClick: () -> Unit,
-    onMenuClicked: () -> Unit = {},
+    onMenuClicked: (() -> Unit)? = null,
 ) {
-    Box(modifier = Modifier) {
+    if (onMenuClicked == null) {
         LiveVideoListItemView(video = video, modifier = modifier, onItemClick = onItemClick)
-        Icon(
-            imageVector = Icons.Default.MoreVert,
-            modifier = Modifier
-                .size(20.dp)
-                .align(alignment = TopEnd)
-                .clickable(onClick = onMenuClicked),
-            contentDescription = "",
-        )
+    } else {
+        Box(modifier = Modifier) {
+            LiveVideoListItemView(video = video, modifier = modifier, onItemClick = onItemClick)
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                modifier = Modifier
+                    .size(20.dp)
+                    .align(alignment = TopEnd)
+                    .clickable(onClick = onMenuClicked),
+                contentDescription = "",
+            )
+        }
     }
 }
 
