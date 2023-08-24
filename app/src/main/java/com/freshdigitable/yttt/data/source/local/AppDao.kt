@@ -59,6 +59,9 @@ interface AppDao {
     @Query("SELECT * FROM video_view WHERE id IN (:ids)")
     suspend fun findVideosById(ids: Collection<LiveVideo.Id>): List<LiveVideoDbView>
 
+    @Query("SELECT * FROM video_view WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
+    suspend fun findAllFinishedVideos(): List<LiveVideoDbView>
+
     @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
     suspend fun findAllUnfinishedVideoList(): List<LiveVideoDbView>
 
@@ -80,8 +83,8 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelAddition(addition: Collection<LiveChannelAdditionTable>)
 
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun addFreeChatItems(ids: Collection<FreeChatTable>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addFreeChatItems(entities: Collection<FreeChatTable>)
 
     @Query("DELETE FROM free_chat WHERE video_id IN(:ids)")
     suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>)

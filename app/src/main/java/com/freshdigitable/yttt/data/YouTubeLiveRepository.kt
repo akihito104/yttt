@@ -89,7 +89,7 @@ class YouTubeLiveRepository @Inject constructor(
         if (detailCache != null) {
             val v = cache.first()
             return object : LiveVideoDetail by detailCache {
-                override val isFreeChat: Boolean
+                override val isFreeChat: Boolean?
                     get() = v.isFreeChat
             }
         }

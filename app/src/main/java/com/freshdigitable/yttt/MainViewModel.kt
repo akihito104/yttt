@@ -113,7 +113,7 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun updateAsFreeChat() {
-        val unfinished = liveRepository.findAllUnfinishedVideos()
+        val unchecked = liveRepository.findAllUnfinishedVideos()
         val regex = listOf(
             "free chat".toRegex(RegexOption.IGNORE_CASE),
             "フリーチャット".toRegex(),
@@ -121,10 +121,12 @@ class MainViewModel @Inject constructor(
             "schedule".toRegex(RegexOption.IGNORE_CASE),
             "の予定".toRegex(),
         )
-        val freeChat = unfinished.filter { it.isUpcoming() }
+        val freeChat = unchecked.filter { it.isFreeChat == null }
             .filter { v -> regex.any { v.title.contains(it) } }
             .map { it.id }
         liveRepository.addFreeChatItems(freeChat)
+        val unfinished = unchecked.filter { it.isFreeChat == null }.map { it.id } - freeChat.toSet()
+        liveRepository.removeFreeChatItems(unfinished)
     }
 
     private val _selectedItem: MutableStateFlow<LiveVideo?> = MutableStateFlow(null)
@@ -132,7 +134,7 @@ class MainViewModel @Inject constructor(
         if (it == null) emptyList()
         else {
             listOf(
-                if (it.isFreeChat) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
+                if (it.isFreeChat == true) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -213,7 +215,7 @@ class UpcomingListViewModel @Inject constructor(
         combine(liveRepository.videos, twitchRepository.upcoming) { yt, tw ->
             val week = Instant.now().plus(Duration.ofDays(7L))
             (yt + tw.filter { it.scheduledStartDateTime?.isBefore(week) == true })
-                .filter { it.isUpcoming() }
+                .filter { it.isUpcoming() && it.isFreeChat != true }
                 .sortedBy { it.scheduledStartDateTime }
         }
     private val extraHourOfDay = prefs.changeDateTime.map {
@@ -236,9 +238,7 @@ class UpcomingListViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, TabData(TimetablePage.Upcoming, 0))
 
     val freeChat: StateFlow<List<LiveVideo>> = liveRepository.videos
-        .map { v ->
-            v.filter { it.isFreeChat }.distinctBy { it.id }.sortedBy { it.channel.id.value }
-        }
+        .map { v -> v.filter { it.isFreeChat == true }.sortedBy { it.channel.id.value } }
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val freeChatTab: StateFlow<TabData> = freeChat.map { it.size }
         .distinctUntilChanged()

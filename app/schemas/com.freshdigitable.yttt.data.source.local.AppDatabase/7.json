@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 7,
-    "identityHash": "0b817cdf0093bda9913c4fc73cb80550",
+    "identityHash": "55757d994ca58048f59937740030a340",
     "entities": [
       {
         "tableName": "channel",
@@ -373,25 +373,26 @@
       },
       {
         "tableName": "free_chat",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `video_id` TEXT NOT NULL, FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`video_id` TEXT NOT NULL, `is_free_chat` INTEGER DEFAULT null, PRIMARY KEY(`video_id`), FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
           {
             "fieldPath": "videoId",
             "columnName": "video_id",
             "affinity": "TEXT",
             "notNull": true
+          },
+          {
+            "fieldPath": "isFreeChat",
+            "columnName": "is_free_chat",
+            "affinity": "INTEGER",
+            "notNull": false,
+            "defaultValue": "null"
           }
         ],
         "primaryKey": {
-          "autoGenerate": true,
+          "autoGenerate": false,
           "columnNames": [
-            "id"
+            "video_id"
           ]
         },
         "indices": [
@@ -423,7 +424,7 @@
     "views": [
       {
         "viewName": "video_view",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, c.title AS channel_title, c.icon AS channel_icon, (f.id NOTNULL) AS is_free_chat FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id WHERE v.visible == 1"
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, c.title AS channel_title, c.icon AS channel_icon, f.is_free_chat AS is_free_chat FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id WHERE v.visible == 1"
       },
       {
         "viewName": "subscription_view",
@@ -436,7 +437,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0b817cdf0093bda9913c4fc73cb80550')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '55757d994ca58048f59937740030a340')"
     ]
   }
 }
