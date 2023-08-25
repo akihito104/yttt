@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.google.accompanist.themeadapter.material.MdcTheme
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -50,11 +49,16 @@ fun TimetableScreen(
 fun LazyListScope.simpleContent(
     itemsProvider: () -> List<LiveVideo>,
     onListItemClicked: (LiveVideo.Id) -> Unit,
+    onMenuClicked: (LiveVideo.Id) -> Unit,
 ) {
     itemsIndexed(
         items = itemsProvider(),
         key = { _, item -> item.id.value }) { _, item ->
-        LiveVideoListItemView(video = item) { onListItemClicked(item.id) }
+        LiveVideoListItemView(
+            video = item,
+            onItemClick = { onListItemClicked(item.id) },
+            onMenuClicked = { onMenuClicked(item.id) },
+        )
     }
 }
 
@@ -62,6 +66,7 @@ fun LazyListScope.simpleContent(
 fun LazyListScope.groupedContent(
     itemsProvider: () -> Map<String, List<LiveVideo>>,
     onListItemClicked: (LiveVideo.Id) -> Unit,
+    onMenuClicked: (LiveVideo.Id) -> Unit,
 ) {
     itemsProvider().forEach { (datetime, items) ->
         stickyHeader {
@@ -70,7 +75,11 @@ fun LazyListScope.groupedContent(
         itemsIndexed(
             items = items,
             key = { _, item -> item.id.value }) { _, item ->
-            LiveVideoListItemView(video = item) { onListItemClicked(item.id) }
+            LiveVideoListItemView(
+                video = item,
+                onItemClick = { onListItemClicked(item.id) },
+                onMenuClicked = { onMenuClicked(item.id) },
+            )
         }
     }
 }
@@ -78,7 +87,7 @@ fun LazyListScope.groupedContent(
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 private fun SimpleTimetableScreenPreview() {
-    MdcTheme {
+    AppTheme {
         TimetableScreen(
             refreshingProvider = { false },
             onRefresh = {},
@@ -86,7 +95,7 @@ private fun SimpleTimetableScreenPreview() {
             simpleContent(
                 itemsProvider = { listOf(liveVideoSample) },
                 onListItemClicked = {},
-            )
+            ) {}
         }
     }
 }
@@ -95,7 +104,7 @@ private fun SimpleTimetableScreenPreview() {
 @Composable
 private fun GroupedTimetableScreenPreview() {
     val items = mapOf("2023/06/29(木)" to listOf(liveVideoSample))
-    MdcTheme {
+    AppTheme {
         TimetableScreen(
             refreshingProvider = { false },
             onRefresh = {},
@@ -103,7 +112,7 @@ private fun GroupedTimetableScreenPreview() {
             groupedContent(
                 itemsProvider = { items },
                 onListItemClicked = {},
-            )
+            ) {}
         }
     }
 }

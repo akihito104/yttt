@@ -4,11 +4,10 @@ import android.content.res.Configuration.UI_MODE_NIGHT_NO
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material.DropdownMenu
-import androidx.compose.material.DropdownMenuItem
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ListItem
-import androidx.compose.material.Text
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.AppSettingsViewModel
-import com.google.accompanist.themeadapter.material.MdcTheme
 
 @Composable
 fun AppSettingsScreen(
@@ -32,7 +30,6 @@ fun AppSettingsScreen(
     )
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun AppSettingsScreen(
     text: () -> String,
@@ -41,8 +38,8 @@ private fun AppSettingsScreen(
     Column(modifier = Modifier.fillMaxWidth()) {
         var isExpanded by remember { mutableStateOf(false) }
         ListItem(
-            text = { Text("time to change the date") },
-            trailing = {
+            headlineContent = { Text("time to change the date") },
+            trailingContent = {
                 Column {
                     Text(text())
                     DropdownMenu(
@@ -51,13 +48,12 @@ private fun AppSettingsScreen(
                     ) {
                         AppSettingsViewModel.changeDateTimeList.forEach {
                             DropdownMenuItem(
+                                text = { Text(text = "$it:00") },
                                 onClick = {
                                     onClicked(it)
                                     isExpanded = false
                                 },
-                            ) {
-                                Text(text = "$it:00")
-                            }
+                            )
                         }
                     }
                 }
@@ -72,7 +68,7 @@ private fun AppSettingsScreen(
 @Preview(uiMode = UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 fun AppSettingsScreenPreview() {
-    MdcTheme {
+    AppTheme {
         AppSettingsScreen(text = { "24:00" }, onClicked = {})
     }
 }

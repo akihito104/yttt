@@ -36,19 +36,21 @@ import java.time.Instant
         LiveChannelLogTable::class,
         LiveSubscriptionTable::class,
         LiveVideoTable::class,
+        FreeChatTable::class,
     ],
     views = [
         LiveVideoDbView::class,
         LiveSubscriptionDbView::class,
         LiveChannelDetailDbView::class,
     ],
-    version = 6,
+    version = 7,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
         AutoMigration(from = 5, to = 6),
+        AutoMigration(from = 6, to = 7),
     ]
 )
 @TypeConverters(
@@ -97,11 +99,32 @@ class LiveVideoTable(
     val visible: Boolean = true,
 )
 
+@Entity(
+    tableName = "free_chat",
+    foreignKeys = [
+        ForeignKey(
+            entity = LiveVideoTable::class,
+            parentColumns = ["id"],
+            childColumns = ["video_id"],
+        ),
+    ],
+    indices = [Index("video_id")],
+)
+class FreeChatTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo("video_id")
+    val videoId: LiveVideo.Id,
+    @ColumnInfo("is_free_chat", defaultValue = "null")
+    val isFreeChat: Boolean? = null,
+)
+
 @DatabaseView(
     "SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, " +
         "v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, " +
-        "c.title AS channel_title, c.icon AS channel_icon " +
-        "FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id " +
+        "c.title AS channel_title, c.icon AS channel_icon, f.is_free_chat AS is_free_chat " +
+        "FROM video AS v " +
+        "INNER JOIN channel AS c ON c.id = v.channel_id " +
+        "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
         "WHERE v.visible == 1",
     viewName = "video_view",
 )
@@ -122,6 +145,8 @@ data class LiveVideoDbView(
     override val actualEndDateTime: Instant?,
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     override val thumbnailUrl: String = "",
+    @ColumnInfo(name = "is_free_chat", defaultValue = "null")
+    override val isFreeChat: Boolean? = null,
 ) : LiveVideo
 
 @Entity(tableName = "channel")

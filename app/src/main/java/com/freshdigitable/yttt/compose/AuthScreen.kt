@@ -16,10 +16,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Button
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ListItem
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -31,15 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.YouTubeOauthViewModel
-import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
-import com.google.accompanist.themeadapter.material.MdcTheme
 import com.google.android.gms.common.GoogleApiAvailability
 import kotlinx.coroutines.launch
 
@@ -259,7 +257,6 @@ class TwitchAuthStateHolder(
     val onStartLoginTwitch: (String) -> Unit,
 )
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun AuthListItem(
     title: String,
@@ -268,8 +265,8 @@ private fun AuthListItem(
     onClick: () -> Unit,
 ) {
     ListItem(
-        text = { Text(title) },
-        trailing = {
+        headlineContent = { Text(title) },
+        trailingContent = {
             Button(
                 enabled = enabled,
                 onClick = onClick,
@@ -283,7 +280,7 @@ private fun AuthListItem(
 @Preview(uiMode = UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 private fun AuthScreenPreview() {
-    MdcTheme {
+    AppTheme {
         AuthScreen(
             youTubeAuthStateHolder = rememberYouTubeAuthStateHolder(
                 pickAccountIntentProvider = object : NewChooseAccountIntentProvider {

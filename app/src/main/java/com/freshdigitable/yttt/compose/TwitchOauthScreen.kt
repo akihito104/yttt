@@ -6,8 +6,8 @@ import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Button
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,11 +19,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.TwitchOauthViewModel
+import com.freshdigitable.yttt.data.TwitchOauthToken
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.TwitchOauthToken
-import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 import java.math.BigInteger
 import java.time.Instant
@@ -85,7 +84,7 @@ private fun TwitchOauthScreen(
 @Preview(uiMode = UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 private fun TwitchOauthScreenPreview() {
-    MdcTheme {
+    AppTheme {
         TwitchOauthScreen(
             hasToken = true, onLoginClicked = {}, userProvider = {
                 object : LiveChannelDetail {

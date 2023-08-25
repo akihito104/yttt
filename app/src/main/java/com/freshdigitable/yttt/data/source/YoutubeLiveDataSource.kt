@@ -17,4 +17,7 @@ interface YoutubeLiveDataSource {
     suspend fun fetchVideoList(
         ids: Collection<LiveVideo.Id>,
     ): List<LiveVideo>
+
+    suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>)
+    suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>)
 }

@@ -10,19 +10,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.LocalContentColor
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.primarySurface
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment.Companion.Top
+import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,25 +36,48 @@ import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
-import com.google.accompanist.themeadapter.material.MdcTheme
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun LiveVideoListItemView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit,
+    onItemClick: () -> Unit,
+    onMenuClicked: (() -> Unit)? = null,
+) {
+    if (onMenuClicked == null) {
+        LiveVideoListItemView(video = video, modifier = modifier, onItemClick = onItemClick)
+    } else {
+        Box(modifier = Modifier) {
+            LiveVideoListItemView(video = video, modifier = modifier, onItemClick = onItemClick)
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                modifier = Modifier
+                    .size(20.dp)
+                    .align(alignment = TopEnd)
+                    .clickable(onClick = onMenuClicked),
+                contentDescription = "",
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+private fun LiveVideoListItemView(
+    video: LiveVideo,
+    modifier: Modifier = Modifier,
+    onItemClick: () -> Unit,
 ) {
     Column(
         modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
-            .clickable(onClick = onClick),
+            .clickable(onClick = onItemClick),
     ) {
         Row(
             modifier = Modifier
@@ -73,7 +96,6 @@ fun LiveVideoListItemView(
                 Image(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "",
-                    colorFilter = ColorFilter.tint(LocalContentColor.current.copy(LocalContentAlpha.current)),
                     modifier = thumbnailModifier.align(Top),
                 )
             }
@@ -110,7 +132,7 @@ fun LiveVideoListItemView(
 
 @Composable
 fun LiveVideoHeaderView(label: String) {
-    Surface(color = MaterialTheme.colors.primarySurface) {
+    Surface(color = MaterialTheme.colorScheme.primaryContainer) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -118,7 +140,7 @@ fun LiveVideoHeaderView(label: String) {
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.subtitle2,
+                style = MaterialTheme.typography.titleSmall,
             )
         }
     }
@@ -137,23 +159,23 @@ private data class ThumbnailKey(val id: String) : Key {
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
 private fun LiveVideoListItemViewPreview() {
-    MdcTheme {
-        LiveVideoListItemView(liveVideoSample) {}
+    AppTheme {
+        LiveVideoListItemView(liveVideoSample, onItemClick = {}) {}
     }
 }
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun LiveVideoListItemViewPreviewDark() {
-    MdcTheme {
-        LiveVideoListItemView(liveVideoSample) {}
+    AppTheme {
+        LiveVideoListItemView(liveVideoSample, onItemClick = {}) {}
     }
 }
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
 fun LiveVideoHeaderViewPreview() {
-    MdcTheme {
+    AppTheme {
         LiveVideoHeaderView(
             label = LocalDateTime.now(ZoneId.systemDefault())
                 .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter)
@@ -164,7 +186,7 @@ fun LiveVideoHeaderViewPreview() {
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun LiveVideoHeaderViewPreviewDark() {
-    MdcTheme {
+    AppTheme {
         LiveVideoHeaderView(
             label = LocalDateTime.now(ZoneId.systemDefault())
                 .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter)

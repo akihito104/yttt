@@ -12,6 +12,7 @@ interface LiveVideo {
     val scheduledEndDateTime: Instant?
     val actualStartDateTime: Instant?
     val actualEndDateTime: Instant?
+    val isFreeChat: Boolean? get() = null
 
     fun isLiveStream(): Boolean = scheduledStartDateTime != null
     fun isNowOnAir(): Boolean = actualStartDateTime != null && actualEndDateTime == null

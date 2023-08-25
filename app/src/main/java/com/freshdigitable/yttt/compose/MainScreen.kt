@@ -6,18 +6,19 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.DrawerValue
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Icon
-import androidx.compose.material.ListItem
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.rememberDrawerState
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -36,13 +37,11 @@ import com.freshdigitable.yttt.R
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.data.model.LivePlatform
-import com.google.accompanist.themeadapter.material.MdcTheme
 import kotlinx.coroutines.launch
 
 @Composable
 fun MainScreen(shouldAuth: Boolean = false) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scaffoldState = rememberScaffoldState(drawerState = drawerState)
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
     val activity = LocalContext.current as ComponentActivity
@@ -55,45 +54,51 @@ fun MainScreen(shouldAuth: Boolean = false) {
         activity.addOnNewIntentListener(listener)
         onDispose { activity.removeOnNewIntentListener(listener) }
     }
-    Scaffold(
-        scaffoldState = scaffoldState,
-        topBar = {
-            val backStack = navController.currentBackStackEntryAsState()
-            TopAppBarImpl(
-                currentBackStackEntryProvider = { backStack.value },
-                onMenuIconClicked = {
-                    coroutineScope.launch {
-                        drawerState.open()
-                    }
-                },
-                onUpClicked = { navController.navigateUp() },
-            )
-        },
+    ModalNavigationDrawer(
+        drawerState = drawerState,
         drawerContent = {
-            DrawerContent(
-                items = DrawerMenuItem.values().toList(),
-                onClicked = {
-                    navController.navigate(it)
-                    coroutineScope.launch {
-                        drawerState.close()
-                    }
-                },
-            )
+            ModalDrawerSheet {
+                DrawerContent(
+                    items = DrawerMenuItem.values().toList(),
+                    onClicked = {
+                        navController.navigate(it)
+                        coroutineScope.launch {
+                            drawerState.close()
+                        }
+                    },
+                )
+            }
         },
-    ) { padding ->
-        val startDestination = remember(shouldAuth) {
-            if (shouldAuth) MainNavRoute.Auth else MainNavRoute.TimetableTab
-        }
-        NavHost(
-            modifier = Modifier.padding(padding),
-            navController = navController,
-            startDestination = startDestination.route,
-        ) {
-            composableWith(navController = navController, navRoutes = MainNavRoute.routes)
+    ) {
+        Scaffold(
+            topBar = {
+                val backStack = navController.currentBackStackEntryAsState()
+                TopAppBarImpl(
+                    currentBackStackEntryProvider = { backStack.value },
+                    onMenuIconClicked = {
+                        coroutineScope.launch {
+                            drawerState.open()
+                        }
+                    },
+                    onUpClicked = { navController.navigateUp() },
+                )
+            },
+        ) { padding ->
+            val startDestination = remember(shouldAuth) {
+                if (shouldAuth) MainNavRoute.Auth else MainNavRoute.TimetableTab
+            }
+            NavHost(
+                modifier = Modifier.padding(padding),
+                navController = navController,
+                startDestination = startDestination.route,
+            ) {
+                composableWith(navController = navController, navRoutes = MainNavRoute.routes)
+            }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopAppBarImpl(
     currentBackStackEntryProvider: () -> NavBackStackEntry?,
@@ -138,7 +143,6 @@ private fun <K : NavArg<*>> NavBackStackEntry?.match(
     return args.all { (k, v) -> v(k.getValue(this.arguments)) }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun ColumnScope.DrawerContent(
     items: Collection<DrawerMenuItem>,
@@ -146,7 +150,7 @@ private fun ColumnScope.DrawerContent(
 ) {
     items.forEach {
         ListItem(
-            text = { Text(it.text()) },
+            headlineContent = { Text(it.text()) },
             modifier = Modifier.clickable(onClick = { onClicked(it) }),
         )
     }
@@ -181,7 +185,7 @@ private fun NavHostController.navigate(item: DrawerMenuItem) {
 @Preview
 @Composable
 fun MainScreenPreview() {
-    MdcTheme {
+    AppTheme {
         MainScreen()
     }
 }

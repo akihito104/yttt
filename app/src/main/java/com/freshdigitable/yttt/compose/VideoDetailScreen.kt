@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Text
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
@@ -29,7 +29,6 @@ import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
-import com.google.accompanist.themeadapter.material.MdcTheme
 import java.math.BigInteger
 import java.time.Instant
 
@@ -115,7 +114,7 @@ private val LiveVideo.statsText: String
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 fun VideoDetailComposePreview() {
-    MdcTheme {
+    AppTheme {
         VideoDetailScreen(videoProvider = {
             object : LiveVideoDetail, LiveVideo by LiveVideoEntity(
                 id = LiveVideo.Id("a"),

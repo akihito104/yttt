@@ -9,10 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import com.google.accompanist.themeadapter.material.MdcTheme
 
 @Composable
 fun LiveChannelListItemView(
@@ -105,7 +104,7 @@ fun LiveChannelIcon(
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
 @Composable
 private fun LiveChannelListItemViewPreviewNight() {
-    MdcTheme {
+    AppTheme {
         LiveChannelListItemView("", "title") {}
     }
 }
@@ -113,7 +112,7 @@ private fun LiveChannelListItemViewPreviewNight() {
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 private fun LiveChannelListItemViewPreview() {
-    MdcTheme {
+    AppTheme {
         LiveChannelListItemView("", "title") {}
     }
 }
@@ -121,7 +120,7 @@ private fun LiveChannelListItemViewPreview() {
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
 @Composable
 private fun LiveChannelContentViewPreview() {
-    MdcTheme {
+    AppTheme {
         LiveChannelContentView("", "title")
     }
 }

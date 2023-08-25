@@ -76,6 +76,16 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         return database.dao.findVideosById(ids)
     }
 
+    override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
+        val f = ids.map { FreeChatTable(it, isFreeChat = true) }
+        database.dao.addFreeChatItems(f)
+    }
+
+    override suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>) {
+        val f = ids.map { FreeChatTable(it, isFreeChat = false) }
+        database.dao.addFreeChatItems(f)
+    }
+
     suspend fun addVideo(video: Collection<LiveVideo>) = withContext(Dispatchers.IO) {
         val videos = video.map { it.toDbEntity() }
         database.withTransaction {
@@ -85,8 +95,11 @@ class YouTubeLiveLocalDataSource @Inject constructor(
 
     suspend fun removeAllFinishedVideos() {
         database.withTransaction {
-            database.dao.removeAllChannelLogs()
-            database.dao.removeAllFinishedVideos()
+            val dao = database.dao
+            val v = dao.findAllFinishedVideos()
+            dao.removeFreeChatItems(v.map { it.id })
+            dao.removeAllChannelLogs()
+            dao.removeAllFinishedVideos()
         }
     }
 

@@ -7,6 +7,9 @@ enum class TimetablePage {
     Upcoming {
         override val textRes: Int = R.string.tab_upcoming
     },
+    FreeChat {
+        override val textRes: Int = R.string.tab_freechat
+    }
     ;
 
     abstract val textRes: Int

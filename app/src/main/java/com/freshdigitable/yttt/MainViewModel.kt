@@ -6,18 +6,21 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TabData
+import com.freshdigitable.yttt.compose.TimetableMenuItem
 import com.freshdigitable.yttt.data.AccountRepository
+import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.toLocalDateTime
-import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -79,6 +82,7 @@ class MainViewModel @Inject constructor(
         task.awaitAll()
         liveRepository.lastUpdateDatetime = Instant.now()
         liveRepository.removeAllFinishedVideos()
+        updateAsFreeChat()
         Log.d(TAG, "fetchLiveStreams: end")
     }
 
@@ -106,6 +110,76 @@ class MainViewModel @Inject constructor(
         following.map {
             viewModelScope.async { twitchRepository.fetchFollowedStreamSchedule(it.channel.id) }
         }.awaitAll()
+    }
+
+    private suspend fun updateAsFreeChat() {
+        val unchecked = liveRepository.findAllUnfinishedVideos()
+        val regex = listOf(
+            "free chat".toRegex(RegexOption.IGNORE_CASE),
+            "フリーチャット".toRegex(),
+            "ふりーちゃっと".toRegex(),
+            "schedule".toRegex(RegexOption.IGNORE_CASE),
+            "の予定".toRegex(),
+        )
+        val freeChat = unchecked.filter { it.isFreeChat == null }
+            .filter { v -> regex.any { v.title.contains(it) } }
+            .map { it.id }
+        liveRepository.addFreeChatItems(freeChat)
+        val unfinished = unchecked.filter { it.isFreeChat == null }.map { it.id } - freeChat.toSet()
+        liveRepository.removeFreeChatItems(unfinished)
+    }
+
+    private val _selectedItem: MutableStateFlow<LiveVideo?> = MutableStateFlow(null)
+    val menuItems: StateFlow<List<TimetableMenuItem>> = _selectedItem.map {
+        if (it == null) emptyList()
+        else {
+            listOf(
+                if (it.isFreeChat == true) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun onMenuClicked(id: LiveVideo.Id) {
+        viewModelScope.launch {
+            val v = when (id.platform) {
+                LivePlatform.YOUTUBE -> liveRepository.fetchVideoDetail(id)
+                LivePlatform.TWITCH -> twitchRepository.fetchStreamDetail(id)
+            }
+            _selectedItem.value = v
+        }
+    }
+
+    fun onMenuClosed() {
+        _selectedItem.value = null
+    }
+
+    fun onMenuItemClicked(item: TimetableMenuItem) {
+        val id = checkNotNull(_selectedItem.value).id
+        when (item) {
+            TimetableMenuItem.ADD_FREE_CHAT -> {
+                if (id.platform == LivePlatform.YOUTUBE) {
+                    checkAsFreeChat(id)
+                }
+            }
+
+            TimetableMenuItem.REMOVE_FREE_CHAT -> {
+                if (id.platform == LivePlatform.YOUTUBE) {
+                    uncheckAsFreeChat(id)
+                }
+            }
+        }
+    }
+
+    private fun checkAsFreeChat(id: LiveVideo.Id) {
+        viewModelScope.launch {
+            liveRepository.addFreeChatItems(listOf(id))
+        }
+    }
+
+    private fun uncheckAsFreeChat(id: LiveVideo.Id) {
+        viewModelScope.launch {
+            liveRepository.removeFreeChatItems(listOf(id))
+        }
     }
 
     companion object {
@@ -141,7 +215,7 @@ class UpcomingListViewModel @Inject constructor(
         combine(liveRepository.videos, twitchRepository.upcoming) { yt, tw ->
             val week = Instant.now().plus(Duration.ofDays(7L))
             (yt + tw.filter { it.scheduledStartDateTime?.isBefore(week) == true })
-                .filter { it.isUpcoming() }
+                .filter { it.isUpcoming() && it.isFreeChat != true }
                 .sortedBy { it.scheduledStartDateTime }
         }
     private val extraHourOfDay = prefs.changeDateTime.map {
@@ -162,4 +236,12 @@ class UpcomingListViewModel @Inject constructor(
         .distinctUntilChanged()
         .map { TabData(TimetablePage.Upcoming, it) }
         .stateIn(viewModelScope, SharingStarted.Lazily, TabData(TimetablePage.Upcoming, 0))
+
+    val freeChat: StateFlow<List<LiveVideo>> = liveRepository.videos
+        .map { v -> v.filter { it.isFreeChat == true }.sortedBy { it.channel.id.value } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val freeChatTab: StateFlow<TabData> = freeChat.map { it.size }
+        .distinctUntilChanged()
+        .map { TabData(TimetablePage.FreeChat, it) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, TabData(TimetablePage.FreeChat, 0))
 }
