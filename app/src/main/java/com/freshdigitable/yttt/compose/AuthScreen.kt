@@ -16,10 +16,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.Button
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.ListItem
-import androidx.compose.material.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -258,7 +257,6 @@ class TwitchAuthStateHolder(
     val onStartLoginTwitch: (String) -> Unit,
 )
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun AuthListItem(
     title: String,
@@ -267,8 +265,8 @@ private fun AuthListItem(
     onClick: () -> Unit,
 ) {
     ListItem(
-        text = { Text(title) },
-        trailing = {
+        headlineContent = { Text(title) },
+        trailingContent = {
             Button(
                 enabled = enabled,
                 onClick = onClick,
