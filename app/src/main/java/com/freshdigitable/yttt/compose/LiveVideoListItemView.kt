@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,12 +22,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.Key
+import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -158,23 +159,18 @@ private data class ThumbnailKey(val id: String) : Key {
     }
 }
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@LightDarkModePreview
 @Composable
-private fun LiveVideoListItemViewPreview() {
+private fun LiveVideoListItemViewPreview(
+    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveVideo,
+) {
     AppTheme {
-        LiveVideoListItemView(liveVideoSample, onItemClick = {}) {}
+        LiveVideoListItemView(video, onItemClick = {}) {}
     }
 }
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-private fun LiveVideoListItemViewPreviewDark() {
-    AppTheme {
-        LiveVideoListItemView(liveVideoSample, onItemClick = {}) {}
-    }
-}
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@LightDarkModePreview
 @Composable
 fun LiveVideoHeaderViewPreview() {
     AppTheme {
@@ -185,25 +181,26 @@ fun LiveVideoHeaderViewPreview() {
     }
 }
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-fun LiveVideoHeaderViewPreviewDark() {
-    AppTheme {
-        LiveVideoHeaderView(
-            label = LocalDateTime.now(ZoneId.systemDefault())
-                .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter)
+class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
+    override val values: Sequence<LiveVideo> = sequenceOf(
+        liveVideo(),
+        liveVideo(channelTitle = "channel title - チャンネルタイトル"),
+    )
+
+    companion object {
+        fun liveVideo(
+            title: String = "video title",
+            channelTitle: String = "channel title",
+        ): LiveVideo = LiveVideoEntity(
+            title = title,
+            scheduledStartDateTime = Instant.now(),
+            channel = LiveChannelEntity(
+                title = channelTitle,
+                iconUrl = "",
+                id = LiveChannel.Id("b")
+            ),
+            id = LiveVideo.Id("a"),
+            thumbnailUrl = "",
         )
     }
 }
-
-val liveVideoSample: LiveVideo = LiveVideoEntity(
-    title = "video title",
-    scheduledStartDateTime = Instant.now(),
-    channel = LiveChannelEntity(
-        title = "channel title",
-        iconUrl = "",
-        id = LiveChannel.Id("b")
-    ),
-    id = LiveVideo.Id("a"),
-    thumbnailUrl = "",
-)

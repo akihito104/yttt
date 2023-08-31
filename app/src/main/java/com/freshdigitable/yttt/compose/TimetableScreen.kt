@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,8 +14,9 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
 
 @OptIn(ExperimentalMaterialApi::class)
@@ -84,7 +84,7 @@ fun LazyListScope.groupedContent(
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
+@LightModePreview
 @Composable
 private fun SimpleTimetableScreenPreview() {
     AppTheme {
@@ -93,17 +93,17 @@ private fun SimpleTimetableScreenPreview() {
             onRefresh = {},
         ) {
             simpleContent(
-                itemsProvider = { listOf(liveVideoSample) },
+                itemsProvider = { listOf(LiveVideoPreviewParamProvider.liveVideo()) },
                 onListItemClicked = {},
             ) {}
         }
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
+@LightDarkModePreview
 @Composable
 private fun GroupedTimetableScreenPreview() {
-    val items = mapOf("2023/06/29(木)" to listOf(liveVideoSample))
+    val items = mapOf("2023/06/29(木)" to listOf(LiveVideoPreviewParamProvider.liveVideo()))
     AppTheme {
         TimetableScreen(
             refreshingProvider = { false },
