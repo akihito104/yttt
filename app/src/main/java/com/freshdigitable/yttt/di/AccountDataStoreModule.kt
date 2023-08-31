@@ -15,6 +15,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -38,7 +41,11 @@ object AccountDataStoreModule {
     }
 
     @Provides
-    fun provideAccountLocalDataSource(dataStore: AndroidPreferencesDataStore): AccountLocalDataSource {
-        return AccountAndroidDataStore(dataStore = dataStore)
-    }
+    fun provideAccountLocalDataSource(
+        dataStore: AndroidPreferencesDataStore,
+        ioCoroutineScope: CoroutineScope,
+    ): AccountLocalDataSource = AccountAndroidDataStore(dataStore = dataStore, ioCoroutineScope)
+
+    @Provides
+    fun provideIoCoroutineScope(): CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 }
