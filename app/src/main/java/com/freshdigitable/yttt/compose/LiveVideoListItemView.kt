@@ -108,6 +108,8 @@ private fun LiveVideoListItemView(
                 LiveChannelContentView(
                     iconUrl = video.channel.iconUrl,
                     title = video.channel.title,
+                    textSize = 14.sp,
+                    lineHeight = (14 * 1.25).sp,
                 )
                 Text(
                     text = video.scheduledStartDateTime?.toLocalFormattedText(dateTimeFormatter)

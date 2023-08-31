@@ -56,6 +56,7 @@ fun LiveChannelContentView(
     iconSize: Dp = 36.dp,
     textOffset: Dp = 8.dp,
     textSize: TextUnit = 14.sp,
+    lineHeight: TextUnit = TextUnit.Unspecified,
 ) {
     Row(
         modifier = modifier
@@ -72,6 +73,7 @@ fun LiveChannelContentView(
             text = title,
             fontSize = textSize,
             modifier = Modifier.align(Alignment.CenterVertically),
+            lineHeight = lineHeight,
         )
     }
 }
