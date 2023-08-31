@@ -7,19 +7,17 @@ import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.os.BundleCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.navDeepLink
-import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.compose.MainNavRoute.Subscription
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
+import com.freshdigitable.yttt.data.TwitchOauthToken
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.TwitchOauthToken
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {
@@ -139,6 +137,15 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             val isFromMenu = Mode.getValue(backStackEntry.arguments) == Modes.MENU.name
+            Launch(navController = navController, isFromMenu = isFromMenu)
+        }
+
+        @Composable
+        fun Launch(
+            navController: NavHostController,
+            isFromMenu: Boolean,
+            twitchToken: TwitchOauthToken? = null,
+        ) {
             val context = LocalContext.current
             AuthScreen(
                 onStartLoginTwitch = {
@@ -159,6 +166,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                         }
                     }
                 },
+                twitchToken = twitchToken,
             )
         }
     }
@@ -196,21 +204,14 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                     scope = requireNotNull(p[Params.Scope]),
                 )
                 Log.d("TwitchLogin", "token: $token")
-                val viewModel = hiltViewModel<TwitchOauthViewModel>(backStackEntry)
-                viewModel.putToken(token)
-                val currentRoute = navController.currentDestination?.route
-                Log.d("TwitchLogin", "currentDest: $currentRoute")
-                if (currentRoute != route) {
-                    return
-                }
-                val authBackStack = navController.previousBackStackEntry
-                    ?: throw IllegalStateException("prevDestination: null")
+                val authBackStack =
+                    checkNotNull(navController.previousBackStackEntry) { "prevDestination: null" }
                 val nextRoute = authBackStack.destination.route
                 check(nextRoute == Auth.route) { "prevDestination: ${authBackStack.destination}" }
-                navController.popBackStack(
-                    route = nextRoute,
-                    inclusive = false,
-                    saveState = false,
+                Auth.Launch(
+                    navController = navController,
+                    isFromMenu = Auth.Mode.getValue(authBackStack.arguments) == Auth.Modes.MENU.name,
+                    twitchToken = token,
                 )
             } else {
                 TwitchOauthScreen()

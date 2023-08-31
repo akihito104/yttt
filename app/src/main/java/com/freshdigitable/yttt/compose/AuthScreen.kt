@@ -20,6 +20,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -33,21 +34,28 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.YouTubeOauthViewModel
+import com.freshdigitable.yttt.data.TwitchOauthToken
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.google.android.gms.common.GoogleApiAvailability
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(
     viewModel: YouTubeOauthViewModel = hiltViewModel(),
     twitchOauthViewModel: TwitchOauthViewModel = hiltViewModel(),
+    twitchToken: TwitchOauthToken? = null,
     onStartLoginTwitch: (String) -> Unit,
     onSetupCompleted: (() -> Unit)?,
 ) {
+    if (twitchToken != null) {
+        twitchOauthViewModel.putToken(twitchToken)
+    }
     val googleServiceState = viewModel.googleServiceState.collectAsState(initial = null)
     AuthScreen(
         youTubeAuthStateHolder = rememberYouTubeAuthStateHolder(
@@ -58,7 +66,7 @@ fun AuthScreen(
         ),
         twitchAuthStateHolder = rememberTwitchAuthStateHolder(
             authorizeUriProvider = { twitchOauthViewModel.getAuthorizeUrl() },
-            hasTwitchTokenProvider = { twitchOauthViewModel.hasToken() },
+            hasTwitchToken = twitchOauthViewModel.hasTokenState,
             onStartLoginTwitch = onStartLoginTwitch,
         ),
         googleServiceStateProvider = { googleServiceState.value },
@@ -243,19 +251,22 @@ fun TwitchListItem(
 @Composable
 private fun rememberTwitchAuthStateHolder(
     authorizeUriProvider: suspend () -> String,
-    hasTwitchTokenProvider: () -> Boolean,
+    hasTwitchToken: Flow<Boolean>,
     onStartLoginTwitch: (String) -> Unit,
 ): TwitchAuthStateHolder {
+    val state = hasTwitchToken.collectAsState(initial = false)
     return remember {
-        TwitchAuthStateHolder(authorizeUriProvider, hasTwitchTokenProvider, onStartLoginTwitch)
+        TwitchAuthStateHolder(authorizeUriProvider, state, onStartLoginTwitch)
     }
 }
 
 class TwitchAuthStateHolder(
     val authorizeUriProvider: suspend () -> String,
-    val hasTwitchTokenProvider: () -> Boolean,
+    private val hasTwitchTokenState: State<Boolean>,
     val onStartLoginTwitch: (String) -> Unit,
-)
+) {
+    val hasTwitchTokenProvider: () -> Boolean = { hasTwitchTokenState.value }
+}
 
 @Composable
 private fun AuthListItem(
@@ -292,7 +303,7 @@ private fun AuthScreenPreview() {
             ),
             twitchAuthStateHolder = rememberTwitchAuthStateHolder(
                 authorizeUriProvider = { "" },
-                hasTwitchTokenProvider = { false },
+                hasTwitchToken = flowOf(false),
                 onStartLoginTwitch = {}
             ),
             googleServiceStateProvider = { YouTubeOauthViewModel.AuthState.Succeeded },
