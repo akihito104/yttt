@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.compose
 
 import android.content.Intent
-import android.content.res.Configuration.UI_MODE_NIGHT_NO
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -14,11 +13,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.TwitchOauthViewModel
+import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.TwitchOauthToken
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
@@ -81,7 +80,7 @@ private fun TwitchOauthScreen(
     }
 }
 
-@Preview(uiMode = UI_MODE_NIGHT_NO, showBackground = true)
+@LightModePreview
 @Composable
 private fun TwitchOauthScreenPreview() {
     AppTheme {

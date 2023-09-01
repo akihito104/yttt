@@ -5,7 +5,6 @@ import android.accounts.AccountManager
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration.UI_MODE_NIGHT_NO
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
@@ -29,11 +28,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.YouTubeOauthViewModel
+import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.TwitchOauthToken
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
@@ -288,7 +287,7 @@ private fun AuthListItem(
     )
 }
 
-@Preview(uiMode = UI_MODE_NIGHT_NO, showBackground = true)
+@LightModePreview
 @Composable
 private fun AuthScreenPreview() {
     AppTheme {
