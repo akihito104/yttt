@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -31,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -41,6 +39,7 @@ import com.freshdigitable.yttt.ChannelDetailChannelSection
 import com.freshdigitable.yttt.ChannelPage
 import com.freshdigitable.yttt.ChannelViewModel
 import com.freshdigitable.yttt.CustomCrop
+import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
@@ -391,7 +390,7 @@ private val BigInteger.toStringWithUnitPrefix: String
     }
 private val unitPrefix = arrayOf("", "k", "M", "G", "T", "P", "E")
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@LightDarkModePreview
 @Composable
 fun ChannelScreenPreview() {
     AppTheme {
@@ -418,7 +417,7 @@ fun ChannelScreenPreview() {
     }
 }
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@LightDarkModePreview
 @Composable
 private fun LazyColumnPreview() {
     AppTheme {

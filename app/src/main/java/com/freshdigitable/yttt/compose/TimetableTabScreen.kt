@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -30,12 +29,12 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.MainViewModel
 import com.freshdigitable.yttt.OnAirListViewModel
 import com.freshdigitable.yttt.TimetablePage
 import com.freshdigitable.yttt.UpcomingListViewModel
+import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -189,7 +188,7 @@ class TabData(
     fun text(): String = stringResource(id = page.textRes, count)
 }
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@LightModePreview
 @Composable
 private fun TimetableTabScreenPreview() {
     AppTheme {
@@ -205,7 +204,7 @@ private fun TimetableTabScreenPreview() {
     }
 }
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@LightModePreview
 @Composable
 private fun ModalSheetPreview() {
     AppTheme {
@@ -216,7 +215,7 @@ private fun ModalSheetPreview() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@LightModePreview
 @Composable
 private fun ListItemMenuSheetPreview() {
     AppTheme {

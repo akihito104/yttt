@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -14,23 +13,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.VideoDetailViewModel
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelEntity
+import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import java.math.BigInteger
-import java.time.Instant
 
 
 @Composable
@@ -111,22 +106,12 @@ private val LiveVideo.statsText: String
         return listOfNotNull(time, count).joinToString("・")
     }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
+@LightModePreview
 @Composable
 fun VideoDetailComposePreview() {
     AppTheme {
         VideoDetailScreen(videoProvider = {
-            object : LiveVideoDetail, LiveVideo by LiveVideoEntity(
-                id = LiveVideo.Id("a"),
-                title = "video title",
-                channel = LiveChannelEntity(
-                    id = LiveChannel.Id("b"),
-                    title = "channel title",
-                    iconUrl = "",
-                ),
-                scheduledStartDateTime = Instant.now(),
-                thumbnailUrl = "",
-            ) {
+            object : LiveVideoDetail, LiveVideo by LiveVideoPreviewParamProvider.liveVideo() {
                 override val description: String = "description"
                 override val viewerCount: BigInteger? = BigInteger.valueOf(100)
 

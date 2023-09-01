@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,13 +16,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 
 @Composable
 fun LiveChannelListItemView(
@@ -56,6 +55,7 @@ fun LiveChannelContentView(
     iconSize: Dp = 36.dp,
     textOffset: Dp = 8.dp,
     textSize: TextUnit = 14.sp,
+    lineHeight: TextUnit = TextUnit.Unspecified,
 ) {
     Row(
         modifier = modifier
@@ -72,6 +72,7 @@ fun LiveChannelContentView(
             text = title,
             fontSize = textSize,
             modifier = Modifier.align(Alignment.CenterVertically),
+            lineHeight = lineHeight,
         )
     }
 }
@@ -101,15 +102,7 @@ fun LiveChannelIcon(
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Composable
-private fun LiveChannelListItemViewPreviewNight() {
-    AppTheme {
-        LiveChannelListItemView("", "title") {}
-    }
-}
-
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
+@LightDarkModePreview
 @Composable
 private fun LiveChannelListItemViewPreview() {
     AppTheme {
@@ -117,7 +110,7 @@ private fun LiveChannelListItemViewPreview() {
     }
 }
 
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
+@LightDarkModePreview
 @Composable
 private fun LiveChannelContentViewPreview() {
     AppTheme {
