@@ -293,8 +293,12 @@ class TwitchTokenInterceptor @Inject constructor(
     private val accountDataSource: AccountLocalDataSource,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = accountDataSource.getTwitchToken() ?: return chain.proceed(chain.request())
-        val req = chain.request().newBuilder()
+        val request = chain.request()
+        if (request.url.host != "api.twitch.tv") {
+            return chain.proceed(request)
+        }
+        val token = accountDataSource.getTwitchToken() ?: return chain.proceed(request)
+        val req = request.newBuilder()
             .header("Authorization", "Bearer $token")
             .header("Client-Id", BuildConfig.TWITCH_CLIENT_ID)
             .build()
