@@ -91,7 +91,7 @@ private fun LiveVideoListItemView(
                     contentDescription = "",
                     modifier = thumbnailModifier.align(Top)
                 ) {
-                    it.signature(ThumbnailKey(video.id.value))
+                    it.signature(ThumbnailKey("${video.id.platform}_${video.id.value}"))
                 }
             } else {
                 Image(
