@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.MainViewModel
@@ -90,10 +91,11 @@ fun TimetableTabScreen(
     }
     val menuItems = viewModel.menuItems.collectAsState(emptyList())
     val sheetState = rememberModalBottomSheetState()
+    val context = LocalContext.current
     ListItemMenuSheet(
         menuItemsProvider = { menuItems.value },
         sheetState = sheetState,
-        onMenuItemClicked = viewModel::onMenuItemClicked,
+        onMenuItemClicked = { viewModel.onMenuItemClicked(it, context::startActivity) },
         onDismissRequest = viewModel::onMenuClosed,
     )
 }
@@ -142,6 +144,7 @@ private fun ColumnScope.MenuContent(
 enum class TimetableMenuItem(val text: String) {
     ADD_FREE_CHAT("check as free chat"),
     REMOVE_FREE_CHAT("uncheck as free chat"),
+    LAUNCH_LIVE("watch live"),
     ;
 }
 
