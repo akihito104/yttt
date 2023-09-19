@@ -368,7 +368,7 @@ class FollowingStreamsResponse(
         @SerializedName("thumbnail_url")
         val thumbnailUrlBase: String,
         @SerializedName("tags")
-        val tags: Array<String>,
+        val tags: List<String>,
         @SerializedName("is_mature")
         val isMature: Boolean,
     ) {
