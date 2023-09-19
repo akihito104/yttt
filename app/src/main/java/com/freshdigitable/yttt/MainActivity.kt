@@ -16,9 +16,10 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d("MainActivity", "onCreate(${this}): ${intent.data}")
+        Log.d(TAG, "onCreate(${this}): ${intent.data}")
         val startDestination =
             if (intent.isTwitchOauth) LaunchNavRoute.Main else LaunchNavRoute.Splash
+        handleFreeTalkIntent()
         setContent {
             AppTheme {
                 val navController = rememberNavController()
@@ -29,8 +30,15 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun handleFreeTalkIntent() {
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
+        AddFreeTalkWorker.enqueue(this, text)
+    }
+
     companion object {
+        @Suppress("unused")
+        private val TAG = MainActivity::class.simpleName
         private val Intent.isTwitchOauth: Boolean
-            get() = data?.toString()?.startsWith("https://twitch_login/") == true
+            get() = data?.toString()?.startsWith(BuildConfig.TWITCH_REDIRECT_URI) == true
     }
 }

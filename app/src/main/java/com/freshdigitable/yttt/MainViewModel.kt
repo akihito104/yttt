@@ -1,5 +1,7 @@
 package com.freshdigitable.yttt
 
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -133,8 +135,9 @@ class MainViewModel @Inject constructor(
     val menuItems: StateFlow<List<TimetableMenuItem>> = _selectedItem.map {
         if (it == null) emptyList()
         else {
-            listOf(
+            listOfNotNull(
                 if (it.isFreeChat == true) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
+                if (it.id.platform == LivePlatform.TWITCH && !it.isNowOnAir()) null else TimetableMenuItem.LAUNCH_LIVE,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -153,8 +156,9 @@ class MainViewModel @Inject constructor(
         _selectedItem.value = null
     }
 
-    fun onMenuItemClicked(item: TimetableMenuItem) {
-        val id = checkNotNull(_selectedItem.value).id
+    fun onMenuItemClicked(item: TimetableMenuItem, appLauncher: (Intent) -> Unit) {
+        val video = checkNotNull(_selectedItem.value)
+        val id = video.id
         when (item) {
             TimetableMenuItem.ADD_FREE_CHAT -> {
                 if (id.platform == LivePlatform.YOUTUBE) {
@@ -166,6 +170,15 @@ class MainViewModel @Inject constructor(
                 if (id.platform == LivePlatform.YOUTUBE) {
                     uncheckAsFreeChat(id)
                 }
+            }
+
+            TimetableMenuItem.LAUNCH_LIVE -> {
+                val url = when (id.platform) {
+                    LivePlatform.YOUTUBE -> "https://youtube.com/watch?v=${id.value}"
+                    LivePlatform.TWITCH -> "https://twitch.tv/${(video.channel as LiveChannelDetail).customUrl}"
+                }
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                appLauncher(intent)
             }
         }
     }

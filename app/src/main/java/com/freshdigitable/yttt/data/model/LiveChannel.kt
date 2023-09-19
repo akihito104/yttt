@@ -57,7 +57,7 @@ interface LiveChannelSection : Comparable<LiveChannelSection> {
         POPULAR_UPLOAD(Content.Playlist::class), RECENT_UPLOAD(Content.Playlist::class),
         SINGLE_PLAYLIST(Content.Playlist::class), SUBSCRIPTION(Content.Channels::class),
         UPCOMING_EVENT(Content.Playlist::class),
-        UNDEFININED(Content.Playlist::class),
+        UNDEFINED(Content.Playlist::class),
     }
 
     interface Content<T> {

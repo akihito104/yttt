@@ -119,6 +119,8 @@ class TwitchLiveRemoteDataSource @Inject constructor(
                     get() = ""
                 override val viewerCount: BigInteger?
                     get() = BigInteger.valueOf(v.viewerCount.toLong())
+
+                override fun toString(): String = v.toString()
             }
         }
         return res
@@ -340,7 +342,7 @@ class FollowingStreamsResponse(
     override val pagination: Pagination,
 ) : Pageable<FollowingStreamsResponse.FollowingStream> {
     override fun getItems(): Array<FollowingStream> = data
-    class FollowingStream(
+    data class FollowingStream(
         @SerializedName("id")
         val id: String,
         @SerializedName("user_id")
@@ -366,7 +368,7 @@ class FollowingStreamsResponse(
         @SerializedName("thumbnail_url")
         val thumbnailUrlBase: String,
         @SerializedName("tags")
-        val tags: Array<String>,
+        val tags: List<String>,
         @SerializedName("is_mature")
         val isMature: Boolean,
     ) {

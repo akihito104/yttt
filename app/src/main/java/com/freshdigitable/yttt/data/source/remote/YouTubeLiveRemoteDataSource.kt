@@ -299,7 +299,7 @@ private data class LiveChannelSectionImpl(
             "singlePlaylist" to LiveChannelSection.Type.SINGLE_PLAYLIST,
             "subscriptions" to LiveChannelSection.Type.SUBSCRIPTION,
             "upcomingEvents" to LiveChannelSection.Type.UPCOMING_EVENT,
-            "channelsectiontypeundefined" to LiveChannelSection.Type.UNDEFININED,
+            "channelsectiontypeundefined" to LiveChannelSection.Type.UNDEFINED,
         )
 
         private fun ChannelSectionSnippet.parseType(): LiveChannelSection.Type? {
