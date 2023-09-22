@@ -83,7 +83,7 @@ class MainViewModel @Inject constructor(
         }
         task.awaitAll()
         liveRepository.lastUpdateDatetime = Instant.now()
-        liveRepository.removeAllFinishedVideos()
+//        liveRepository.removeAllFinishedVideos()
         updateAsFreeChat()
         Log.d(TAG, "fetchLiveStreams: end")
     }

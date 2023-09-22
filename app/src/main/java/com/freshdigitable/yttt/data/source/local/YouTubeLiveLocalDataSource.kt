@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,8 +73,14 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
+    private val liveVideoExpiredTable = mutableMapOf<LiveVideo.Id, Instant>()
     override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
-        return database.dao.findVideosById(ids)
+        val current = Instant.now()
+        val localId = ids.filter {
+            val expired = liveVideoExpiredTable[it]
+            expired != null && current.isBefore(expired)
+        }
+        return database.dao.findVideosById(localId)
     }
 
     override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
@@ -87,6 +94,18 @@ class YouTubeLiveLocalDataSource @Inject constructor(
     }
 
     suspend fun addVideo(video: Collection<LiveVideo>) = withContext(Dispatchers.IO) {
+        val defaultExpired = Instant.now() + Duration.ofMinutes(10)
+        val added = video.map {
+            val expired = when {
+                it.isFreeChat == true -> Instant.now() + Duration.ofDays(1)
+                it.isUpcoming() -> it.scheduledStartDateTime ?: defaultExpired
+                it.isNowOnAir() -> Instant.now()
+                !it.isLiveStream() || it.actualEndDateTime != null -> Instant.MAX
+                else -> defaultExpired
+            }
+            it.id to expired
+        }
+        liveVideoExpiredTable.putAll(added)
         val videos = video.map { it.toDbEntity() }
         database.withTransaction {
             database.dao.addVideos(videos)
