@@ -67,10 +67,10 @@ class YouTubeLiveRepository @Inject constructor(
         return cache + res
     }
 
-    suspend fun fetchVideoListByPlaylistId(
+    suspend fun fetchVideoIdListByPlaylistId(
         id: LivePlaylist.Id,
         maxResult: Long = 10,
-    ): List<LiveVideo> {
+    ): List<LiveVideo.Id> {
         val playlistItems = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
         val uploadedAtAnotherChannel = playlistItems
             .filter { it.channel.id != it.videoOwnerChannelId }
@@ -78,9 +78,7 @@ class YouTubeLiveRepository @Inject constructor(
         if (uploadedAtAnotherChannel.isNotEmpty()) {
             fetchChannelList(uploadedAtAnotherChannel)
         }
-
-        val videoIds = playlistItems.map { it.videoId }.toSet()
-        return fetchVideoList(videoIds)
+        return playlistItems.map { it.videoId }
     }
 
     suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo? {

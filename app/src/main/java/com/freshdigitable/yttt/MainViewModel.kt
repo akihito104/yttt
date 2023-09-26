@@ -81,18 +81,20 @@ class MainViewModel @Inject constructor(
         val task = channelDetails.map { channelDetail ->
             viewModelScope.async { fetchVideoTask(channelDetail) }
         }
-        task.awaitAll()
+        val ids = task.awaitAll().flatten()
+        liveRepository.fetchVideoList(ids)
         liveRepository.lastUpdateDatetime = Instant.now()
 //        liveRepository.removeAllFinishedVideos()
         updateAsFreeChat()
         Log.d(TAG, "fetchLiveStreams: end")
     }
 
-    private suspend fun fetchVideoTask(channelDetail: LiveChannelDetail) {
-        val id = channelDetail.uploadedPlayList ?: return
+    private suspend fun fetchVideoTask(channelDetail: LiveChannelDetail): List<LiveVideo.Id> {
+        val id = channelDetail.uploadedPlayList ?: return emptyList()
         try {
-            val videos = liveRepository.fetchVideoListByPlaylistId(id)
-            Log.d(TAG, "fetchLiveStreams: playlistId> $id,count>${videos.size}")
+            val ids = liveRepository.fetchVideoIdListByPlaylistId(id)
+            Log.d(TAG, "fetchLiveStreams: playlistId> $id,count>${ids.size}")
+            return ids
         } catch (e: Exception) {
             if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
                 Log.d(TAG, "fetchLiveStreams(reload ${channelDetail.customUrl}) did not update.")
@@ -100,6 +102,7 @@ class MainViewModel @Inject constructor(
                 Log.e(TAG, "fetchLiveStreams: channel>$channelDetail", e)
             }
         }
+        return emptyList()
     }
 
     private suspend fun fetchTwitchStream() {
