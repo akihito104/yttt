@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -110,6 +111,22 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         database.withTransaction {
             database.dao.addVideos(videos)
         }
+    }
+
+    private val videoDetailCache = mutableMapOf<LiveVideo.Id, LiveVideoDetail>()
+    suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideoDetail? {
+        return videoDetailCache[id]
+    }
+
+    suspend fun addVideoDetail(detail: Collection<LiveVideoDetail>) {
+        if (detail.isEmpty()) {
+            return
+        }
+        videoDetailCache.putAll(detail.map { it.id to it })
+    }
+
+    suspend fun removeVideoDetail(id: LiveVideo.Id) {
+        videoDetailCache.remove(id)
     }
 
     suspend fun removeAllFinishedVideos() {

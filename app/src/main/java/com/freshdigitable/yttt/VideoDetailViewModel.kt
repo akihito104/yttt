@@ -4,12 +4,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.TwitchLiveRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigInteger
 import javax.inject.Inject
@@ -19,11 +19,15 @@ class VideoDetailViewModel @Inject constructor(
     private val repository: YouTubeLiveRepository,
     private val twitchRepository: TwitchLiveRepository,
 ) : ViewModel() {
-    fun fetchViewDetail(id: LiveVideo.Id): LiveData<LiveVideo> {
+    fun fetchViewDetail(id: LiveVideo.Id): LiveData<LiveVideo?> {
         return liveData(viewModelScope.coroutineContext) {
             val detail = when (id.platform) {
                 LivePlatform.YOUTUBE -> repository.fetchVideoDetail(id)
                 LivePlatform.TWITCH -> twitchRepository.fetchStreamDetail(id)
+            }
+            if (detail == null) { // TODO: informing video is not found
+                emit(null)
+                return@liveData
             }
             val channel = when (id.platform) {
                 LivePlatform.YOUTUBE -> repository.fetchChannelList(listOf(detail.channel.id))

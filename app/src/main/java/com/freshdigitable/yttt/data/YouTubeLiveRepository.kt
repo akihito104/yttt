@@ -52,16 +52,18 @@ class YouTubeLiveRepository @Inject constructor(
         return res
     }
 
-    private val videoRemote = mutableMapOf<LiveVideo.Id, LiveVideoDetail>()
     override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
         if (ids.isEmpty()) {
             return emptyList()
         }
         val cache = localSource.fetchVideoList(ids)
         val neededId = ids - cache.map { it.id }.toSet()
+        if (neededId.isEmpty()) {
+            return cache
+        }
         val res = remoteSource.fetchVideoList(neededId)
         localSource.addVideo(res)
-        videoRemote.putAll(res.map { it.id to it })
+        localSource.addVideoDetail(res)
         return cache + res
     }
 
@@ -81,19 +83,22 @@ class YouTubeLiveRepository @Inject constructor(
         return fetchVideoList(videoIds)
     }
 
-    suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo { // TODO
-        val detailCache = videoRemote[id]
-        val ids = listOf(id)
-        val cache = fetchVideoList(ids).firstOrNull()
+    suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo? {
+        val detailCache = localSource.fetchVideoDetail(id)
+        val cache = fetchVideoList(listOf(id)).firstOrNull()
+        if (cache == null) {
+            localSource.removeVideoDetail(id)
+            return null
+        }
         if (detailCache != null) {
             return object : LiveVideoDetail by detailCache {
                 override val isFreeChat: Boolean?
-                    get() = cache?.isFreeChat
+                    get() = cache.isFreeChat
 
                 override fun toString(): String = detailCache.toString()
             }
         }
-        return checkNotNull(cache)
+        return cache
     }
 
     suspend fun removeAllFinishedVideos() {
