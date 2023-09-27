@@ -159,6 +159,9 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         getItems: T.() -> List<E>,
         requestParams: YouTube.(Collection<IdBase<ID>>) -> AbstractGoogleClientRequest<T>,
     ): List<E> {
+        if (ids.isEmpty()) {
+            return emptyList()
+        }
         if (ids.size <= VIDEO_MAX_FETCH_SIZE) {
             return fetch { requestParams(ids) }.getItems()
         }

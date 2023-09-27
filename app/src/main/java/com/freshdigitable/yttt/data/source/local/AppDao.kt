@@ -56,11 +56,20 @@ interface AppDao {
     @Query("DELETE FROM video WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
     suspend fun removeAllFinishedVideos()
 
-    @Query("SELECT * FROM video_view WHERE id IN (:ids)")
-    suspend fun findVideosById(ids: Collection<LiveVideo.Id>): List<LiveVideoDbView>
+    @Query(
+        "SELECT v.* FROM video_view AS v LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
+            "WHERE id IN (:ids) AND (e.expired_at NOTNULL AND :current < e.expired_at)"
+    )
+    suspend fun findVideosById(
+        ids: Collection<LiveVideo.Id>,
+        current: Instant = Instant.now(),
+    ): List<LiveVideoDbView>
 
     @Query("SELECT * FROM video_view WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
     suspend fun findAllFinishedVideos(): List<LiveVideoDbView>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addLiveVideoExpire(expire: Collection<LiveVideoExpireTable>)
 
     @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
     suspend fun findAllUnfinishedVideoList(): List<LiveVideoDbView>

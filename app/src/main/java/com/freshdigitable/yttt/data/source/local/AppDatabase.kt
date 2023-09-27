@@ -37,13 +37,14 @@ import java.time.Instant
         LiveSubscriptionTable::class,
         LiveVideoTable::class,
         FreeChatTable::class,
+        LiveVideoExpireTable::class,
     ],
     views = [
         LiveVideoDbView::class,
         LiveSubscriptionDbView::class,
         LiveChannelDetailDbView::class,
     ],
-    version = 7,
+    version = 8,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -51,6 +52,7 @@ import java.time.Instant
         AutoMigration(from = 4, to = 5),
         AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7),
+        AutoMigration(from = 7, to = 8),
     ]
 )
 @TypeConverters(
@@ -116,6 +118,25 @@ class FreeChatTable(
     val videoId: LiveVideo.Id,
     @ColumnInfo("is_free_chat", defaultValue = "null")
     val isFreeChat: Boolean? = null,
+)
+
+@Entity(
+    tableName = "video_expire",
+    foreignKeys = [
+        ForeignKey(
+            entity = LiveVideoTable::class,
+            parentColumns = ["id"],
+            childColumns = ["video_id"],
+        ),
+    ],
+    indices = [Index("video_id")],
+)
+class LiveVideoExpireTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo(name = "video_id")
+    val videoId: LiveVideo.Id,
+    @ColumnInfo(name = "expired_at", defaultValue = "null")
+    val expiredAt: Instant? = null,
 )
 
 @DatabaseView(

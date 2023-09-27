@@ -74,14 +74,8 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
-    private val liveVideoExpiredTable = mutableMapOf<LiveVideo.Id, Instant>()
     override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
-        val current = Instant.now()
-        val localId = ids.filter {
-            val expired = liveVideoExpiredTable[it]
-            expired != null && current.isBefore(expired)
-        }
-        return database.dao.findVideosById(localId)
+        return database.dao.findVideosById(ids)
     }
 
     override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
@@ -96,20 +90,20 @@ class YouTubeLiveLocalDataSource @Inject constructor(
 
     suspend fun addVideo(video: Collection<LiveVideo>) = withContext(Dispatchers.IO) {
         val defaultExpired = Instant.now() + Duration.ofMinutes(10)
-        val added = video.map {
+        val expiring = video.map {
             val expired = when {
                 it.isFreeChat == true -> Instant.now() + Duration.ofDays(1)
                 it.isUpcoming() -> it.scheduledStartDateTime ?: defaultExpired
                 it.isNowOnAir() -> Instant.now()
-                !it.isLiveStream() || it.actualEndDateTime != null -> Instant.MAX
+                !it.isLiveStream() || it.actualEndDateTime != null -> Instant.ofEpochMilli(Long.MAX_VALUE) // for DB limitation :(
                 else -> defaultExpired
             }
-            it.id to expired
+            LiveVideoExpireTable(it.id, expired)
         }
-        liveVideoExpiredTable.putAll(added)
         val videos = video.map { it.toDbEntity() }
         database.withTransaction {
             database.dao.addVideos(videos)
+            database.dao.addLiveVideoExpire(expiring)
         }
     }
 
