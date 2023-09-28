@@ -89,14 +89,15 @@ class YouTubeLiveLocalDataSource @Inject constructor(
     }
 
     suspend fun addVideo(video: Collection<LiveVideo>) = withContext(Dispatchers.IO) {
-        val defaultExpired = Instant.now() + Duration.ofMinutes(10)
+        val current = Instant.now()
+        val defaultExpiredAt = current + EXPIRATION_DEFAULT
         val expiring = video.map {
             val expired = when {
-                it.isFreeChat == true -> Instant.now() + Duration.ofDays(1)
-                it.isUpcoming() -> it.scheduledStartDateTime ?: defaultExpired
-                it.isNowOnAir() -> Instant.now()
-                !it.isLiveStream() || it.actualEndDateTime != null -> Instant.ofEpochMilli(Long.MAX_VALUE) // for DB limitation :(
-                else -> defaultExpired
+                it.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
+                it.isUpcoming() -> defaultExpiredAt.coerceAtMost(checkNotNull(it.scheduledStartDateTime))
+                it.isNowOnAir() -> current
+                it.isArchived -> EXPIRATION_MAX
+                else -> defaultExpiredAt
             }
             LiveVideoExpireTable(it.id, expired)
         }
@@ -164,6 +165,25 @@ class YouTubeLiveLocalDataSource @Inject constructor(
 
     fun addChannelSection(channelSection: List<LiveChannelSection>) {
         channelSections[channelSection[0].channelId] = channelSection
+    }
+
+    companion object {
+        /**
+         * cache expiration duration for archived video (`Long.MAX_VALUE`, because of DB limitation :( )
+         */
+        private val EXPIRATION_MAX: Instant = Instant.ofEpochMilli(Long.MAX_VALUE)
+
+        /**
+         * cache expiration duration for default (10 min.)
+         */
+        private val EXPIRATION_DEFAULT = Duration.ofMinutes(10)
+
+        /**
+         * cache expiration duration for free chat (1 day)
+         */
+        private val EXPIRATION_FREE_CHAT = Duration.ofDays(1)
+        private val LiveVideo.isArchived: Boolean
+            get() = !isLiveStream() || actualEndDateTime != null
     }
 }
 
