@@ -124,13 +124,22 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         videoDetailCache.remove(id)
     }
 
-    suspend fun removeAllFinishedVideos() {
+    suspend fun cleanUp(ids: Collection<LiveVideo.Id>) {
+        removeNotExistVideos(ids)
+        database.dao.removeAllChannelLogs()
+    }
+
+    private suspend fun removeNotExistVideos(ids: Collection<LiveVideo.Id>) {
+        val removingId = database.dao.findNotExistVideoIds(ids)
+        removeVideo(removingId)
+    }
+
+    private suspend fun removeVideo(ids: Collection<LiveVideo.Id>) = withContext(Dispatchers.IO) {
         database.withTransaction {
-            val dao = database.dao
-            val v = dao.findAllFinishedVideos()
-            dao.removeFreeChatItems(v.map { it.id })
-            dao.removeAllChannelLogs()
-            dao.removeAllFinishedVideos()
+            database.dao.removeFreeChatItems(ids)
+            database.dao.removeLiveVideoExpire(ids)
+            ids.forEach { removeVideoDetail(it) }
+            database.dao.removeVideos(ids)
         }
     }
 

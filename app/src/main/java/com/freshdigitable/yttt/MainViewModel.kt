@@ -84,7 +84,7 @@ class MainViewModel @Inject constructor(
         val ids = task.awaitAll().flatten()
         liveRepository.fetchVideoList(ids)
         liveRepository.lastUpdateDatetime = Instant.now()
-//        liveRepository.removeAllFinishedVideos()
+        liveRepository.cleanUp(usefulItemIds = (currentVideo + ids).toSet())
         updateAsFreeChat()
         Log.d(TAG, "fetchLiveStreams: end")
     }
