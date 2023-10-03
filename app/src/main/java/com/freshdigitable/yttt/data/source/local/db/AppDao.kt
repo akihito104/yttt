@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt.data.source.local
+package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.Dao
 import androidx.room.Insert
