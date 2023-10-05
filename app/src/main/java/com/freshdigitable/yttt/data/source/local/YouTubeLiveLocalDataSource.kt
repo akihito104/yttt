@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelLog
@@ -11,14 +12,15 @@ import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
-import com.freshdigitable.yttt.data.source.local.LivePlaylistCache.Companion.updateCache
 import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
 import com.freshdigitable.yttt.data.source.local.db.LiveChannelAdditionTable
 import com.freshdigitable.yttt.data.source.local.db.LiveChannelLogTable
 import com.freshdigitable.yttt.data.source.local.db.LiveChannelTable
+import com.freshdigitable.yttt.data.source.local.db.LivePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionTable
 import com.freshdigitable.yttt.data.source.local.db.LiveVideoExpireTable
 import com.freshdigitable.yttt.data.source.local.db.LiveVideoTable
+import com.freshdigitable.yttt.data.source.local.db.toDbEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -84,13 +86,9 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
-    private val playlistExpireTable = mutableMapOf<LivePlaylist.Id, LivePlaylistCache>()
     suspend fun fetchPlaylistItems(id: LivePlaylist.Id): List<LivePlaylistItem> {
-        val cache = playlistExpireTable[id] ?: return emptyList()
-        if (cache.isExpired()) {
-            return cache.playlistItems.toList()
-        }
-        return emptyList()
+        return database.dao.findPlaylistById(id, since = Instant.now())?.playlistItems
+            ?: emptyList()
     }
 
     suspend fun setPlaylistItemsByPlaylistId(
@@ -98,15 +96,36 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         items: Collection<LivePlaylistItem>,
     ) {
         if (items.isEmpty()) {
+            database.dao.removePlaylistItemsByPlaylistId(id)
             return
         }
         check(items.all { it.playlistId == id })
-        val cache = playlistExpireTable[id]
-        playlistExpireTable[id] = cache.updateCache(id, items)
+        val cache = database.dao.findPlaylistById(id)
+        if (cache == null) {
+            val dao = database.dao
+            database.withTransaction {
+                dao.addPlaylists(LivePlaylistTable(id, items.first().channel.id))
+                dao.addPlaylistItems(items.map { it.toDbEntity() })
+            }
+            return
+        }
+        val cachedIds = cache.playlistItems.map { it.id }.toSet()
+        val newIds = items.map { it.id }.toSet()
+        val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
+        val maxAge = if (isNotModified) {
+            cache.playlist.maxAge.multipliedBy(2).coerceAtMost(LivePlaylistTable.MAX_AGE_MAX)
+        } else {
+            LivePlaylistTable.MAX_AGE_DEFAULT
+        }
+        database.withTransaction {
+            database.dao.updatePlaylist(id, maxAge = maxAge)
+            database.dao.removePlaylistItemsByPlaylistId(id)
+            database.dao.addPlaylistItems(items.map { it.toDbEntity() })
+        }
     }
 
     override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
-        return database.dao.findVideosById(ids)
+        return fetchListByIds(ids) { dao.findVideosById(it) }
     }
 
     override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
@@ -155,22 +174,22 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         videoDetailCache.remove(id)
     }
 
-    suspend fun cleanUp(ids: Collection<LiveVideo.Id>) {
-        removeNotExistVideos(ids)
+    suspend fun cleanUp() {
+        removeNotExistVideos()
         database.dao.removeAllChannelLogs()
     }
 
-    private suspend fun removeNotExistVideos(ids: Collection<LiveVideo.Id>) {
-        val removingId = database.dao.findNotExistVideoIds(ids)
+    private suspend fun removeNotExistVideos() {
+        val removingId = database.dao.findUnusedVideoIds()
         removeVideo(removingId)
     }
 
     private suspend fun removeVideo(ids: Collection<LiveVideo.Id>) = withContext(Dispatchers.IO) {
-        database.withTransaction {
-            database.dao.removeFreeChatItems(ids)
-            database.dao.removeLiveVideoExpire(ids)
-            ids.forEach { removeVideoDetail(it) }
-            database.dao.removeVideos(ids)
+        ids.forEach { removeVideoDetail(it) }
+        fetchByIds(ids) {
+            dao.removeFreeChatItems(it)
+            dao.removeLiveVideoExpire(it)
+            dao.removeVideos(it)
         }
     }
 
@@ -205,6 +224,36 @@ class YouTubeLiveLocalDataSource @Inject constructor(
 
     fun addChannelSection(channelSection: List<LiveChannelSection>) {
         channelSections[channelSection[0].channelId] = channelSection
+    }
+
+    private suspend fun <I : IdBase<*>, E> fetchListByIds(
+        ids: Collection<I>,
+        query: suspend AppDatabase.(Collection<I>) -> List<E>,
+    ): List<E> {
+        return if (ids.isEmpty()) {
+            emptyList()
+        } else if (ids.size < 50) {
+            query(database, ids)
+        } else {
+            database.withTransaction {
+                ids.chunked(50).map { query(database, it) }.flatten()
+            }
+        }
+    }
+
+    private suspend fun <I : IdBase<*>> fetchByIds(
+        ids: Collection<I>,
+        query: suspend AppDatabase.(Collection<I>) -> Unit,
+    ) {
+        if (ids.isEmpty()) {
+            return
+        } else if (ids.size < 50) {
+            query(database, ids)
+        } else {
+            database.withTransaction {
+                ids.chunked(50).map { query(database, it) }
+            }
+        }
     }
 
     companion object {
@@ -267,37 +316,3 @@ private fun LiveChannelDetail.toAddition(): LiveChannelAdditionTable = LiveChann
     videoCount = videoCount,
     viewsCount = viewsCount,
 )
-
-data class LivePlaylistCache(
-    val playlistId: LivePlaylist.Id,
-    val playlistItems: Collection<LivePlaylistItem>,
-    val modifiedAt: Instant = Instant.now(),
-    val expireDuration: Duration = DEFAULT_DURATION,
-) {
-    private val expiredAt: Instant get() = modifiedAt + expireDuration
-    fun isExpired(current: Instant = Instant.now()): Boolean = expiredAt.isAfter(current)
-    private fun updateExpireDuration(
-        items: Collection<LivePlaylistItem>,
-        current: Instant = Instant.now(),
-    ): LivePlaylistCache {
-        val cachedIds = playlistItems.map { it.id }.toSet()
-        val newIds = items.map { it.id }.toSet()
-        val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
-        val nextDuration = if (isNotModified) {
-            expireDuration.multipliedBy(2).coerceAtMost(Duration.ofDays(1))
-        } else {
-            DEFAULT_DURATION
-        }
-        return LivePlaylistCache(playlistId, playlistItems, current, nextDuration)
-    }
-
-    companion object {
-        private val DEFAULT_DURATION = Duration.ofMinutes(10)
-        fun LivePlaylistCache?.updateCache(
-            id: LivePlaylist.Id,
-            items: Collection<LivePlaylistItem>,
-            current: Instant = Instant.now(),
-        ): LivePlaylistCache =
-            this?.updateExpireDuration(items, current) ?: LivePlaylistCache(id, items, current)
-    }
-}

@@ -104,8 +104,8 @@ class YouTubeLiveRepository @Inject constructor(
         return cache
     }
 
-    suspend fun cleanUp(usefulItemIds: Collection<LiveVideo.Id>) {
-        localSource.cleanUp(usefulItemIds)
+    suspend fun cleanUp() {
+        localSource.cleanUp()
     }
 
     suspend fun findAllUnfinishedVideos(): List<LiveVideo> {

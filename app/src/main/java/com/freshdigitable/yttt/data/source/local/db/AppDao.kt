@@ -4,10 +4,13 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import kotlinx.coroutines.flow.Flow
+import java.time.Duration
 import java.time.Instant
 
 @Dao
@@ -53,8 +56,10 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addVideos(videos: Collection<LiveVideoTable>)
 
-    @Query("SELECT id FROM video WHERE id NOT IN (:ids)")
-    suspend fun findNotExistVideoIds(ids: Collection<LiveVideo.Id>): List<LiveVideo.Id>
+    @Query("SELECT id FROM video AS v WHERE NOT EXISTS" +
+        " (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
+        " UNION SELECT video_id FROM free_chat AS f WHERE v.id = f.video_id)")
+    suspend fun findUnusedVideoIds(): List<LiveVideo.Id>
 
     @Query("DELETE FROM video WHERE id IN (:videoIds)")
     suspend fun removeVideos(videoIds: Collection<LiveVideo.Id>)
@@ -100,6 +105,29 @@ interface AppDao {
 
     @Query("DELETE FROM free_chat WHERE video_id IN(:ids)")
     suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addPlaylists(playlist: LivePlaylistTable)
+
+    @Transaction
+    @Query("SELECT * FROM (SELECT * FROM playlist WHERE :since < (last_modified + max_age)) WHERE id = :id")
+    suspend fun findPlaylistById(
+        id: LivePlaylist.Id,
+        since: Instant = Instant.EPOCH,
+    ): LivePlaylistDb?
+
+    @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
+    suspend fun updatePlaylist(
+        id: LivePlaylist.Id,
+        lastModified: Instant = Instant.now(),
+        maxAge: Duration,
+    )
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addPlaylistItems(items: Collection<LivePlaylistItemTable>)
+
+    @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
+    suspend fun removePlaylistItemsByPlaylistId(id: LivePlaylist.Id)
 
     companion object {
         private const val CONDITION_UNFINISHED_VIDEOS =

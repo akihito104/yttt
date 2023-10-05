@@ -7,15 +7,27 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.freshdigitable.yttt.data.source.local.db.AppDao
+import com.freshdigitable.yttt.data.source.local.db.BigIntegerConverter
+import com.freshdigitable.yttt.data.source.local.db.DurationConverter
 import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
+import com.freshdigitable.yttt.data.source.local.db.InstantConverter
 import com.freshdigitable.yttt.data.source.local.db.LiveChannelAdditionTable
 import com.freshdigitable.yttt.data.source.local.db.LiveChannelDetailDbView
+import com.freshdigitable.yttt.data.source.local.db.LiveChannelIdConverter
+import com.freshdigitable.yttt.data.source.local.db.LiveChannelLogIdConverter
 import com.freshdigitable.yttt.data.source.local.db.LiveChannelLogTable
 import com.freshdigitable.yttt.data.source.local.db.LiveChannelTable
+import com.freshdigitable.yttt.data.source.local.db.LivePlaylistIdConverter
+import com.freshdigitable.yttt.data.source.local.db.LivePlaylistItemDb
+import com.freshdigitable.yttt.data.source.local.db.LivePlaylistItemIdConverter
+import com.freshdigitable.yttt.data.source.local.db.LivePlaylistItemTable
+import com.freshdigitable.yttt.data.source.local.db.LivePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionDbView
+import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionIdConverter
 import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionTable
 import com.freshdigitable.yttt.data.source.local.db.LiveVideoDbView
 import com.freshdigitable.yttt.data.source.local.db.LiveVideoExpireTable
+import com.freshdigitable.yttt.data.source.local.db.LiveVideoIdConverter
 import com.freshdigitable.yttt.data.source.local.db.LiveVideoTable
 import dagger.Module
 import dagger.Provides
@@ -32,11 +44,14 @@ import dagger.hilt.components.SingletonComponent
         LiveVideoTable::class,
         FreeChatTable::class,
         LiveVideoExpireTable::class,
+        LivePlaylistTable::class,
+        LivePlaylistItemTable::class,
     ],
     views = [
         LiveVideoDbView::class,
         LiveSubscriptionDbView::class,
         LiveChannelDetailDbView::class,
+        LivePlaylistItemDb::class,
     ],
     version = 8,
     autoMigrations = [
@@ -51,11 +66,13 @@ import dagger.hilt.components.SingletonComponent
 )
 @TypeConverters(
     InstantConverter::class,
+    DurationConverter::class,
     LiveChannelIdConverter::class,
     LiveSubscriptionIdConverter::class,
     LiveVideoIdConverter::class,
     LiveChannelLogIdConverter::class,
     LivePlaylistIdConverter::class,
+    LivePlaylistItemIdConverter::class,
     BigIntegerConverter::class,
 )
 abstract class AppDatabase : RoomDatabase() {
