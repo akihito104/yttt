@@ -148,7 +148,7 @@ class YouTubeLiveLocalDataSource @Inject constructor(
             val expired = when {
                 it.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
                 it.isUpcoming() -> defaultExpiredAt.coerceAtMost(checkNotNull(it.scheduledStartDateTime))
-                it.isNowOnAir() -> current
+                it.isNowOnAir() -> current + EXPIRATION_ON_AIR
                 it.isArchived -> EXPIRATION_MAX
                 else -> defaultExpiredAt
             }
@@ -278,6 +278,11 @@ class YouTubeLiveLocalDataSource @Inject constructor(
          * cache expiration duration for free chat (1 day)
          */
         private val EXPIRATION_FREE_CHAT = Duration.ofDays(1)
+
+        /**
+         * cache expiration duration for on air stream (1 min.)
+         */
+        private val EXPIRATION_ON_AIR = Duration.ofMinutes(1)
         private val LiveVideo.isArchived: Boolean
             get() = !isLiveStream() || actualEndDateTime != null
     }
