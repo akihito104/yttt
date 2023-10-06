@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt.data.source.local
+package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.TypeConverter
 import com.freshdigitable.yttt.data.model.IdBase
@@ -6,9 +6,11 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
+import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 
 abstract class Converter<S, O>(
@@ -25,6 +27,11 @@ abstract class Converter<S, O>(
 class InstantConverter : Converter<Long, Instant>(
     serialize = { it.toEpochMilli() },
     createObject = { Instant.ofEpochMilli(it) },
+)
+
+class DurationConverter : Converter<Long, Duration>(
+    serialize = { it.toMillis() },
+    createObject = { Duration.ofMillis(it) }
 )
 
 abstract class IdConverter<E : IdBase<String>>(createObject: (String) -> E) :
@@ -44,6 +51,8 @@ class LiveChannelLogIdConverter :
     IdConverter<LiveChannelLog.Id>(createObject = { LiveChannelLog.Id(it) })
 
 class LivePlaylistIdConverter : IdConverter<LivePlaylist.Id>(createObject = { LivePlaylist.Id(it) })
+class LivePlaylistItemIdConverter :
+    IdConverter<LivePlaylistItem.Id>(createObject = { LivePlaylistItem.Id(it) })
 
 class BigIntegerConverter : Converter<Long, BigInteger>(
     serialize = { it.toLong() },

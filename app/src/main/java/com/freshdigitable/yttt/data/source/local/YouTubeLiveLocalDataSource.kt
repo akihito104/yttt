@@ -1,16 +1,30 @@
 package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelLog
 import com.freshdigitable.yttt.data.model.LiveChannelSection
+import com.freshdigitable.yttt.data.model.LivePlaylist
+import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
+import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
+import com.freshdigitable.yttt.data.source.local.db.LiveChannelAdditionTable
+import com.freshdigitable.yttt.data.source.local.db.LiveChannelLogTable
+import com.freshdigitable.yttt.data.source.local.db.LiveChannelTable
+import com.freshdigitable.yttt.data.source.local.db.LivePlaylistTable
+import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionTable
+import com.freshdigitable.yttt.data.source.local.db.LiveVideoExpireTable
+import com.freshdigitable.yttt.data.source.local.db.LiveVideoTable
+import com.freshdigitable.yttt.data.source.local.db.toDbEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,8 +86,49 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
+    suspend fun fetchPlaylistItems(id: LivePlaylist.Id): List<LivePlaylistItem> {
+        return database.dao.findPlaylistById(id, since = Instant.now())?.playlistItems
+            ?: emptyList()
+    }
+
+    suspend fun setPlaylistItemsByPlaylistId(
+        id: LivePlaylist.Id,
+        items: Collection<LivePlaylistItem>,
+    ) {
+        if (items.isEmpty()) {
+            database.withTransaction {
+                database.dao.addPlaylist(LivePlaylistTable.createWithMaxAge(id))
+                database.dao.removePlaylistItemsByPlaylistId(id)
+            }
+            return
+        }
+        check(items.all { it.playlistId == id })
+        val cache = database.dao.findPlaylistById(id)
+        if (cache == null) {
+            val dao = database.dao
+            database.withTransaction {
+                dao.addPlaylist(LivePlaylistTable(id))
+                dao.addPlaylistItems(items.map { it.toDbEntity() })
+            }
+            return
+        }
+        val cachedIds = cache.playlistItems.map { it.id }.toSet()
+        val newIds = items.map { it.id }.toSet()
+        val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
+        val maxAge = if (isNotModified) {
+            cache.playlist.maxAge.multipliedBy(2).coerceAtMost(LivePlaylistTable.MAX_AGE_MAX)
+        } else {
+            LivePlaylistTable.MAX_AGE_DEFAULT
+        }
+        database.withTransaction {
+            database.dao.updatePlaylist(id, maxAge = maxAge)
+            database.dao.removePlaylistItemsByPlaylistId(id)
+            database.dao.addPlaylistItems(items.map { it.toDbEntity() })
+        }
+    }
+
     override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
-        return database.dao.findVideosById(ids)
+        return fetchListByIds(ids) { dao.findVideosById(it) }
     }
 
     override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
@@ -87,19 +142,57 @@ class YouTubeLiveLocalDataSource @Inject constructor(
     }
 
     suspend fun addVideo(video: Collection<LiveVideo>) = withContext(Dispatchers.IO) {
+        val current = Instant.now()
+        val defaultExpiredAt = current + EXPIRATION_DEFAULT
+        val expiring = video.map {
+            val expired = when {
+                it.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
+                it.isUpcoming() -> defaultExpiredAt.coerceAtMost(checkNotNull(it.scheduledStartDateTime))
+                it.isNowOnAir() -> current + EXPIRATION_ON_AIR
+                it.isArchived -> EXPIRATION_MAX
+                else -> defaultExpiredAt
+            }
+            LiveVideoExpireTable(it.id, expired)
+        }
         val videos = video.map { it.toDbEntity() }
         database.withTransaction {
             database.dao.addVideos(videos)
+            database.dao.addLiveVideoExpire(expiring)
         }
     }
 
-    suspend fun removeAllFinishedVideos() {
-        database.withTransaction {
-            val dao = database.dao
-            val v = dao.findAllFinishedVideos()
-            dao.removeFreeChatItems(v.map { it.id })
-            dao.removeAllChannelLogs()
-            dao.removeAllFinishedVideos()
+    private val videoDetailCache = mutableMapOf<LiveVideo.Id, LiveVideoDetail>()
+    suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideoDetail? {
+        return videoDetailCache[id]
+    }
+
+    suspend fun addVideoDetail(detail: Collection<LiveVideoDetail>) {
+        if (detail.isEmpty()) {
+            return
+        }
+        videoDetailCache.putAll(detail.map { it.id to it })
+    }
+
+    suspend fun removeVideoDetail(id: LiveVideo.Id) {
+        videoDetailCache.remove(id)
+    }
+
+    suspend fun cleanUp() {
+        removeNotExistVideos()
+        database.dao.removeAllChannelLogs()
+    }
+
+    private suspend fun removeNotExistVideos() {
+        val removingId = database.dao.findUnusedVideoIds()
+        removeVideo(removingId)
+    }
+
+    private suspend fun removeVideo(ids: Collection<LiveVideo.Id>) = withContext(Dispatchers.IO) {
+        ids.forEach { removeVideoDetail(it) }
+        fetchByIds(ids) {
+            dao.removeFreeChatItems(it)
+            dao.removeLiveVideoExpire(it)
+            dao.removeVideos(it)
         }
     }
 
@@ -121,8 +214,12 @@ class YouTubeLiveLocalDataSource @Inject constructor(
     suspend fun addChannelList(channelDetail: Collection<LiveChannelDetail>) {
         val channels = channelDetail.map { it.toDbEntity() }
         val additions = channelDetail.map { it.toAddition() }
+        val playlists = additions.mapNotNull { it.uploadedPlayList }
+            .distinct()
+            .map { LivePlaylistTable(it) }
         database.withTransaction {
             database.dao.addChannels(channels)
+            database.dao.addPlaylists(playlists)
             database.dao.addChannelAddition(additions)
         }
     }
@@ -134,6 +231,60 @@ class YouTubeLiveLocalDataSource @Inject constructor(
 
     fun addChannelSection(channelSection: List<LiveChannelSection>) {
         channelSections[channelSection[0].channelId] = channelSection
+    }
+
+    private suspend fun <I : IdBase<*>, E> fetchListByIds(
+        ids: Collection<I>,
+        query: suspend AppDatabase.(Collection<I>) -> List<E>,
+    ): List<E> {
+        return if (ids.isEmpty()) {
+            emptyList()
+        } else if (ids.size < 50) {
+            query(database, ids)
+        } else {
+            database.withTransaction {
+                ids.chunked(50).map { query(database, it) }.flatten()
+            }
+        }
+    }
+
+    private suspend fun <I : IdBase<*>> fetchByIds(
+        ids: Collection<I>,
+        query: suspend AppDatabase.(Collection<I>) -> Unit,
+    ) {
+        if (ids.isEmpty()) {
+            return
+        } else if (ids.size < 50) {
+            query(database, ids)
+        } else {
+            database.withTransaction {
+                ids.chunked(50).map { query(database, it) }
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * cache expiration duration for archived video (`Long.MAX_VALUE`, because of DB limitation :( )
+         */
+        private val EXPIRATION_MAX: Instant = Instant.ofEpochMilli(Long.MAX_VALUE)
+
+        /**
+         * cache expiration duration for default (10 min.)
+         */
+        private val EXPIRATION_DEFAULT = Duration.ofMinutes(10)
+
+        /**
+         * cache expiration duration for free chat (1 day)
+         */
+        private val EXPIRATION_FREE_CHAT = Duration.ofDays(1)
+
+        /**
+         * cache expiration duration for on air stream (1 min.)
+         */
+        private val EXPIRATION_ON_AIR = Duration.ofMinutes(1)
+        private val LiveVideo.isArchived: Boolean
+            get() = !isLiveStream() || actualEndDateTime != null
     }
 }
 

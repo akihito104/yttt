@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import android.util.Log
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
@@ -35,7 +36,10 @@ import com.google.api.services.youtube.model.PlaylistItem
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.math.BigInteger
 import java.time.Instant
@@ -45,6 +49,7 @@ import javax.inject.Singleton
 @Singleton
 class YouTubeLiveRemoteDataSource @Inject constructor(
     httpRequestInitializer: HttpRequestInitializer,
+    private val coroutineScope: CoroutineScope,
 ) : YoutubeLiveDataSource {
     private val youtube = YouTube.Builder(
         NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
@@ -89,24 +94,20 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
 
     override suspend fun fetchVideoList(
         ids: Collection<LiveVideo.Id>,
-    ): List<LiveVideoDetail> = ids.map { it.value }.chunked(VIDEO_MAX_FETCH_SIZE).flatMap {
-        fetch {
-            videos()
-                .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
-                .setId(it)
-                .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-        }.items
+    ): List<LiveVideoDetail> = fetchList(ids, getItems = { items }) { chunked ->
+        videos()
+            .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
+            .setId(chunked.map { it.value })
+            .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
     }.map { it.toLiveVideo() }
 
     suspend fun fetchChannelList(
         ids: Collection<LiveChannel.Id>,
-    ): List<LiveChannelDetail> = ids.map { it.value }.chunked(VIDEO_MAX_FETCH_SIZE).flatMap {
-        fetch {
-            channels()
-                .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
-                .setId(it)
-                .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-        }.items
+    ): List<LiveChannelDetail> = fetchList(ids, getItems = { items }) { chunked ->
+        channels()
+            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
+            .setId(chunked.map { it.value })
+            .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
     }.map { LiveChannelImpl(it) }
 
     suspend fun fetchChannelSection(
@@ -131,13 +132,11 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
 
     suspend fun fetchPlaylist(
         ids: Collection<LivePlaylist.Id>,
-    ): List<LivePlaylist> = ids.chunked(VIDEO_MAX_FETCH_SIZE).flatMap { chunked ->
-        fetch {
-            playlists()
-                .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-                .setId(chunked.map { it.value })
-                .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-        }.items
+    ): List<LivePlaylist> = fetchList(ids, getItems = { items }) { chunked ->
+        playlists()
+            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setId(chunked.map { it.value })
+            .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
     }.map { it.toLivePlaylist() }
 
     private suspend fun <T, E> fetchAllItems(
@@ -153,6 +152,23 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
             token = response.getNextToken()
         } while (token != null)
         return res
+    }
+
+    private suspend fun <ID, T, E> fetchList(
+        ids: Collection<IdBase<ID>>,
+        getItems: T.() -> List<E>,
+        requestParams: YouTube.(Collection<IdBase<ID>>) -> AbstractGoogleClientRequest<T>,
+    ): List<E> {
+        if (ids.isEmpty()) {
+            return emptyList()
+        }
+        if (ids.size <= VIDEO_MAX_FETCH_SIZE) {
+            return fetch { requestParams(ids) }.getItems()
+        }
+        return ids.chunked(VIDEO_MAX_FETCH_SIZE)
+            .map { chunked -> coroutineScope.async { fetch { requestParams(chunked) }.getItems() } }
+            .awaitAll()
+            .flatten()
     }
 
     private suspend fun <T> fetch(requestParams: YouTube.() -> AbstractGoogleClientRequest<T>): T {

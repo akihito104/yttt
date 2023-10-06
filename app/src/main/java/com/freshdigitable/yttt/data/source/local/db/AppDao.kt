@@ -1,13 +1,16 @@
-package com.freshdigitable.yttt.data.source.local
+package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveVideo
 import kotlinx.coroutines.flow.Flow
+import java.time.Duration
 import java.time.Instant
 
 @Dao
@@ -53,14 +56,30 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addVideos(videos: Collection<LiveVideoTable>)
 
-    @Query("DELETE FROM video WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
-    suspend fun removeAllFinishedVideos()
+    @Query(
+        "SELECT id FROM video AS v WHERE NOT EXISTS" +
+            " (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
+            " UNION SELECT video_id FROM free_chat AS f WHERE v.id = f.video_id)"
+    )
+    suspend fun findUnusedVideoIds(): List<LiveVideo.Id>
 
-    @Query("SELECT * FROM video_view WHERE id IN (:ids)")
-    suspend fun findVideosById(ids: Collection<LiveVideo.Id>): List<LiveVideoDbView>
+    @Query("DELETE FROM video WHERE id IN (:videoIds)")
+    suspend fun removeVideos(videoIds: Collection<LiveVideo.Id>)
 
-    @Query("SELECT * FROM video_view WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
-    suspend fun findAllFinishedVideos(): List<LiveVideoDbView>
+    @Query(
+        "SELECT v.* FROM (SELECT * FROM video_view WHERE id IN (:ids)) AS v " +
+            "INNER JOIN (SELECT * FROM video_expire WHERE :current < expired_at) AS e ON e.video_id = v.id"
+    )
+    suspend fun findVideosById(
+        ids: Collection<LiveVideo.Id>,
+        current: Instant = Instant.now(),
+    ): List<LiveVideoDbView>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addLiveVideoExpire(expire: Collection<LiveVideoExpireTable>)
+
+    @Query("DELETE FROM video_expire WHERE video_id IN (:ids)")
+    suspend fun removeLiveVideoExpire(ids: Collection<LiveVideo.Id>)
 
     @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
     suspend fun findAllUnfinishedVideoList(): List<LiveVideoDbView>
@@ -88,6 +107,32 @@ interface AppDao {
 
     @Query("DELETE FROM free_chat WHERE video_id IN(:ids)")
     suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addPlaylist(playlist: LivePlaylistTable)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addPlaylists(playlist: List<LivePlaylistTable>)
+
+    @Transaction
+    @Query("SELECT * FROM (SELECT * FROM playlist WHERE :since < (last_modified + max_age)) WHERE id = :id")
+    suspend fun findPlaylistById(
+        id: LivePlaylist.Id,
+        since: Instant = Instant.EPOCH,
+    ): LivePlaylistDb?
+
+    @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
+    suspend fun updatePlaylist(
+        id: LivePlaylist.Id,
+        lastModified: Instant = Instant.now(),
+        maxAge: Duration,
+    )
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addPlaylistItems(items: Collection<LivePlaylistItemTable>)
+
+    @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
+    suspend fun removePlaylistItemsByPlaylistId(id: LivePlaylist.Id)
 
     companion object {
         private const val CONDITION_UNFINISHED_VIDEOS =
