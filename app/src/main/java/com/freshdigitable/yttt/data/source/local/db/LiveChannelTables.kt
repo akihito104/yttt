@@ -36,6 +36,11 @@ data class LiveChannelTable(
             parentColumns = ["id"],
             childColumns = ["id"],
         ),
+        ForeignKey(
+            entity = LivePlaylistTable::class,
+            parentColumns = ["id"],
+            childColumns = ["uploaded_playlist_id"],
+        ),
     ],
 )
 data class LiveChannelAdditionTable(

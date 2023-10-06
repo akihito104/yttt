@@ -14,22 +14,11 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import java.time.Duration
 import java.time.Instant
 
-@Entity(
-    tableName = "playlist",
-    foreignKeys = [
-        ForeignKey(
-            entity = LiveChannelTable::class,
-            parentColumns = ["id"],
-            childColumns = ["channel_id"]
-        ),
-    ],
-)
+@Entity(tableName = "playlist")
 class LivePlaylistTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     val id: LivePlaylist.Id,
-    @ColumnInfo(name = "channel_id", index = true)
-    val channelId: LiveChannel.Id,
     @ColumnInfo(name = "last_modified")
     val lastModified: Instant = Instant.now(),
     @ColumnInfo(name = "max_age")
@@ -38,6 +27,8 @@ class LivePlaylistTable(
     companion object {
         val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
         val MAX_AGE_MAX: Duration = Duration.ofDays(1)
+        fun createWithMaxAge(id: LivePlaylist.Id): LivePlaylistTable =
+            LivePlaylistTable(id, maxAge = MAX_AGE_MAX)
     }
 }
 

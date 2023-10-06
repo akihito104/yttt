@@ -56,9 +56,11 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addVideos(videos: Collection<LiveVideoTable>)
 
-    @Query("SELECT id FROM video AS v WHERE NOT EXISTS" +
-        " (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
-        " UNION SELECT video_id FROM free_chat AS f WHERE v.id = f.video_id)")
+    @Query(
+        "SELECT id FROM video AS v WHERE NOT EXISTS" +
+            " (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
+            " UNION SELECT video_id FROM free_chat AS f WHERE v.id = f.video_id)"
+    )
     suspend fun findUnusedVideoIds(): List<LiveVideo.Id>
 
     @Query("DELETE FROM video WHERE id IN (:videoIds)")
@@ -107,7 +109,10 @@ interface AppDao {
     suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addPlaylists(playlist: LivePlaylistTable)
+    suspend fun addPlaylist(playlist: LivePlaylistTable)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addPlaylists(playlist: List<LivePlaylistTable>)
 
     @Transaction
     @Query("SELECT * FROM (SELECT * FROM playlist WHERE :since < (last_modified + max_age)) WHERE id = :id")

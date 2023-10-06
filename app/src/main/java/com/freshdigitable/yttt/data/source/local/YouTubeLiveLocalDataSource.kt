@@ -96,7 +96,10 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         items: Collection<LivePlaylistItem>,
     ) {
         if (items.isEmpty()) {
-            database.dao.removePlaylistItemsByPlaylistId(id)
+            database.withTransaction {
+                database.dao.addPlaylist(LivePlaylistTable.createWithMaxAge(id))
+                database.dao.removePlaylistItemsByPlaylistId(id)
+            }
             return
         }
         check(items.all { it.playlistId == id })
@@ -104,7 +107,7 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         if (cache == null) {
             val dao = database.dao
             database.withTransaction {
-                dao.addPlaylists(LivePlaylistTable(id, items.first().channel.id))
+                dao.addPlaylist(LivePlaylistTable(id))
                 dao.addPlaylistItems(items.map { it.toDbEntity() })
             }
             return
@@ -211,8 +214,12 @@ class YouTubeLiveLocalDataSource @Inject constructor(
     suspend fun addChannelList(channelDetail: Collection<LiveChannelDetail>) {
         val channels = channelDetail.map { it.toDbEntity() }
         val additions = channelDetail.map { it.toAddition() }
+        val playlists = additions.mapNotNull { it.uploadedPlayList }
+            .distinct()
+            .map { LivePlaylistTable(it) }
         database.withTransaction {
             database.dao.addChannels(channels)
+            database.dao.addPlaylists(playlists)
             database.dao.addChannelAddition(additions)
         }
     }
