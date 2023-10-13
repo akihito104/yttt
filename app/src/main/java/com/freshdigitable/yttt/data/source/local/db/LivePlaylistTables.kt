@@ -26,7 +26,13 @@ class LivePlaylistTable(
 ) {
     companion object {
         val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
-        val MAX_AGE_MAX: Duration = Duration.ofDays(1)
+        private val MAX_AGE_MAX: Duration = Duration.ofDays(1)
+        private val MAX_AGE_FOR_ACTIVE_ACCOUNT: Duration = Duration.ofMinutes(30)
+        val RECENTLY_BOARDER: Duration = Duration.ofDays(3)
+
+        fun getMaxAgeUpperLimit(isPublishedRecently: Boolean): Duration =
+            if (isPublishedRecently) MAX_AGE_FOR_ACTIVE_ACCOUNT else MAX_AGE_MAX
+
         fun createWithMaxAge(id: LivePlaylist.Id): LivePlaylistTable =
             LivePlaylistTable(id, maxAge = MAX_AGE_MAX)
     }
