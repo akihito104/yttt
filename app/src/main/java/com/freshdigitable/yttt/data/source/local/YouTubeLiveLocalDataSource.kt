@@ -116,7 +116,10 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         val newIds = items.map { it.id }.toSet()
         val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
         val maxAge = if (isNotModified) {
-            cache.playlist.maxAge.multipliedBy(2).coerceAtMost(LivePlaylistTable.MAX_AGE_MAX)
+            val boarder = Instant.now().minus(LivePlaylistTable.RECENTLY_BOARDER)
+            val isPublishedRecently = items.any { boarder.isAfter(it.publishedAt) }
+            val maxAgeMax = LivePlaylistTable.getMaxAgeUpperLimit(isPublishedRecently)
+            cache.playlist.maxAge.multipliedBy(2).coerceAtMost(maxAgeMax)
         } else {
             LivePlaylistTable.MAX_AGE_DEFAULT
         }
