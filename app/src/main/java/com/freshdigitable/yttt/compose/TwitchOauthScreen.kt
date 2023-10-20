@@ -15,16 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.TwitchOauthToken
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LivePlaylist
+import com.freshdigitable.yttt.data.source.TwitchUser
 import kotlinx.coroutines.launch
-import java.math.BigInteger
-import java.time.Instant
 
 @Composable
 fun TwitchOauthScreen(
@@ -55,7 +50,7 @@ fun TwitchOauthScreen(
 private fun TwitchOauthScreen(
     hasToken: Boolean,
     onLoginClicked: () -> Unit,
-    userProvider: () -> LiveChannelDetail?,
+    userProvider: () -> TwitchUser?,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -71,11 +66,11 @@ private fun TwitchOauthScreen(
         } else {
             val user = userProvider()
             Text(text = user?.id?.value ?: "")
-            Text(text = user?.title ?: "")
-            Text(text = user?.customUrl ?: "")
-            if (user?.iconUrl?.isNotEmpty() == true) {
-                GlideImage(model = user.iconUrl, contentDescription = "")
-            }
+            Text(text = user?.displayName ?: "")
+            Text(text = user?.loginName ?: "")
+//            if (user?.iconUrl?.isNotEmpty() == true) {
+//                GlideImage(model = user.iconUrl, contentDescription = "")
+//            }
         }
     }
 }
@@ -86,39 +81,13 @@ private fun TwitchOauthScreenPreview() {
     AppTheme {
         TwitchOauthScreen(
             hasToken = true, onLoginClicked = {}, userProvider = {
-                object : LiveChannelDetail {
-                    override val id: LiveChannel.Id = LiveChannel.Id("user_id")
-                    override val title: String = "display name"
-                    override val iconUrl: String = ""
-                    override val customUrl: String = "login_name"
-
-                    override fun equals(other: Any?): Boolean {
-                        TODO("Not yet implemented")
-                    }
-
-                    override fun hashCode(): Int {
-                        TODO("Not yet implemented")
-                    }
-
-                    override val bannerUrl: String?
-                        get() = TODO("Not yet implemented")
-                    override val subscriberCount: BigInteger
-                        get() = TODO("Not yet implemented")
-                    override val isSubscriberHidden: Boolean
-                        get() = TODO("Not yet implemented")
-                    override val videoCount: BigInteger
-                        get() = TODO("Not yet implemented")
-                    override val viewsCount: BigInteger
-                        get() = TODO("Not yet implemented")
-                    override val publishedAt: Instant
-                        get() = TODO("Not yet implemented")
-                    override val keywords: Collection<String>
-                        get() = TODO("Not yet implemented")
-                    override val description: String?
-                        get() = TODO("Not yet implemented")
-                    override val uploadedPlayList: LivePlaylist.Id?
-                        get() = TODO("Not yet implemented")
-
+                object : TwitchUser {
+                    override val id: TwitchUser.Id
+                        get() = TwitchUser.Id("user_id")
+                    override val loginName: String
+                        get() = "login_name"
+                    override val displayName: String
+                        get() = "display_name"
                 }
             })
     }

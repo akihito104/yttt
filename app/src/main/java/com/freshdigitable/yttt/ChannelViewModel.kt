@@ -17,6 +17,7 @@ import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
 import com.freshdigitable.yttt.ChannelDetailChannelSection.ChannelDetailContent
 import com.freshdigitable.yttt.compose.VideoListItemEntity
+import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
@@ -25,11 +26,14 @@ import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.TwitchLiveRepository
+import com.freshdigitable.yttt.data.source.TwitchUserDetail
+import com.freshdigitable.yttt.data.source.mapTo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flow
 import java.io.IOException
+import java.math.BigInteger
 import java.security.MessageDigest
+import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
@@ -40,7 +44,10 @@ class ChannelViewModel @Inject constructor(
     fun fetchChannel(id: LiveChannel.Id): LiveData<LiveChannelDetail?> = flow {
         val channel = when (id.platform) {
             LivePlatform.YOUTUBE -> repository.fetchChannelList(listOf(id))
-            LivePlatform.TWITCH -> twitchRepository.findUsersById(listOf(id))
+            LivePlatform.TWITCH -> {
+                val u = twitchRepository.findUsersById(listOf(id.mapTo()))
+                u.map { it.toLiveChannelDetail() }
+            }
         }.firstOrNull()
         emit(channel)
     }.asLiveData(viewModelScope.coroutineContext)
@@ -122,10 +129,10 @@ class ChannelViewModel @Inject constructor(
 
                 LivePlatform.TWITCH -> {
                     liveData {
-                        val res = twitchRepository.fetchVideosByChannelId(id).map {
+                        val res = twitchRepository.fetchVideosByUserId(id.mapTo()).map {
                             VideoListItemEntity(
                                 id = it.id,
-                                thumbnailUrl = it.thumbnailUrl,
+                                thumbnailUrl = it.getThumbnailUrl(),
                                 title = it.title
                             )
                         }
@@ -152,6 +159,40 @@ class ChannelViewModel @Inject constructor(
     companion object {
         private val emptyState = MutableLiveData(emptyList<VideoListItemEntity>())
     }
+}
+
+data class LiveChannelDetailEntity(
+    override val id: LiveChannel.Id,
+    override val title: String,
+    override val iconUrl: String,
+    override val bannerUrl: String?,
+    override val subscriberCount: BigInteger,
+    override val isSubscriberHidden: Boolean,
+    override val videoCount: BigInteger,
+    override val viewsCount: BigInteger,
+    override val publishedAt: Instant,
+    override val customUrl: String,
+    override val keywords: Collection<String>,
+    override val description: String?,
+    override val uploadedPlayList: LivePlaylist.Id?
+) : LiveChannelDetail
+
+fun TwitchUserDetail.toLiveChannelDetail(): LiveChannelDetail {
+    return LiveChannelDetailEntity(
+        id = LiveChannel.Id(id.value, id.platform),
+        title = this.displayName,
+        iconUrl = this.profileImageUrl,
+        bannerUrl = "",
+        customUrl = loginName,
+        description = description,
+        isSubscriberHidden = false,
+        keywords = emptyList(),
+        publishedAt = this.createdAt,
+        subscriberCount = BigInteger.ZERO,
+        uploadedPlayList = null,
+        videoCount = BigInteger.ZERO,
+        viewsCount = BigInteger.valueOf(this.viewsCount.toLong()),
+    )
 }
 
 class CustomCrop(
