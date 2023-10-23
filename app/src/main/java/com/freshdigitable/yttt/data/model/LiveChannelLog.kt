@@ -9,7 +9,9 @@ interface LiveChannelLog {
     val channelId: LiveChannel.Id
     val thumbnailUrl: String
 
-    data class Id(override val value: String) : IdBase<String>
+    data class Id(override val value: String) : IdBase<String> {
+        override val platform: LivePlatform = LivePlatform.YOUTUBE
+    }
 }
 
 data class LiveChannelLogEntity(

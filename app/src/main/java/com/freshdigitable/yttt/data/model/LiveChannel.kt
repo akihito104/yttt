@@ -49,7 +49,10 @@ interface LiveChannelSection : Comparable<LiveChannelSection> {
 
     override fun compareTo(other: LiveChannelSection): Int = (position - other.position).toInt()
 
-    data class Id(override val value: String) : IdBase<String>
+    data class Id(override val value: String) : IdBase<String> {
+        override val platform: LivePlatform = LivePlatform.YOUTUBE
+    }
+
     enum class Type(val metaType: KClass<out Content<*>>) {
         ALL_PLAYLIST(Content.Playlist::class), COMPLETED_EVENT(Content.Playlist::class),
         LIVE_EVENT(Content.Playlist::class), MULTIPLE_CHANNEL(Content.Channels::class),

@@ -45,6 +45,7 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveChannelSection
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
@@ -433,7 +434,7 @@ private fun LazyColumnPreview() {
                             title = "channel title",
                             iconUrl = "",
                         ),
-                        videoId = LiveVideo.Id("f"),
+                        videoId = LiveVideo.Id("f", LivePlatform.YOUTUBE),
                         thumbnailUrl = "",
                         description = "description",
                         videoOwnerChannelId = LiveChannel.Id("e"),

@@ -2,7 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 interface IdBase<S> {
     val value: S
-    val platform: LivePlatform get() = LivePlatform.YOUTUBE
+    val platform: LivePlatform
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
 }
