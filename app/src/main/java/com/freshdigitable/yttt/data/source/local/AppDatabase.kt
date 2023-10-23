@@ -6,6 +6,17 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.freshdigitable.yttt.data.model.CsvConverter
+import com.freshdigitable.yttt.data.model.TwitchBroadcasterTable
+import com.freshdigitable.yttt.data.model.TwitchChannelVacationScheduleTable
+import com.freshdigitable.yttt.data.model.TwitchStreamDbView
+import com.freshdigitable.yttt.data.model.TwitchStreamIdConverter
+import com.freshdigitable.yttt.data.model.TwitchStreamScheduleIdConverter
+import com.freshdigitable.yttt.data.model.TwitchStreamScheduleTable
+import com.freshdigitable.yttt.data.model.TwitchStreamTable
+import com.freshdigitable.yttt.data.model.TwitchUserDetailTable
+import com.freshdigitable.yttt.data.model.TwitchUserIdConverter
+import com.freshdigitable.yttt.data.model.TwitchUserTable
 import com.freshdigitable.yttt.data.source.local.db.AppDao
 import com.freshdigitable.yttt.data.source.local.db.BigIntegerConverter
 import com.freshdigitable.yttt.data.source.local.db.DurationConverter
@@ -46,14 +57,21 @@ import dagger.hilt.components.SingletonComponent
         LiveVideoExpireTable::class,
         LivePlaylistTable::class,
         LivePlaylistItemTable::class,
+        TwitchUserTable::class,
+        TwitchStreamScheduleTable::class,
+        TwitchBroadcasterTable::class,
+        TwitchStreamTable::class,
+        TwitchUserDetailTable::class,
+        TwitchChannelVacationScheduleTable::class,
     ],
     views = [
         LiveVideoDbView::class,
         LiveSubscriptionDbView::class,
         LiveChannelDetailDbView::class,
         LivePlaylistItemDb::class,
+        TwitchStreamDbView::class,
     ],
-    version = 8,
+    version = 9,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -62,6 +80,7 @@ import dagger.hilt.components.SingletonComponent
         AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7),
         AutoMigration(from = 7, to = 8),
+        AutoMigration(from = 8, to = 9),
     ]
 )
 @TypeConverters(
@@ -74,6 +93,10 @@ import dagger.hilt.components.SingletonComponent
     LivePlaylistIdConverter::class,
     LivePlaylistItemIdConverter::class,
     BigIntegerConverter::class,
+    TwitchUserIdConverter::class,
+    TwitchStreamScheduleIdConverter::class,
+    TwitchStreamIdConverter::class,
+    CsvConverter::class,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract val dao: AppDao

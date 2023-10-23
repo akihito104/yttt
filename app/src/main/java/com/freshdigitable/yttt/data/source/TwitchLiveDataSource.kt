@@ -101,6 +101,8 @@ interface TwitchStream : TwitchVideo<TwitchStream.Id> {
     val startedAt: Instant
     val tags: List<String>
     val isMature: Boolean
+    override val url: String
+        get() = "https://twitch.tv/${user.loginName}"
 
     data class Id(override val value: String) : TwitchVideo.TwitchVideoId
 }
@@ -109,8 +111,6 @@ interface TwitchChannelSchedule {
     val segments: List<Stream>?
     val broadcaster: TwitchUser
     val vacation: Vacation?
-
-    companion object
 
     interface Stream {
         val id: Id

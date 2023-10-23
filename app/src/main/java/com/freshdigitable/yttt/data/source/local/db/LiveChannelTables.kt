@@ -65,7 +65,7 @@ data class LiveChannelAdditionTable(
     val keywordsRaw: String,
     @ColumnInfo(name = "description")
     override val description: String?,
-    @ColumnInfo(name = "uploaded_playlist_id")
+    @ColumnInfo(name = "uploaded_playlist_id", index = true)
     override val uploadedPlayList: LivePlaylist.Id?,
 ) : LiveChannelAddition {
     override val keywords: Collection<String>

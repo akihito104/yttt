@@ -272,8 +272,6 @@ data class FollowingStream(
             loginName = loginName,
             displayName = displayName
         )
-    override val url: String
-        get() = "https://twitch.tv/${user.loginName}"
 }
 
 class FollowingStreamsResponse(
