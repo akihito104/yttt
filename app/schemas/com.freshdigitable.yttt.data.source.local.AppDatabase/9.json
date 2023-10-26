@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 9,
-    "identityHash": "104fe3edaeb615b30d11327d493dbfee",
+    "identityHash": "9c265d1d41540241ac95638b51acad6a",
     "entities": [
       {
         "tableName": "channel",
@@ -646,70 +646,8 @@
         "foreignKeys": []
       },
       {
-        "tableName": "twitch_channel_schedule_stream",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `start_time` INTEGER NOT NULL, `end_time` INTEGER NOT NULL, `title` TEXT NOT NULL, `canceled_until` TEXT, `is_recurring` INTEGER NOT NULL, `category_id` TEXT, `category_name` TEXT, PRIMARY KEY(`id`))",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "startTime",
-            "columnName": "start_time",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "endTime",
-            "columnName": "end_time",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "title",
-            "columnName": "title",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "canceledUntil",
-            "columnName": "canceled_until",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "isRecurring",
-            "columnName": "is_recurring",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "category.id",
-            "columnName": "category_id",
-            "affinity": "TEXT",
-            "notNull": false
-          },
-          {
-            "fieldPath": "category.name",
-            "columnName": "category_name",
-            "affinity": "TEXT",
-            "notNull": false
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id"
-          ]
-        },
-        "indices": [],
-        "foreignKeys": []
-      },
-      {
-        "tableName": "twitch_broadcaster",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `followed_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "tableName": "twitch_user_detail",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `profile_image_url` TEXT NOT NULL, `views_count` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, `description` TEXT NOT NULL, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "id",
@@ -718,9 +656,27 @@
             "notNull": true
           },
           {
-            "fieldPath": "followedAt",
-            "columnName": "followed_at",
+            "fieldPath": "profileImageUrl",
+            "columnName": "profile_image_url",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "viewsCount",
+            "columnName": "views_count",
             "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT",
             "notNull": true
           }
         ],
@@ -741,6 +697,147 @@
             ],
             "referencedColumns": [
               "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "twitch_user_detail_expire",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `expired_at` INTEGER DEFAULT null, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user_detail`(`user_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "userId",
+            "columnName": "user_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expiredAt",
+            "columnName": "expired_at",
+            "affinity": "INTEGER",
+            "notNull": false,
+            "defaultValue": "null"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "user_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_twitch_user_detail_expire_user_id",
+            "unique": false,
+            "columnNames": [
+              "user_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_twitch_user_detail_expire_user_id` ON `${TABLE_NAME}` (`user_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "twitch_user_detail",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "user_id"
+            ],
+            "referencedColumns": [
+              "user_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "twitch_broadcaster",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `follower_user_id` TEXT NOT NULL, `followed_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `follower_user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "user_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "followerId",
+            "columnName": "follower_user_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "followedAt",
+            "columnName": "followed_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "user_id",
+            "follower_user_id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "twitch_user",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "user_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "twitch_broadcaster_expire",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `follower_user_id` TEXT NOT NULL, `expire_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `follower_user_id`), FOREIGN KEY(`user_id`, `follower_user_id`) REFERENCES `twitch_broadcaster`(`user_id`, `follower_user_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "user_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "followerId",
+            "columnName": "follower_user_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "expireAt",
+            "columnName": "expire_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "user_id",
+            "follower_user_id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "twitch_broadcaster",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "user_id",
+              "follower_user_id"
+            ],
+            "referencedColumns": [
+              "user_id",
+              "follower_user_id"
             ]
           }
         ]
@@ -854,41 +951,81 @@
         ]
       },
       {
-        "tableName": "twitch_user_detail",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `profile_image_url` TEXT NOT NULL, `views_count` INTEGER NOT NULL, `created_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "tableName": "twitch_channel_schedule_stream",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `start_time` INTEGER NOT NULL, `end_time` INTEGER NOT NULL, `title` TEXT NOT NULL, `canceled_until` TEXT, `is_recurring` INTEGER NOT NULL, `user_id` TEXT NOT NULL, `category_id` TEXT, `category_name` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startTime",
+            "columnName": "start_time",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endTime",
+            "columnName": "end_time",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canceledUntil",
+            "columnName": "canceled_until",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "isRecurring",
+            "columnName": "is_recurring",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
             "columnName": "user_id",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "profileImageUrl",
-            "columnName": "profile_image_url",
+            "fieldPath": "category.id",
+            "columnName": "category_id",
             "affinity": "TEXT",
-            "notNull": true
+            "notNull": false
           },
           {
-            "fieldPath": "viewsCount",
-            "columnName": "views_count",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "createdAt",
-            "columnName": "created_at",
-            "affinity": "INTEGER",
-            "notNull": true
+            "fieldPath": "category.name",
+            "columnName": "category_name",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "user_id"
+            "id"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_twitch_channel_schedule_stream_user_id",
+            "unique": false,
+            "columnNames": [
+              "user_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_twitch_channel_schedule_stream_user_id` ON `${TABLE_NAME}` (`user_id`)"
+          }
+        ],
         "foreignKeys": [
           {
             "table": "twitch_user",
@@ -905,7 +1042,7 @@
       },
       {
         "tableName": "twitch_channel_schedule_vacation",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `vacation_start` INTEGER NOT NULL, `vacation_end` INTEGER NOT NULL, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `vacation_start` INTEGER, `vacation_end` INTEGER, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "userId",
@@ -917,13 +1054,13 @@
             "fieldPath": "vacation.startTime",
             "columnName": "vacation_start",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
           },
           {
             "fieldPath": "vacation.endTime",
             "columnName": "vacation_end",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -977,12 +1114,16 @@
       },
       {
         "viewName": "twitch_stream_view",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT *, u.id AS user_id, u.display_name AS user_display_name, u.login_name AS user_login_name FROM twitch_stream AS s INNER JOIN twitch_user AS u ON u.id = s.user_id"
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT s.*, u.display_name AS user_display_name, u.login_name AS user_login_name FROM twitch_stream AS s INNER JOIN twitch_user AS u ON u.id = s.user_id"
+      },
+      {
+        "viewName": "twitch_user_detail_view",
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT u.*, d.profile_image_url, d.views_count, d.created_at, d.description FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '104fe3edaeb615b30d11327d493dbfee')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9c265d1d41540241ac95638b51acad6a')"
     ]
   }
 }

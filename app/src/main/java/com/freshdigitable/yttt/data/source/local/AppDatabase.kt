@@ -7,13 +7,17 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.freshdigitable.yttt.data.model.CsvConverter
+import com.freshdigitable.yttt.data.model.TwitchBroadcasterExpireTable
 import com.freshdigitable.yttt.data.model.TwitchBroadcasterTable
 import com.freshdigitable.yttt.data.model.TwitchChannelVacationScheduleTable
+import com.freshdigitable.yttt.data.model.TwitchDao
 import com.freshdigitable.yttt.data.model.TwitchStreamDbView
 import com.freshdigitable.yttt.data.model.TwitchStreamIdConverter
 import com.freshdigitable.yttt.data.model.TwitchStreamScheduleIdConverter
 import com.freshdigitable.yttt.data.model.TwitchStreamScheduleTable
 import com.freshdigitable.yttt.data.model.TwitchStreamTable
+import com.freshdigitable.yttt.data.model.TwitchUserDetailDbView
+import com.freshdigitable.yttt.data.model.TwitchUserDetailExpireTable
 import com.freshdigitable.yttt.data.model.TwitchUserDetailTable
 import com.freshdigitable.yttt.data.model.TwitchUserIdConverter
 import com.freshdigitable.yttt.data.model.TwitchUserTable
@@ -58,10 +62,12 @@ import dagger.hilt.components.SingletonComponent
         LivePlaylistTable::class,
         LivePlaylistItemTable::class,
         TwitchUserTable::class,
-        TwitchStreamScheduleTable::class,
-        TwitchBroadcasterTable::class,
-        TwitchStreamTable::class,
         TwitchUserDetailTable::class,
+        TwitchUserDetailExpireTable::class,
+        TwitchBroadcasterTable::class,
+        TwitchBroadcasterExpireTable::class,
+        TwitchStreamTable::class,
+        TwitchStreamScheduleTable::class,
         TwitchChannelVacationScheduleTable::class,
     ],
     views = [
@@ -70,6 +76,7 @@ import dagger.hilt.components.SingletonComponent
         LiveChannelDetailDbView::class,
         LivePlaylistItemDb::class,
         TwitchStreamDbView::class,
+        TwitchUserDetailDbView::class,
     ],
     version = 9,
     autoMigrations = [
@@ -100,6 +107,7 @@ import dagger.hilt.components.SingletonComponent
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract val dao: AppDao
+    abstract val twitchDao: TwitchDao
 }
 
 @Module
@@ -109,4 +117,7 @@ object DbModule {
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "ytttdb")
             .build()
+
+    @Provides
+    fun provideTwitchDao(database: AppDatabase): TwitchDao = database.twitchDao
 }
