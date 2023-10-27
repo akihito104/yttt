@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 9,
-    "identityHash": "9c265d1d41540241ac95638b51acad6a",
+    "identityHash": "c52c6dcdc33ab79610a35f7acf672810",
     "entities": [
       {
         "tableName": "channel",
@@ -752,7 +752,7 @@
       },
       {
         "tableName": "twitch_broadcaster",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `follower_user_id` TEXT NOT NULL, `followed_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `follower_user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `follower_user_id` TEXT NOT NULL, `followed_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`, `follower_user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`follower_user_id`) REFERENCES `twitch_auth_user`(`user_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "id",
@@ -780,7 +780,17 @@
             "follower_user_id"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_twitch_broadcaster_follower_user_id",
+            "unique": false,
+            "columnNames": [
+              "follower_user_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_twitch_broadcaster_follower_user_id` ON `${TABLE_NAME}` (`follower_user_id`)"
+          }
+        ],
         "foreignKeys": [
           {
             "table": "twitch_user",
@@ -791,6 +801,17 @@
             ],
             "referencedColumns": [
               "id"
+            ]
+          },
+          {
+            "table": "twitch_auth_user",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "follower_user_id"
+            ],
+            "referencedColumns": [
+              "user_id"
             ]
           }
         ]
@@ -825,7 +846,17 @@
             "follower_user_id"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_twitch_broadcaster_expire_follower_user_id",
+            "unique": false,
+            "columnNames": [
+              "follower_user_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_twitch_broadcaster_expire_follower_user_id` ON `${TABLE_NAME}` (`follower_user_id`)"
+          }
+        ],
         "foreignKeys": [
           {
             "table": "twitch_broadcaster",
@@ -838,6 +869,38 @@
             "referencedColumns": [
               "user_id",
               "follower_user_id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "twitch_auth_user",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "userId",
+            "columnName": "user_id",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "user_id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "twitch_user",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "user_id"
+            ],
+            "referencedColumns": [
+              "id"
             ]
           }
         ]
@@ -1123,7 +1186,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9c265d1d41540241ac95638b51acad6a')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'c52c6dcdc33ab79610a35f7acf672810')"
     ]
   }
 }

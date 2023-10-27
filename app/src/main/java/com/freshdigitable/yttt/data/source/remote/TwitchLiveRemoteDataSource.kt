@@ -64,7 +64,10 @@ class TwitchLiveRemoteDataSource @Inject constructor(
             response.body()?.data ?: return@fetch emptyList()
         }
 
-    override suspend fun fetchMe(): TwitchUser? = findUsersById().firstOrNull()
+    override suspend fun fetchMe(): TwitchUserDetail? = fetch {
+        val response = getMe("").execute()
+        response.body()?.data?.firstOrNull()
+    }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster> {
         return fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
@@ -117,6 +120,8 @@ interface TwitchHelixService {
         @Query("id") id: Collection<String>? = null,
         @Query("login") loginName: Collection<String>? = null,
     ): Call<TwitchUserResponse>
+
+    fun getMe(token: String): Call<TwitchUserResponse> = getUser()
 
     @GET("helix/channels/followed")
     fun getFollowing(
@@ -201,10 +206,15 @@ class TwitchTokenInterceptor @Inject constructor(
         }
         val token = accountDataSource.getTwitchToken() ?: return chain.proceed(request)
         val req = request.newBuilder()
-            .header("Authorization", "Bearer $token")
+            .header(HEADER_AUTHORIZATION, toAuthorizationValue(token))
             .header("Client-Id", BuildConfig.TWITCH_CLIENT_ID)
             .build()
         return chain.proceed(req)
+    }
+
+    companion object {
+        const val HEADER_AUTHORIZATION: String = "Authorization"
+        fun toAuthorizationValue(token: String): String = "Bearer $token"
     }
 }
 

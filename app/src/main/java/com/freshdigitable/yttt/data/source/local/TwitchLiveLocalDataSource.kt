@@ -20,11 +20,10 @@ class TwitchLiveLocalDataSource @Inject constructor(
 ) : TwitchLiveDataSource {
     override val onAir: Flow<List<TwitchStream>> = dao.watchStream()
     override val upcoming: Flow<List<TwitchChannelSchedule>> = dao.watchChannelSchedule()
-    private var me: TwitchUserDetail? = null
 
     override suspend fun findUsersById(ids: Collection<TwitchUser.Id>?): List<TwitchUserDetail> {
         if (ids == null) {
-            return listOfNotNull(me)
+            return listOfNotNull(fetchMe())
         }
         return dao.findUserDetail(ids)
     }
@@ -33,17 +32,17 @@ class TwitchLiveLocalDataSource @Inject constructor(
         dao.addUserDetails(users)
     }
 
-    override suspend fun fetchMe(): TwitchUser? = me
+    override suspend fun fetchMe(): TwitchUserDetail? = dao.findMe()
 
-    suspend fun setMe(me: TwitchUserDetail?) {
-        this.me = me
+    suspend fun setMe(me: TwitchUserDetail) {
+        dao.setMe(me)
     }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster> {
         return dao.findBroadcastersByFollowerId(userId)
     }
 
-    suspend fun addFollowings(userId: TwitchUser.Id, followings: List<TwitchBroadcaster>) {
+    suspend fun setFollowings(userId: TwitchUser.Id, followings: List<TwitchBroadcaster>) {
         dao.setBroadcasters(userId, followings)
     }
 

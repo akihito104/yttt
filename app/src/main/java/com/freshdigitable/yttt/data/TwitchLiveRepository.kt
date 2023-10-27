@@ -28,7 +28,7 @@ class TwitchLiveRepository @Inject constructor(
     override suspend fun findUsersById(ids: Collection<TwitchUser.Id>?): List<TwitchUserDetail> {
         if (ids == null) {
             val me = checkNotNull(fetchMe())
-            return listOf(me as TwitchUserDetail)
+            return listOf(me)
         }
         val cache = localDataSource.findUsersById(ids)
         if (cache.size == ids.size) {
@@ -40,12 +40,12 @@ class TwitchLiveRepository @Inject constructor(
         return cache + remote
     }
 
-    override suspend fun fetchMe(): TwitchUser? {
+    override suspend fun fetchMe(): TwitchUserDetail? {
         val me = localDataSource.fetchMe()
         if (me != null) {
             return me
         }
-        val res = remoteDataSource.findUsersById().firstOrNull()
+        val res = remoteDataSource.fetchMe() ?: return null
         localDataSource.setMe(res)
         return res
     }
@@ -56,7 +56,7 @@ class TwitchLiveRepository @Inject constructor(
             return cache
         }
         val remote = remoteDataSource.fetchAllFollowings(userId)
-        localDataSource.addFollowings(userId, remote)
+        localDataSource.setFollowings(userId, remote)
         return remote
     }
 

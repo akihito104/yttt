@@ -10,7 +10,7 @@ interface TwitchLiveDataSource {
     val upcoming: Flow<List<TwitchChannelSchedule>>
     suspend fun getAuthorizeUrl(): String
     suspend fun findUsersById(ids: Collection<TwitchUser.Id>? = null): List<TwitchUserDetail>
-    suspend fun fetchMe(): TwitchUser?
+    suspend fun fetchMe(): TwitchUserDetail?
     suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster>
     suspend fun fetchFollowedStreams(): List<TwitchStream>
     suspend fun fetchFollowedStreamSchedule(

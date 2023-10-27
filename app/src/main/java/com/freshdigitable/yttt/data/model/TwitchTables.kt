@@ -109,13 +109,18 @@ class TwitchUserDetailExpireTable(
             parentColumns = ["id"],
             childColumns = ["user_id"],
         ),
+        ForeignKey(
+            entity = TwitchAuthorizedUserTable::class,
+            parentColumns = ["user_id"],
+            childColumns = ["follower_user_id"],
+        ),
     ],
     primaryKeys = ["user_id", "follower_user_id"]
 )
 class TwitchBroadcasterTable(
     @ColumnInfo(name = "user_id")
     val id: TwitchUser.Id,
-    @ColumnInfo(name = "follower_user_id")
+    @ColumnInfo(name = "follower_user_id", index = true)
     val followerId: TwitchUser.Id,
     @ColumnInfo(name = "followed_at")
     val followedAt: Instant,
@@ -130,12 +135,12 @@ class TwitchBroadcasterTable(
             childColumns = ["user_id", "follower_user_id"],
         ),
     ],
-    primaryKeys = ["user_id", "follower_user_id"]
+    primaryKeys = ["user_id", "follower_user_id"],
 )
 class TwitchBroadcasterExpireTable(
     @ColumnInfo("user_id")
     val id: TwitchUser.Id,
-    @ColumnInfo("follower_user_id")
+    @ColumnInfo("follower_user_id", index = true)
     val followerId: TwitchUser.Id,
     @ColumnInfo("expire_at")
     val expireAt: Instant,
@@ -151,6 +156,22 @@ data class TwitchBroadcasterDb(
     @ColumnInfo("followed_at")
     override val followedAt: Instant
 ) : TwitchBroadcaster
+
+@Entity(
+    tableName = "twitch_auth_user",
+    foreignKeys = [
+        ForeignKey(
+            entity = TwitchUserTable::class,
+            parentColumns = ["id"],
+            childColumns = ["user_id"],
+        ),
+    ],
+)
+class TwitchAuthorizedUserTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo("user_id")
+    val userId: TwitchUser.Id,
+)
 
 @Entity(
     tableName = "twitch_stream",
@@ -308,6 +329,18 @@ class CsvConverter : Converter<String, List<@JvmSuppressWildcards String>>(
 
 @Dao
 interface TwitchDao {
+    @Transaction
+    suspend fun setMe(me: TwitchUserDetail) {
+        addUserDetails(listOf(me))
+        setMeEntity(me.id)
+    }
+
+    @Insert
+    suspend fun setMeEntity(me: TwitchUser.Id)
+
+    @Query("SELECT u.* FROM twitch_auth_user AS a INNER JOIN twitch_user_detail_view AS u ON a.user_id = u.id LIMIT 1")
+    suspend fun findMe(): TwitchUserDetailDbView?
+
     @Transaction
     suspend fun addUserDetails(
         users: Collection<TwitchUserDetail>,

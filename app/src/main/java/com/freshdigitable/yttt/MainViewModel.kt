@@ -113,8 +113,8 @@ class MainViewModel @Inject constructor(
         if (accountRepository.getTwitchToken() == null) {
             return
         }
-        twitchRepository.fetchFollowedStreams()
         val me = twitchRepository.fetchMe() ?: return
+        twitchRepository.fetchFollowedStreams()
         val following = twitchRepository.fetchAllFollowings(me.id)
         val tasks = coroutineScope {
             following.map { async { twitchRepository.fetchFollowedStreamSchedule(it.id) } }

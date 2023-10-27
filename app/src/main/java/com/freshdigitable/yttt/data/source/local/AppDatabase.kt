@@ -7,6 +7,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.freshdigitable.yttt.data.model.CsvConverter
+import com.freshdigitable.yttt.data.model.TwitchAuthorizedUserTable
 import com.freshdigitable.yttt.data.model.TwitchBroadcasterExpireTable
 import com.freshdigitable.yttt.data.model.TwitchBroadcasterTable
 import com.freshdigitable.yttt.data.model.TwitchChannelVacationScheduleTable
@@ -66,6 +67,7 @@ import dagger.hilt.components.SingletonComponent
         TwitchUserDetailExpireTable::class,
         TwitchBroadcasterTable::class,
         TwitchBroadcasterExpireTable::class,
+        TwitchAuthorizedUserTable::class,
         TwitchStreamTable::class,
         TwitchStreamScheduleTable::class,
         TwitchChannelVacationScheduleTable::class,
