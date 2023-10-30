@@ -72,7 +72,7 @@ class TwitchLiveRepository @Inject constructor(
         maxCount: Int,
     ): List<TwitchChannelSchedule> {
         val res = remoteDataSource.fetchFollowedStreamSchedule(id, maxCount)
-        localDataSource.updateFollowedStreamSchedule(res)
+        localDataSource.setFollowedStreamSchedule(res)
         return res
     }
 

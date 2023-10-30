@@ -332,11 +332,11 @@ interface TwitchDao {
     @Transaction
     suspend fun setMe(me: TwitchUserDetail) {
         addUserDetails(listOf(me))
-        setMeEntity(me.id)
+        setMeEntity(TwitchAuthorizedUserTable(me.id))
     }
 
     @Insert
-    suspend fun setMeEntity(me: TwitchUser.Id)
+    suspend fun setMeEntity(me: TwitchAuthorizedUserTable)
 
     @Query("SELECT u.* FROM twitch_auth_user AS a INNER JOIN twitch_user_detail_view AS u ON a.user_id = u.id LIMIT 1")
     suspend fun findMe(): TwitchUserDetailDbView?
@@ -419,12 +419,21 @@ interface TwitchDao {
     suspend fun remoteBroadcasterExpireByFollowerId(followerId: TwitchUser.Id)
 
     @Transaction
-    suspend fun addChannelSchedules(schedule: Collection<TwitchChannelSchedule>) {
+    suspend fun setChannelSchedules(schedule: Collection<TwitchChannelSchedule>) {
+        val userIds = schedule.map { it.broadcaster.id }.toSet()
         val streams = schedule.map { it.toStreamScheduleTable() }.flatten()
         val vacations = schedule.map { it.toVacationScheduleTable() }
+        removeChannelStreamSchedulesByUserIds(userIds)
+        removeChannelVacationSchedulesByUserIds(userIds)
         addChannelStreamSchedules(streams)
         addChannelVacationSchedules(vacations)
     }
+
+    @Query("DELETE FROM twitch_channel_schedule_stream WHERE user_id IN (:ids)")
+    suspend fun removeChannelStreamSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
+
+    @Query("DELETE FROM twitch_channel_schedule_vacation WHERE user_id IN (:ids)")
+    suspend fun removeChannelVacationSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelStreamSchedules(streams: Collection<TwitchStreamScheduleTable>)
@@ -462,11 +471,20 @@ interface TwitchDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addStreams(streams: Collection<TwitchStreamTable>)
 
+    @Transaction
+    suspend fun setStreams(streams: Collection<TwitchStreamTable>) {
+        removeAllStreams()
+        addStreams(streams)
+    }
+
     @Query("SELECT * FROM twitch_stream_view AS v WHERE v.id = :id")
     suspend fun findStream(id: TwitchStream.Id): TwitchStreamDbView
 
     @Query("SELECT * FROM twitch_stream_view AS v ORDER BY v.started_at DESC")
     fun watchStream(): Flow<List<TwitchStreamDbView>>
+
+    @Query("DELETE FROM twitch_stream")
+    suspend fun removeAllStreams()
 
     @Query("SELECT * FROM twitch_stream_view AS v ORDER BY v.started_at DESC")
     suspend fun findAllStreams(): List<TwitchStreamDbView>

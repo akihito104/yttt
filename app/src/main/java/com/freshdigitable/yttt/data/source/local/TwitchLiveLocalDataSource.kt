@@ -47,7 +47,7 @@ class TwitchLiveLocalDataSource @Inject constructor(
     }
 
     suspend fun addFollowedStreams(followedStreams: List<TwitchStream>) {
-        dao.addStreams(followedStreams.map { it.toTable() })
+        dao.setStreams(followedStreams.map { it.toTable() })
     }
 
     override suspend fun fetchFollowedStreams(): List<TwitchStream> = dao.findAllStreams()
@@ -57,8 +57,8 @@ class TwitchLiveLocalDataSource @Inject constructor(
         maxCount: Int
     ): List<TwitchChannelSchedule> = dao.findChannelSchedule(id)
 
-    suspend fun updateFollowedStreamSchedule(schedule: List<TwitchChannelSchedule>) {
-        dao.addChannelSchedules(schedule)
+    suspend fun setFollowedStreamSchedule(schedule: List<TwitchChannelSchedule>) {
+        dao.setChannelSchedules(schedule)
     }
 
     override suspend fun fetchStreamDetail(
