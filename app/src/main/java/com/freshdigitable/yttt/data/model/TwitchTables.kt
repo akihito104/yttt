@@ -130,16 +130,14 @@ class TwitchBroadcasterTable(
     tableName = "twitch_broadcaster_expire",
     foreignKeys = [
         ForeignKey(
-            entity = TwitchBroadcasterTable::class,
-            parentColumns = ["user_id", "follower_user_id"],
-            childColumns = ["user_id", "follower_user_id"],
+            entity = TwitchAuthorizedUserTable::class,
+            parentColumns = ["user_id"],
+            childColumns = ["follower_user_id"],
         ),
     ],
-    primaryKeys = ["user_id", "follower_user_id"],
 )
 class TwitchBroadcasterExpireTable(
-    @ColumnInfo("user_id")
-    val id: TwitchUser.Id,
+    @PrimaryKey(autoGenerate = false)
     @ColumnInfo("follower_user_id", index = true)
     val followerId: TwitchUser.Id,
     @ColumnInfo("expire_at")
@@ -244,6 +242,24 @@ data class TwitchStreamDbView(
 ) : TwitchStream
 
 @Entity(
+    tableName = "twitch_stream_expire",
+    foreignKeys = [
+        ForeignKey(
+            entity = TwitchAuthorizedUserTable::class,
+            parentColumns = ["user_id"],
+            childColumns = ["user_id"],
+        ),
+    ],
+)
+class TwitchStreamExpireTable(
+    @PrimaryKey
+    @ColumnInfo("user_id", index = true)
+    val userId: TwitchUser.Id,
+    @ColumnInfo("expired_at")
+    val expiredAt: Instant,
+)
+
+@Entity(
     tableName = "twitch_channel_schedule_vacation",
     foreignKeys = [
         ForeignKey(
@@ -317,6 +333,24 @@ class TwitchChannelScheduleDb(
     override val vacation: TwitchChannelVacationSchedule?,
 ) : TwitchChannelSchedule
 
+@Entity(
+    tableName = "twitch_channel_schedule_expire",
+    foreignKeys = [
+        ForeignKey(
+            entity = TwitchChannelVacationScheduleTable::class,
+            parentColumns = ["user_id"],
+            childColumns = ["user_id"],
+        ),
+    ],
+)
+class TwitchChannelScheduleExpireTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo("user_id")
+    val userId: TwitchUser.Id,
+    @ColumnInfo("expired_at")
+    val expiredAt: Instant,
+)
+
 class TwitchUserIdConverter : IdConverter<TwitchUser.Id>(createObject = { TwitchUser.Id(it) })
 class TwitchStreamScheduleIdConverter :
     IdConverter<TwitchChannelSchedule.Stream.Id>(createObject = { TwitchChannelSchedule.Stream.Id(it) })
@@ -346,10 +380,11 @@ interface TwitchDao {
         users: Collection<TwitchUserDetail>,
         expiredAt: Instant = Instant.now() + MAX_AGE_USER_DETAIL,
     ) {
-        val expires = users.map { TwitchUserDetailExpireTable(it.id, expiredAt) }
         val details = users.map { it.toTable() }
-        addUserDetailExpireEntities(expires)
+        val expires = users.map { TwitchUserDetailExpireTable(it.id, expiredAt) }
+        addUsers(users.map { (it as TwitchUser).toTable() })
         addUserDetailEntities(details)
+        addUserDetailExpireEntities(expires)
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -367,6 +402,9 @@ interface TwitchDao {
         current: Instant = Instant.now(),
     ): List<TwitchUserDetailDbView>
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addUsers(user: Collection<TwitchUserTable>)
+
     @Query("SELECT * FROM twitch_user WHERE id = :id")
     suspend fun findUser(id: TwitchUser.Id): TwitchUserTable?
 
@@ -374,16 +412,13 @@ interface TwitchDao {
     suspend fun addBroadcasters(
         followerId: TwitchUser.Id,
         broadcasters: Collection<TwitchBroadcaster>,
-        expiredAt: Instant = Instant.now() + MAX_AGE_BROADCASTER,
     ) {
+        addUsers(broadcasters.map { TwitchUserTable(it.id, it.loginName, it.displayName) })
         addBroadcasterEntities(broadcasters.map { it.toTable(followerId) })
-        addBroadcasterExpireEntities(broadcasters.map {
-            TwitchBroadcasterExpireTable(it.id, followerId, expiredAt)
-        })
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addBroadcasterExpireEntities(expires: Collection<TwitchBroadcasterExpireTable>)
+    suspend fun addBroadcasterExpireEntity(expires: TwitchBroadcasterExpireTable)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addBroadcasterEntities(broadcasters: Collection<TwitchBroadcasterTable>)
@@ -391,8 +426,7 @@ interface TwitchDao {
     @Query(
         "SELECT u.*, b.followed_at FROM " +
             "(SELECT * FROM twitch_broadcaster AS bb " +
-            " INNER JOIN twitch_broadcaster_expire AS e " +
-            " ON e.user_id = bb.user_id AND e.follower_user_id = bb.follower_user_id " +
+            " INNER JOIN twitch_broadcaster_expire AS e ON e.follower_user_id = bb.follower_user_id " +
             " WHERE :current < e.expire_at) AS b " +
             "INNER JOIN twitch_user AS u ON b.user_id = u.id " +
             "WHERE b.follower_user_id = :id"
@@ -403,30 +437,31 @@ interface TwitchDao {
     ): List<TwitchBroadcasterDb>
 
     @Transaction
-    suspend fun setBroadcasters(
+    suspend fun replaceAllBroadcasters(
         followerId: TwitchUser.Id,
         broadcasters: Collection<TwitchBroadcaster>,
+        expiredAt: Instant = Instant.now() + MAX_AGE_BROADCASTER,
     ) {
-        remoteBroadcasterExpireByFollowerId(followerId)
         removeBroadcastersByFollowerId(followerId)
         addBroadcasters(followerId, broadcasters)
+        addBroadcasterExpireEntity(TwitchBroadcasterExpireTable(followerId, expiredAt))
     }
 
     @Query("DELETE FROM twitch_broadcaster WHERE follower_user_id = :followerId")
     suspend fun removeBroadcastersByFollowerId(followerId: TwitchUser.Id)
 
-    @Query("DELETE FROM twitch_broadcaster_expire WHERE follower_user_id = :followerId")
-    suspend fun remoteBroadcasterExpireByFollowerId(followerId: TwitchUser.Id)
-
     @Transaction
-    suspend fun setChannelSchedules(schedule: Collection<TwitchChannelSchedule>) {
+    suspend fun replaceChannelSchedules(schedule: Collection<TwitchChannelSchedule>) {
         val userIds = schedule.map { it.broadcaster.id }.toSet()
         val streams = schedule.map { it.toStreamScheduleTable() }.flatten()
         val vacations = schedule.map { it.toVacationScheduleTable() }
+        val expiredAt = Instant.now() + MAX_AGE_CHANNEL_SCHEDULE
+        val expire = userIds.map { TwitchChannelScheduleExpireTable(it, expiredAt) }
         removeChannelStreamSchedulesByUserIds(userIds)
         removeChannelVacationSchedulesByUserIds(userIds)
         addChannelStreamSchedules(streams)
         addChannelVacationSchedules(vacations)
+        addChannelScheduleExpireEntity(expire)
     }
 
     @Query("DELETE FROM twitch_channel_schedule_stream WHERE user_id IN (:ids)")
@@ -441,14 +476,23 @@ interface TwitchDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelVacationSchedules(streams: Collection<TwitchChannelVacationScheduleTable>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addChannelScheduleExpireEntity(schedule: Collection<TwitchChannelScheduleExpireTable>)
+
     @Transaction
     @Query(
         "SELECT s.*, u.display_name AS user_display_name, u.login_name AS user_login_name " +
-            "FROM twitch_channel_schedule_vacation AS s " +
+            "FROM (SELECT ss.* FROM twitch_channel_schedule_vacation AS ss " +
+            " INNER JOIN twitch_channel_schedule_expire AS e ON ss.user_id = e.user_id " +
+            " WHERE :current < e.expired_at " +
+            ") AS s " +
             "INNER JOIN twitch_user AS u ON s.user_id = u.id " +
             "WHERE u.id = :id"
     )
-    suspend fun findChannelSchedule(id: TwitchUser.Id): List<TwitchChannelScheduleDb>
+    suspend fun findChannelSchedule(
+        id: TwitchUser.Id,
+        current: Instant = Instant.now(),
+    ): List<TwitchChannelScheduleDb>
 
     @Transaction
     @Query(
@@ -472,9 +516,11 @@ interface TwitchDao {
     suspend fun addStreams(streams: Collection<TwitchStreamTable>)
 
     @Transaction
-    suspend fun setStreams(streams: Collection<TwitchStreamTable>) {
+    suspend fun replaceAllStreams(me: TwitchUser.Id, streams: Collection<TwitchStream>) {
         removeAllStreams()
-        addStreams(streams)
+        setStreamExpire(TwitchStreamExpireTable(me, Instant.now() + MAX_AGE_STREAM))
+        addUsers(streams.map { it.user.toTable() })
+        addStreams(streams.map { it.toTable() })
     }
 
     @Query("SELECT * FROM twitch_stream_view AS v WHERE v.id = :id")
@@ -489,12 +535,21 @@ interface TwitchDao {
     @Query("SELECT * FROM twitch_stream_view AS v ORDER BY v.started_at DESC")
     suspend fun findAllStreams(): List<TwitchStreamDbView>
 
+    @Query("SELECT * FROM twitch_stream_expire WHERE user_id = :me")
+    suspend fun findStreamExpire(me: TwitchUser.Id): TwitchStreamExpireTable?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun setStreamExpire(expiredAt: TwitchStreamExpireTable)
+
     companion object {
         private val MAX_AGE_BROADCASTER = Duration.ofHours(12)
         private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
+        private val MAX_AGE_STREAM = Duration.ofHours(1)
+        private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
     }
 }
 
+private fun TwitchUser.toTable(): TwitchUserTable = TwitchUserTable(id, loginName, displayName)
 private fun TwitchUserDetail.toTable(): TwitchUserDetailTable =
     TwitchUserDetailTable(id, profileImageUrl, viewsCount, createdAt, description)
 
@@ -531,7 +586,7 @@ private fun TwitchBroadcaster.toTable(followerId: TwitchUser.Id): TwitchBroadcas
         followedAt = followedAt,
     )
 
-fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
+private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
     userId = user.id,
     title = title,
     id = id,

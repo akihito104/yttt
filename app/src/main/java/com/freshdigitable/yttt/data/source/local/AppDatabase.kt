@@ -10,9 +10,11 @@ import com.freshdigitable.yttt.data.model.CsvConverter
 import com.freshdigitable.yttt.data.model.TwitchAuthorizedUserTable
 import com.freshdigitable.yttt.data.model.TwitchBroadcasterExpireTable
 import com.freshdigitable.yttt.data.model.TwitchBroadcasterTable
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleExpireTable
 import com.freshdigitable.yttt.data.model.TwitchChannelVacationScheduleTable
 import com.freshdigitable.yttt.data.model.TwitchDao
 import com.freshdigitable.yttt.data.model.TwitchStreamDbView
+import com.freshdigitable.yttt.data.model.TwitchStreamExpireTable
 import com.freshdigitable.yttt.data.model.TwitchStreamIdConverter
 import com.freshdigitable.yttt.data.model.TwitchStreamScheduleIdConverter
 import com.freshdigitable.yttt.data.model.TwitchStreamScheduleTable
@@ -69,8 +71,10 @@ import dagger.hilt.components.SingletonComponent
         TwitchBroadcasterExpireTable::class,
         TwitchAuthorizedUserTable::class,
         TwitchStreamTable::class,
+        TwitchStreamExpireTable::class,
         TwitchStreamScheduleTable::class,
         TwitchChannelVacationScheduleTable::class,
+        TwitchChannelScheduleExpireTable::class,
     ],
     views = [
         LiveVideoDbView::class,

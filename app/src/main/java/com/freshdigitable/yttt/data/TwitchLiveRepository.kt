@@ -56,12 +56,16 @@ class TwitchLiveRepository @Inject constructor(
             return cache
         }
         val remote = remoteDataSource.fetchAllFollowings(userId)
-        localDataSource.setFollowings(userId, remote)
+        localDataSource.replaceAllFollowings(userId, remote)
         return remote
     }
 
     override suspend fun fetchFollowedStreams(): List<TwitchStream> {
         val me = fetchMe() ?: return emptyList()
+        val cache = localDataSource.fetchFollowedStreams()
+        if (cache.isNotEmpty()) {
+            return cache
+        }
         val res = remoteDataSource.fetchFollowedStreams(me.id)
         localDataSource.addFollowedStreams(res)
         return res
@@ -71,6 +75,10 @@ class TwitchLiveRepository @Inject constructor(
         id: TwitchUser.Id,
         maxCount: Int,
     ): List<TwitchChannelSchedule> {
+        val cache = localDataSource.fetchFollowedStreamSchedule(id)
+        if (cache.isNotEmpty()) {
+            return cache
+        }
         val res = remoteDataSource.fetchFollowedStreamSchedule(id, maxCount)
         localDataSource.setFollowedStreamSchedule(res)
         return res

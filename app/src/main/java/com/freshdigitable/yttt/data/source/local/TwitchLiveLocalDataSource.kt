@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.source.local
 
 import com.freshdigitable.yttt.data.model.TwitchDao
-import com.freshdigitable.yttt.data.model.toTable
 import com.freshdigitable.yttt.data.source.TwitchBroadcaster
 import com.freshdigitable.yttt.data.source.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
@@ -11,6 +10,7 @@ import com.freshdigitable.yttt.data.source.TwitchUserDetail
 import com.freshdigitable.yttt.data.source.TwitchVideo
 import com.freshdigitable.yttt.data.source.TwitchVideoDetail
 import kotlinx.coroutines.flow.Flow
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,15 +42,23 @@ class TwitchLiveLocalDataSource @Inject constructor(
         return dao.findBroadcastersByFollowerId(userId)
     }
 
-    suspend fun setFollowings(userId: TwitchUser.Id, followings: List<TwitchBroadcaster>) {
-        dao.setBroadcasters(userId, followings)
+    suspend fun replaceAllFollowings(userId: TwitchUser.Id, followings: List<TwitchBroadcaster>) {
+        dao.replaceAllBroadcasters(userId, followings)
     }
 
     suspend fun addFollowedStreams(followedStreams: List<TwitchStream>) {
-        dao.setStreams(followedStreams.map { it.toTable() })
+        val me = fetchMe() ?: return
+        dao.replaceAllStreams(me.id, followedStreams)
     }
 
-    override suspend fun fetchFollowedStreams(): List<TwitchStream> = dao.findAllStreams()
+    override suspend fun fetchFollowedStreams(): List<TwitchStream> {
+        val me = fetchMe() ?: return emptyList()
+        val expiredAt = dao.findStreamExpire(me.id)?.expiredAt
+        if (expiredAt?.isBefore(Instant.now()) == true) {
+            return emptyList()
+        }
+        return dao.findAllStreams()
+    }
 
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
@@ -58,7 +66,7 @@ class TwitchLiveLocalDataSource @Inject constructor(
     ): List<TwitchChannelSchedule> = dao.findChannelSchedule(id)
 
     suspend fun setFollowedStreamSchedule(schedule: List<TwitchChannelSchedule>) {
-        dao.setChannelSchedules(schedule)
+        dao.replaceChannelSchedules(schedule)
     }
 
     override suspend fun fetchStreamDetail(

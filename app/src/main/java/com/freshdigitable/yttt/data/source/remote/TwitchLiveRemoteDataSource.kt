@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.source.TwitchUser
 import com.freshdigitable.yttt.data.source.TwitchUserDetail
 import com.freshdigitable.yttt.data.source.TwitchVideo
 import com.freshdigitable.yttt.data.source.TwitchVideoDetail
+import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -65,7 +66,7 @@ class TwitchLiveRemoteDataSource @Inject constructor(
         }
 
     override suspend fun fetchMe(): TwitchUserDetail? = fetch {
-        val response = getMe("").execute()
+        val response = getMe().execute()
         response.body()?.data?.firstOrNull()
     }
 
@@ -115,13 +116,15 @@ interface TwitchOauth {
 }
 
 interface TwitchHelixService {
+    companion object {
+        fun TwitchHelixService.getMe(): Call<TwitchUserResponse> = getUser()
+    }
+
     @GET("helix/users")
     fun getUser(
         @Query("id") id: Collection<String>? = null,
         @Query("login") loginName: Collection<String>? = null,
     ): Call<TwitchUserResponse>
-
-    fun getMe(token: String): Call<TwitchUserResponse> = getUser()
 
     @GET("helix/channels/followed")
     fun getFollowing(
