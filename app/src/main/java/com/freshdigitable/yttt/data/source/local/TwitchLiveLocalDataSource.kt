@@ -63,7 +63,17 @@ class TwitchLiveLocalDataSource @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int
-    ): List<TwitchChannelSchedule> = dao.findChannelSchedule(id)
+    ): List<TwitchChannelSchedule> {
+        val schedule = dao.findChannelSchedule(id)
+        val current = Instant.now()
+        val finished = schedule.mapNotNull { it.segments }.flatten()
+            .filter { current.isAfter(it.endTime) }
+        if (finished.isEmpty()) {
+            return schedule
+        }
+        dao.removeChannelStreamSchedulesByIds(finished.map { it.id })
+        return dao.findChannelSchedule(id)
+    }
 
     suspend fun setFollowedStreamSchedule(schedule: List<TwitchChannelSchedule>) {
         dao.replaceChannelSchedules(schedule)

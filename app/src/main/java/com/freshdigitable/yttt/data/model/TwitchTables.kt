@@ -463,6 +463,9 @@ interface TwitchDao {
     @Query("DELETE FROM twitch_channel_schedule_vacation WHERE user_id IN (:ids)")
     suspend fun removeChannelVacationSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
 
+    @Query("DELETE FROM twitch_channel_schedule_stream WHERE id IN (:ids)")
+    suspend fun removeChannelStreamSchedulesByIds(ids: Collection<TwitchChannelSchedule.Stream.Id>)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelStreamSchedules(streams: Collection<TwitchStreamScheduleTable>)
 
