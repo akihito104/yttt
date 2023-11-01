@@ -60,19 +60,9 @@ class TwitchUserDetailTable(
     val description: String,
 )
 
-@DatabaseView(
-    viewName = "twitch_user_detail_view",
-    value = "SELECT u.*, d.profile_image_url, d.views_count, d.created_at, d.description " +
-        "FROM twitch_user_detail AS d " +
-        "INNER JOIN twitch_user AS u ON d.user_id = u.id",
-)
 data class TwitchUserDetailDbView(
-    @ColumnInfo("id")
-    override val id: TwitchUser.Id,
-    @ColumnInfo("login_name")
-    override val loginName: String,
-    @ColumnInfo("display_name")
-    override val displayName: String,
+    @Embedded
+    private val user: TwitchUserTable,
     @ColumnInfo("description")
     override val description: String,
     @ColumnInfo("profile_image_url")
@@ -81,7 +71,18 @@ data class TwitchUserDetailDbView(
     override val viewsCount: Int,
     @ColumnInfo("created_at")
     override val createdAt: Instant,
-) : TwitchUserDetail
+) : TwitchUserDetail, TwitchUser by user {
+    companion object {
+        internal const val SQL_USER_DETAIL = "SELECT u.*, d.profile_image_url, d.views_count, " +
+            "d.created_at, d.description FROM twitch_user_detail AS d " +
+            "INNER JOIN twitch_user AS u ON d.user_id = u.id"
+        internal const val SQL_EMBED_PREFIX = "u_"
+        internal const val SQL_EMBED_ALIAS = "u.id AS ${SQL_EMBED_PREFIX}id, " +
+            "u.display_name AS ${SQL_EMBED_PREFIX}display_name, u.login_name AS ${SQL_EMBED_PREFIX}login_name, " +
+            "u.description AS ${SQL_EMBED_PREFIX}description, u.created_at AS ${SQL_EMBED_PREFIX}created_at, " +
+            "u.views_count AS ${SQL_EMBED_PREFIX}views_count, u.profile_image_url AS ${SQL_EMBED_PREFIX}profile_image_url"
+    }
+}
 
 @Entity(
     tableName = "twitch_user_detail_expire",
@@ -145,15 +146,11 @@ class TwitchBroadcasterExpireTable(
 )
 
 data class TwitchBroadcasterDb(
-    @ColumnInfo("id")
-    override val id: TwitchUser.Id,
-    @ColumnInfo("login_name")
-    override val loginName: String,
-    @ColumnInfo("display_name")
-    override val displayName: String,
+    @Embedded
+    private val user: TwitchUserTable,
     @ColumnInfo("followed_at")
     override val followedAt: Instant
-) : TwitchBroadcaster
+) : TwitchBroadcaster, TwitchUser by user
 
 @Entity(
     tableName = "twitch_auth_user",
@@ -211,35 +208,27 @@ class TwitchStreamTable(
 
 @DatabaseView(
     viewName = "twitch_stream_view",
-    value = "SELECT s.*, u.display_name AS user_display_name, u.login_name AS user_login_name" +
-        " FROM twitch_stream AS s INNER JOIN twitch_user AS u ON u.id = s.user_id",
+    value = "SELECT s.*, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} FROM twitch_stream AS s " +
+        "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON u.id = s.user_id",
 )
 data class TwitchStreamDbView(
-    @ColumnInfo(name = "id")
-    override val id: TwitchStream.Id,
-    @Embedded("user_")
-    override val user: TwitchUserTable,
-    @ColumnInfo(name = "title")
-    override val title: String,
-    @ColumnInfo(name = "thumbnail_url_base")
-    override val thumbnailUrlBase: String,
-    @ColumnInfo(name = "view_count")
-    override val viewCount: Int,
-    @ColumnInfo(name = "language")
-    override val language: String,
-    @ColumnInfo(name = "game_id")
-    override val gameId: String,
-    @ColumnInfo(name = "game_name")
-    override val gameName: String,
-    @ColumnInfo(name = "type")
-    override val type: String,
-    @ColumnInfo(name = "started_at")
-    override val startedAt: Instant,
-    @ColumnInfo(name = "tags")
-    override val tags: List<String>,
-    @ColumnInfo(name = "is_mature")
-    override val isMature: Boolean,
-) : TwitchStream
+    @Embedded
+    private val streamEntity: TwitchStreamTable,
+    @Embedded(TwitchUserDetailDbView.SQL_EMBED_PREFIX)
+    override val user: TwitchUserDetailDbView,
+) : TwitchStream {
+    override val gameId: String get() = streamEntity.gameId
+    override val gameName: String get() = streamEntity.gameName
+    override val type: String get() = streamEntity.type
+    override val startedAt: Instant get() = streamEntity.startedAt
+    override val tags: List<String> get() = streamEntity.tags
+    override val isMature: Boolean get() = streamEntity.isMature
+    override val id: TwitchStream.Id get() = streamEntity.id
+    override val title: String get() = streamEntity.title
+    override val thumbnailUrlBase: String get() = streamEntity.thumbnailUrlBase
+    override val viewCount: Int get() = streamEntity.viewCount
+    override val language: String get() = streamEntity.language
+}
 
 @Entity(
     tableName = "twitch_stream_expire",
@@ -323,12 +312,12 @@ class TwitchStreamCategory(
 
 class TwitchChannelScheduleDb(
     @Relation(
-        parentColumn = "user_id",
+        parentColumn = "${TwitchUserDetailDbView.SQL_EMBED_PREFIX}id",
         entityColumn = "user_id"
     )
     override val segments: List<TwitchStreamScheduleTable>?,
-    @Embedded("user_")
-    override val broadcaster: TwitchUserTable,
+    @Embedded(TwitchUserDetailDbView.SQL_EMBED_PREFIX)
+    override val broadcaster: TwitchUserDetailDbView,
     @Embedded
     override val vacation: TwitchChannelVacationSchedule?,
 ) : TwitchChannelSchedule
@@ -372,7 +361,10 @@ interface TwitchDao {
     @Insert
     suspend fun setMeEntity(me: TwitchAuthorizedUserTable)
 
-    @Query("SELECT u.* FROM twitch_auth_user AS a INNER JOIN twitch_user_detail_view AS u ON a.user_id = u.id LIMIT 1")
+    @Query(
+        "SELECT u.* FROM twitch_auth_user AS a " +
+            "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON a.user_id = u.id LIMIT 1"
+    )
     suspend fun findMe(): TwitchUserDetailDbView?
 
     @Transaction
@@ -394,7 +386,7 @@ interface TwitchDao {
     suspend fun addUserDetailExpireEntities(expires: Collection<TwitchUserDetailExpireTable>)
 
     @Query(
-        "SELECT v.* FROM (SELECT * FROM twitch_user_detail_view WHERE id IN (:ids)) AS v " +
+        "SELECT v.* FROM (SELECT * FROM (${TwitchUserDetailDbView.SQL_USER_DETAIL}) WHERE id IN (:ids)) AS v " +
             "INNER JOIN (SELECT * FROM twitch_user_detail_expire WHERE :current < expired_at) AS e ON v.id = e.user_id"
     )
     suspend fun findUserDetail(
@@ -425,7 +417,7 @@ interface TwitchDao {
 
     @Query(
         "SELECT u.*, b.followed_at FROM " +
-            "(SELECT * FROM twitch_broadcaster AS bb " +
+            "(SELECT bb.* FROM twitch_broadcaster AS bb " +
             " INNER JOIN twitch_broadcaster_expire AS e ON e.follower_user_id = bb.follower_user_id " +
             " WHERE :current < e.expire_at) AS b " +
             "INNER JOIN twitch_user AS u ON b.user_id = u.id " +
@@ -458,6 +450,7 @@ interface TwitchDao {
         val expiredAt = Instant.now() + MAX_AGE_CHANNEL_SCHEDULE
         val expire = userIds.map { TwitchChannelScheduleExpireTable(it, expiredAt) }
         removeChannelStreamSchedulesByUserIds(userIds)
+        removeChannelScheduleExpireEntity(userIds)
         removeChannelVacationSchedulesByUserIds(userIds)
         addChannelStreamSchedules(streams)
         addChannelVacationSchedules(vacations)
@@ -479,14 +472,17 @@ interface TwitchDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelScheduleExpireEntity(schedule: Collection<TwitchChannelScheduleExpireTable>)
 
+    @Query("DELETE FROM twitch_channel_schedule_expire WHERE user_id IN (:id)")
+    suspend fun removeChannelScheduleExpireEntity(id: Collection<TwitchUser.Id>)
+
     @Transaction
     @Query(
-        "SELECT s.*, u.display_name AS user_display_name, u.login_name AS user_login_name " +
+        "SELECT s.vacation_start, s.vacation_end, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
             "FROM (SELECT ss.* FROM twitch_channel_schedule_vacation AS ss " +
             " INNER JOIN twitch_channel_schedule_expire AS e ON ss.user_id = e.user_id " +
             " WHERE :current < e.expired_at " +
             ") AS s " +
-            "INNER JOIN twitch_user AS u ON s.user_id = u.id " +
+            "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id " +
             "WHERE u.id = :id"
     )
     suspend fun findChannelSchedule(
@@ -496,9 +492,9 @@ interface TwitchDao {
 
     @Transaction
     @Query(
-        "SELECT s.*, u.display_name AS user_display_name, u.login_name AS user_login_name " +
+        "SELECT s.vacation_start, s.vacation_end, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
             "FROM twitch_channel_schedule_vacation AS s " +
-            "INNER JOIN twitch_user AS u ON s.user_id = u.id"
+            "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id"
     )
     fun watchChannelSchedule(): Flow<List<TwitchChannelScheduleDb>>
 

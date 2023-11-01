@@ -114,12 +114,14 @@ class MainViewModel @Inject constructor(
             return
         }
         val me = twitchRepository.fetchMe() ?: return
-        twitchRepository.fetchFollowedStreams()
+        val streams = twitchRepository.fetchFollowedStreams()
         val following = twitchRepository.fetchAllFollowings(me.id)
         val tasks = coroutineScope {
             following.map { async { twitchRepository.fetchFollowedStreamSchedule(it.id) } }
         }
-        tasks.awaitAll()
+        val schedules = tasks.awaitAll()
+        val users = streams.map { it.user.id } + schedules.flatten().map { it.broadcaster.id }
+        twitchRepository.findUsersById(users)
     }
 
     private suspend fun updateAsFreeChat() {

@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 9,
-    "identityHash": "931ef02add8d9fc053e3d5601360ed2b",
+    "identityHash": "37cfacbdea72a9f8fe23348711c18e64",
     "entities": [
       {
         "tableName": "channel",
@@ -1254,16 +1254,12 @@
       },
       {
         "viewName": "twitch_stream_view",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT s.*, u.display_name AS user_display_name, u.login_name AS user_login_name FROM twitch_stream AS s INNER JOIN twitch_user AS u ON u.id = s.user_id"
-      },
-      {
-        "viewName": "twitch_user_detail_view",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT u.*, d.profile_image_url, d.views_count, d.created_at, d.description FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT s.*, u.id AS u_id, u.display_name AS u_display_name, u.login_name AS u_login_name, u.description AS u_description, u.created_at AS u_created_at, u.views_count AS u_views_count, u.profile_image_url AS u_profile_image_url FROM twitch_stream AS s INNER JOIN (SELECT u.*, d.profile_image_url, d.views_count, d.created_at, d.description FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id) AS u ON u.id = s.user_id"
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '931ef02add8d9fc053e3d5601360ed2b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '37cfacbdea72a9f8fe23348711c18e64')"
     ]
   }
 }

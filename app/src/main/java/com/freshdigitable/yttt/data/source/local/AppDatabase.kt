@@ -19,7 +19,6 @@ import com.freshdigitable.yttt.data.model.TwitchStreamIdConverter
 import com.freshdigitable.yttt.data.model.TwitchStreamScheduleIdConverter
 import com.freshdigitable.yttt.data.model.TwitchStreamScheduleTable
 import com.freshdigitable.yttt.data.model.TwitchStreamTable
-import com.freshdigitable.yttt.data.model.TwitchUserDetailDbView
 import com.freshdigitable.yttt.data.model.TwitchUserDetailExpireTable
 import com.freshdigitable.yttt.data.model.TwitchUserDetailTable
 import com.freshdigitable.yttt.data.model.TwitchUserIdConverter
@@ -82,7 +81,6 @@ import dagger.hilt.components.SingletonComponent
         LiveChannelDetailDbView::class,
         LivePlaylistItemDb::class,
         TwitchStreamDbView::class,
-        TwitchUserDetailDbView::class,
     ],
     version = 9,
     autoMigrations = [
