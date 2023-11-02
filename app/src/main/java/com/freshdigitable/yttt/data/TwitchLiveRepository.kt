@@ -31,10 +31,10 @@ class TwitchLiveRepository @Inject constructor(
             return listOf(me)
         }
         val cache = localDataSource.findUsersById(ids)
-        if (cache.size == ids.size) {
+        val remoteIds = ids - cache.map { it.id }.toSet()
+        if (remoteIds.isEmpty()) {
             return cache
         }
-        val remoteIds = ids - cache.map { it.id }.toSet()
         val remote = remoteDataSource.findUsersById(remoteIds)
         localDataSource.addUsers(remote)
         return cache + remote
