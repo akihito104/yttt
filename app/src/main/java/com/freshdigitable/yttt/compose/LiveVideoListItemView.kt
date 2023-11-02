@@ -32,6 +32,7 @@ import com.bumptech.glide.load.Key
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
@@ -199,7 +200,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
                 iconUrl = "",
                 id = LiveChannel.Id("b")
             ),
-            id = LiveVideo.Id("a"),
+            id = LiveVideo.Id("a", LivePlatform.YOUTUBE),
             thumbnailUrl = "",
         )
     }

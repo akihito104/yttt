@@ -10,6 +10,9 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
+import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigInteger
 import javax.inject.Inject
@@ -18,12 +21,13 @@ import javax.inject.Inject
 class VideoDetailViewModel @Inject constructor(
     private val repository: YouTubeLiveRepository,
     private val twitchRepository: TwitchLiveRepository,
+    private val findLiveVideoFromTwitch: FindLiveVideoFromTwitchUseCase,
 ) : ViewModel() {
     fun fetchViewDetail(id: LiveVideo.Id): LiveData<LiveVideo?> {
         return liveData(viewModelScope.coroutineContext) {
             val detail = when (id.platform) {
                 LivePlatform.YOUTUBE -> repository.fetchVideoDetail(id)
-                LivePlatform.TWITCH -> twitchRepository.fetchStreamDetail(id)
+                LivePlatform.TWITCH -> findLiveVideoFromTwitch(id)
             }
             if (detail == null) { // TODO: informing video is not found
                 emit(null)
@@ -31,8 +35,14 @@ class VideoDetailViewModel @Inject constructor(
             }
             val channel = when (id.platform) {
                 LivePlatform.YOUTUBE -> repository.fetchChannelList(listOf(detail.channel.id))
-                LivePlatform.TWITCH -> twitchRepository.findUsersById(listOf(detail.channel.id))
-            }.first()
+                    .first()
+
+                LivePlatform.TWITCH -> {
+                    val tid = detail.channel.id.mapTo<TwitchUser.Id>()
+                    val u = twitchRepository.findUsersById(listOf(tid)).first()
+                    u.toLiveChannelDetail()
+                }
+            }
             val res = object : LiveVideoDetail, LiveVideo by detail {
                 override val description: String
                     get() = (detail as? LiveVideoDetail)?.description ?: ""

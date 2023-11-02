@@ -7,7 +7,9 @@ interface LivePlaylist {
     val title: String
     val thumbnailUrl: String
 
-    data class Id(override val value: String) : IdBase<String>
+    data class Id(override val value: String) : IdBase<String> {
+        override val platform: LivePlatform = LivePlatform.YOUTUBE
+    }
 }
 
 interface LivePlaylistItem {
@@ -21,7 +23,9 @@ interface LivePlaylistItem {
     val videoOwnerChannelId: LiveChannel.Id?
     val publishedAt: Instant
 
-    data class Id(override val value: String) : IdBase<String>
+    data class Id(override val value: String) : IdBase<String> {
+        override val platform: LivePlatform = LivePlatform.YOUTUBE
+    }
 }
 
 data class LivePlaylistItemEntity(

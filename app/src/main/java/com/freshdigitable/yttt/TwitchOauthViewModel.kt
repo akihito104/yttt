@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.TwitchOauthToken
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
+import com.freshdigitable.yttt.data.model.TwitchUser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,7 +36,7 @@ class TwitchOauthViewModel @Inject constructor(
         }
     }
 
-    fun getMe(): LiveData<LiveChannelDetail> = liveData {
+    fun getMe(): LiveData<TwitchUser> = liveData {
         val user = twitchRepository.fetchMe() ?: throw IllegalStateException()
         emit(user)
     }

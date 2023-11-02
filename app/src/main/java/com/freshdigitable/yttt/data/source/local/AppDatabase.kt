@@ -8,6 +8,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.freshdigitable.yttt.data.source.local.db.AppDao
 import com.freshdigitable.yttt.data.source.local.db.BigIntegerConverter
+import com.freshdigitable.yttt.data.source.local.db.CsvConverter
 import com.freshdigitable.yttt.data.source.local.db.DurationConverter
 import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
 import com.freshdigitable.yttt.data.source.local.db.InstantConverter
@@ -29,6 +30,22 @@ import com.freshdigitable.yttt.data.source.local.db.LiveVideoDbView
 import com.freshdigitable.yttt.data.source.local.db.LiveVideoExpireTable
 import com.freshdigitable.yttt.data.source.local.db.LiveVideoIdConverter
 import com.freshdigitable.yttt.data.source.local.db.LiveVideoTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchAuthorizedUserTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterExpireTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchChannelScheduleExpireTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchChannelVacationScheduleTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchDao
+import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDbView
+import com.freshdigitable.yttt.data.source.local.db.TwitchStreamExpireTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchStreamIdConverter
+import com.freshdigitable.yttt.data.source.local.db.TwitchStreamScheduleIdConverter
+import com.freshdigitable.yttt.data.source.local.db.TwitchStreamScheduleTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchStreamTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailExpireTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserIdConverter
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserTable
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -46,14 +63,26 @@ import dagger.hilt.components.SingletonComponent
         LiveVideoExpireTable::class,
         LivePlaylistTable::class,
         LivePlaylistItemTable::class,
+        TwitchUserTable::class,
+        TwitchUserDetailTable::class,
+        TwitchUserDetailExpireTable::class,
+        TwitchBroadcasterTable::class,
+        TwitchBroadcasterExpireTable::class,
+        TwitchAuthorizedUserTable::class,
+        TwitchStreamTable::class,
+        TwitchStreamExpireTable::class,
+        TwitchStreamScheduleTable::class,
+        TwitchChannelVacationScheduleTable::class,
+        TwitchChannelScheduleExpireTable::class,
     ],
     views = [
         LiveVideoDbView::class,
         LiveSubscriptionDbView::class,
         LiveChannelDetailDbView::class,
         LivePlaylistItemDb::class,
+        TwitchStreamDbView::class,
     ],
-    version = 8,
+    version = 9,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -62,6 +91,7 @@ import dagger.hilt.components.SingletonComponent
         AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7),
         AutoMigration(from = 7, to = 8),
+        AutoMigration(from = 8, to = 9),
     ]
 )
 @TypeConverters(
@@ -74,9 +104,14 @@ import dagger.hilt.components.SingletonComponent
     LivePlaylistIdConverter::class,
     LivePlaylistItemIdConverter::class,
     BigIntegerConverter::class,
+    TwitchUserIdConverter::class,
+    TwitchStreamScheduleIdConverter::class,
+    TwitchStreamIdConverter::class,
+    CsvConverter::class,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract val dao: AppDao
+    abstract val twitchDao: TwitchDao
 }
 
 @Module
@@ -86,4 +121,7 @@ object DbModule {
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "ytttdb")
             .build()
+
+    @Provides
+    fun provideTwitchDao(database: AppDatabase): TwitchDao = database.twitchDao
 }

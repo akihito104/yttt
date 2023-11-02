@@ -15,13 +15,16 @@ import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.toLocalDateTime
+import com.freshdigitable.yttt.data.model.toTwitchVideoList
 import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +43,7 @@ class MainViewModel @Inject constructor(
     private val liveRepository: YouTubeLiveRepository,
     private val twitchRepository: TwitchLiveRepository,
     private val accountRepository: AccountRepository,
+    private val findLiveVideoFromTwitch: FindLiveVideoFromTwitchUseCase,
 ) : ViewModel() {
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
@@ -78,8 +82,8 @@ class MainViewModel @Inject constructor(
         val channelIds = liveRepository.fetchAllSubscribe(maxResult = 50).map { it.channel.id }
         Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
         val channelDetails = liveRepository.fetchChannelList(channelIds)
-        val task = channelDetails.map { channelDetail ->
-            viewModelScope.async { fetchVideoTask(channelDetail) }
+        val task = coroutineScope {
+            channelDetails.map { channelDetail -> async { fetchVideoTask(channelDetail) } }
         }
         val ids = task.awaitAll().flatten()
         liveRepository.fetchVideoList(ids)
@@ -109,12 +113,15 @@ class MainViewModel @Inject constructor(
         if (accountRepository.getTwitchToken() == null) {
             return
         }
-        twitchRepository.fetchFollowedStreams()
         val me = twitchRepository.fetchMe() ?: return
+        val streams = twitchRepository.fetchFollowedStreams()
         val following = twitchRepository.fetchAllFollowings(me.id)
-        following.map {
-            viewModelScope.async { twitchRepository.fetchFollowedStreamSchedule(it.channel.id) }
-        }.awaitAll()
+        val tasks = coroutineScope {
+            following.map { async { twitchRepository.fetchFollowedStreamSchedule(it.id) } }
+        }
+        val schedules = tasks.awaitAll()
+        val users = streams.map { it.user.id } + schedules.flatten().map { it.broadcaster.id }
+        twitchRepository.findUsersById(users)
     }
 
     private suspend fun updateAsFreeChat() {
@@ -149,7 +156,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             val v = when (id.platform) {
                 LivePlatform.YOUTUBE -> liveRepository.fetchVideoDetail(id)
-                LivePlatform.TWITCH -> twitchRepository.fetchStreamDetail(id)
+                LivePlatform.TWITCH -> findLiveVideoFromTwitch(id)
             }
             _selectedItem.value = v
         }
@@ -208,8 +215,15 @@ class OnAirListViewModel @Inject constructor(
     liveRepository: YouTubeLiveRepository,
     twitchRepository: TwitchLiveRepository,
 ) : ViewModel() {
+    private val twitchItems = twitchRepository.onAir.map {
+        it.map { s ->
+            val user = s.user as? TwitchUserDetail
+                ?: twitchRepository.findUsersById(listOf(s.user.id)).first()
+            s.toLiveVideo(user)
+        }
+    }
     val items: StateFlow<List<LiveVideo>> =
-        combine(liveRepository.videos, twitchRepository.onAir) { yt, tw -> yt + tw }
+        combine(liveRepository.videos, twitchItems) { yt, tw -> yt + tw }
             .map { v ->
                 v.filter { it.isNowOnAir() }
                     .sortedByDescending { it.actualStartDateTime }
@@ -227,8 +241,16 @@ class UpcomingListViewModel @Inject constructor(
     twitchRepository: TwitchLiveRepository,
     prefs: AndroidPreferencesDataStore,
 ) : ViewModel() {
+    private val twitchItems = twitchRepository.upcoming.map {
+        it.map { s -> s.toTwitchVideoList() }.flatten()
+            .map { s ->
+                val user = s.user as? TwitchUserDetail
+                    ?: twitchRepository.findUsersById(listOf(s.user.id)).first()
+                s.toLiveVideo(user)
+            }
+    }
     private val upcomingItems =
-        combine(liveRepository.videos, twitchRepository.upcoming) { yt, tw ->
+        combine(liveRepository.videos, twitchItems) { yt, tw ->
             val week = Instant.now().plus(Duration.ofDays(7L))
             (yt + tw.filter { it.scheduledStartDateTime?.isBefore(week) == true })
                 .filter { it.isUpcoming() && it.isFreeChat != true }
