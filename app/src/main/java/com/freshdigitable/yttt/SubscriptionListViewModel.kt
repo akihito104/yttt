@@ -9,8 +9,8 @@ import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
-import com.freshdigitable.yttt.data.source.TwitchBroadcaster
-import com.freshdigitable.yttt.data.source.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

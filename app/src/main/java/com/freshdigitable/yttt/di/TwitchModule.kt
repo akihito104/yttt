@@ -1,9 +1,9 @@
 package com.freshdigitable.yttt.di
 
-import com.freshdigitable.yttt.data.source.TwitchChannelSchedule
-import com.freshdigitable.yttt.data.source.TwitchStream
-import com.freshdigitable.yttt.data.source.TwitchUser
-import com.freshdigitable.yttt.data.source.TwitchVideo
+import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
 import com.freshdigitable.yttt.data.source.remote.TwitchOauth
 import com.freshdigitable.yttt.data.source.remote.TwitchTokenInterceptor

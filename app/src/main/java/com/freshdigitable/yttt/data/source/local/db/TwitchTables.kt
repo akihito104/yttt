@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt.data.model
+package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
 import androidx.room.Dao
@@ -12,15 +12,13 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
-import com.freshdigitable.yttt.data.source.TwitchBroadcaster
-import com.freshdigitable.yttt.data.source.TwitchChannelSchedule
-import com.freshdigitable.yttt.data.source.TwitchStream
-import com.freshdigitable.yttt.data.source.TwitchStreamSchedule
-import com.freshdigitable.yttt.data.source.TwitchUser
-import com.freshdigitable.yttt.data.source.TwitchUserDetail
-import com.freshdigitable.yttt.data.source.TwitchVideo
-import com.freshdigitable.yttt.data.source.local.db.Converter
-import com.freshdigitable.yttt.data.source.local.db.IdConverter
+import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreamSchedule
+import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchVideo
 import kotlinx.coroutines.flow.Flow
 import java.time.Duration
 import java.time.Instant

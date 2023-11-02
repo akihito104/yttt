@@ -1,15 +1,15 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.BuildConfig
+import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchVideo
+import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.AccountLocalDataSource
-import com.freshdigitable.yttt.data.source.TwitchBroadcaster
-import com.freshdigitable.yttt.data.source.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
-import com.freshdigitable.yttt.data.source.TwitchStream
-import com.freshdigitable.yttt.data.source.TwitchUser
-import com.freshdigitable.yttt.data.source.TwitchUserDetail
-import com.freshdigitable.yttt.data.source.TwitchVideo
-import com.freshdigitable.yttt.data.source.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers

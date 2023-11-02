@@ -21,18 +21,16 @@ import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
 import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
 import com.freshdigitable.yttt.data.model.LivePlaylistItem
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.source.TwitchUserDetail
-import com.freshdigitable.yttt.data.source.mapTo
+import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flow
 import java.io.IOException
-import java.math.BigInteger
 import java.security.MessageDigest
 import javax.inject.Inject
 
@@ -159,24 +157,6 @@ class ChannelViewModel @Inject constructor(
     companion object {
         private val emptyState = MutableLiveData(emptyList<VideoListItemEntity>())
     }
-}
-
-fun TwitchUserDetail.toLiveChannelDetail(): LiveChannelDetail {
-    return LiveChannelDetailEntity(
-        id = LiveChannel.Id(id.value, id.platform),
-        title = this.displayName,
-        iconUrl = this.profileImageUrl,
-        bannerUrl = "",
-        customUrl = loginName,
-        description = description,
-        isSubscriberHidden = false,
-        keywords = emptyList(),
-        publishedAt = this.createdAt,
-        subscriberCount = BigInteger.ZERO,
-        uploadedPlayList = null,
-        videoCount = BigInteger.ZERO,
-        viewsCount = BigInteger.valueOf(this.viewsCount.toLong()),
-    )
 }
 
 class CustomCrop(

@@ -15,11 +15,11 @@ import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.toLocalDateTime
-import com.freshdigitable.yttt.data.source.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.toTwitchVideoList
 import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
-import com.freshdigitable.yttt.data.source.toTwitchVideoList
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async

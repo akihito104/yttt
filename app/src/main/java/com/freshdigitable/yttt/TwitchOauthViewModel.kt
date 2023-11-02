@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.TwitchOauthToken
-import com.freshdigitable.yttt.data.source.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

@@ -6,11 +6,11 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
-import com.freshdigitable.yttt.data.source.TwitchChannelSchedule
-import com.freshdigitable.yttt.data.source.TwitchStream
-import com.freshdigitable.yttt.data.source.TwitchStreamSchedule
-import com.freshdigitable.yttt.data.source.TwitchUserDetail
-import com.freshdigitable.yttt.data.source.mapTo
+import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreamSchedule
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.mapTo
 import javax.inject.Inject
 
 class FindLiveVideoFromTwitchUseCase @Inject constructor(

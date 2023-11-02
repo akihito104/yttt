@@ -18,7 +18,7 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.TwitchOauthToken
-import com.freshdigitable.yttt.data.source.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUser
 import kotlinx.coroutines.launch
 
 @Composable
