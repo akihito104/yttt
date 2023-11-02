@@ -43,6 +43,7 @@ import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
+import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LivePlatform
@@ -396,22 +397,21 @@ private val unitPrefix = arrayOf("", "k", "M", "G", "T", "P", "E")
 fun ChannelScreenPreview() {
     AppTheme {
         ChannelDetailScreen({
-            object : LiveChannelDetail, LiveChannel by LiveChannelEntity(
+            LiveChannelDetailEntity(
                 id = LiveChannel.Id("a"),
                 title = "channel title",
                 iconUrl = "",
-            ) {
-                override val bannerUrl: String = ""
-                override val subscriberCount: BigInteger = BigInteger.valueOf(52400)
-                override val isSubscriberHidden: Boolean = false
-                override val videoCount: BigInteger = BigInteger.valueOf(132)
-                override val viewsCount: BigInteger = BigInteger.valueOf(38498283)
-                override val publishedAt: Instant = Instant.parse("2021-04-13T00:23:11Z")
-                override val customUrl: String = "@custom_url"
-                override val keywords: Collection<String> = emptyList()
-                override val description: String = "description is here."
-                override val uploadedPlayList: LivePlaylist.Id = LivePlaylist.Id("a")
-            }
+                bannerUrl = "",
+                subscriberCount = BigInteger.valueOf(52400),
+                isSubscriberHidden = false,
+                videoCount = BigInteger.valueOf(132),
+                viewsCount = BigInteger.valueOf(38498283),
+                publishedAt = Instant.parse("2021-04-13T00:23:11Z"),
+                customUrl = "@custom_url",
+                keywords = emptyList(),
+                description = "description is here.",
+                uploadedPlayList = LivePlaylist.Id("a"),
+            )
         }) {
             PlainTextPage { "text here." }
         }

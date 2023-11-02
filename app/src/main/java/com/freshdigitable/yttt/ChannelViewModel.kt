@@ -21,6 +21,7 @@ import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeLiveRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
+import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
 import com.freshdigitable.yttt.data.model.LiveChannelSection
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LivePlaylist
@@ -33,7 +34,6 @@ import kotlinx.coroutines.flow.flow
 import java.io.IOException
 import java.math.BigInteger
 import java.security.MessageDigest
-import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
@@ -83,7 +83,7 @@ class ChannelViewModel @Inject constructor(
                 val item = repository.fetchPlaylistItems(content.item.first())
                 return ChannelDetailChannelSection(
                     cs,
-                    _title = p.first().title,
+                    title = p.first().title,
                     content = ChannelDetailContent.SinglePlaylist(item),
                 )
             }
@@ -161,22 +161,6 @@ class ChannelViewModel @Inject constructor(
     }
 }
 
-data class LiveChannelDetailEntity(
-    override val id: LiveChannel.Id,
-    override val title: String,
-    override val iconUrl: String,
-    override val bannerUrl: String?,
-    override val subscriberCount: BigInteger,
-    override val isSubscriberHidden: Boolean,
-    override val videoCount: BigInteger,
-    override val viewsCount: BigInteger,
-    override val publishedAt: Instant,
-    override val customUrl: String,
-    override val keywords: Collection<String>,
-    override val description: String?,
-    override val uploadedPlayList: LivePlaylist.Id?
-) : LiveChannelDetail
-
 fun TwitchUserDetail.toLiveChannelDetail(): LiveChannelDetail {
     return LiveChannelDetailEntity(
         id = LiveChannel.Id(id.value, id.platform),
@@ -249,10 +233,10 @@ enum class ChannelPage(val platform: Array<LivePlatform> = LivePlatform.values()
 
 class ChannelDetailChannelSection(
     channelSection: LiveChannelSection,
-    _title: String? = null,
+    title: String? = null,
     override val content: ChannelDetailContent<*>?,
 ) : LiveChannelSection by channelSection {
-    override val title: String? = _title ?: channelSection.title
+    override val title: String? = title ?: channelSection.title
 
     sealed class ChannelDetailContent<T> : LiveChannelSection.Content<T> {
         data class MultiPlaylist(override val item: List<LivePlaylist>) :

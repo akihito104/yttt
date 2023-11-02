@@ -70,3 +70,19 @@ interface LiveChannelSection : Comparable<LiveChannelSection> {
         val item: List<T>
     }
 }
+
+data class LiveChannelDetailEntity(
+    override val id: LiveChannel.Id,
+    override val title: String,
+    override val iconUrl: String,
+    override val bannerUrl: String?,
+    override val subscriberCount: BigInteger,
+    override val isSubscriberHidden: Boolean,
+    override val videoCount: BigInteger,
+    override val viewsCount: BigInteger,
+    override val publishedAt: Instant,
+    override val customUrl: String,
+    override val keywords: Collection<String>,
+    override val description: String?,
+    override val uploadedPlayList: LivePlaylist.Id?
+) : LiveChannelDetail
