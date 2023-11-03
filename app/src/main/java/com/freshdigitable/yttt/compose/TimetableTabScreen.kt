@@ -5,9 +5,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.pager.HorizontalPager
@@ -138,7 +140,7 @@ private fun ColumnScope.MenuContent(
             headlineContent = { Text(i.text) },
         )
     }
-    Spacer(modifier = Modifier.navigationBarsPadding())
+    Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))
 }
 
 enum class TimetableMenuItem(val text: String) {
