@@ -209,7 +209,7 @@ interface TwitchDao {
     companion object {
         private val MAX_AGE_BROADCASTER = Duration.ofHours(12)
         private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
-        private val MAX_AGE_STREAM = Duration.ofHours(1)
+        private val MAX_AGE_STREAM = Duration.ofMinutes(10)
         private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
     }
 }
