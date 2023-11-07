@@ -34,20 +34,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.MainViewModel
-import com.freshdigitable.yttt.OnAirListViewModel
 import com.freshdigitable.yttt.TimetablePage
-import com.freshdigitable.yttt.UpcomingListViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableTabScreen(
     viewModel: MainViewModel = hiltViewModel(),
-    onAirViewModel: OnAirListViewModel = hiltViewModel(),
-    upcomingViewModel: UpcomingListViewModel = hiltViewModel(),
     onListItemClicked: (LiveVideo.Id) -> Unit,
 ) {
     LaunchedEffect(Unit) {
@@ -55,30 +50,19 @@ fun TimetableTabScreen(
             viewModel.loadList()
         }
     }
-    val tabData = combine(
-        onAirViewModel.tabData,
-        upcomingViewModel.tabData,
-        upcomingViewModel.freeChatTab,
-    ) { items ->
-        items.toList()
-    }.collectAsState(initial = TimetablePage.values().map { TabData(it, 0) })
+    val tabData = viewModel.tabs.collectAsState(initial = TabData.initialValues())
     val refreshing = viewModel.isLoading.observeAsState(false)
     val onMenuClicked: (LiveVideo.Id) -> Unit = viewModel::onMenuClicked
     val listContents: List<LazyListScope.() -> Unit> = TimetablePage.values().map {
-        when (it) {
-            TimetablePage.OnAir -> {
-                val onAir = onAirViewModel.items.collectAsState(emptyList())
-                return@map { simpleContent({ onAir.value }, onListItemClicked, onMenuClicked) }
+        when (it.type) {
+            TimetablePage.Type.SIMPLE -> {
+                val item = viewModel.getSimpleItemList(it).collectAsState(initial = emptyList())
+                return@map { simpleContent({ item.value }, onListItemClicked, onMenuClicked) }
             }
 
-            TimetablePage.Upcoming -> {
-                val upcoming = upcomingViewModel.items.collectAsState(emptyMap())
-                return@map { groupedContent({ upcoming.value }, onListItemClicked, onMenuClicked) }
-            }
-
-            TimetablePage.FreeChat -> {
-                val freeChat = upcomingViewModel.freeChat.collectAsState(emptyList())
-                return@map { simpleContent({ freeChat.value }, onListItemClicked, onMenuClicked) }
+            TimetablePage.Type.GROUPED -> {
+                val item = viewModel.getGroupedItemList(it).collectAsState(initial = emptyMap())
+                return@map { groupedContent({ item.value }, onListItemClicked, onMenuClicked) }
             }
         }
     }
@@ -187,10 +171,17 @@ private fun TimetableTabScreen(
 class TabData(
     private val page: TimetablePage,
     private val count: Int
-) {
+) : Comparable<TabData> {
     @Composable
     @ReadOnlyComposable
     fun text(): String = stringResource(id = page.textRes, count)
+    override fun compareTo(other: TabData): Int = page.ordinal - other.page.ordinal
+
+    companion object {
+        fun initialValues(): List<TabData> {
+            return TimetablePage.values().map { TabData(it, 0) }
+        }
+    }
 }
 
 @LightModePreview

@@ -1,10 +1,10 @@
 package com.freshdigitable.yttt
 
-enum class TimetablePage {
+enum class TimetablePage(val type: Type = Type.SIMPLE) {
     OnAir {
         override val textRes: Int = R.string.tab_onAir
     },
-    Upcoming {
+    Upcoming(type = Type.GROUPED) {
         override val textRes: Int = R.string.tab_upcoming
     },
     FreeChat {
@@ -13,4 +13,6 @@ enum class TimetablePage {
     ;
 
     abstract val textRes: Int
+
+    enum class Type { SIMPLE, GROUPED, }
 }
