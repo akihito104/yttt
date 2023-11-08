@@ -21,13 +21,7 @@ import com.freshdigitable.yttt.data.model.toLocalDateTime
 import com.freshdigitable.yttt.data.model.toTwitchVideoList
 import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.multibindings.IntoSet
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -44,15 +38,14 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
-import javax.inject.Qualifier
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val liveRepository: YouTubeLiveRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     private val findLiveVideoFromTwitch: FindLiveVideoFromTwitchUseCase,
-    timetableTabViewModel: TimetableTabViewModelImpl,
-) : ViewModel(), TimetableTabViewModel by timetableTabViewModel {
+    timetablePageFacade: TimetablePageFacade,
+) : ViewModel(), TimetablePageFacade by timetablePageFacade {
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
     val canUpdate: Boolean
@@ -242,112 +235,86 @@ class FetchTwitchStreamUseCase @Inject constructor(
     }
 }
 
-@InstallIn(ViewModelComponent::class)
-@Module
-interface FetchStreamUseCaseModules {
-    @Binds
-    @IntoSet
-    fun bindYouTubeStreamUseCase(useCase: FetchYouTubeStreamUseCase): FetchStreamUseCase
-
-    @Binds
-    @IntoSet
-    fun bindTwitchStreamUseCase(useCase: FetchTwitchStreamUseCase): FetchStreamUseCase
-}
-
-interface TimetableTabViewModel {
+interface TimetablePageFacade {
     fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo>>
     fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<LiveVideo>>>
     val tabs: Flow<List<TabData>>
 }
 
-@Target(AnnotationTarget.FUNCTION, AnnotationTarget.VALUE_PARAMETER)
-@Qualifier
-annotation class TimetableTabQualifier(val page: TimetablePage)
+interface FetchTimetableItemSourceUseCase {
+    operator fun invoke(): Flow<List<LiveVideo>>
+}
 
-@InstallIn(ViewModelComponent::class)
-@Module
-object TimetableTabModules {
-    @Provides
-    @TimetableTabQualifier(TimetablePage.OnAir)
-    @IntoSet
-    fun provideTwitchOnAirItemList(repository: TwitchLiveRepository): Flow<List<LiveVideo>> =
-        repository.onAir.map {
-            it.map { s ->
+class FetchTwitchOnAirItemSourceUseCase @Inject constructor(
+    private val repository: TwitchLiveRepository,
+) : FetchTimetableItemSourceUseCase {
+    override operator fun invoke(): Flow<List<LiveVideo>> = repository.onAir.map {
+        it.map { s ->
+            val user = s.user as? TwitchUserDetail
+                ?: repository.findUsersById(listOf(s.user.id)).first()
+            s.toLiveVideo(user)
+        }
+    }
+}
+
+class FetchYouTubeOnAirItemSourceUseCase @Inject constructor(
+    private val repository: YouTubeLiveRepository,
+) : FetchTimetableItemSourceUseCase {
+    override fun invoke(): Flow<List<LiveVideo>> =
+        repository.videos.map { v -> v.filter { it.isNowOnAir() } }
+}
+
+class FetchYouTubeUpcomingItemSourceUseCase @Inject constructor(
+    private val repository: YouTubeLiveRepository,
+) : FetchTimetableItemSourceUseCase {
+    override fun invoke(): Flow<List<LiveVideo>> =
+        repository.videos.map { v -> v.filter { it.isUpcoming() } }
+}
+
+class FetchTwitchUpcomingItemSourceUseCase @Inject constructor(
+    private val repository: TwitchLiveRepository,
+) : FetchTimetableItemSourceUseCase {
+    override fun invoke(): Flow<List<LiveVideo>> = repository.upcoming.map { u ->
+        val week = Instant.now().plus(Duration.ofDays(7L))
+        u.map { s -> s.toTwitchVideoList() }.flatten()
+            .filter { it.schedule.startTime.isBefore(week) }
+            .map { s ->
                 val user = s.user as? TwitchUserDetail
                     ?: repository.findUsersById(listOf(s.user.id)).first()
                 s.toLiveVideo(user)
             }
-        }
-
-    @Provides
-    @TimetableTabQualifier(TimetablePage.OnAir)
-    @IntoSet
-    fun provideYouTubeOnAirItemList(repository: YouTubeLiveRepository): Flow<List<LiveVideo>> =
-        repository.videos.map { v -> v.filter { it.isNowOnAir() } }
-
-    @Provides
-    @TimetableTabQualifier(TimetablePage.Upcoming)
-    @IntoSet
-    fun provideYouTubeUpcomingItemList(repository: YouTubeLiveRepository): Flow<List<LiveVideo>> =
-        repository.videos.map { v -> v.filter { it.isUpcoming() } }
-
-    @Provides
-    @TimetableTabQualifier(TimetablePage.Upcoming)
-    @IntoSet
-    fun provideTwitchUpcomingItemList(repository: TwitchLiveRepository): Flow<List<LiveVideo>> =
-        repository.upcoming.map { u ->
-            val week = Instant.now().plus(Duration.ofDays(7L))
-            u.map { s -> s.toTwitchVideoList() }.flatten()
-                .filter { it.schedule.startTime.isBefore(week) }
-                .map { s ->
-                    val user = s.user as? TwitchUserDetail
-                        ?: repository.findUsersById(listOf(s.user.id)).first()
-                    s.toLiveVideo(user)
-                }
-        }
-
-    @Provides
-    @TimetableTabQualifier(TimetablePage.FreeChat)
-    @IntoSet
-    fun provideYouTubeFreeChatItemList(repository: YouTubeLiveRepository): Flow<List<LiveVideo>> =
-        repository.videos.map { v -> v.filter { it.isFreeChat == true } }
-
-    @Provides
-    fun provideItemList(
-        @TimetableTabQualifier(TimetablePage.OnAir) onAirItems: Set<@JvmSuppressWildcards Flow<List<LiveVideo>>>,
-        @TimetableTabQualifier(TimetablePage.Upcoming) upcomingItems: Set<@JvmSuppressWildcards Flow<List<LiveVideo>>>,
-        @TimetableTabQualifier(TimetablePage.FreeChat) freeChatItems: Set<@JvmSuppressWildcards Flow<List<LiveVideo>>>,
-    ): Map<TimetablePage, Flow<List<LiveVideo>>> {
-        return mapOf(
-            TimetablePage.OnAir to combine(onAirItems) { i -> i.flatMap { it } },
-            TimetablePage.Upcoming to combine(upcomingItems) { i -> i.flatMap { it } },
-            TimetablePage.FreeChat to combine(freeChatItems) { i -> i.flatMap { it } },
-        )
     }
 }
 
-class TimetableTabViewModelImpl @Inject constructor(
-    items: Map<TimetablePage, @JvmSuppressWildcards Flow<List<LiveVideo>>>,
+class FetchYouTubeFreeChatItemSourceUseCase @Inject constructor(
+    private val repository: YouTubeLiveRepository,
+) : FetchTimetableItemSourceUseCase {
+    override fun invoke(): Flow<List<LiveVideo>> =
+        repository.videos.map { v -> v.filter { it.isFreeChat == true } }
+}
+
+class TimetablePageFacadeImpl @Inject constructor(
+    items: Map<TimetablePage, @JvmSuppressWildcards Set<FetchTimetableItemSourceUseCase>>,
     prefs: AndroidPreferencesDataStore,
-) : TimetableTabViewModel {
-    private val mapperTable =
-        mapOf<TimetablePage, (List<LiveVideo>) -> List<LiveVideo>>(
-            TimetablePage.OnAir to { i ->
-                i.filter { it.isNowOnAir() }
-                    .sortedByDescending { it.actualStartDateTime }
-            },
-            TimetablePage.Upcoming to { i ->
-                i.filter { it.isUpcoming() && it.isFreeChat != true }
-                    .sortedBy { it.scheduledStartDateTime }
-            },
-            TimetablePage.FreeChat to { i ->
-                i.sortedBy { it.channel.id.value }
-            },
-        )
+) : TimetablePageFacade {
+    private val mapperTable = mapOf<TimetablePage, (List<LiveVideo>) -> List<LiveVideo>>(
+        TimetablePage.OnAir to { i ->
+            i.filter { it.isNowOnAir() }
+                .sortedByDescending { it.actualStartDateTime }
+        },
+        TimetablePage.Upcoming to { i ->
+            i.filter { it.isUpcoming() && it.isFreeChat != true }
+                .sortedBy { it.scheduledStartDateTime }
+        },
+        TimetablePage.FreeChat to { i ->
+            i.sortedBy { it.channel.id.value }
+        },
+    )
     private val sourceTable: Map<TimetablePage, Flow<List<LiveVideo>>> = items.entries
-        .associate { i ->
-            i.key to combine(i.value) { v -> v.flatMap { it } }
-                .map { checkNotNull(mapperTable[i.key]).invoke(it) }
+        .associate { (p, uc) ->
+            val mapper = checkNotNull(mapperTable[p])
+            p to combine(uc.map { it() }) { v -> v.flatMap { it } }
+                .map { mapper(it) }
         }
 
     override fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo>> =
