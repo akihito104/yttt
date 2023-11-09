@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.di
 import com.freshdigitable.yttt.FetchTimetableItemSourceUseCase
 import com.freshdigitable.yttt.FetchTwitchOnAirItemSourceUseCase
 import com.freshdigitable.yttt.FetchTwitchUpcomingItemSourceUseCase
+import com.freshdigitable.yttt.FetchYouTubeFreeChatItemSourceUseCase
 import com.freshdigitable.yttt.FetchYouTubeOnAirItemSourceUseCase
 import com.freshdigitable.yttt.FetchYouTubeUpcomingItemSourceUseCase
 import com.freshdigitable.yttt.TimetablePage
@@ -76,5 +77,5 @@ interface TimetableTabModules {
     @Binds
     @IntoSet
     @TimetableTabQualifier(TimetablePage.FreeChat)
-    fun bindFetchYouTubeFreeChatItemSourceUseCase(useCase: FetchYouTubeUpcomingItemSourceUseCase): FetchTimetableItemSourceUseCase
+    fun bindFetchYouTubeFreeChatItemSourceUseCase(useCase: FetchYouTubeFreeChatItemSourceUseCase): FetchTimetableItemSourceUseCase
 }
