@@ -25,7 +25,7 @@ import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
-class MainViewModel @Inject constructor(
+class TimetableTabViewModel @Inject constructor(
     private val liveRepository: YouTubeLiveRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     private val findLiveVideoFromTwitch: FindLiveVideoFromTwitchUseCase,
@@ -115,6 +115,6 @@ class MainViewModel @Inject constructor(
 
     companion object {
         @Suppress("unused")
-        private val TAG = MainViewModel::class.java.simpleName
+        private val TAG = TimetableTabViewModel::class.java.simpleName
     }
 }

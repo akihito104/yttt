@@ -33,8 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.freshdigitable.yttt.MainViewModel
 import com.freshdigitable.yttt.TimetablePage
+import com.freshdigitable.yttt.TimetableTabViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
 import kotlinx.coroutines.launch
@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableTabScreen(
-    viewModel: MainViewModel = hiltViewModel(),
+    viewModel: TimetableTabViewModel = hiltViewModel(),
     onListItemClicked: (LiveVideo.Id) -> Unit,
 ) {
     LaunchedEffect(Unit) {
