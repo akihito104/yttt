@@ -8,45 +8,45 @@ import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelAddition
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveChannelLog
-import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelAddition
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import java.math.BigInteger
 import java.time.Instant
 
 @Entity(tableName = "channel")
-data class LiveChannelTable(
+data class YouTubeChannelTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
-    override val id: LiveChannel.Id,
+    override val id: YouTubeChannel.Id,
     @ColumnInfo(name = "title", defaultValue = "")
     override val title: String = "",
     @ColumnInfo(name = "icon", defaultValue = "")
     override val iconUrl: String = "",
-) : LiveChannel
+) : YouTubeChannel
 
 @Entity(
     tableName = "channel_addition",
     foreignKeys = [
         ForeignKey(
-            entity = LiveChannelTable::class,
+            entity = YouTubeChannelTable::class,
             parentColumns = ["id"],
             childColumns = ["id"],
         ),
         ForeignKey(
-            entity = LivePlaylistTable::class,
+            entity = YouTubePlaylistTable::class,
             parentColumns = ["id"],
             childColumns = ["uploaded_playlist_id"],
         ),
     ],
 )
-data class LiveChannelAdditionTable(
+data class YouTubeChannelAdditionTable(
     @PrimaryKey
     @ColumnInfo(name = "id")
-    val id: LiveChannel.Id,
+    val id: YouTubeChannel.Id,
     @ColumnInfo(name = "banner_url")
     override val bannerUrl: String?,
     @ColumnInfo(name = "subscriber_count")
@@ -66,8 +66,8 @@ data class LiveChannelAdditionTable(
     @ColumnInfo(name = "description")
     override val description: String?,
     @ColumnInfo(name = "uploaded_playlist_id", index = true)
-    override val uploadedPlayList: LivePlaylist.Id?,
-) : LiveChannelAddition {
+    override val uploadedPlayList: YouTubePlaylist.Id?,
+) : YouTubeChannelAddition {
     override val keywords: Collection<String>
         get() = keywordsRaw.split(",", " ")
 }
@@ -76,44 +76,44 @@ data class LiveChannelAdditionTable(
     "SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id",
     viewName = "channel_detail",
 )
-data class LiveChannelDetailDbView(
+data class YouTubeChannelDetailDbView(
     @ColumnInfo(name = "title")
     override val title: String,
     @ColumnInfo(name = "icon")
     override val iconUrl: String,
     @Embedded
-    val addition: LiveChannelAdditionTable,
-) : LiveChannelDetail, LiveChannel, LiveChannelAddition by addition {
+    val addition: YouTubeChannelAdditionTable,
+) : YouTubeChannelDetail, YouTubeChannel, YouTubeChannelAddition by addition {
     @Ignore
-    override val id: LiveChannel.Id = addition.id
+    override val id: YouTubeChannel.Id = addition.id
 }
 
 @Entity(
     tableName = "channel_log",
     foreignKeys = [
         ForeignKey(
-            entity = LiveChannelTable::class,
+            entity = YouTubeChannelTable::class,
             parentColumns = ["id"],
             childColumns = ["channel_id"],
         ),
         ForeignKey(
-            entity = LiveVideoTable::class,
+            entity = YouTubeVideoTable::class,
             parentColumns = ["id"],
             childColumns = ["video_id"],
         ),
     ],
     indices = [Index("channel_id"), Index("video_id")],
 )
-data class LiveChannelLogTable(
+data class YouTubeChannelLogTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
-    override val id: LiveChannelLog.Id,
+    override val id: YouTubeChannelLog.Id,
     @ColumnInfo(name = "datetime")
     override val dateTime: Instant,
     @ColumnInfo(name = "video_id")
-    override val videoId: LiveVideo.Id,
+    override val videoId: YouTubeVideo.Id,
     @ColumnInfo(name = "channel_id")
-    override val channelId: LiveChannel.Id,
+    override val channelId: YouTubeChannel.Id,
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     override val thumbnailUrl: String = "",
-) : LiveChannelLog
+) : YouTubeChannelLog

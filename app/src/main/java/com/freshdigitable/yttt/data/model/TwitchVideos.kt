@@ -81,7 +81,7 @@ data class TwitchStreamSchedule(
 ) : TwitchVideo<TwitchChannelSchedule.Stream.Id> {
     override val id: TwitchChannelSchedule.Stream.Id get() = schedule.id
     override val title: String get() = schedule.title
-    override val url: String = "https://twitch.tv/${user.loginName}"
+    override val url: String get() = "https://twitch.tv/${user.loginName}/schedule?seriesID=${id.value}"
     override val thumbnailUrlBase: String = ""
     override val viewCount: Int = 0
     override val language: String = ""

@@ -3,9 +3,9 @@ package com.freshdigitable.yttt
 import android.util.Log
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
-import com.freshdigitable.yttt.data.YouTubeLiveRepository
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,7 +18,7 @@ interface FetchStreamUseCase {
 }
 
 class FetchYouTubeStreamUseCase @Inject constructor(
-    private val liveRepository: YouTubeLiveRepository,
+    private val liveRepository: YouTubeRepository,
     private val accountRepository: AccountRepository,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke() {
@@ -55,7 +55,7 @@ class FetchYouTubeStreamUseCase @Inject constructor(
         liveRepository.fetchVideoList(ids)
     }
 
-    private suspend fun fetchVideoTask(channelDetail: LiveChannelDetail): List<LiveVideo.Id> {
+    private suspend fun fetchVideoTask(channelDetail: YouTubeChannelDetail): List<YouTubeVideo.Id> {
         val id = channelDetail.uploadedPlayList ?: return emptyList()
         try {
             val ids = liveRepository.fetchVideoIdListByPlaylistId(id)

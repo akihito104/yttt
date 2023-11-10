@@ -7,18 +7,18 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import androidx.room.Relation
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.model.LivePlaylistItem
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import java.time.Duration
 import java.time.Instant
 
 @Entity(tableName = "playlist")
-class LivePlaylistTable(
+class YouTubePlaylistTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
-    val id: LivePlaylist.Id,
+    val id: YouTubePlaylist.Id,
     @ColumnInfo(name = "last_modified")
     val lastModified: Instant = Instant.now(),
     @ColumnInfo(name = "max_age")
@@ -33,8 +33,8 @@ class LivePlaylistTable(
         fun getMaxAgeUpperLimit(isPublishedRecently: Boolean): Duration =
             if (isPublishedRecently) MAX_AGE_FOR_ACTIVE_ACCOUNT else MAX_AGE_MAX
 
-        fun createWithMaxAge(id: LivePlaylist.Id): LivePlaylistTable =
-            LivePlaylistTable(id, maxAge = MAX_AGE_MAX)
+        fun createWithMaxAge(id: YouTubePlaylist.Id): YouTubePlaylistTable =
+            YouTubePlaylistTable(id, maxAge = MAX_AGE_MAX)
     }
 }
 
@@ -42,30 +42,30 @@ class LivePlaylistTable(
     tableName = "playlist_item",
     foreignKeys = [
         ForeignKey(
-            entity = LivePlaylistTable::class,
+            entity = YouTubePlaylistTable::class,
             parentColumns = ["id"],
             childColumns = ["playlist_id"],
         ),
     ]
 )
-class LivePlaylistItemTable(
+class YouTubePlaylistItemTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
-    val id: LivePlaylistItem.Id,
+    val id: YouTubePlaylistItem.Id,
     @ColumnInfo(name = "playlist_id", index = true)
-    val playlistId: LivePlaylist.Id,
+    val playlistId: YouTubePlaylist.Id,
     @ColumnInfo(name = "title")
     val title: String,
     @ColumnInfo(name = "channel_id")
-    val channelId: LiveChannel.Id,
+    val channelId: YouTubeChannel.Id,
     @ColumnInfo(name = "thumbnail_url")
     val thumbnailUrl: String,
     @ColumnInfo(name = "video_id")
-    val videoId: LiveVideo.Id,
+    val videoId: YouTubeVideo.Id,
     @ColumnInfo(name = "description")
     val description: String,
     @ColumnInfo(name = "video_owner_channel_id", defaultValue = "null")
-    val videoOwnerChannelId: LiveChannel.Id? = null,
+    val videoOwnerChannelId: YouTubeChannel.Id? = null,
     @ColumnInfo(name = "published_at")
     val publishedAt: Instant,
 )
@@ -75,28 +75,28 @@ class LivePlaylistItemTable(
         " INNER JOIN channel AS c ON c.id = p.channel_id",
     viewName = "playlist_item_view",
 )
-data class LivePlaylistItemDb(
+data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "id")
-    override val id: LivePlaylistItem.Id,
+    override val id: YouTubePlaylistItem.Id,
     @ColumnInfo(name = "playlist_id")
-    override val playlistId: LivePlaylist.Id,
+    override val playlistId: YouTubePlaylist.Id,
     @ColumnInfo(name = "title")
     override val title: String,
     @Embedded(prefix = "channel_")
-    override val channel: LiveChannelTable,
+    override val channel: YouTubeChannelTable,
     @ColumnInfo(name = "thumbnail_url")
     override val thumbnailUrl: String,
     @ColumnInfo(name = "video_id")
-    override val videoId: LiveVideo.Id,
+    override val videoId: YouTubeVideo.Id,
     @ColumnInfo(name = "description")
     override val description: String,
     @ColumnInfo(name = "video_owner_channel_id")
-    override val videoOwnerChannelId: LiveChannel.Id?,
+    override val videoOwnerChannelId: YouTubeChannel.Id?,
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
-) : LivePlaylistItem
+) : YouTubePlaylistItem
 
-fun LivePlaylistItem.toDbEntity(): LivePlaylistItemTable = LivePlaylistItemTable(
+fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(
     id,
     playlistId,
     title,
@@ -108,12 +108,12 @@ fun LivePlaylistItem.toDbEntity(): LivePlaylistItemTable = LivePlaylistItemTable
     publishedAt
 )
 
-data class LivePlaylistDb(
+data class YouTubePlaylistDb(
     @Embedded
-    val playlist: LivePlaylistTable,
+    val playlist: YouTubePlaylistTable,
     @Relation(
         parentColumn = "id",
         entityColumn = "playlist_id"
     )
-    val playlistItems: List<LivePlaylistItemDb>,
+    val playlistItems: List<YouTubePlaylistItemDb>,
 )

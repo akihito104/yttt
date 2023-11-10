@@ -44,13 +44,13 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
-import com.freshdigitable.yttt.data.model.LiveChannelEntity
-import com.freshdigitable.yttt.data.model.LiveChannelSection
-import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.model.LivePlaylistItem
-import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
+import com.freshdigitable.yttt.data.model.YouTubeChannelSection
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import kotlinx.coroutines.launch
@@ -286,7 +286,7 @@ fun VideoListItem(
 }
 
 @Composable
-private fun ChannelSectionContent(cs: LiveChannelSection) {
+private fun ChannelSectionContent(cs: YouTubeChannelSection) {
     Column {
         Text(text = cs.title ?: cs.type.name)
         LazyRow(
@@ -321,7 +321,7 @@ private fun ChannelSectionContent(cs: LiveChannelSection) {
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun SinglePlaylistContent(item: LivePlaylistItem, modifier: Modifier = Modifier) {
+fun SinglePlaylistContent(item: YouTubePlaylistItem, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         GlideImage(
             model = item.thumbnailUrl,
@@ -339,7 +339,7 @@ fun SinglePlaylistContent(item: LivePlaylistItem, modifier: Modifier = Modifier)
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun MultiPlaylistContent(item: LivePlaylist, modifier: Modifier = Modifier) {
+fun MultiPlaylistContent(item: YouTubePlaylist, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         GlideImage(
             model = item.thumbnailUrl,
@@ -410,7 +410,7 @@ fun ChannelScreenPreview() {
                 customUrl = "@custom_url",
                 keywords = emptyList(),
                 description = "description is here.",
-                uploadedPlayList = LivePlaylist.Id("a"),
+                uploadedPlayList = YouTubePlaylist.Id("a"),
             )
         }) {
             PlainTextPage { "text here." }
@@ -425,19 +425,19 @@ private fun LazyColumnPreview() {
         PlainListPage(
             listProvider = {
                 listOf("a", "b", "c").mapIndexed { i, title ->
-                    object : LivePlaylistItem by LivePlaylistItemEntity(
-                        id = LivePlaylistItem.Id(title),
-                        playlistId = LivePlaylist.Id("d"),
+                    object : YouTubePlaylistItem by YouTubePlaylistItemEntity(
+                        id = YouTubePlaylistItem.Id(title),
+                        playlistId = YouTubePlaylist.Id("d"),
                         title = "title($i)",
-                        channel = LiveChannelEntity(
-                            id = LiveChannel.Id("e"),
+                        channel = YouTubeChannelEntity(
+                            id = YouTubeChannel.Id("e"),
                             title = "channel title",
                             iconUrl = "",
                         ),
-                        videoId = LiveVideo.Id("f", LivePlatform.YOUTUBE),
+                        videoId = YouTubeVideo.Id("f"),
                         thumbnailUrl = "",
                         description = "description",
-                        videoOwnerChannelId = LiveChannel.Id("e"),
+                        videoOwnerChannelId = YouTubeChannel.Id("e"),
                         publishedAt = Instant.now(),
                     ) {
                         override fun toString(): String = "id: $id"

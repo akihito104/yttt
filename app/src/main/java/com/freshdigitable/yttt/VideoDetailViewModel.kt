@@ -5,12 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.TwitchLiveRepository
-import com.freshdigitable.yttt.data.YouTubeLiveRepository
+import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelDetail
+import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,23 +22,23 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VideoDetailViewModel @Inject constructor(
-    private val repository: YouTubeLiveRepository,
+    private val repository: YouTubeRepository,
     private val twitchRepository: TwitchLiveRepository,
-    private val findLiveVideoFromTwitch: FindLiveVideoFromTwitchUseCase,
+    private val findLiveVideoTable: Map<LivePlatform, @JvmSuppressWildcards FindLiveVideoUseCase>,
 ) : ViewModel() {
     fun fetchViewDetail(id: LiveVideo.Id): LiveData<LiveVideo?> {
         return liveData(viewModelScope.coroutineContext) {
-            val detail = when (id.platform) {
-                LivePlatform.YOUTUBE -> repository.fetchVideoDetail(id)
-                LivePlatform.TWITCH -> findLiveVideoFromTwitch(id)
-            }
+            val detail = checkNotNull(findLiveVideoTable[id.platform]).invoke(id)
             if (detail == null) { // TODO: informing video is not found
                 emit(null)
                 return@liveData
             }
             val channel = when (id.platform) {
-                LivePlatform.YOUTUBE -> repository.fetchChannelList(listOf(detail.channel.id))
-                    .first()
+                LivePlatform.YOUTUBE -> {
+                    val c = repository.fetchChannelList(listOf(detail.channel.id.mapTo()))
+                        .first()
+                    c.toLiveChannelDetail()
+                }
 
                 LivePlatform.TWITCH -> {
                     val tid = detail.channel.id.mapTo<TwitchUser.Id>()
@@ -57,3 +60,19 @@ class VideoDetailViewModel @Inject constructor(
         }
     }
 }
+
+private fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
+    id = LiveChannel.Id(id.value, id.platform),
+    title = title,
+    iconUrl = iconUrl,
+    bannerUrl = bannerUrl,
+    subscriberCount = subscriberCount,
+    isSubscriberHidden = isSubscriberHidden,
+    viewsCount = videoCount,
+    videoCount = viewsCount,
+    publishedAt = publishedAt,
+    customUrl = customUrl,
+    keywords = keywords,
+    description = description,
+    uploadedPlayList = uploadedPlayList
+)

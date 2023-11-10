@@ -7,10 +7,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TimetableMenuItem
-import com.freshdigitable.yttt.data.YouTubeLiveRepository
+import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.mapTo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -26,9 +27,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TimetableTabViewModel @Inject constructor(
-    private val liveRepository: YouTubeLiveRepository,
+    private val liveRepository: YouTubeRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
-    private val findLiveVideoFromTwitch: FindLiveVideoFromTwitchUseCase,
+    private val findLiveVideoTable: Map<LivePlatform, @JvmSuppressWildcards FindLiveVideoUseCase>,
     timetablePageFacade: TimetablePageFacade,
 ) : ViewModel(), TimetablePageFacade by timetablePageFacade {
     private val _isLoading = MutableLiveData(false)
@@ -61,11 +62,9 @@ class TimetableTabViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun onMenuClicked(id: LiveVideo.Id) {
+        val findLiveVideo = checkNotNull(findLiveVideoTable[id.platform])
         viewModelScope.launch {
-            val v = when (id.platform) {
-                LivePlatform.YOUTUBE -> liveRepository.fetchVideoDetail(id)
-                LivePlatform.TWITCH -> findLiveVideoFromTwitch(id)
-            }
+            val v = findLiveVideo(id)
             _selectedItem.value = v
         }
     }
@@ -103,13 +102,13 @@ class TimetableTabViewModel @Inject constructor(
 
     private fun checkAsFreeChat(id: LiveVideo.Id) {
         viewModelScope.launch {
-            liveRepository.addFreeChatItems(listOf(id))
+            liveRepository.addFreeChatItems(listOf(id.mapTo()))
         }
     }
 
     private fun uncheckAsFreeChat(id: LiveVideo.Id) {
         viewModelScope.launch {
-            liveRepository.removeFreeChatItems(listOf(id))
+            liveRepository.removeFreeChatItems(listOf(id.mapTo()))
         }
     }
 

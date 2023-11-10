@@ -6,21 +6,24 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.TwitchLiveRepository
-import com.freshdigitable.yttt.data.YouTubeLiveRepository
+import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 @HiltViewModel
 class SubscriptionListViewModel @Inject constructor(
-    repository: YouTubeLiveRepository,
+    repository: YouTubeRepository,
     twitchRepository: TwitchLiveRepository,
 ) : ViewModel() {
-    val subscriptions: LiveData<List<LiveSubscription>> =
-        repository.subscriptions.asLiveData(viewModelScope.coroutineContext)
+    val subscriptions: LiveData<List<LiveSubscription>> = repository.subscriptions
+        .map { i -> i.map { it.toLiveSubscription() } }
+        .asLiveData(viewModelScope.coroutineContext)
     val twitchSubs: LiveData<List<LiveSubscription>> = liveData {
         val me = twitchRepository.fetchMe()
         if (me == null) {
@@ -43,3 +46,10 @@ fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): Li
         subscribeSince = followedAt,
     )
 }
+
+fun YouTubeSubscription.toLiveSubscription(): LiveSubscription = LiveSubscriptionEntity(
+    id = LiveSubscription.Id(id.value, id.platform),
+    channel = channel.toLiveChannel(),
+    subscribeSince = subscribeSince,
+    order = order,
+)

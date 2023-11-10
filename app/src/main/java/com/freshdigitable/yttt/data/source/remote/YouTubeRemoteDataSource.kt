@@ -2,23 +2,22 @@ package com.freshdigitable.yttt.data.source.remote
 
 import android.util.Log
 import com.freshdigitable.yttt.data.model.IdBase
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveChannelEntity
-import com.freshdigitable.yttt.data.model.LiveChannelLog
-import com.freshdigitable.yttt.data.model.LiveChannelLogEntity
-import com.freshdigitable.yttt.data.model.LiveChannelSection
-import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.model.LivePlaylistItem
-import com.freshdigitable.yttt.data.model.LivePlaylistItemEntity
-import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
-import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelLogEntity
+import com.freshdigitable.yttt.data.model.YouTubeChannelSection
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionEntity
+import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
+import com.freshdigitable.yttt.data.model.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.AccountLocalDataSource
-import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
+import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpRequest
@@ -47,17 +46,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YouTubeLiveRemoteDataSource @Inject constructor(
+class YouTubeRemoteDataSource @Inject constructor(
     httpRequestInitializer: HttpRequestInitializer,
     private val coroutineScope: CoroutineScope,
-) : YoutubeLiveDataSource {
+) : YoutubeDataSource {
     private val youtube = YouTube.Builder(
         NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
     ).build()
 
     override suspend fun fetchAllSubscribe(
         maxResult: Long,
-    ): List<LiveSubscription> = fetchAllItems(
+    ): List<YouTubeSubscription> = fetchAllItems(
         requestParams = { token ->
             subscriptions()
                 .list(listOf(PART_SNIPPET))
@@ -70,10 +69,10 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
     ).mapIndexed { i, s -> s.toLiveSubscription(i) }
 
     override suspend fun fetchLiveChannelLogs(
-        channelId: LiveChannel.Id,
+        channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
-        maxResult: Long?,
-    ): List<LiveChannelLog> = fetchAllItems(
+        maxResult: Long?
+    ): List<YouTubeChannelLog> = fetchAllItems(
         requestParams = { token ->
             activities()
                 .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
@@ -92,37 +91,36 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
     ).filter { it.contentDetails?.upload != null }
         .map { it.toChannelLog() }
 
-    override suspend fun fetchVideoList(
-        ids: Collection<LiveVideo.Id>,
-    ): List<LiveVideoDetail> = fetchList(ids, getItems = { items }) { chunked ->
-        videos()
-            .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
-            .setId(chunked.map { it.value })
-            .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-    }.map { it.toLiveVideo() }
+    override suspend fun fetchVideoList(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideoDetail> =
+        fetchList(ids, getItems = { items }) { chunked ->
+            videos()
+                .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
+                .setId(chunked.map { it.value })
+                .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
+        }.map { it.toLiveVideo() }
 
     suspend fun fetchChannelList(
-        ids: Collection<LiveChannel.Id>,
-    ): List<LiveChannelDetail> = fetchList(ids, getItems = { items }) { chunked ->
+        ids: Collection<YouTubeChannel.Id>,
+    ): List<YouTubeChannelDetail> = fetchList(ids, getItems = { items }) { chunked ->
         channels()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
             .setId(chunked.map { it.value })
             .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-    }.map { LiveChannelImpl(it) }
+    }.map { YouTubeChannelImpl(it) }
 
     suspend fun fetchChannelSection(
-        channelId: LiveChannel.Id,
-    ): List<LiveChannelSection> = fetch {
+        channelId: YouTubeChannel.Id,
+    ): List<YouTubeChannelSection> = fetch {
         channelSections()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
             .setChannelId(channelId.value)
-    }.items.map { LiveChannelSectionImpl(it) }
+    }.items.map { YouTubeChannelSectionImpl(it) }
 
     suspend fun fetchPlaylistItems(
-        id: LivePlaylist.Id,
+        id: YouTubePlaylist.Id,
         maxResult: Long = 20,
         pageToken: String? = null,
-    ): List<LivePlaylistItem> = fetch {
+    ): List<YouTubePlaylistItem> = fetch {
         playlistItems()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
             .setPlaylistId(id.value)
@@ -131,8 +129,8 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
     }.items.map { it.toLivePlaylistItem() }
 
     suspend fun fetchPlaylist(
-        ids: Collection<LivePlaylist.Id>,
-    ): List<LivePlaylist> = fetchList(ids, getItems = { items }) { chunked ->
+        ids: Collection<YouTubePlaylist.Id>,
+    ): List<YouTubePlaylist> = fetchList(ids, getItems = { items }) { chunked ->
         playlists()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
             .setId(chunked.map { it.value })
@@ -176,15 +174,15 @@ class YouTubeLiveRemoteDataSource @Inject constructor(
         return withContext(Dispatchers.IO) { params.execute() }
     }
 
-    override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) =
+    override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) =
         throw UnsupportedOperationException()
 
-    override suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>) =
+    override suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>) =
         throw UnsupportedOperationException()
 
     companion object {
         @Suppress("unused")
-        private val TAG = YouTubeLiveRemoteDataSource::class.simpleName
+        private val TAG = YouTubeRemoteDataSource::class.simpleName
         private const val PART_SNIPPET = "snippet"
         private const val PART_CONTENT_DETAILS = "contentDetails"
         private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
@@ -206,32 +204,31 @@ internal class HttpRequestInitializerImpl(
     }
 }
 
-private fun liveChannelId(id: String): LiveChannel.Id = LiveChannel.Id(id, LivePlatform.YOUTUBE)
-private fun liveVideoId(id: String): LiveVideo.Id = LiveVideo.Id(id, LivePlatform.YOUTUBE)
-private fun Subscription.toLiveSubscription(order: Int): LiveSubscription = LiveSubscriptionEntity(
-    id = LiveSubscription.Id(id, LivePlatform.YOUTUBE),
-    subscribeSince = Instant.ofEpochMilli(snippet.publishedAt.value),
-    channel = LiveChannelEntity(
-        id = liveChannelId(snippet.resourceId.channelId),
-        iconUrl = snippet.thumbnails.url,
-        title = snippet.title,
-    ),
-    order = order,
-)
+private fun Subscription.toLiveSubscription(order: Int): YouTubeSubscription =
+    YouTubeSubscriptionEntity(
+        id = YouTubeSubscription.Id(id),
+        subscribeSince = Instant.ofEpochMilli(snippet.publishedAt.value),
+        channel = YouTubeChannelEntity(
+            id = YouTubeChannel.Id(snippet.resourceId.channelId),
+            iconUrl = snippet.thumbnails.url,
+            title = snippet.title,
+        ),
+        order = order,
+    )
 
-private fun Activity.toChannelLog(): LiveChannelLog = LiveChannelLogEntity(
-    id = LiveChannelLog.Id(id),
+private fun Activity.toChannelLog(): YouTubeChannelLog = YouTubeChannelLogEntity(
+    id = YouTubeChannelLog.Id(id),
     dateTime = Instant.ofEpochMilli(snippet.publishedAt.value),
-    videoId = liveVideoId(contentDetails.upload.videoId),
-    channelId = liveChannelId(snippet.channelId),
+    videoId = YouTubeVideo.Id(contentDetails.upload.videoId),
+    channelId = YouTubeChannel.Id(snippet.channelId),
     thumbnailUrl = snippet.thumbnails.url,
 )
 
-private fun Video.toLiveVideo(): LiveVideoDetail =
-    object : LiveVideoDetail, LiveVideo by LiveVideoEntity(
-        id = liveVideoId(id),
-        channel = LiveChannelEntity(
-            id = liveChannelId(snippet.channelId),
+private fun Video.toLiveVideo(): YouTubeVideoDetail =
+    object : YouTubeVideoDetail, YouTubeVideo by YouTubeVideoEntity(
+        id = YouTubeVideo.Id(id),
+        channel = YouTubeChannelEntity(
+            id = YouTubeChannel.Id(snippet.channelId),
             title = snippet.channelTitle,
             iconUrl = "",
         ),
@@ -254,10 +251,10 @@ private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
 private val ThumbnailDetails.url: String
     get() = (maxres ?: high ?: standard ?: medium ?: default)?.url ?: ""
 
-private data class LiveChannelImpl(
+private data class YouTubeChannelImpl(
     private val channel: Channel,
-) : LiveChannelDetail, LiveChannel by LiveChannelEntity(
-    id = liveChannelId(channel.id),
+) : YouTubeChannelDetail, YouTubeChannel by YouTubeChannelEntity(
+    id = YouTubeChannel.Id(channel.id),
     title = channel.snippet.title,
     iconUrl = channel.snippet.thumbnails.url,
 ) {
@@ -279,61 +276,61 @@ private data class LiveChannelImpl(
         get() = channel.snippet.publishedAt.toInstant()
     override val description: String?
         get() = channel.brandingSettings?.channel?.description
-    override val uploadedPlayList: LivePlaylist.Id?
-        get() = channel.contentDetails?.relatedPlaylists?.uploads?.let { LivePlaylist.Id(it) }
+    override val uploadedPlayList: YouTubePlaylist.Id?
+        get() = channel.contentDetails?.relatedPlaylists?.uploads?.let { YouTubePlaylist.Id(it) }
 
     override fun toString(): String = channel.toPrettyString()
 }
 
-private data class LiveChannelSectionImpl(
+private data class YouTubeChannelSectionImpl(
     private val channelSection: ChannelSection
-) : LiveChannelSection {
-    override val id: LiveChannelSection.Id
-        get() = LiveChannelSection.Id(channelSection.id)
-    override val channelId: LiveChannel.Id
-        get() = liveChannelId(channelSection.snippet.channelId)
+) : YouTubeChannelSection {
+    override val id: YouTubeChannelSection.Id
+        get() = YouTubeChannelSection.Id(channelSection.id)
+    override val channelId: YouTubeChannel.Id
+        get() = YouTubeChannel.Id(channelSection.snippet.channelId)
     override val title: String?
         get() = channelSection.snippet.title
     override val position: Long
         get() = channelSection.snippet.position
-    override val type: LiveChannelSection.Type
+    override val type: YouTubeChannelSection.Type
         get() = requireNotNull(channelSection.snippet.parseType()) { channelSection.snippet }
-    override val content: LiveChannelSection.Content<*>?
+    override val content: YouTubeChannelSection.Content<*>?
         get() = channelSection.parseContent()
 
     override fun toString(): String = channelSection.toPrettyString()
 
     companion object {
         private val typeTable = mapOf(
-            "allPlaylists" to LiveChannelSection.Type.ALL_PLAYLIST,
-            "completedEvents" to LiveChannelSection.Type.COMPLETED_EVENT,
-            "liveEvents" to LiveChannelSection.Type.LIVE_EVENT,
-            "multipleChannels" to LiveChannelSection.Type.MULTIPLE_CHANNEL,
-            "multiplePlaylists" to LiveChannelSection.Type.MULTIPLE_PLAYLIST,
-            "popularUploads" to LiveChannelSection.Type.POPULAR_UPLOAD,
-            "recentUploads" to LiveChannelSection.Type.RECENT_UPLOAD,
-            "singlePlaylist" to LiveChannelSection.Type.SINGLE_PLAYLIST,
-            "subscriptions" to LiveChannelSection.Type.SUBSCRIPTION,
-            "upcomingEvents" to LiveChannelSection.Type.UPCOMING_EVENT,
-            "channelsectiontypeundefined" to LiveChannelSection.Type.UNDEFINED,
+            "allPlaylists" to YouTubeChannelSection.Type.ALL_PLAYLIST,
+            "completedEvents" to YouTubeChannelSection.Type.COMPLETED_EVENT,
+            "liveEvents" to YouTubeChannelSection.Type.LIVE_EVENT,
+            "multipleChannels" to YouTubeChannelSection.Type.MULTIPLE_CHANNEL,
+            "multiplePlaylists" to YouTubeChannelSection.Type.MULTIPLE_PLAYLIST,
+            "popularUploads" to YouTubeChannelSection.Type.POPULAR_UPLOAD,
+            "recentUploads" to YouTubeChannelSection.Type.RECENT_UPLOAD,
+            "singlePlaylist" to YouTubeChannelSection.Type.SINGLE_PLAYLIST,
+            "subscriptions" to YouTubeChannelSection.Type.SUBSCRIPTION,
+            "upcomingEvents" to YouTubeChannelSection.Type.UPCOMING_EVENT,
+            "channelsectiontypeundefined" to YouTubeChannelSection.Type.UNDEFINED,
         )
 
-        private fun ChannelSectionSnippet.parseType(): LiveChannelSection.Type? {
+        private fun ChannelSectionSnippet.parseType(): YouTubeChannelSection.Type? {
             return typeTable[type]
                 ?: typeTable.entries.firstOrNull { it.key.lowercase() == type.lowercase() }?.value
         }
 
-        private fun ChannelSection.parseContent(): LiveChannelSection.Content<*>? {
+        private fun ChannelSection.parseContent(): YouTubeChannelSection.Content<*>? {
             if (contentDetails == null) {
                 return null
             }
             return when (requireNotNull(snippet.parseType()).metaType) {
-                LiveChannelSection.Content.Playlist::class -> LiveChannelSection.Content.Playlist(
-                    contentDetails.playlists.map { LivePlaylist.Id(it) }
+                YouTubeChannelSection.Content.Playlist::class -> YouTubeChannelSection.Content.Playlist(
+                    contentDetails.playlists.map { YouTubePlaylist.Id(it) }
                 )
 
-                LiveChannelSection.Content.Channels::class -> LiveChannelSection.Content.Channels(
-                    contentDetails.channels.map { liveChannelId(it) }
+                YouTubeChannelSection.Content.Channels::class -> YouTubeChannelSection.Content.Channels(
+                    contentDetails.channels.map { YouTubeChannel.Id(it) }
                 )
 
                 else -> throw IllegalStateException()
@@ -342,9 +339,9 @@ private data class LiveChannelSectionImpl(
     }
 }
 
-private fun Playlist.toLivePlaylist() = object : LivePlaylist {
-    override val id: LivePlaylist.Id
-        get() = LivePlaylist.Id(this@toLivePlaylist.id)
+private fun Playlist.toLivePlaylist() = object : YouTubePlaylist {
+    override val id: YouTubePlaylist.Id
+        get() = YouTubePlaylist.Id(this@toLivePlaylist.id)
     override val title: String
         get() = this@toLivePlaylist.snippet.title
     override val thumbnailUrl: String
@@ -353,20 +350,20 @@ private fun Playlist.toLivePlaylist() = object : LivePlaylist {
     override fun toString(): String = this@toLivePlaylist.toPrettyString()
 }
 
-private fun PlaylistItem.toLivePlaylistItem(): LivePlaylistItem =
-    object : LivePlaylistItem by LivePlaylistItemEntity(
-        id = LivePlaylistItem.Id(id),
-        playlistId = LivePlaylist.Id(snippet.playlistId),
+private fun PlaylistItem.toLivePlaylistItem(): YouTubePlaylistItem =
+    object : YouTubePlaylistItem by YouTubePlaylistItemEntity(
+        id = YouTubePlaylistItem.Id(id),
+        playlistId = YouTubePlaylist.Id(snippet.playlistId),
         title = snippet.title,
         thumbnailUrl = snippet.thumbnails?.url ?: "",
-        videoId = liveVideoId(contentDetails.videoId),
-        channel = LiveChannelEntity(
-            id = liveChannelId(snippet.channelId),
+        videoId = YouTubeVideo.Id(contentDetails.videoId),
+        channel = YouTubeChannelEntity(
+            id = YouTubeChannel.Id(snippet.channelId),
             title = snippet.channelTitle,
             iconUrl = "",
         ),
         description = snippet.description,
-        videoOwnerChannelId = snippet.videoOwnerChannelId?.let { liveChannelId(it) },
+        videoOwnerChannelId = snippet.videoOwnerChannelId?.let { YouTubeChannel.Id(it) },
         publishedAt = snippet.publishedAt.toInstant(),
     ) {
         override fun toString(): String = toPrettyString()

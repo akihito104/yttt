@@ -2,11 +2,11 @@ package com.freshdigitable.yttt.data.model
 
 import java.time.Instant
 
-interface LiveChannelLog {
+interface YouTubeChannelLog {
     val id: Id
     val dateTime: Instant
-    val videoId: LiveVideo.Id
-    val channelId: LiveChannel.Id
+    val videoId: YouTubeVideo.Id
+    val channelId: YouTubeChannel.Id
     val thumbnailUrl: String
 
     data class Id(override val value: String) : IdBase<String> {
@@ -14,10 +14,10 @@ interface LiveChannelLog {
     }
 }
 
-data class LiveChannelLogEntity(
-    override val id: LiveChannelLog.Id,
+data class YouTubeChannelLogEntity(
+    override val id: YouTubeChannelLog.Id,
     override val dateTime: Instant,
-    override val videoId: LiveVideo.Id,
-    override val channelId: LiveChannel.Id,
+    override val videoId: YouTubeVideo.Id,
+    override val channelId: YouTubeChannel.Id,
     override val thumbnailUrl: String,
-) : LiveChannelLog
+) : YouTubeChannelLog

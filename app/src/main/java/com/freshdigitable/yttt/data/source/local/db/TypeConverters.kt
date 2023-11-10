@@ -2,13 +2,12 @@ package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.TypeConverter
 import com.freshdigitable.yttt.data.model.IdBase
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelLog
-import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.model.LivePlaylistItem
-import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
@@ -37,22 +36,24 @@ class DurationConverter : Converter<Long, Duration>(
 abstract class IdConverter<E : IdBase<String>>(createObject: (String) -> E) :
     Converter<String, E>(serialize = { it.value }, createObject = createObject)
 
-class LiveChannelIdConverter :
-    IdConverter<LiveChannel.Id>(createObject = { LiveChannel.Id(it, LivePlatform.YOUTUBE) })
+class YouTubeChannelIdConverter :
+    IdConverter<YouTubeChannel.Id>(createObject = { YouTubeChannel.Id(it) })
 
-class LiveSubscriptionIdConverter : IdConverter<LiveSubscription.Id>(
-    createObject = { LiveSubscription.Id(it, LivePlatform.YOUTUBE) }
+class YouTubeSubscriptionIdConverter : IdConverter<YouTubeSubscription.Id>(
+    createObject = { YouTubeSubscription.Id(it) }
 )
 
-class LiveVideoIdConverter :
-    IdConverter<LiveVideo.Id>(createObject = { LiveVideo.Id(it, LivePlatform.YOUTUBE) })
+class YouTubeVideoIdConverter :
+    IdConverter<YouTubeVideo.Id>(createObject = { YouTubeVideo.Id(it) })
 
-class LiveChannelLogIdConverter :
-    IdConverter<LiveChannelLog.Id>(createObject = { LiveChannelLog.Id(it) })
+class YouTubeChannelLogIdConverter :
+    IdConverter<YouTubeChannelLog.Id>(createObject = { YouTubeChannelLog.Id(it) })
 
-class LivePlaylistIdConverter : IdConverter<LivePlaylist.Id>(createObject = { LivePlaylist.Id(it) })
-class LivePlaylistItemIdConverter :
-    IdConverter<LivePlaylistItem.Id>(createObject = { LivePlaylistItem.Id(it) })
+class YouTubePlaylistIdConverter :
+    IdConverter<YouTubePlaylist.Id>(createObject = { YouTubePlaylist.Id(it) })
+
+class YouTubePlaylistItemIdConverter :
+    IdConverter<YouTubePlaylistItem.Id>(createObject = { YouTubePlaylistItem.Id(it) })
 
 class BigIntegerConverter : Converter<Long, BigInteger>(
     serialize = { it.toLong() },
