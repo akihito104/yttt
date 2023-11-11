@@ -7,13 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.TwitchUser
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,19 +57,3 @@ class VideoDetailViewModel @Inject constructor(
         }
     }
 }
-
-private fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
-    id = id.mapTo(),
-    title = title,
-    iconUrl = iconUrl,
-    bannerUrl = bannerUrl,
-    subscriberCount = subscriberCount,
-    isSubscriberHidden = isSubscriberHidden,
-    viewsCount = videoCount,
-    videoCount = viewsCount,
-    publishedAt = publishedAt,
-    customUrl = customUrl,
-    keywords = keywords,
-    description = description,
-    uploadedPlayList = uploadedPlayList
-)

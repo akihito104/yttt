@@ -8,11 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
-import com.freshdigitable.yttt.data.model.TwitchBroadcaster
-import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveSubscription
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -38,19 +34,3 @@ class SubscriptionListViewModel @Inject constructor(
         emit(followings)
     }
 }
-
-fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): LiveSubscription {
-    return LiveSubscriptionEntity(
-        id = id.mapTo(),
-        channel = user.toLiveChannel(),
-        order = order,
-        subscribeSince = followedAt,
-    )
-}
-
-fun YouTubeSubscription.toLiveSubscription(): LiveSubscription = LiveSubscriptionEntity(
-    id = id.mapTo(),
-    channel = channel.toLiveChannel(),
-    subscribeSince = subscribeSince,
-    order = order,
-)

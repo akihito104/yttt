@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
+import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toLocalDateTime
 import com.freshdigitable.yttt.data.model.toTwitchVideoList
 import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore

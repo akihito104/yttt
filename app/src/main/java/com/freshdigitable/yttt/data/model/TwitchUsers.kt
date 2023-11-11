@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data.model
 
-import java.math.BigInteger
 import java.time.Instant
 
 interface TwitchUser {
@@ -21,19 +20,3 @@ interface TwitchUserDetail : TwitchUser {
 interface TwitchBroadcaster : TwitchUser {
     val followedAt: Instant
 }
-
-fun TwitchUserDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
-    id = id.mapTo(),
-    title = this.displayName,
-    iconUrl = this.profileImageUrl,
-    bannerUrl = "",
-    customUrl = loginName,
-    description = description,
-    isSubscriberHidden = false,
-    keywords = emptyList(),
-    publishedAt = this.createdAt,
-    subscriberCount = BigInteger.ZERO,
-    uploadedPlayList = null,
-    videoCount = BigInteger.ZERO,
-    viewsCount = BigInteger.valueOf(this.viewsCount.toLong()),
-)

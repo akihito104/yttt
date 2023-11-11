@@ -21,20 +21,14 @@ import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
-import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoEntity
-import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
+import com.freshdigitable.yttt.data.model.toLiveVideo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flow
 import java.io.IOException
@@ -241,37 +235,3 @@ class ChannelDetailChannelSection(
             ChannelDetailContent<LiveChannel>()
     }
 }
-
-private fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
-    id = id.mapTo(),
-    title = title,
-    videoCount = viewsCount,
-    isSubscriberHidden = isSubscriberHidden,
-    keywords = keywords,
-    subscriberCount = subscriberCount,
-    uploadedPlayList = uploadedPlayList,
-    bannerUrl = bannerUrl,
-    customUrl = customUrl,
-    description = description,
-    viewsCount = viewsCount,
-    publishedAt = publishedAt,
-    iconUrl = iconUrl,
-)
-
-fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
-    id = id.mapTo(),
-    title = title,
-    channel = channel.toLiveChannel(),
-    thumbnailUrl = thumbnailUrl,
-    scheduledStartDateTime = scheduledStartDateTime,
-    scheduledEndDateTime = scheduledEndDateTime,
-    actualStartDateTime = actualStartDateTime,
-    actualEndDateTime = actualEndDateTime,
-    url = url,
-)
-
-fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
-    id = id.mapTo(),
-    title = title,
-    iconUrl = iconUrl,
-)
