@@ -202,6 +202,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             ),
             id = LiveVideo.Id("a", LivePlatform.YOUTUBE),
             thumbnailUrl = "",
+            url = "",
         )
     }
 }

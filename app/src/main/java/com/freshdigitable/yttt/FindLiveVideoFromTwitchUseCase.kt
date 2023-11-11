@@ -45,6 +45,7 @@ fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo {
         scheduledStartDateTime = startedAt,
         actualStartDateTime = startedAt,
         thumbnailUrl = getThumbnailUrl(),
+        url = url,
     )
 }
 
@@ -56,6 +57,7 @@ fun TwitchStreamSchedule.toLiveVideo(user: TwitchUserDetail): LiveVideo {
         scheduledEndDateTime = schedule.endTime,
         title = title,
         thumbnailUrl = getThumbnailUrl(),
+        url = url,
     )
 }
 

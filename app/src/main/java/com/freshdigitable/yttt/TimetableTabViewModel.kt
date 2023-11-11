@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TimetableMenuItem
 import com.freshdigitable.yttt.data.YouTubeRepository
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.mapTo
@@ -56,7 +55,7 @@ class TimetableTabViewModel @Inject constructor(
         else {
             listOfNotNull(
                 if (it.isFreeChat == true) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
-                if (it.id.platform == LivePlatform.TWITCH && !it.isNowOnAir()) null else TimetableMenuItem.LAUNCH_LIVE,
+                TimetableMenuItem.LAUNCH_LIVE,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -90,11 +89,7 @@ class TimetableTabViewModel @Inject constructor(
             }
 
             TimetableMenuItem.LAUNCH_LIVE -> {
-                val url = when (id.platform) {
-                    LivePlatform.YOUTUBE -> "https://youtube.com/watch?v=${id.value}"
-                    LivePlatform.TWITCH -> "https://twitch.tv/${(video.channel as LiveChannelDetail).customUrl}"
-                }
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(video.url))
                 appLauncher(intent)
             }
         }

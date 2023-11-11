@@ -23,6 +23,10 @@ interface YouTubeVideo {
     fun isUpcoming(): Boolean = isLiveStream() && actualStartDateTime == null
 
     data class Id(override val value: String) : YouTubeId
+
+    companion object {
+        val YouTubeVideo.url: String get() = "https://youtube.com/watch?v=${id.value}"
+    }
 }
 
 data class YouTubeVideoEntity(

@@ -13,6 +13,7 @@ interface LiveVideo {
     val actualStartDateTime: Instant?
     val actualEndDateTime: Instant?
     val isFreeChat: Boolean? get() = null
+    val url: String
 
     fun isLiveStream(): Boolean = scheduledStartDateTime != null
     fun isNowOnAir(): Boolean = actualStartDateTime != null && actualEndDateTime == null
@@ -36,6 +37,7 @@ data class LiveVideoEntity(
     override val actualStartDateTime: Instant? = null,
     override val actualEndDateTime: Instant? = null,
     override val thumbnailUrl: String,
+    override val url: String,
 ) : LiveVideo
 
 interface LiveVideoDetail : LiveVideo {

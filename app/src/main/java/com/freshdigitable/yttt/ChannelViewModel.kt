@@ -32,6 +32,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -266,6 +267,7 @@ fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
     scheduledEndDateTime = scheduledEndDateTime,
     actualStartDateTime = actualStartDateTime,
     actualEndDateTime = actualEndDateTime,
+    url = url,
 )
 
 fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
