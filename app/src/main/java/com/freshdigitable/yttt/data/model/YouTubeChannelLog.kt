@@ -9,9 +9,7 @@ interface YouTubeChannelLog {
     val channelId: YouTubeChannel.Id
     val thumbnailUrl: String
 
-    data class Id(override val value: String) : IdBase<String> {
-        override val platform: LivePlatform = LivePlatform.YOUTUBE
-    }
+    data class Id(override val value: String) : YouTubeId
 }
 
 data class YouTubeChannelLogEntity(

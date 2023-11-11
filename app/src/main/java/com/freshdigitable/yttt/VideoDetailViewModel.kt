@@ -62,7 +62,7 @@ class VideoDetailViewModel @Inject constructor(
 }
 
 private fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
-    id = LiveChannel.Id(id.value, id.platform),
+    id = id.mapTo(),
     title = title,
     iconUrl = iconUrl,
     bannerUrl = bannerUrl,

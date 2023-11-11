@@ -23,7 +23,7 @@ interface TwitchBroadcaster : TwitchUser {
 }
 
 fun TwitchUserDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
-    id = LiveChannel.Id(id.value, id.platform),
+    id = id.mapTo(),
     title = this.displayName,
     iconUrl = this.profileImageUrl,
     bannerUrl = "",

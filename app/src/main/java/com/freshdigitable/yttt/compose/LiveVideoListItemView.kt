@@ -198,7 +198,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
-                id = LiveChannel.Id("b")
+                id = LiveChannel.Id("b", LivePlatform.YOUTUBE)
             ),
             id = LiveVideo.Id("a", LivePlatform.YOUTUBE),
             thumbnailUrl = "",

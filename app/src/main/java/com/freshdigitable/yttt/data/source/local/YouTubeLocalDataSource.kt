@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.IdBase
-import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -72,9 +71,9 @@ class YouTubeLocalDataSource @Inject constructor(
     suspend fun addLiveChannelLogs(channelLogs: List<YouTubeChannelLog>) {
         val channels = channelLogs.map { it.channelId }.distinct()
             .filter { dao.findChannel(it) == null }
-            .map { YouTubeChannelTable(id = YouTubeChannel.Id(it.value)) }
+            .map { YouTubeChannelTable(id = it) }
         val videos = channelLogs.distinctBy { it.videoId }
-            .filter { dao.findVideosById(listOf(YouTubeVideo.Id(it.videoId.value))).isEmpty() }
+            .filter { dao.findVideosById(listOf(it.videoId)).isEmpty() }
             .map {
                 YouTubeVideoTable(
                     id = it.videoId,
@@ -298,12 +297,8 @@ private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTube
     id = id, subscribeSince = subscribeSince, channelId = channel.id,
 )
 
-private fun LiveChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
-    id = YouTubeChannel.Id(id.value), title = title, iconUrl = iconUrl,
-)
-
 private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
-    id = YouTubeChannel.Id(id.value), title = title, iconUrl = iconUrl,
+    id = id, title = title, iconUrl = iconUrl,
 )
 
 private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(

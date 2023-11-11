@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.LiveSubscriptionEntity
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.mapTo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -40,7 +41,7 @@ class SubscriptionListViewModel @Inject constructor(
 
 fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): LiveSubscription {
     return LiveSubscriptionEntity(
-        id = LiveSubscription.Id(id.value, id.platform),
+        id = id.mapTo(),
         channel = user.toLiveChannel(),
         order = order,
         subscribeSince = followedAt,
@@ -48,7 +49,7 @@ fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): Li
 }
 
 fun YouTubeSubscription.toLiveSubscription(): LiveSubscription = LiveSubscriptionEntity(
-    id = LiveSubscription.Id(id.value, id.platform),
+    id = id.mapTo(),
     channel = channel.toLiveChannel(),
     subscribeSince = subscribeSince,
     order = order,

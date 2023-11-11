@@ -13,7 +13,7 @@ interface LiveChannel {
 
     data class Id(
         override val value: String,
-        override val platform: LivePlatform = LivePlatform.YOUTUBE
+        override val platform: LivePlatform,
     ) : IdBase<String>
 }
 

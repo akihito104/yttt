@@ -44,6 +44,7 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
@@ -398,7 +399,7 @@ fun ChannelScreenPreview() {
     AppTheme {
         ChannelDetailScreen({
             LiveChannelDetailEntity(
-                id = LiveChannel.Id("a"),
+                id = LiveChannel.Id("a", LivePlatform.YOUTUBE),
                 title = "channel title",
                 iconUrl = "",
                 bannerUrl = "",

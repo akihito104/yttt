@@ -49,7 +49,7 @@ class ChannelViewModel @Inject constructor(
     fun fetchChannel(id: LiveChannel.Id): LiveData<LiveChannelDetail?> = flow {
         val channel = when (id.platform) {
             LivePlatform.YOUTUBE -> {
-                val c = repository.fetchChannelList(listOf(YouTubeChannel.Id(id.value)))
+                val c = repository.fetchChannelList(listOf(id.mapTo()))
                 c.map { it.toLiveChannelDetail() }
             }
 
@@ -66,7 +66,7 @@ class ChannelViewModel @Inject constructor(
             emit(emptyList())
             return@flow
         }
-        val channelSection = repository.fetchChannelSection(YouTubeChannel.Id(id.value))
+        val channelSection = repository.fetchChannelSection(id.mapTo())
             .mapNotNull { cs ->
                 try {
                     fetchSectionItems(cs)
@@ -243,7 +243,7 @@ class ChannelDetailChannelSection(
 }
 
 private fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
-    id = LiveChannel.Id(id.value, id.platform),
+    id = id.mapTo(),
     title = title,
     videoCount = viewsCount,
     isSubscriberHidden = isSubscriberHidden,
@@ -259,7 +259,7 @@ private fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = Live
 )
 
 fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
-    id = LiveVideo.Id(id.value, id.platform),
+    id = id.mapTo(),
     title = title,
     channel = channel.toLiveChannel(),
     thumbnailUrl = thumbnailUrl,
@@ -271,7 +271,7 @@ fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
 )
 
 fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
-    id = LiveChannel.Id(id.value, id.platform),
+    id = id.mapTo(),
     title = title,
     iconUrl = iconUrl,
 )

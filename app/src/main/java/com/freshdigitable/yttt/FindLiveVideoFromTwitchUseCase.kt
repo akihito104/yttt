@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreamSchedule
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -28,8 +29,8 @@ class FindLiveVideoFromTwitchUseCase @Inject constructor(
 ) : FindLiveVideoUseCase {
     override suspend operator fun invoke(id: LiveVideo.Id): LiveVideo? { // TODO: id type mismatch
         check(id.platform == LivePlatform.TWITCH)
-        val d = repository.fetchStreamDetail(id.mapTo())
-            ?: repository.fetchStreamDetail(id.mapTo())
+        val d = repository.fetchStreamDetail(id.mapTo<TwitchStream.Id>())
+            ?: repository.fetchStreamDetail(id.mapTo<TwitchChannelSchedule.Stream.Id>())
         checkNotNull(d)
         val u = repository.findUsersById(listOf(d.user.id)).first()
         return (d as? TwitchStream)?.toLiveVideo(u)
@@ -39,7 +40,7 @@ class FindLiveVideoFromTwitchUseCase @Inject constructor(
 
 fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo {
     return LiveVideoEntity(
-        id = LiveVideo.Id(id.value, id.platform),
+        id = id.mapTo(),
         channel = user.toLiveChannel(),
         title = title,
         scheduledStartDateTime = startedAt,
@@ -51,7 +52,7 @@ fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo {
 
 fun TwitchStreamSchedule.toLiveVideo(user: TwitchUserDetail): LiveVideo {
     return LiveVideoEntity(
-        id = LiveVideo.Id(id.value, id.platform),
+        id = id.mapTo(),
         channel = user.toLiveChannel(),
         scheduledStartDateTime = schedule.startTime,
         scheduledEndDateTime = schedule.endTime,
@@ -63,7 +64,7 @@ fun TwitchStreamSchedule.toLiveVideo(user: TwitchUserDetail): LiveVideo {
 
 fun TwitchUserDetail.toLiveChannel(): LiveChannel {
     return LiveChannelEntity(
-        id = LiveChannel.Id(id.value, id.platform),
+        id = id.mapTo(),
         title = displayName,
         iconUrl = profileImageUrl,
     )
