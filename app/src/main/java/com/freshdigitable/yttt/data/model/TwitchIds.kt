@@ -1,5 +1,5 @@
 package com.freshdigitable.yttt.data.model
 
-interface TwitchId : IdBase<String> {
+interface TwitchId : IdBase {
     override val platform: LivePlatform get() = LivePlatform.TWITCH
 }

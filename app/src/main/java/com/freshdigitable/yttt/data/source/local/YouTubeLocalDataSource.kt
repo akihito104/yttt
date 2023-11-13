@@ -1,11 +1,11 @@
 package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
+import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -238,7 +238,7 @@ class YouTubeLocalDataSource @Inject constructor(
         channelSections[channelSection[0].channelId] = channelSection
     }
 
-    private suspend fun <I : IdBase<*>, E> fetchListByIds(
+    private suspend fun <I : YouTubeId, E> fetchListByIds(
         ids: Collection<I>,
         query: suspend AppDatabase.(Collection<I>) -> List<E>,
     ): List<E> {
@@ -253,7 +253,7 @@ class YouTubeLocalDataSource @Inject constructor(
         }
     }
 
-    private suspend fun <I : IdBase<*>> fetchByIds(
+    private suspend fun <I : YouTubeId> fetchByIds(
         ids: Collection<I>,
         query: suspend AppDatabase.(Collection<I>) -> Unit,
     ) {

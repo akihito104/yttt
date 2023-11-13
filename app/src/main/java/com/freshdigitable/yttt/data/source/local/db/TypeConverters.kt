@@ -33,7 +33,7 @@ class DurationConverter : Converter<Long, Duration>(
     createObject = { Duration.ofMillis(it) }
 )
 
-abstract class IdConverter<E : IdBase<String>>(createObject: (String) -> E) :
+abstract class IdConverter<E : IdBase>(createObject: (String) -> E) :
     Converter<String, E>(serialize = { it.value }, createObject = createObject)
 
 class YouTubeChannelIdConverter :

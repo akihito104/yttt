@@ -44,7 +44,6 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
-import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
@@ -53,6 +52,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateFormatter
+import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import kotlinx.coroutines.launch
 import java.math.BigInteger
@@ -230,7 +230,7 @@ private fun PlainTextPage(
 @Composable
 fun <T> PlainListPage(
     listProvider: () -> List<T>,
-    idProvider: (T) -> IdBase<String>,
+    idProvider: (T) -> IdBase,
     content: @Composable (T) -> Unit,
 ) {
     LazyColumn(
@@ -245,7 +245,7 @@ fun <T> PlainListPage(
     )
 }
 
-class VideoListItemEntity(val id: IdBase<String>, val thumbnailUrl: String, val title: String)
+class VideoListItemEntity(val id: IdBase, val thumbnailUrl: String, val title: String)
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
@@ -399,7 +399,7 @@ fun ChannelScreenPreview() {
     AppTheme {
         ChannelDetailScreen({
             LiveChannelDetailEntity(
-                id = LiveChannel.Id("a", LivePlatform.YOUTUBE),
+                id = YouTubeVideo.Id("a").mapTo(),
                 title = "channel title",
                 iconUrl = "",
                 bannerUrl = "",

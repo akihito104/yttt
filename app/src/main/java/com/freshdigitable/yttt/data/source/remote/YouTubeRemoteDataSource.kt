@@ -152,10 +152,10 @@ class YouTubeRemoteDataSource @Inject constructor(
         return res
     }
 
-    private suspend fun <ID, T, E> fetchList(
-        ids: Collection<IdBase<ID>>,
+    private suspend fun <T, E> fetchList(
+        ids: Collection<IdBase>,
         getItems: T.() -> List<E>,
-        requestParams: YouTube.(Collection<IdBase<ID>>) -> AbstractGoogleClientRequest<T>,
+        requestParams: YouTube.(Collection<IdBase>) -> AbstractGoogleClientRequest<T>,
     ): List<E> {
         if (ids.isEmpty()) {
             return emptyList()
