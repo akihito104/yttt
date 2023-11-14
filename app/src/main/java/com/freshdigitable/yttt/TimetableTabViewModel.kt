@@ -8,7 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TimetableMenuItem
 import com.freshdigitable.yttt.data.YouTubeRepository
-import com.freshdigitable.yttt.data.model.LivePlatform
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
@@ -29,7 +29,7 @@ import javax.inject.Inject
 class TimetableTabViewModel @Inject constructor(
     private val liveRepository: YouTubeRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
-    private val findLiveVideoTable: Map<LivePlatform, @JvmSuppressWildcards FindLiveVideoUseCase>,
+    private val findLiveVideoTable: Map<Class<out IdBase>, @JvmSuppressWildcards FindLiveVideoUseCase>,
     timetablePageFacade: TimetablePageFacade,
 ) : ViewModel(), TimetablePageFacade by timetablePageFacade {
     private val _isLoading = MutableLiveData(false)
@@ -62,7 +62,7 @@ class TimetableTabViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun onMenuClicked(id: LiveVideo.Id) {
-        val findLiveVideo = checkNotNull(findLiveVideoTable[id.platform])
+        val findLiveVideo = checkNotNull(findLiveVideoTable[id.type.java])
         viewModelScope.launch {
             val v = findLiveVideo(id)
             _selectedItem.value = v
