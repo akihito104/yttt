@@ -62,12 +62,6 @@ fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelD
     iconUrl = iconUrl,
 )
 
-fun TwitchVideo<*>.toLiveVideo(user: TwitchUserDetail): LiveVideo = when (this) {
-    is TwitchStream -> this.toLiveVideo(user)
-    is TwitchStreamSchedule -> this.toLiveVideo(user)
-    else -> throw AssertionError("unsupported type: ${this::class.simpleName}")
-}
-
 fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo = LiveVideoEntity(
     id = id.mapTo(),
     channel = user.toLiveChannel(),
@@ -99,6 +93,37 @@ fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
     actualEndDateTime = actualEndDateTime,
     url = url,
 )
+
+private data class LiveVideoDetailImpl(
+    private val video: LiveVideo,
+    override val description: String,
+    override val viewerCount: BigInteger? = null,
+) : LiveVideoDetail, LiveVideo by video
+
+fun TwitchVideo<*>.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail = when (this) {
+    is TwitchStream -> this.toLiveVideoDetail(user)
+    is TwitchStreamSchedule -> this.toLiveVideoDetail(user)
+    else -> throw AssertionError("unsupported type: ${this::class.simpleName}")
+}
+
+fun TwitchStream.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail = LiveVideoDetailImpl(
+    video = this.toLiveVideo(user),
+    description = "${this.gameName} tag: ${this.tags.joinToString()}",
+    viewerCount = BigInteger.valueOf(this.viewCount.toLong())
+)
+
+fun TwitchStreamSchedule.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail =
+    LiveVideoDetailImpl(
+        video = this.toLiveVideo(user),
+        description = "",
+    )
+
+fun YouTubeVideoDetail.toLiveVideoDetail(): LiveVideoDetail =
+    LiveVideoDetailImpl(
+        video = this.toLiveVideo(),
+        description = this.description,
+        viewerCount = this.viewerCount,
+    )
 
 fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): LiveSubscription =
     LiveSubscriptionEntity(

@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import kotlinx.coroutines.flow.Flow
+import java.math.BigInteger
 import java.time.Instant
 import java.time.Period
 import javax.inject.Inject
@@ -94,11 +95,11 @@ class YouTubeRepository @Inject constructor(
             return null
         }
         if (detailCache != null) {
-            return object : YouTubeVideoDetail by detailCache {
-                override val isFreeChat: Boolean?
-                    get() = cache.isFreeChat
-
-                override fun toString(): String = detailCache.toString()
+            return object : YouTubeVideoDetail, YouTubeVideo by cache {
+                override val description: String
+                    get() = detailCache.description
+                override val viewerCount: BigInteger?
+                    get() = detailCache.viewerCount
             }
         }
         return cache
