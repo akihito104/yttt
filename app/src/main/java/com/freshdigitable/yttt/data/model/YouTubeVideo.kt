@@ -3,9 +3,7 @@ package com.freshdigitable.yttt.data.model
 import java.math.BigInteger
 import java.time.Instant
 
-interface YouTubeId : IdBase {
-    override val platform: LivePlatform get() = LivePlatform.YOUTUBE
-}
+interface YouTubeId : IdBase
 
 interface YouTubeVideo {
     val id: Id

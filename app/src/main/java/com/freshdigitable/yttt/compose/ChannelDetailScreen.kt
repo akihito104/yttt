@@ -70,7 +70,7 @@ fun ChannelDetailScreen(
     val items = viewModel.fetchVideoListItems(detail)
     val detailState = detail.observeAsState()
     ChannelDetailScreen(
-        pages = ChannelPage.findByPlatform(id.platform),
+        pages = ChannelPage.findByPlatform(id.type),
         channelDetail = { detailState.value }) { page ->
         when (page) {
             ChannelPage.ABOUT -> PlainTextPage {

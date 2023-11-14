@@ -19,10 +19,12 @@ import com.freshdigitable.yttt.ChannelDetailChannelSection.ChannelDetailContent
 import com.freshdigitable.yttt.compose.VideoListItemEntity
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.flow
 import java.io.IOException
 import java.security.MessageDigest
 import javax.inject.Inject
+import kotlin.reflect.KClass
 
 @HiltViewModel
 class ChannelViewModel @Inject constructor(
@@ -41,22 +44,24 @@ class ChannelViewModel @Inject constructor(
     private val twitchRepository: TwitchLiveRepository,
 ) : ViewModel() {
     fun fetchChannel(id: LiveChannel.Id): LiveData<LiveChannelDetail?> = flow {
-        val channel = when (id.platform) {
-            LivePlatform.YOUTUBE -> {
+        val channel = when (id.type) {
+            YouTubeChannel.Id::class -> {
                 val c = repository.fetchChannelList(listOf(id.mapTo()))
                 c.map { it.toLiveChannelDetail() }
             }
 
-            LivePlatform.TWITCH -> {
+            TwitchUser.Id::class -> {
                 val u = twitchRepository.findUsersById(listOf(id.mapTo()))
                 u.map { it.toLiveChannelDetail() }
             }
+
+            else -> throw AssertionError("unsupported type: ${id.type}")
         }.firstOrNull()
         emit(channel)
     }.asLiveData(viewModelScope.coroutineContext)
 
     fun fetchChannelSection(id: LiveChannel.Id): LiveData<List<YouTubeChannelSection>> = flow {
-        if (id.platform != LivePlatform.YOUTUBE) {
+        if (id.type != YouTubeChannel.Id::class) {
             emit(emptyList())
             return@flow
         }
@@ -116,8 +121,8 @@ class ChannelViewModel @Inject constructor(
     ): LiveData<List<VideoListItemEntity>> {
         return detail.switchMap { d ->
             val id = d?.id ?: return@switchMap emptyState
-            when (id.platform) {
-                LivePlatform.YOUTUBE -> {
+            when (id.type) {
+                YouTubeChannel.Id::class -> {
                     val pId = d.uploadedPlayList ?: return@switchMap emptyState
                     fetchPlaylistItems(pId).map { items ->
                         items.map {
@@ -130,7 +135,7 @@ class ChannelViewModel @Inject constructor(
                     }
                 }
 
-                LivePlatform.TWITCH -> {
+                TwitchUser.Id::class -> {
                     liveData {
                         val res = twitchRepository.fetchVideosByUserId(id.mapTo()).map {
                             VideoListItemEntity(
@@ -142,13 +147,15 @@ class ChannelViewModel @Inject constructor(
                         emit(res)
                     }
                 }
+
+                else -> throw AssertionError("unsupported type: ${id.type}")
             }
         }
     }
 
     fun fetchActivities(id: LiveChannel.Id): LiveData<List<LiveVideo>> = flow {
         emit(emptyList())
-        if (id.platform != LivePlatform.YOUTUBE) {
+        if (id.type != YouTubeChannel.Id::class) {
             return@flow
         }
         val logs = repository.fetchLiveChannelLogs(id.mapTo(), maxResult = 20)
@@ -204,14 +211,19 @@ class CustomCrop(
     }
 }
 
-enum class ChannelPage(val platform: Array<LivePlatform> = LivePlatform.values()) {
-    ABOUT, CHANNEL_SECTION(arrayOf(LivePlatform.YOUTUBE)), UPLOADED,
-    ACTIVITIES(arrayOf(LivePlatform.YOUTUBE)), DEBUG_CHANNEL,
+enum class ChannelPage(
+    val platform: Array<KClass<out IdBase>> = arrayOf(
+        YouTubeChannel.Id::class,
+        TwitchUser.Id::class,
+    ),
+) {
+    ABOUT, CHANNEL_SECTION(arrayOf(YouTubeChannel.Id::class)), UPLOADED,
+    ACTIVITIES(arrayOf(YouTubeChannel.Id::class)), DEBUG_CHANNEL,
     ;
 
     companion object {
-        fun findByPlatform(platform: LivePlatform): Array<ChannelPage> {
-            return ChannelPage.values().filter { p -> p.platform.any { it == platform } }
+        fun findByPlatform(type: KClass<out IdBase>): Array<ChannelPage> {
+            return ChannelPage.values().filter { p -> p.platform.any { it == type } }
                 .toTypedArray()
         }
     }

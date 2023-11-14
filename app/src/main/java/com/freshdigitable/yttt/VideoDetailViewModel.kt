@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,18 +31,19 @@ class VideoDetailViewModel @Inject constructor(
                 emit(null)
                 return@liveData
             }
-            val channel = when (id.platform) {
-                LivePlatform.YOUTUBE -> {
-                    val c = repository.fetchChannelList(listOf(detail.channel.id.mapTo()))
-                        .first()
+            val channelId = detail.channel.id
+            val channel = when (channelId.type) {
+                YouTubeChannel.Id::class -> {
+                    val c = repository.fetchChannelList(listOf(channelId.mapTo())).first()
                     c.toLiveChannelDetail()
                 }
 
-                LivePlatform.TWITCH -> {
-                    val tid = detail.channel.id.mapTo<TwitchUser.Id>()
-                    val u = twitchRepository.findUsersById(listOf(tid)).first()
+                TwitchUser.Id::class -> {
+                    val u = twitchRepository.findUsersById(listOf(channelId.mapTo())).first()
                     u.toLiveChannelDetail()
                 }
+
+                else -> throw AssertionError("unsupported type: ${channelId.type}")
             }
             val res = object : LiveVideoDetail, LiveVideo by detail {
                 override val description: String

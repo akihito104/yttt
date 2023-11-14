@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.compose.TimetableMenuItem
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
@@ -77,13 +78,13 @@ class TimetableTabViewModel @Inject constructor(
         val id = video.id
         when (item) {
             TimetableMenuItem.ADD_FREE_CHAT -> {
-                if (id.platform == LivePlatform.YOUTUBE) {
+                if (id.type == YouTubeVideo.Id::class) {
                     checkAsFreeChat(id)
                 }
             }
 
             TimetableMenuItem.REMOVE_FREE_CHAT -> {
-                if (id.platform == LivePlatform.YOUTUBE) {
+                if (id.type == YouTubeVideo.Id::class) {
                     uncheckAsFreeChat(id)
                 }
             }

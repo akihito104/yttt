@@ -62,6 +62,12 @@ fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelD
     iconUrl = iconUrl,
 )
 
+fun TwitchVideo<*>.toLiveVideo(user: TwitchUserDetail): LiveVideo = when (this) {
+    is TwitchStream -> this.toLiveVideo(user)
+    is TwitchStreamSchedule -> this.toLiveVideo(user)
+    else -> throw AssertionError("unsupported type: ${this::class.simpleName}")
+}
+
 fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo = LiveVideoEntity(
     id = id.mapTo(),
     channel = user.toLiveChannel(),
