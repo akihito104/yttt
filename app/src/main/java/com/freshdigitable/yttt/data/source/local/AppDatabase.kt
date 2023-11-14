@@ -6,30 +6,12 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.freshdigitable.yttt.data.source.local.db.AppDao
+import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.BigIntegerConverter
 import com.freshdigitable.yttt.data.source.local.db.CsvConverter
 import com.freshdigitable.yttt.data.source.local.db.DurationConverter
 import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
 import com.freshdigitable.yttt.data.source.local.db.InstantConverter
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelAdditionTable
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelDetailDbView
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelIdConverter
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelLogIdConverter
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelLogTable
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelTable
-import com.freshdigitable.yttt.data.source.local.db.LivePlaylistIdConverter
-import com.freshdigitable.yttt.data.source.local.db.LivePlaylistItemDb
-import com.freshdigitable.yttt.data.source.local.db.LivePlaylistItemIdConverter
-import com.freshdigitable.yttt.data.source.local.db.LivePlaylistItemTable
-import com.freshdigitable.yttt.data.source.local.db.LivePlaylistTable
-import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionDbView
-import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionIdConverter
-import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionTable
-import com.freshdigitable.yttt.data.source.local.db.LiveVideoDbView
-import com.freshdigitable.yttt.data.source.local.db.LiveVideoExpireTable
-import com.freshdigitable.yttt.data.source.local.db.LiveVideoIdConverter
-import com.freshdigitable.yttt.data.source.local.db.LiveVideoTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchAuthorizedUserTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterTable
@@ -46,6 +28,24 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserIdConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelAdditionTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelDetailDbView
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemDb
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionDbView
+import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDbView
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -54,15 +54,15 @@ import dagger.hilt.components.SingletonComponent
 
 @Database(
     entities = [
-        LiveChannelTable::class,
-        LiveChannelAdditionTable::class,
-        LiveChannelLogTable::class,
-        LiveSubscriptionTable::class,
-        LiveVideoTable::class,
+        YouTubeChannelTable::class,
+        YouTubeChannelAdditionTable::class,
+        YouTubeChannelLogTable::class,
+        YouTubeSubscriptionTable::class,
+        YouTubeVideoTable::class,
         FreeChatTable::class,
-        LiveVideoExpireTable::class,
-        LivePlaylistTable::class,
-        LivePlaylistItemTable::class,
+        YouTubeVideoExpireTable::class,
+        YouTubePlaylistTable::class,
+        YouTubePlaylistItemTable::class,
         TwitchUserTable::class,
         TwitchUserDetailTable::class,
         TwitchUserDetailExpireTable::class,
@@ -76,10 +76,10 @@ import dagger.hilt.components.SingletonComponent
         TwitchChannelScheduleExpireTable::class,
     ],
     views = [
-        LiveVideoDbView::class,
-        LiveSubscriptionDbView::class,
-        LiveChannelDetailDbView::class,
-        LivePlaylistItemDb::class,
+        YouTubeVideoDbView::class,
+        YouTubeSubscriptionDbView::class,
+        YouTubeChannelDetailDbView::class,
+        YouTubePlaylistItemDb::class,
         TwitchStreamDbView::class,
     ],
     version = 9,
@@ -97,12 +97,12 @@ import dagger.hilt.components.SingletonComponent
 @TypeConverters(
     InstantConverter::class,
     DurationConverter::class,
-    LiveChannelIdConverter::class,
-    LiveSubscriptionIdConverter::class,
-    LiveVideoIdConverter::class,
-    LiveChannelLogIdConverter::class,
-    LivePlaylistIdConverter::class,
-    LivePlaylistItemIdConverter::class,
+    YouTubeSubscriptionIdConverter::class,
+    YouTubeChannelLogIdConverter::class,
+    YouTubePlaylistIdConverter::class,
+    YouTubePlaylistItemIdConverter::class,
+    YouTubeVideoIdConverter::class,
+    YouTubeChannelIdConverter::class,
     BigIntegerConverter::class,
     TwitchUserIdConverter::class,
     TwitchStreamScheduleIdConverter::class,
@@ -110,7 +110,7 @@ import dagger.hilt.components.SingletonComponent
     CsvConverter::class,
 )
 abstract class AppDatabase : RoomDatabase() {
-    abstract val dao: AppDao
+    abstract val youtubeDao: YouTubeDao
     abstract val twitchDao: TwitchDao
 }
 

@@ -2,10 +2,11 @@ package com.freshdigitable.yttt
 
 import com.freshdigitable.yttt.compose.TabData
 import com.freshdigitable.yttt.data.TwitchLiveRepository
-import com.freshdigitable.yttt.data.YouTubeLiveRepository
+import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
+import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toLocalDateTime
 import com.freshdigitable.yttt.data.model.toTwitchVideoList
 import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
@@ -41,17 +42,19 @@ class FetchTwitchOnAirItemSourceUseCase @Inject constructor(
 }
 
 class FetchYouTubeOnAirItemSourceUseCase @Inject constructor(
-    private val repository: YouTubeLiveRepository,
+    private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
-    override fun invoke(): Flow<List<LiveVideo>> =
-        repository.videos.map { v -> v.filter { it.isNowOnAir() } }
+    override fun invoke(): Flow<List<LiveVideo>> = repository.videos.map { v ->
+        v.filter { it.isNowOnAir() }.map { it.toLiveVideo() }
+    }
 }
 
 class FetchYouTubeUpcomingItemSourceUseCase @Inject constructor(
-    private val repository: YouTubeLiveRepository,
+    private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
-    override fun invoke(): Flow<List<LiveVideo>> =
-        repository.videos.map { v -> v.filter { it.isUpcoming() && it.isFreeChat != true } }
+    override fun invoke(): Flow<List<LiveVideo>> = repository.videos.map { v ->
+        v.filter { it.isUpcoming() && it.isFreeChat != true }.map { it.toLiveVideo() }
+    }
 }
 
 class FetchTwitchUpcomingItemSourceUseCase @Inject constructor(
@@ -70,10 +73,10 @@ class FetchTwitchUpcomingItemSourceUseCase @Inject constructor(
 }
 
 class FetchYouTubeFreeChatItemSourceUseCase @Inject constructor(
-    private val repository: YouTubeLiveRepository,
+    private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
     override fun invoke(): Flow<List<LiveVideo>> =
-        repository.videos.map { v -> v.filter { it.isFreeChat == true } }
+        repository.videos.map { v -> v.filter { it.isFreeChat == true }.map { it.toLiveVideo() } }
 }
 
 class TimetablePageFacadeImpl @Inject constructor(

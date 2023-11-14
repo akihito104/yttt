@@ -7,10 +7,11 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TimetableMenuItem
-import com.freshdigitable.yttt.data.YouTubeLiveRepository
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LivePlatform
+import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.mapTo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -26,9 +27,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TimetableTabViewModel @Inject constructor(
-    private val liveRepository: YouTubeLiveRepository,
+    private val liveRepository: YouTubeRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
-    private val findLiveVideoFromTwitch: FindLiveVideoFromTwitchUseCase,
+    private val findLiveVideoTable: Map<Class<out IdBase>, @JvmSuppressWildcards FindLiveVideoUseCase>,
     timetablePageFacade: TimetablePageFacade,
 ) : ViewModel(), TimetablePageFacade by timetablePageFacade {
     private val _isLoading = MutableLiveData(false)
@@ -55,17 +56,15 @@ class TimetableTabViewModel @Inject constructor(
         else {
             listOfNotNull(
                 if (it.isFreeChat == true) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
-                if (it.id.platform == LivePlatform.TWITCH && !it.isNowOnAir()) null else TimetableMenuItem.LAUNCH_LIVE,
+                TimetableMenuItem.LAUNCH_LIVE,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun onMenuClicked(id: LiveVideo.Id) {
+        val findLiveVideo = checkNotNull(findLiveVideoTable[id.type.java])
         viewModelScope.launch {
-            val v = when (id.platform) {
-                LivePlatform.YOUTUBE -> liveRepository.fetchVideoDetail(id)
-                LivePlatform.TWITCH -> findLiveVideoFromTwitch(id)
-            }
+            val v = findLiveVideo(id)
             _selectedItem.value = v
         }
     }
@@ -79,23 +78,19 @@ class TimetableTabViewModel @Inject constructor(
         val id = video.id
         when (item) {
             TimetableMenuItem.ADD_FREE_CHAT -> {
-                if (id.platform == LivePlatform.YOUTUBE) {
+                if (id.type == YouTubeVideo.Id::class) {
                     checkAsFreeChat(id)
                 }
             }
 
             TimetableMenuItem.REMOVE_FREE_CHAT -> {
-                if (id.platform == LivePlatform.YOUTUBE) {
+                if (id.type == YouTubeVideo.Id::class) {
                     uncheckAsFreeChat(id)
                 }
             }
 
             TimetableMenuItem.LAUNCH_LIVE -> {
-                val url = when (id.platform) {
-                    LivePlatform.YOUTUBE -> "https://youtube.com/watch?v=${id.value}"
-                    LivePlatform.TWITCH -> "https://twitch.tv/${(video.channel as LiveChannelDetail).customUrl}"
-                }
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(video.url))
                 appLauncher(intent)
             }
         }
@@ -103,13 +98,13 @@ class TimetableTabViewModel @Inject constructor(
 
     private fun checkAsFreeChat(id: LiveVideo.Id) {
         viewModelScope.launch {
-            liveRepository.addFreeChatItems(listOf(id))
+            liveRepository.addFreeChatItems(listOf(id.mapTo()))
         }
     }
 
     private fun uncheckAsFreeChat(id: LiveVideo.Id) {
         viewModelScope.launch {
-            liveRepository.removeFreeChatItems(listOf(id))
+            liveRepository.removeFreeChatItems(listOf(id.mapTo()))
         }
     }
 

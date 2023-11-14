@@ -7,29 +7,29 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import java.time.Instant
 
 @Entity(
     tableName = "video",
     foreignKeys = [
         ForeignKey(
-            entity = LiveChannelTable::class,
+            entity = YouTubeChannelTable::class,
             parentColumns = ["id"],
             childColumns = ["channel_id"],
         ),
     ],
     indices = [Index("channel_id")],
 )
-class LiveVideoTable(
+class YouTubeVideoTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
-    val id: LiveVideo.Id,
+    val id: YouTubeVideo.Id,
     @ColumnInfo(name = "title", defaultValue = "")
     val title: String = "",
     @ColumnInfo(name = "channel_id")
-    val channelId: LiveChannel.Id,
+    val channelId: YouTubeChannel.Id,
     @ColumnInfo(name = "schedule_start_datetime")
     val scheduledStartDateTime: Instant? = null,
     @ColumnInfo(name = "schedule_end_datetime")
@@ -48,7 +48,7 @@ class LiveVideoTable(
     tableName = "free_chat",
     foreignKeys = [
         ForeignKey(
-            entity = LiveVideoTable::class,
+            entity = YouTubeVideoTable::class,
             parentColumns = ["id"],
             childColumns = ["video_id"],
         ),
@@ -58,7 +58,7 @@ class LiveVideoTable(
 class FreeChatTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("video_id")
-    val videoId: LiveVideo.Id,
+    val videoId: YouTubeVideo.Id,
     @ColumnInfo("is_free_chat", defaultValue = "null")
     val isFreeChat: Boolean? = null,
 )
@@ -67,17 +67,17 @@ class FreeChatTable(
     tableName = "video_expire",
     foreignKeys = [
         ForeignKey(
-            entity = LiveVideoTable::class,
+            entity = YouTubeVideoTable::class,
             parentColumns = ["id"],
             childColumns = ["video_id"],
         ),
     ],
     indices = [Index("video_id")],
 )
-class LiveVideoExpireTable(
+class YouTubeVideoExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "video_id")
-    val videoId: LiveVideo.Id,
+    val videoId: YouTubeVideo.Id,
     @ColumnInfo(name = "expired_at", defaultValue = "null")
     val expiredAt: Instant? = null,
 )
@@ -92,13 +92,13 @@ class LiveVideoExpireTable(
         "WHERE v.visible == 1",
     viewName = "video_view",
 )
-data class LiveVideoDbView(
+data class YouTubeVideoDbView(
     @ColumnInfo(name = "id")
-    override val id: LiveVideo.Id,
+    override val id: YouTubeVideo.Id,
     @ColumnInfo(name = "title")
     override val title: String,
     @Embedded(prefix = "channel_")
-    override val channel: LiveChannelTable,
+    override val channel: YouTubeChannelTable,
     @ColumnInfo(name = "schedule_start_datetime")
     override val scheduledStartDateTime: Instant?,
     @ColumnInfo(name = "schedule_end_datetime")
@@ -111,4 +111,4 @@ data class LiveVideoDbView(
     override val thumbnailUrl: String = "",
     @ColumnInfo(name = "is_free_chat", defaultValue = "null")
     override val isFreeChat: Boolean? = null,
-) : LiveVideo
+) : YouTubeVideo

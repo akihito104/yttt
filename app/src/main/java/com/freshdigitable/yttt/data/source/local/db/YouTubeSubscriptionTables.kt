@@ -7,29 +7,29 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveSubscription
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import java.time.Instant
 
 @Entity(
     tableName = "subscription",
     foreignKeys = [
         ForeignKey(
-            entity = LiveChannelTable::class,
+            entity = YouTubeChannelTable::class,
             parentColumns = ["id"],
             childColumns = ["channel_id"],
         ),
     ],
     indices = [Index("channel_id")],
 )
-class LiveSubscriptionTable(
+class YouTubeSubscriptionTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
-    val id: LiveSubscription.Id,
+    val id: YouTubeSubscription.Id,
     @ColumnInfo(name = "subscription_since")
     val subscribeSince: Instant,
     @ColumnInfo(name = "channel_id")
-    val channelId: LiveChannel.Id,
+    val channelId: YouTubeChannel.Id,
     @ColumnInfo(name = "subs_order", defaultValue = Int.MAX_VALUE.toString())
     val order: Int = Int.MAX_VALUE,
 )
@@ -41,13 +41,13 @@ class LiveSubscriptionTable(
         "ORDER BY subs_order ASC",
     viewName = "subscription_view"
 )
-data class LiveSubscriptionDbView(
+data class YouTubeSubscriptionDbView(
     @ColumnInfo(name = "id")
-    override val id: LiveSubscription.Id,
+    override val id: YouTubeSubscription.Id,
     @ColumnInfo(name = "subscription_since")
     override val subscribeSince: Instant,
     @Embedded(prefix = "channel_")
-    override val channel: LiveChannelTable,
+    override val channel: YouTubeChannelTable,
     @ColumnInfo(name = "subs_order")
     override val order: Int,
-) : LiveSubscription
+) : YouTubeSubscription

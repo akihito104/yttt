@@ -1,17 +1,17 @@
 package com.freshdigitable.yttt.data
 
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveChannelLog
-import com.freshdigitable.yttt.data.model.LiveChannelSection
-import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.model.LivePlaylistItem
-import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
-import com.freshdigitable.yttt.data.source.local.YouTubeLiveLocalDataSource
-import com.freshdigitable.yttt.data.source.remote.YouTubeLiveRemoteDataSource
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelSection
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
+import com.freshdigitable.yttt.data.source.YoutubeDataSource
+import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
+import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.Period
@@ -19,15 +19,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YouTubeLiveRepository @Inject constructor(
-    private val remoteSource: YouTubeLiveRemoteDataSource,
-    private val localSource: YouTubeLiveLocalDataSource,
-) : YoutubeLiveDataSource {
-    val subscriptions: Flow<List<LiveSubscription>> = localSource.subscriptions
-    val videos: Flow<List<LiveVideo>> = localSource.videos
+class YouTubeRepository @Inject constructor(
+    private val remoteSource: YouTubeRemoteDataSource,
+    private val localSource: YouTubeLocalDataSource,
+) : YoutubeDataSource {
+    val subscriptions: Flow<List<YouTubeSubscription>> = localSource.subscriptions
+    val videos: Flow<List<YouTubeVideo>> = localSource.videos
     var lastUpdateDatetime: Instant? = null
 
-    override suspend fun fetchAllSubscribe(maxResult: Long): List<LiveSubscription> {
+    override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> {
         val res = remoteSource.fetchAllSubscribe(maxResult)
         val current = localSource.fetchAllSubscribe()
         val deleted = res.map { it.id }.toSet() - current.map { it.id }.toSet()
@@ -37,10 +37,10 @@ class YouTubeLiveRepository @Inject constructor(
     }
 
     override suspend fun fetchLiveChannelLogs(
-        channelId: LiveChannel.Id,
+        channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
         maxResult: Long?,
-    ): List<LiveChannelLog> {
+    ): List<YouTubeChannelLog> {
         val pa = if (publishedAfter != null) {
             publishedAfter
         } else {
@@ -52,7 +52,7 @@ class YouTubeLiveRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
+    override suspend fun fetchVideoList(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideo> {
         if (ids.isEmpty()) {
             return emptyList()
         }
@@ -68,9 +68,9 @@ class YouTubeLiveRepository @Inject constructor(
     }
 
     suspend fun fetchVideoIdListByPlaylistId(
-        id: LivePlaylist.Id,
+        id: YouTubePlaylist.Id,
         maxResult: Long = 10,
-    ): List<LiveVideo.Id> {
+    ): List<YouTubeVideo.Id> {
         val cache = localSource.fetchPlaylistItems(id)
         val playlistItems = cache.ifEmpty {
             val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
@@ -86,7 +86,7 @@ class YouTubeLiveRepository @Inject constructor(
         return playlistItems.map { it.videoId }
     }
 
-    suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideo? {
+    suspend fun fetchVideoDetail(id: YouTubeVideo.Id): YouTubeVideo? {
         val detailCache = localSource.fetchVideoDetail(id)
         val cache = fetchVideoList(listOf(id)).firstOrNull()
         if (cache == null) {
@@ -94,7 +94,7 @@ class YouTubeLiveRepository @Inject constructor(
             return null
         }
         if (detailCache != null) {
-            return object : LiveVideoDetail by detailCache {
+            return object : YouTubeVideoDetail by detailCache {
                 override val isFreeChat: Boolean?
                     get() = cache.isFreeChat
 
@@ -108,18 +108,18 @@ class YouTubeLiveRepository @Inject constructor(
         localSource.cleanUp()
     }
 
-    suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
+    suspend fun findAllUnfinishedVideos(): List<YouTubeVideo> {
         return localSource.findAllUnfinishedVideos()
     }
 
-    suspend fun updateVideosInvisible(removed: Collection<LiveVideo.Id>) {
+    suspend fun updateVideosInvisible(removed: Collection<YouTubeVideo.Id>) {
         if (removed.isEmpty()) {
             return
         }
         localSource.updateVideosInvisible(removed)
     }
 
-    suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannelDetail> {
+    suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
         if (ids.isEmpty()) {
             return emptyList()
         }
@@ -133,7 +133,7 @@ class YouTubeLiveRepository @Inject constructor(
         return remote
     }
 
-    suspend fun fetchChannelSection(id: LiveChannel.Id): List<LiveChannelSection> {
+    suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
         val cache = localSource.fetchChannelSection(id)
         if (cache.isNotEmpty()) {
             return cache
@@ -143,22 +143,22 @@ class YouTubeLiveRepository @Inject constructor(
         return remote
     }
 
-    suspend fun fetchPlaylist(ids: Collection<LivePlaylist.Id>): List<LivePlaylist> {
+    suspend fun fetchPlaylist(ids: Collection<YouTubePlaylist.Id>): List<YouTubePlaylist> {
         return remoteSource.fetchPlaylist(ids)
     }
 
     suspend fun fetchPlaylistItems(
-        id: LivePlaylist.Id,
+        id: YouTubePlaylist.Id,
         maxResult: Long = 20,
-    ): List<LivePlaylistItem> {
+    ): List<YouTubePlaylistItem> {
         return remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
     }
 
-    override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
+    override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
         localSource.addFreeChatItems(ids)
     }
 
-    override suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>) {
+    override suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
         localSource.removeFreeChatItems(ids)
     }
 

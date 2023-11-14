@@ -30,13 +30,13 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.Key
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
-import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
-import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
+import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import java.security.MessageDigest
 import java.time.Instant
@@ -92,7 +92,7 @@ private fun LiveVideoListItemView(
                     contentDescription = "",
                     modifier = thumbnailModifier.align(Top)
                 ) {
-                    it.signature(ThumbnailKey("${video.id.platform}_${video.id.value}"))
+                    it.signature(ThumbnailKey("${video.id.type}_${video.id.value}"))
                 }
             } else {
                 Image(
@@ -198,10 +198,11 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
-                id = LiveChannel.Id("b")
+                id = YouTubeVideo.Id("b").mapTo(),
             ),
-            id = LiveVideo.Id("a", LivePlatform.YOUTUBE),
+            id = YouTubeVideo.Id("a").mapTo(),
             thumbnailUrl = "",
+            url = "",
         )
     }
 }

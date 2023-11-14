@@ -9,9 +9,8 @@ import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.freshdigitable.yttt.data.YouTubeLiveRepository
-import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -19,7 +18,7 @@ import dagger.assisted.AssistedInject
 class AddFreeTalkWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val repository: YouTubeLiveRepository,
+    private val repository: YouTubeRepository,
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         val text = inputData.uri ?: return Result.failure()
@@ -30,7 +29,7 @@ class AddFreeTalkWorker @AssistedInject constructor(
         }
         val value = url.pathSegments[1] ?: return Result.failure()
         Log.d(TAG, "handleFreeTalk: $value")
-        val id = LiveVideo.Id(platform = LivePlatform.YOUTUBE, value = value)
+        val id = YouTubeVideo.Id(value)
         val v = repository.fetchVideoList(listOf(id))
         repository.addFreeChatItems(v.map { it.id })
         return Result.success()

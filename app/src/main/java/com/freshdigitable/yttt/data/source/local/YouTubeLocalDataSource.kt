@@ -1,26 +1,26 @@
 package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
-import com.freshdigitable.yttt.data.model.IdBase
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveChannelLog
-import com.freshdigitable.yttt.data.model.LiveChannelSection
-import com.freshdigitable.yttt.data.model.LivePlaylist
-import com.freshdigitable.yttt.data.model.LivePlaylistItem
-import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.source.YoutubeLiveDataSource
-import com.freshdigitable.yttt.data.source.local.db.AppDao
+import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelSection
+import com.freshdigitable.yttt.data.model.YouTubeId
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
+import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelAdditionTable
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelLogTable
-import com.freshdigitable.yttt.data.source.local.db.LiveChannelTable
-import com.freshdigitable.yttt.data.source.local.db.LivePlaylistTable
-import com.freshdigitable.yttt.data.source.local.db.LiveSubscriptionTable
-import com.freshdigitable.yttt.data.source.local.db.LiveVideoExpireTable
-import com.freshdigitable.yttt.data.source.local.db.LiveVideoTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelAdditionTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
 import com.freshdigitable.yttt.data.source.local.db.toDbEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -31,19 +31,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YouTubeLiveLocalDataSource @Inject constructor(
+class YouTubeLocalDataSource @Inject constructor(
     private val database: AppDatabase,
-) : YoutubeLiveDataSource {
-    private val dao: AppDao get() = database.dao
-    val subscriptions: Flow<List<LiveSubscription>> = dao.watchAllSubscriptions()
-    val videos: Flow<List<LiveVideo>> = dao.watchAllUnfinishedVideos()
+) : YoutubeDataSource {
+    private val dao: YouTubeDao get() = database.youtubeDao
+    val subscriptions: Flow<List<YouTubeSubscription>> = dao.watchAllSubscriptions()
+    val videos: Flow<List<YouTubeVideo>> = dao.watchAllUnfinishedVideos()
 
-    override suspend fun fetchAllSubscribe(maxResult: Long): List<LiveSubscription> =
+    override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> =
         withContext(Dispatchers.IO) {
             dao.findAllSubscriptions()
         }
 
-    suspend fun addSubscribes(subscriptions: Collection<LiveSubscription>) =
+    suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>) =
         withContext(Dispatchers.IO) {
             val channels = subscriptions.map { it.channel }.toSet()
                 .map { it.toDbEntity() }
@@ -53,29 +53,29 @@ class YouTubeLiveLocalDataSource @Inject constructor(
             }
         }
 
-    suspend fun removeSubscribes(subscriptions: Collection<LiveSubscription.Id>) {
+    suspend fun removeSubscribes(subscriptions: Collection<YouTubeSubscription.Id>) {
         dao.removeSubscriptions(subscriptions)
     }
 
     override suspend fun fetchLiveChannelLogs(
-        channelId: LiveChannel.Id,
+        channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
         maxResult: Long?,
-    ): List<LiveChannelLog> {
+    ): List<YouTubeChannelLog> {
         if (publishedAfter != null) {
             return dao.findChannelLogs(channelId, publishedAfter, maxResult)
         }
         return dao.findChannelLogs(channelId, maxResult)
     }
 
-    suspend fun addLiveChannelLogs(channelLogs: List<LiveChannelLog>) {
+    suspend fun addLiveChannelLogs(channelLogs: List<YouTubeChannelLog>) {
         val channels = channelLogs.map { it.channelId }.distinct()
             .filter { dao.findChannel(it) == null }
-            .map { LiveChannelTable(id = it) }
+            .map { YouTubeChannelTable(id = it) }
         val videos = channelLogs.distinctBy { it.videoId }
             .filter { dao.findVideosById(listOf(it.videoId)).isEmpty() }
             .map {
-                LiveVideoTable(
+                YouTubeVideoTable(
                     id = it.videoId,
                     channelId = it.channelId,
                     thumbnailUrl = it.thumbnailUrl,
@@ -88,18 +88,18 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
-    suspend fun fetchPlaylistItems(id: LivePlaylist.Id): List<LivePlaylistItem> {
+    suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem> {
         return dao.findPlaylistById(id, since = Instant.now())?.playlistItems
             ?: emptyList()
     }
 
     suspend fun setPlaylistItemsByPlaylistId(
-        id: LivePlaylist.Id,
-        items: Collection<LivePlaylistItem>,
+        id: YouTubePlaylist.Id,
+        items: Collection<YouTubePlaylistItem>,
     ) {
         if (items.isEmpty()) {
             database.withTransaction {
-                dao.addPlaylist(LivePlaylistTable.createWithMaxAge(id))
+                dao.addPlaylist(YouTubePlaylistTable.createWithMaxAge(id))
                 dao.removePlaylistItemsByPlaylistId(id)
             }
             return
@@ -108,7 +108,7 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         val cache = dao.findPlaylistById(id)
         if (cache == null) {
             database.withTransaction {
-                dao.addPlaylist(LivePlaylistTable(id))
+                dao.addPlaylist(YouTubePlaylistTable(id))
                 dao.addPlaylistItems(items.map { it.toDbEntity() })
             }
             return
@@ -117,12 +117,12 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         val newIds = items.map { it.id }.toSet()
         val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
         val maxAge = if (isNotModified) {
-            val boarder = Instant.now().minus(LivePlaylistTable.RECENTLY_BOARDER)
+            val boarder = Instant.now().minus(YouTubePlaylistTable.RECENTLY_BOARDER)
             val isPublishedRecently = items.any { boarder.isAfter(it.publishedAt) }
-            val maxAgeMax = LivePlaylistTable.getMaxAgeUpperLimit(isPublishedRecently)
+            val maxAgeMax = YouTubePlaylistTable.getMaxAgeUpperLimit(isPublishedRecently)
             cache.playlist.maxAge.multipliedBy(2).coerceAtMost(maxAgeMax)
         } else {
-            LivePlaylistTable.MAX_AGE_DEFAULT
+            YouTubePlaylistTable.MAX_AGE_DEFAULT
         }
         database.withTransaction {
             dao.updatePlaylist(id, maxAge = maxAge)
@@ -131,21 +131,21 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun fetchVideoList(ids: Collection<LiveVideo.Id>): List<LiveVideo> {
-        return fetchListByIds(ids) { dao.findVideosById(it) }
+    override suspend fun fetchVideoList(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideo> {
+        return fetchListByIds(ids) { youtubeDao.findVideosById(it) }
     }
 
-    override suspend fun addFreeChatItems(ids: Collection<LiveVideo.Id>) {
+    override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
         val f = ids.map { FreeChatTable(it, isFreeChat = true) }
         dao.addFreeChatItems(f)
     }
 
-    override suspend fun removeFreeChatItems(ids: Collection<LiveVideo.Id>) {
+    override suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
         val f = ids.map { FreeChatTable(it, isFreeChat = false) }
         dao.addFreeChatItems(f)
     }
 
-    suspend fun addVideo(video: Collection<LiveVideo>) = withContext(Dispatchers.IO) {
+    suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(Dispatchers.IO) {
         val current = Instant.now()
         val defaultExpiredAt = current + EXPIRATION_DEFAULT
         val expiring = video.map {
@@ -156,7 +156,7 @@ class YouTubeLiveLocalDataSource @Inject constructor(
                 it.isArchived -> EXPIRATION_MAX
                 else -> defaultExpiredAt
             }
-            LiveVideoExpireTable(it.id, expired)
+            YouTubeVideoExpireTable(it.id, expired)
         }
         val videos = video.map { it.toDbEntity() }
         database.withTransaction {
@@ -165,19 +165,19 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
-    private val videoDetailCache = mutableMapOf<LiveVideo.Id, LiveVideoDetail>()
-    suspend fun fetchVideoDetail(id: LiveVideo.Id): LiveVideoDetail? {
+    private val videoDetailCache = mutableMapOf<YouTubeVideo.Id, YouTubeVideoDetail>()
+    suspend fun fetchVideoDetail(id: YouTubeVideo.Id): YouTubeVideoDetail? {
         return videoDetailCache[id]
     }
 
-    suspend fun addVideoDetail(detail: Collection<LiveVideoDetail>) {
+    suspend fun addVideoDetail(detail: Collection<YouTubeVideoDetail>) {
         if (detail.isEmpty()) {
             return
         }
         videoDetailCache.putAll(detail.map { it.id to it })
     }
 
-    suspend fun removeVideoDetail(id: LiveVideo.Id) {
+    suspend fun removeVideoDetail(id: YouTubeVideo.Id) {
         videoDetailCache.remove(id)
     }
 
@@ -191,36 +191,37 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         removeVideo(removingId)
     }
 
-    private suspend fun removeVideo(ids: Collection<LiveVideo.Id>) = withContext(Dispatchers.IO) {
-        ids.forEach { removeVideoDetail(it) }
-        fetchByIds(ids) {
-            dao.removeFreeChatItems(it)
-            dao.removeLiveVideoExpire(it)
-            dao.removeVideos(it)
+    private suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>) =
+        withContext(Dispatchers.IO) {
+            ids.forEach { removeVideoDetail(it) }
+            fetchByIds(ids) {
+                youtubeDao.removeFreeChatItems(it)
+                youtubeDao.removeLiveVideoExpire(it)
+                youtubeDao.removeVideos(it)
+            }
         }
-    }
 
-    suspend fun findAllUnfinishedVideos(): List<LiveVideo> {
+    suspend fun findAllUnfinishedVideos(): List<YouTubeVideo> {
         return dao.findAllUnfinishedVideoList()
     }
 
-    suspend fun updateVideosInvisible(removed: Collection<LiveVideo.Id>) {
+    suspend fun updateVideosInvisible(removed: Collection<YouTubeVideo.Id>) {
         if (removed.isEmpty()) {
             return
         }
         dao.updateVideoInvisible(removed)
     }
 
-    suspend fun fetchChannelList(ids: Collection<LiveChannel.Id>): List<LiveChannelDetail> {
+    suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
         return dao.findChannelDetail(ids)
     }
 
-    suspend fun addChannelList(channelDetail: Collection<LiveChannelDetail>) {
+    suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>) {
         val channels = channelDetail.map { it.toDbEntity() }
         val additions = channelDetail.map { it.toAddition() }
         val playlists = additions.mapNotNull { it.uploadedPlayList }
             .distinct()
-            .map { LivePlaylistTable(it) }
+            .map { YouTubePlaylistTable(it) }
         database.withTransaction {
             dao.addChannels(channels)
             dao.addPlaylists(playlists)
@@ -228,16 +229,16 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
-    private val channelSections = mutableMapOf<LiveChannel.Id, List<LiveChannelSection>>()
-    fun fetchChannelSection(id: LiveChannel.Id): List<LiveChannelSection> {
+    private val channelSections = mutableMapOf<YouTubeChannel.Id, List<YouTubeChannelSection>>()
+    fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
         return channelSections[id] ?: emptyList()
     }
 
-    fun addChannelSection(channelSection: List<LiveChannelSection>) {
+    fun addChannelSection(channelSection: List<YouTubeChannelSection>) {
         channelSections[channelSection[0].channelId] = channelSection
     }
 
-    private suspend fun <I : IdBase<*>, E> fetchListByIds(
+    private suspend fun <I : YouTubeId, E> fetchListByIds(
         ids: Collection<I>,
         query: suspend AppDatabase.(Collection<I>) -> List<E>,
     ): List<E> {
@@ -252,7 +253,7 @@ class YouTubeLiveLocalDataSource @Inject constructor(
         }
     }
 
-    private suspend fun <I : IdBase<*>> fetchByIds(
+    private suspend fun <I : YouTubeId> fetchByIds(
         ids: Collection<I>,
         query: suspend AppDatabase.(Collection<I>) -> Unit,
     ) {
@@ -287,20 +288,20 @@ class YouTubeLiveLocalDataSource @Inject constructor(
          * cache expiration duration for on air stream (1 min.)
          */
         private val EXPIRATION_ON_AIR = Duration.ofMinutes(1)
-        private val LiveVideo.isArchived: Boolean
+        private val YouTubeVideo.isArchived: Boolean
             get() = !isLiveStream() || actualEndDateTime != null
     }
 }
 
-private fun LiveSubscription.toDbEntity(): LiveSubscriptionTable = LiveSubscriptionTable(
+private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTubeSubscriptionTable(
     id = id, subscribeSince = subscribeSince, channelId = channel.id,
 )
 
-private fun LiveChannel.toDbEntity(): LiveChannelTable = LiveChannelTable(
+private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
     id = id, title = title, iconUrl = iconUrl,
 )
 
-private fun LiveVideo.toDbEntity(): LiveVideoTable = LiveVideoTable(
+private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
     id = id,
     title = title,
     channelId = channel.id,
@@ -311,7 +312,7 @@ private fun LiveVideo.toDbEntity(): LiveVideoTable = LiveVideoTable(
     thumbnailUrl = thumbnailUrl,
 )
 
-private fun LiveChannelLog.toDbEntity(): LiveChannelLogTable = LiveChannelLogTable(
+private fun YouTubeChannelLog.toDbEntity(): YouTubeChannelLogTable = YouTubeChannelLogTable(
     id = id,
     dateTime = dateTime,
     videoId = videoId,
@@ -319,16 +320,17 @@ private fun LiveChannelLog.toDbEntity(): LiveChannelLogTable = LiveChannelLogTab
     thumbnailUrl = thumbnailUrl,
 )
 
-private fun LiveChannelDetail.toAddition(): LiveChannelAdditionTable = LiveChannelAdditionTable(
-    id = id,
-    bannerUrl = bannerUrl,
-    uploadedPlayList = uploadedPlayList,
-    description = description,
-    customUrl = customUrl,
-    isSubscriberHidden = isSubscriberHidden,
-    keywordsRaw = keywords.joinToString(","),
-    publishedAt = publishedAt,
-    subscriberCount = subscriberCount,
-    videoCount = videoCount,
-    viewsCount = viewsCount,
-)
+private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
+    YouTubeChannelAdditionTable(
+        id = id,
+        bannerUrl = bannerUrl,
+        uploadedPlayList = uploadedPlayList,
+        description = description,
+        customUrl = customUrl,
+        isSubscriberHidden = isSubscriberHidden,
+        keywordsRaw = keywords.joinToString(","),
+        publishedAt = publishedAt,
+        subscriberCount = subscriberCount,
+        videoCount = videoCount,
+        viewsCount = viewsCount,
+    )

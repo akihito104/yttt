@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data
 
-import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -85,7 +84,6 @@ class TwitchLiveRepository @Inject constructor(
     }
 
     override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchVideo<out TwitchVideo.TwitchVideoId>? {
-        check(id.platform == LivePlatform.TWITCH)
         return localDataSource.fetchStreamDetail(id)
     }
 

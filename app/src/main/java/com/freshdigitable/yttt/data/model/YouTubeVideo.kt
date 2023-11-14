@@ -2,46 +2,43 @@ package com.freshdigitable.yttt.data.model
 
 import java.math.BigInteger
 import java.time.Instant
-import kotlin.reflect.KClass
 
-interface LiveVideo {
+interface YouTubeId : IdBase
+
+interface YouTubeVideo {
     val id: Id
     val title: String
-    val channel: LiveChannel
+    val channel: YouTubeChannel
     val thumbnailUrl: String
     val scheduledStartDateTime: Instant?
     val scheduledEndDateTime: Instant?
     val actualStartDateTime: Instant?
     val actualEndDateTime: Instant?
     val isFreeChat: Boolean? get() = null
-    val url: String
 
     fun isLiveStream(): Boolean = scheduledStartDateTime != null
     fun isNowOnAir(): Boolean = actualStartDateTime != null && actualEndDateTime == null
     fun isUpcoming(): Boolean = isLiveStream() && actualStartDateTime == null
 
-    override fun equals(other: Any?): Boolean
-    override fun hashCode(): Int
+    data class Id(override val value: String) : YouTubeId
 
-    data class Id(
-        override val value: String,
-        override val type: KClass<out IdBase>,
-    ) : LiveId
+    companion object {
+        val YouTubeVideo.url: String get() = "https://youtube.com/watch?v=${id.value}"
+    }
 }
 
-data class LiveVideoEntity(
-    override val id: LiveVideo.Id,
-    override val channel: LiveChannel,
+data class YouTubeVideoEntity(
+    override val id: YouTubeVideo.Id,
+    override val channel: YouTubeChannel,
     override val title: String,
     override val scheduledStartDateTime: Instant?,
     override val scheduledEndDateTime: Instant? = null,
     override val actualStartDateTime: Instant? = null,
     override val actualEndDateTime: Instant? = null,
     override val thumbnailUrl: String,
-    override val url: String,
-) : LiveVideo
+) : YouTubeVideo
 
-interface LiveVideoDetail : LiveVideo {
+interface YouTubeVideoDetail : YouTubeVideo {
     val description: String
     val viewerCount: BigInteger?
 }
