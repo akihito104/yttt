@@ -4,14 +4,14 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
 class VideoDetailViewModel @Inject constructor(
-    private val findLiveVideoTable: Map<Class<out IdBase>, @JvmSuppressWildcards FindLiveVideoUseCase>,
+    private val findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
 ) : ViewModel() {
     fun fetchViewDetail(id: LiveVideo.Id): LiveData<LiveVideo?> {
         val findLiveVideo = checkNotNull(findLiveVideoTable[id.type.java])

@@ -8,10 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TimetableMenuItem
 import com.freshdigitable.yttt.data.YouTubeRepository
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -29,7 +29,7 @@ import javax.inject.Inject
 class TimetableTabViewModel @Inject constructor(
     private val liveRepository: YouTubeRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
-    private val findLiveVideoTable: Map<Class<out IdBase>, @JvmSuppressWildcards FindLiveVideoUseCase>,
+    private val findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
     timetablePageFacade: TimetablePageFacade,
 ) : ViewModel(), TimetablePageFacade by timetablePageFacade {
     private val _isLoading = MutableLiveData(false)
