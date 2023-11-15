@@ -23,7 +23,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,23 +66,22 @@ fun ChannelDetailScreen(
     id: LiveChannel.Id,
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
-    val detail = viewModel.fetchChannel(id)
-    val items = viewModel.fetchVideoListItems(detail)
-    val detailState = detail.observeAsState()
+    val delegate = viewModel.getDelegate(id)
+    val detail = delegate.channelDetail.collectAsState(initial = null)
     ChannelDetailScreen(
-        pages = ChannelPage.findByPlatform(id.type),
-        channelDetail = { detailState.value }) { page ->
+        pages = delegate.tabs,
+        channelDetail = { detail.value }) { page ->
         when (page) {
             ChannelPage.ABOUT -> PlainTextPage {
-                detailState.value?.description ?: ""
+                detail.value?.description ?: ""
             }
 
             ChannelPage.DEBUG_CHANNEL -> PlainTextPage {
-                detailState.value?.toString() ?: ""
+                detail.value?.toString() ?: ""
             }
 
             ChannelPage.CHANNEL_SECTION -> {
-                val sectionState = viewModel.fetchChannelSection(id).observeAsState(emptyList())
+                val sectionState = delegate.channelSection.collectAsState(emptyList())
                 PlainListPage(
                     listProvider = { sectionState.value },
                     idProvider = { it.id },
@@ -91,7 +90,7 @@ fun ChannelDetailScreen(
             }
 
             ChannelPage.UPLOADED -> {
-                val itemsState = items.observeAsState(emptyList())
+                val itemsState = delegate.uploadedVideo.collectAsState(emptyList())
                 PlainListPage(
                     listProvider = { itemsState.value },
                     idProvider = { it.id },
@@ -100,7 +99,7 @@ fun ChannelDetailScreen(
             }
 
             ChannelPage.ACTIVITIES -> {
-                val logs = viewModel.fetchActivities(id).observeAsState(emptyList())
+                val logs = delegate.activities.collectAsState(initial = emptyList())
                 PlainListPage(
                     listProvider = { logs.value },
                     idProvider = { it.id },

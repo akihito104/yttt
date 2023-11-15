@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import java.math.BigInteger
 
 inline fun <reified T : IdBase> IdBase.mapTo(): T {
+    (this as? LiveId)?.checkMappable<T>()
     return when (T::class) {
         YouTubeVideo.Id::class -> YouTubeVideo.Id(value) as T
         YouTubeChannel.Id::class -> YouTubeChannel.Id(value) as T
@@ -15,6 +16,12 @@ inline fun <reified T : IdBase> IdBase.mapTo(): T {
         LiveVideo.Id::class -> LiveVideo.Id(value, this::class) as T
         LiveChannel.Id::class -> LiveChannel.Id(value, this::class) as T
         else -> throw AssertionError("unsupported id type: $this")
+    }
+}
+
+inline fun <reified T : IdBase> IdBase.checkMappable() {
+    if (this is LiveId) {
+        check(this.type == T::class) { "unmappable: ${this.type} to ${T::class}" }
     }
 }
 

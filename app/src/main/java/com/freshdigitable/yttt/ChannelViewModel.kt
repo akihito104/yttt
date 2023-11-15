@@ -5,21 +5,13 @@ import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.util.Log
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.liveData
-import androidx.lifecycle.map
-import androidx.lifecycle.switchMap
-import androidx.lifecycle.viewModelScope
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
 import com.freshdigitable.yttt.ChannelDetailChannelSection.ChannelDetailContent
 import com.freshdigitable.yttt.compose.VideoListItemEntity
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -31,41 +23,104 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import com.freshdigitable.yttt.data.model.toLiveVideo
+import com.freshdigitable.yttt.di.IdBaseClassKey
+import com.freshdigitable.yttt.di.IdBaseClassMap
+import dagger.Binds
+import dagger.Module
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ViewModelComponent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.multibindings.IntoMap
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import java.io.IOException
 import java.security.MessageDigest
 import javax.inject.Inject
-import kotlin.reflect.KClass
 
 @HiltViewModel
 class ChannelViewModel @Inject constructor(
-    private val repository: YouTubeRepository,
-    private val twitchRepository: TwitchLiveRepository,
+    private val delegateFactory: IdBaseClassMap<ChannelDetailDelegate.Factory>,
 ) : ViewModel() {
-    fun fetchChannel(id: LiveChannel.Id): LiveData<LiveChannelDetail?> = flow {
-        val channel = when (id.type) {
-            YouTubeChannel.Id::class -> {
-                val c = repository.fetchChannelList(listOf(id.mapTo()))
-                c.map { it.toLiveChannelDetail() }
-            }
+    fun getDelegate(id: LiveChannel.Id): ChannelDetailDelegate =
+        checkNotNull(delegateFactory[id.type.java]).create(id)
+}
 
-            TwitchUser.Id::class -> {
-                val u = twitchRepository.findUsersById(listOf(id.mapTo()))
-                u.map { it.toLiveChannelDetail() }
-            }
+@Module
+@InstallIn(ViewModelComponent::class)
+interface ChannelDetailDelegateModule {
+    @Binds
+    @IntoMap
+    @IdBaseClassKey(YouTubeChannel.Id::class)
+    fun bindChannelDetailDelegateFactoryYouTube(
+        factory: ChannelDetailDelegateForYouTube.Factory,
+    ): ChannelDetailDelegate.Factory
 
-            else -> throw AssertionError("unsupported type: ${id.type}")
-        }.firstOrNull()
-        emit(channel)
-    }.asLiveData(viewModelScope.coroutineContext)
+    @Binds
+    @IntoMap
+    @IdBaseClassKey(TwitchUser.Id::class)
+    fun bindChannelDetailDelegateFactoryTwitch(
+        factory: ChannelDetailDelegateForTwitch.Factory,
+    ): ChannelDetailDelegate.Factory
+}
 
-    fun fetchChannelSection(id: LiveChannel.Id): LiveData<List<YouTubeChannelSection>> = flow {
-        if (id.type != YouTubeChannel.Id::class) {
-            emit(emptyList())
-            return@flow
+interface ChannelDetailDelegate {
+    val tabs: Array<ChannelPage>
+    val channelDetail: Flow<LiveChannelDetail?>
+    val uploadedVideo: Flow<List<VideoListItemEntity>>
+    val channelSection: Flow<List<YouTubeChannelSection>> // TODO: platform-free
+    val activities: Flow<List<LiveVideo>>
+
+    interface Factory {
+        fun create(id: LiveChannel.Id): ChannelDetailDelegate
+    }
+}
+
+class ChannelDetailDelegateForYouTube @AssistedInject constructor(
+    private val repository: YouTubeRepository,
+    @Assisted id: LiveChannel.Id,
+) : ChannelDetailDelegate {
+    @AssistedFactory
+    interface Factory : ChannelDetailDelegate.Factory {
+        override fun create(id: LiveChannel.Id): ChannelDetailDelegateForYouTube
+    }
+
+    init {
+        check(id.type == YouTubeChannel.Id::class) { "unsupported id type: ${id.type}" }
+    }
+
+    override val tabs: Array<ChannelPage> = arrayOf(
+        ChannelPage.ABOUT,
+        ChannelPage.CHANNEL_SECTION,
+        ChannelPage.UPLOADED,
+        ChannelPage.ACTIVITIES,
+        ChannelPage.DEBUG_CHANNEL,
+    )
+    override val channelDetail: Flow<LiveChannelDetail?> = flow {
+        val c = repository.fetchChannelList(listOf(id.mapTo())).firstOrNull()
+        emit(c?.toLiveChannelDetail())
+    }
+    override val uploadedVideo: Flow<List<VideoListItemEntity>> = channelDetail.map { d ->
+        val pId = d?.uploadedPlayList ?: return@map emptyList()
+        val items = try {
+            repository.fetchPlaylistItems(pId)
+        } catch (e: Exception) {
+            return@map emptyList()
         }
-        val channelSection = repository.fetchChannelSection(id.mapTo())
+        items.map {
+            VideoListItemEntity(
+                id = it.id,
+                thumbnailUrl = it.thumbnailUrl,
+                title = it.title,
+            )
+        }
+    }
+
+    override val channelSection: Flow<List<YouTubeChannelSection>> = flow {
+        val sections = repository.fetchChannelSection(id.mapTo())
             .mapNotNull { cs ->
                 try {
                     fetchSectionItems(cs)
@@ -75,8 +130,8 @@ class ChannelViewModel @Inject constructor(
                 }
             }
             .sortedBy { it.position }
-        emit(channelSection)
-    }.asLiveData(viewModelScope.coroutineContext)
+        emit(sections)
+    }
 
     private suspend fun fetchSectionItems(cs: YouTubeChannelSection): ChannelDetailChannelSection {
         val content = cs.content
@@ -104,60 +159,7 @@ class ChannelViewModel @Inject constructor(
         return ChannelDetailChannelSection(cs, content = c)
     }
 
-    private fun fetchPlaylistItems(
-        id: YouTubePlaylist.Id,
-    ): LiveData<List<YouTubePlaylistItem>> = flow {
-        emit(emptyList())
-        val items = try {
-            repository.fetchPlaylistItems(id)
-        } catch (e: Exception) {
-            emptyList()
-        }
-        emit(items)
-    }.asLiveData(viewModelScope.coroutineContext)
-
-    fun fetchVideoListItems(
-        detail: LiveData<LiveChannelDetail?>,
-    ): LiveData<List<VideoListItemEntity>> {
-        return detail.switchMap { d ->
-            val id = d?.id ?: return@switchMap emptyState
-            when (id.type) {
-                YouTubeChannel.Id::class -> {
-                    val pId = d.uploadedPlayList ?: return@switchMap emptyState
-                    fetchPlaylistItems(pId).map { items ->
-                        items.map {
-                            VideoListItemEntity(
-                                id = it.id,
-                                thumbnailUrl = it.thumbnailUrl,
-                                title = it.title
-                            )
-                        }
-                    }
-                }
-
-                TwitchUser.Id::class -> {
-                    liveData {
-                        val res = twitchRepository.fetchVideosByUserId(id.mapTo()).map {
-                            VideoListItemEntity(
-                                id = it.id,
-                                thumbnailUrl = it.getThumbnailUrl(),
-                                title = it.title
-                            )
-                        }
-                        emit(res)
-                    }
-                }
-
-                else -> throw AssertionError("unsupported type: ${id.type}")
-            }
-        }
-    }
-
-    fun fetchActivities(id: LiveChannel.Id): LiveData<List<LiveVideo>> = flow {
-        emit(emptyList())
-        if (id.type != YouTubeChannel.Id::class) {
-            return@flow
-        }
+    override val activities: Flow<List<LiveVideo>> = flow {
         val logs = repository.fetchLiveChannelLogs(id.mapTo(), maxResult = 20)
         val videos = repository.fetchVideoList(logs.map { it.videoId })
             .map { v -> v to logs.find { v.id == it.videoId } }
@@ -165,11 +167,45 @@ class ChannelViewModel @Inject constructor(
             .map { it.first }
             .map { it.toLiveVideo() }
         emit(videos)
-    }.asLiveData(viewModelScope.coroutineContext)
-
-    companion object {
-        private val emptyState = MutableLiveData(emptyList<VideoListItemEntity>())
     }
+}
+
+class ChannelDetailDelegateForTwitch @AssistedInject constructor(
+    private val repository: TwitchLiveRepository,
+    @Assisted id: LiveChannel.Id,
+) : ChannelDetailDelegate {
+    @AssistedFactory
+    interface Factory : ChannelDetailDelegate.Factory {
+        override fun create(id: LiveChannel.Id): ChannelDetailDelegateForTwitch
+    }
+
+    init {
+        check(id.type == TwitchUser.Id::class) { "unsupported id type: ${id.type}" }
+    }
+
+    override val tabs: Array<ChannelPage> = arrayOf(
+        ChannelPage.ABOUT,
+        ChannelPage.UPLOADED,
+        ChannelPage.DEBUG_CHANNEL,
+    )
+    override val channelDetail: Flow<LiveChannelDetail?> = flow {
+        val u = repository.findUsersById(listOf(id.mapTo()))
+        emit(u.map { it.toLiveChannelDetail() }.firstOrNull())
+    }
+    override val uploadedVideo: Flow<List<VideoListItemEntity>> = flow {
+        val res = repository.fetchVideosByUserId(id.mapTo()).map {
+            VideoListItemEntity(
+                id = it.id,
+                thumbnailUrl = it.getThumbnailUrl(),
+                title = it.title,
+            )
+        }
+        emit(res)
+    }
+    override val channelSection: Flow<List<YouTubeChannelSection>>
+        get() = throw AssertionError("unsupported operation")
+    override val activities: Flow<List<LiveVideo>>
+        get() = throw AssertionError("unsupported operation")
 }
 
 class CustomCrop(
@@ -211,22 +247,9 @@ class CustomCrop(
     }
 }
 
-enum class ChannelPage(
-    val platform: Array<KClass<out IdBase>> = arrayOf(
-        YouTubeChannel.Id::class,
-        TwitchUser.Id::class,
-    ),
-) {
-    ABOUT, CHANNEL_SECTION(arrayOf(YouTubeChannel.Id::class)), UPLOADED,
-    ACTIVITIES(arrayOf(YouTubeChannel.Id::class)), DEBUG_CHANNEL,
+enum class ChannelPage {
+    ABOUT, CHANNEL_SECTION, UPLOADED, ACTIVITIES, DEBUG_CHANNEL,
     ;
-
-    companion object {
-        fun findByPlatform(type: KClass<out IdBase>): Array<ChannelPage> {
-            return ChannelPage.values().filter { p -> p.platform.any { it == type } }
-                .toTypedArray()
-        }
-    }
 }
 
 class ChannelDetailChannelSection(

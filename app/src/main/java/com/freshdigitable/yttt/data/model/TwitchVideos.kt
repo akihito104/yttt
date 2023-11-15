@@ -27,6 +27,8 @@ interface TwitchVideoDetail : TwitchVideo<TwitchVideo.Id> {
     val type: String
     val duration: String
     val mutedSegments: List<MutedSegment>
+    override fun getThumbnailUrl(width: Int, height: Int): String =
+        thumbnailUrlBase.replace("%{width}", "$width").replace("%{height}", "$height")
 
     interface MutedSegment {
         val duration: Int // [sec.]
