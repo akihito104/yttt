@@ -44,9 +44,9 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
+import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
-import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
@@ -244,8 +244,6 @@ fun <T> PlainListPage(
     )
 }
 
-class VideoListItemEntity(val id: IdBase, val thumbnailUrl: String, val title: String)
-
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun VideoListItem(
@@ -286,9 +284,9 @@ fun VideoListItem(
 }
 
 @Composable
-private fun ChannelSectionContent(cs: YouTubeChannelSection) {
+private fun ChannelSectionContent(cs: ChannelDetailChannelSection) {
     Column {
-        Text(text = cs.title ?: cs.type.name)
+        Text(text = cs.title)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             content = {
@@ -312,6 +310,8 @@ private fun ChannelSectionContent(cs: YouTubeChannelSection) {
                                 item = content.item[i],
                                 modifier = Modifier.fillParentMaxWidth(0.4f),
                             )
+
+                        else -> {}
                     }
                 }
             },
@@ -321,7 +321,7 @@ private fun ChannelSectionContent(cs: YouTubeChannelSection) {
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun SinglePlaylistContent(item: YouTubePlaylistItem, modifier: Modifier = Modifier) {
+fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         GlideImage(
             model = item.thumbnailUrl,
@@ -339,7 +339,7 @@ fun SinglePlaylistContent(item: YouTubePlaylistItem, modifier: Modifier = Modifi
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun MultiPlaylistContent(item: YouTubePlaylist, modifier: Modifier = Modifier) {
+fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         GlideImage(
             model = item.thumbnailUrl,

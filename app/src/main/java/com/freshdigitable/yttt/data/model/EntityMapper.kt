@@ -146,3 +146,15 @@ fun YouTubeSubscription.toLiveSubscription(): LiveSubscription = LiveSubscriptio
     subscribeSince = subscribeSince,
     order = order,
 )
+
+fun YouTubePlaylist.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
+    id = id.mapTo(),
+    title = title,
+    thumbnailUrl = thumbnailUrl,
+)
+
+fun YouTubePlaylistItem.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
+    id = id.mapTo(),
+    title = title,
+    thumbnailUrl = thumbnailUrl,
+)

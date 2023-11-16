@@ -1,20 +1,21 @@
 package com.freshdigitable.yttt
 
 import android.util.Log
-import com.freshdigitable.yttt.compose.VideoListItemEntity
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
+import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
-import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import com.freshdigitable.yttt.data.model.toLiveVideo
+import com.freshdigitable.yttt.data.model.toLiveVideoThumbnail
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -26,8 +27,8 @@ import java.io.IOException
 interface ChannelDetailDelegate {
     val tabs: Array<ChannelPage>
     val channelDetail: Flow<LiveChannelDetail?>
-    val uploadedVideo: Flow<List<VideoListItemEntity>>
-    val channelSection: Flow<List<YouTubeChannelSection>> // TODO: platform-free
+    val uploadedVideo: Flow<List<LiveVideoThumbnail>>
+    val channelSection: Flow<List<ChannelDetailChannelSection>>
     val activities: Flow<List<LiveVideo>>
 
     interface Factory {
@@ -59,23 +60,17 @@ class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         val c = repository.fetchChannelList(listOf(id.mapTo())).firstOrNull()
         emit(c?.toLiveChannelDetail())
     }
-    override val uploadedVideo: Flow<List<VideoListItemEntity>> = channelDetail.map { d ->
+    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = channelDetail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
         val items = try {
             repository.fetchPlaylistItems(pId)
         } catch (e: Exception) {
             return@map emptyList()
         }
-        items.map {
-            VideoListItemEntity(
-                id = it.id,
-                thumbnailUrl = it.thumbnailUrl,
-                title = it.title,
-            )
-        }
+        items.map { it.toLiveVideoThumbnail() }
     }
 
-    override val channelSection: Flow<List<YouTubeChannelSection>> = flow {
+    override val channelSection: Flow<List<ChannelDetailChannelSection>> = flow {
         val sections = repository.fetchChannelSection(id.mapTo())
             .mapNotNull { cs ->
                 try {
@@ -95,13 +90,15 @@ class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             if (cs.type == YouTubeChannelSection.Type.MULTIPLE_PLAYLIST ||
                 cs.type == YouTubeChannelSection.Type.ALL_PLAYLIST
             ) {
-                val item = repository.fetchPlaylist(content.item)
+                val item = repository.fetchPlaylist(content.item).map { it.toLiveVideoThumbnail() }
                 ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist(item)
             } else {
                 val p = repository.fetchPlaylist(content.item)
                 val item = repository.fetchPlaylistItems(content.item.first())
+                    .map { it.toLiveVideoThumbnail() }
                 return ChannelDetailChannelSection(
-                    cs,
+                    id = cs.id,
+                    position = cs.position.toInt(),
                     title = p.first().title,
                     content = ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(item),
                 )
@@ -112,7 +109,12 @@ class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         } else {
             ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(emptyList())
         }
-        return ChannelDetailChannelSection(cs, content = c)
+        return ChannelDetailChannelSection(
+            id = cs.id,
+            position = cs.position.toInt(),
+            title = cs.title ?: cs.type.name,
+            content = c,
+        )
     }
 
     override val activities: Flow<List<LiveVideo>> = flow {
@@ -148,37 +150,38 @@ class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         val u = repository.findUsersById(listOf(id.mapTo()))
         emit(u.map { it.toLiveChannelDetail() }.firstOrNull())
     }
-    override val uploadedVideo: Flow<List<VideoListItemEntity>> = flow {
+    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flow {
         val res = repository.fetchVideosByUserId(id.mapTo()).map {
-            VideoListItemEntity(
-                id = it.id,
+            LiveVideoThumbnailEntity(
+                id = it.id.mapTo(),
                 thumbnailUrl = it.getThumbnailUrl(),
                 title = it.title,
             )
         }
         emit(res)
     }
-    override val channelSection: Flow<List<YouTubeChannelSection>>
+    override val channelSection: Flow<List<ChannelDetailChannelSection>>
         get() = throw AssertionError("unsupported operation")
     override val activities: Flow<List<LiveVideo>>
         get() = throw AssertionError("unsupported operation")
 }
 
 class ChannelDetailChannelSection(
-    channelSection: YouTubeChannelSection,
-    title: String? = null,
-    override val content: ChannelDetailContent<*>?,
-) : YouTubeChannelSection by channelSection {
-    override val title: String? = title ?: channelSection.title
+    val id: IdBase,
+    val position: Int,
+    val title: String,
+    val content: ChannelDetailContent<*>?,
+) {
+    sealed class ChannelDetailContent<T> {
+        data class MultiPlaylist(override val item: List<LiveVideoThumbnail>) :
+            ChannelDetailContent<LiveVideoThumbnail>()
 
-    sealed class ChannelDetailContent<T> : YouTubeChannelSection.Content<T> {
-        data class MultiPlaylist(override val item: List<YouTubePlaylist>) :
-            ChannelDetailContent<YouTubePlaylist>()
-
-        data class SinglePlaylist(override val item: List<YouTubePlaylistItem>) :
-            ChannelDetailContent<YouTubePlaylistItem>()
+        data class SinglePlaylist(override val item: List<LiveVideoThumbnail>) :
+            ChannelDetailContent<LiveVideoThumbnail>()
 
         data class ChannelList(override val item: List<LiveChannel>) :
             ChannelDetailContent<LiveChannel>()
+
+        abstract val item: List<T>
     }
 }

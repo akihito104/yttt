@@ -4,11 +4,23 @@ import java.math.BigInteger
 import java.time.Instant
 import kotlin.reflect.KClass
 
-interface LiveVideo {
-    val id: Id
+interface LiveVideoThumbnail {
+    val id: LiveVideo.Id
     val title: String
-    val channel: LiveChannel
     val thumbnailUrl: String
+
+    override fun equals(other: Any?): Boolean
+    override fun hashCode(): Int
+}
+
+data class LiveVideoThumbnailEntity(
+    override val id: LiveVideo.Id,
+    override val title: String,
+    override val thumbnailUrl: String,
+) : LiveVideoThumbnail
+
+interface LiveVideo : LiveVideoThumbnail {
+    val channel: LiveChannel
     val scheduledStartDateTime: Instant?
     val scheduledEndDateTime: Instant?
     val actualStartDateTime: Instant?
