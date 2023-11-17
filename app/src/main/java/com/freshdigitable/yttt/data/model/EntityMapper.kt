@@ -99,6 +99,7 @@ fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
     actualStartDateTime = actualStartDateTime,
     actualEndDateTime = actualEndDateTime,
     url = url,
+    isFreeChat = isFreeChat,
 )
 
 private data class LiveVideoDetailImpl(

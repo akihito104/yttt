@@ -94,15 +94,12 @@ class YouTubeRepository @Inject constructor(
             localSource.removeVideoDetail(id)
             return null
         }
-        if (detailCache != null) {
-            return object : YouTubeVideoDetail, YouTubeVideo by cache {
-                override val description: String
-                    get() = detailCache.description
-                override val viewerCount: BigInteger?
-                    get() = detailCache.viewerCount
-            }
+        return object : YouTubeVideoDetail, YouTubeVideo by cache {
+            override val description: String
+                get() = detailCache?.description ?: ""
+            override val viewerCount: BigInteger?
+                get() = detailCache?.viewerCount ?: BigInteger.ZERO
         }
-        return cache
     }
 
     suspend fun cleanUp() {

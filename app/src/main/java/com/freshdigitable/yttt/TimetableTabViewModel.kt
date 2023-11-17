@@ -1,7 +1,5 @@
 package com.freshdigitable.yttt
 
-import android.content.Intent
-import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -9,12 +7,12 @@ import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TimetableMenuItem
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +27,7 @@ import javax.inject.Inject
 class TimetableTabViewModel @Inject constructor(
     private val liveRepository: YouTubeRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
-    private val findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
+    private val contextMenuDelegate: TimetableContextMenuDelegate,
     timetablePageFacade: TimetablePageFacade,
 ) : ViewModel(), TimetablePageFacade by timetablePageFacade {
     private val _isLoading = MutableLiveData(false)
@@ -50,66 +48,105 @@ class TimetableTabViewModel @Inject constructor(
         }
     }
 
-    private val _selectedItem: MutableStateFlow<LiveVideo?> = MutableStateFlow(null)
-    val menuItems: StateFlow<List<TimetableMenuItem>> = _selectedItem.map {
-        if (it == null) emptyList()
-        else {
-            listOfNotNull(
-                if (it.isFreeChat == true) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
-                TimetableMenuItem.LAUNCH_LIVE,
-            )
-        }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val menuItems: StateFlow<List<TimetableMenuItem>> = contextMenuDelegate.menuItems
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun onMenuClicked(id: LiveVideo.Id) {
-        val findLiveVideo = checkNotNull(findLiveVideoTable[id.type.java])
         viewModelScope.launch {
-            val v = findLiveVideo(id)
-            _selectedItem.value = v
+            contextMenuDelegate.setupMenu(id)
         }
     }
 
     fun onMenuClosed() {
-        _selectedItem.value = null
+        contextMenuDelegate.tearDownMenu()
     }
 
-    fun onMenuItemClicked(item: TimetableMenuItem, appLauncher: (Intent) -> Unit) {
-        val video = checkNotNull(_selectedItem.value)
-        val id = video.id
-        when (item) {
-            TimetableMenuItem.ADD_FREE_CHAT -> {
-                if (id.type == YouTubeVideo.Id::class) {
-                    checkAsFreeChat(id)
-                }
-            }
-
-            TimetableMenuItem.REMOVE_FREE_CHAT -> {
-                if (id.type == YouTubeVideo.Id::class) {
-                    uncheckAsFreeChat(id)
-                }
-            }
-
-            TimetableMenuItem.LAUNCH_LIVE -> {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(video.url))
-                appLauncher(intent)
-            }
-        }
-    }
-
-    private fun checkAsFreeChat(id: LiveVideo.Id) {
+    fun onMenuItemClicked(item: TimetableMenuItem) {
         viewModelScope.launch {
-            liveRepository.addFreeChatItems(listOf(id.mapTo()))
-        }
-    }
-
-    private fun uncheckAsFreeChat(id: LiveVideo.Id) {
-        viewModelScope.launch {
-            liveRepository.removeFreeChatItems(listOf(id.mapTo()))
+            contextMenuDelegate.consumeMenuItem(item)
         }
     }
 
     companion object {
         @Suppress("unused")
         private val TAG = TimetableTabViewModel::class.java.simpleName
+    }
+}
+
+class TimetableContextMenuDelegate @Inject constructor(
+    private val findLiveVideoMap: IdBaseClassMap<FindLiveVideoUseCase>,
+    private val menuSelectorMap: IdBaseClassMap<MenuSelector>,
+) {
+    private val _selectedLiveVideo = MutableStateFlow<LiveVideo?>(null)
+    private val selected: LiveVideo get() = checkNotNull(_selectedLiveVideo.value)
+    private val menuSelector get() = checkNotNull(menuSelectorMap[selected.id.type.java])
+    val menuItems: Flow<List<TimetableMenuItem>> = _selectedLiveVideo.map {
+        if (it == null) {
+            emptyList()
+        } else {
+            menuSelector.findMenuItems(it)
+        }
+    }
+
+    suspend fun setupMenu(id: LiveVideo.Id) {
+        val video = checkNotNull(findLiveVideoMap[id.type.java]).invoke(id)
+        _selectedLiveVideo.value = video
+    }
+
+    suspend fun consumeMenuItem(item: TimetableMenuItem) {
+        val video = checkNotNull(_selectedLiveVideo.value)
+        menuSelector.consumeMenuItem(video, item)
+    }
+
+    fun tearDownMenu() {
+        _selectedLiveVideo.value = null
+    }
+
+    interface MenuSelector {
+        fun findMenuItems(video: LiveVideo): List<TimetableMenuItem>
+        suspend fun consumeMenuItem(video: LiveVideo, item: TimetableMenuItem)
+    }
+}
+
+class TimetableContextMenuDelegateForYouTube @Inject constructor(
+    private val repository: YouTubeRepository,
+    private val launchApp: LaunchAppWithUrlUseCase,
+) : TimetableContextMenuDelegate.MenuSelector {
+    override fun findMenuItems(video: LiveVideo): List<TimetableMenuItem> {
+        return listOfNotNull(
+            if (video.isFreeChat == true) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
+            TimetableMenuItem.LAUNCH_LIVE,
+        )
+    }
+
+    override suspend fun consumeMenuItem(video: LiveVideo, item: TimetableMenuItem) {
+        val id = video.id
+        when (item) {
+            TimetableMenuItem.ADD_FREE_CHAT -> {
+                repository.addFreeChatItems(listOf(id.mapTo()))
+            }
+
+            TimetableMenuItem.REMOVE_FREE_CHAT -> {
+                repository.removeFreeChatItems(listOf(id.mapTo()))
+            }
+
+            TimetableMenuItem.LAUNCH_LIVE -> {
+                launchApp(video.url)
+            }
+        }
+    }
+}
+
+class TimetableContextMenuDelegateForTwitch @Inject constructor(
+    private val launchApp: LaunchAppWithUrlUseCase,
+) : TimetableContextMenuDelegate.MenuSelector {
+    override fun findMenuItems(video: LiveVideo): List<TimetableMenuItem> {
+        return listOf(TimetableMenuItem.LAUNCH_LIVE)
+    }
+
+    override suspend fun consumeMenuItem(video: LiveVideo, item: TimetableMenuItem) {
+        if (item == TimetableMenuItem.LAUNCH_LIVE) {
+            launchApp(video.url)
+        }
     }
 }

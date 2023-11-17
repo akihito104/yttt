@@ -1,13 +1,11 @@
 package com.freshdigitable.yttt
 
 import com.freshdigitable.yttt.data.TwitchLiveRepository
-import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toLiveVideoDetail
@@ -33,11 +31,11 @@ class FindLiveVideoFromTwitchUseCase @Inject constructor(
 }
 
 class FindLiveVideoFromYouTubeUseCase @Inject constructor(
-    private val repository: YouTubeRepository,
+    private val facade: YouTubeFacade,
 ) : FindLiveVideoUseCase {
     override suspend fun invoke(id: LiveVideo.Id): LiveVideo? {
         check(id.type == YouTubeVideo.Id::class)
-        val v = repository.fetchVideoDetail(id.mapTo())
-        return (v as? YouTubeVideoDetail)?.toLiveVideoDetail() ?: v?.toLiveVideo()
+        val v = facade.fetchVideoDetail(id.mapTo())
+        return v?.toLiveVideoDetail() ?: v?.toLiveVideo()
     }
 }

@@ -51,6 +51,7 @@ data class LiveVideoEntity(
     override val actualEndDateTime: Instant? = null,
     override val thumbnailUrl: String,
     override val url: String,
+    override val isFreeChat: Boolean? = null,
 ) : LiveVideo
 
 interface LiveVideoDetail : LiveVideo {
