@@ -18,6 +18,8 @@ import kotlin.reflect.KClass
 @MapKey
 annotation class IdBaseClassKey(val value: KClass<out IdBase>)
 
+typealias IdBaseClassMap<T> = Map<Class<out IdBase>, @JvmSuppressWildcards T>
+
 @Suppress("unused")
 @Module
 @InstallIn(ViewModelComponent::class)

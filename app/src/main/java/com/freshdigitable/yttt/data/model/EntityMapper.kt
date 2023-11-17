@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import java.math.BigInteger
 
 inline fun <reified T : IdBase> IdBase.mapTo(): T {
+    (this as? LiveId)?.checkMappable<T>()
     return when (T::class) {
         YouTubeVideo.Id::class -> YouTubeVideo.Id(value) as T
         YouTubeChannel.Id::class -> YouTubeChannel.Id(value) as T
@@ -15,6 +16,12 @@ inline fun <reified T : IdBase> IdBase.mapTo(): T {
         LiveVideo.Id::class -> LiveVideo.Id(value, this::class) as T
         LiveChannel.Id::class -> LiveChannel.Id(value, this::class) as T
         else -> throw AssertionError("unsupported id type: $this")
+    }
+}
+
+inline fun <reified T : IdBase> IdBase.checkMappable() {
+    if (this is LiveId) {
+        check(this.type == T::class) { "unmappable: ${this.type} to ${T::class}" }
     }
 }
 
@@ -62,12 +69,6 @@ fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelD
     iconUrl = iconUrl,
 )
 
-fun TwitchVideo<*>.toLiveVideo(user: TwitchUserDetail): LiveVideo = when (this) {
-    is TwitchStream -> this.toLiveVideo(user)
-    is TwitchStreamSchedule -> this.toLiveVideo(user)
-    else -> throw AssertionError("unsupported type: ${this::class.simpleName}")
-}
-
 fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo = LiveVideoEntity(
     id = id.mapTo(),
     channel = user.toLiveChannel(),
@@ -98,7 +99,39 @@ fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
     actualStartDateTime = actualStartDateTime,
     actualEndDateTime = actualEndDateTime,
     url = url,
+    isFreeChat = isFreeChat,
 )
+
+private data class LiveVideoDetailImpl(
+    private val video: LiveVideo,
+    override val description: String,
+    override val viewerCount: BigInteger? = null,
+) : LiveVideoDetail, LiveVideo by video
+
+fun TwitchVideo<*>.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail = when (this) {
+    is TwitchStream -> this.toLiveVideoDetail(user)
+    is TwitchStreamSchedule -> this.toLiveVideoDetail(user)
+    else -> throw AssertionError("unsupported type: ${this::class.simpleName}")
+}
+
+fun TwitchStream.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail = LiveVideoDetailImpl(
+    video = this.toLiveVideo(user),
+    description = "${this.gameName} tag: ${this.tags.joinToString()}",
+    viewerCount = BigInteger.valueOf(this.viewCount.toLong())
+)
+
+fun TwitchStreamSchedule.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail =
+    LiveVideoDetailImpl(
+        video = this.toLiveVideo(user),
+        description = "",
+    )
+
+fun YouTubeVideoDetail.toLiveVideoDetail(): LiveVideoDetail =
+    LiveVideoDetailImpl(
+        video = this.toLiveVideo(),
+        description = this.description,
+        viewerCount = this.viewerCount,
+    )
 
 fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): LiveSubscription =
     LiveSubscriptionEntity(
@@ -113,4 +146,16 @@ fun YouTubeSubscription.toLiveSubscription(): LiveSubscription = LiveSubscriptio
     channel = channel.toLiveChannel(),
     subscribeSince = subscribeSince,
     order = order,
+)
+
+fun YouTubePlaylist.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
+    id = id.mapTo(),
+    title = title,
+    thumbnailUrl = thumbnailUrl,
+)
+
+fun YouTubePlaylistItem.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
+    id = id.mapTo(),
+    title = title,
+    thumbnailUrl = thumbnailUrl,
 )

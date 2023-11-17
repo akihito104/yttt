@@ -3,7 +3,7 @@ package com.freshdigitable.yttt.compose
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.SubscriptionListViewModel
 import com.freshdigitable.yttt.data.model.LiveChannel
@@ -16,10 +16,7 @@ fun SubscriptionListScreen(
     page: LivePlatform,
     onListItemClicked: (LiveChannel.Id) -> Unit,
 ) {
-    val subs = when (page) {
-        LivePlatform.YOUTUBE -> viewModel.subscriptions.observeAsState(emptyList())
-        LivePlatform.TWITCH -> viewModel.twitchSubs.observeAsState(emptyList())
-    }
+    val subs = viewModel.getSubscriptionSource(page).collectAsState(initial = emptyList())
     ListPage(
         itemProvider = { subs.value },
         onListItemClicked = onListItemClicked,

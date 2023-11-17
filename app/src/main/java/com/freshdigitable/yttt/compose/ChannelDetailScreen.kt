@@ -23,7 +23,7 @@ import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,9 +44,9 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
+import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
-import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
@@ -66,23 +66,22 @@ fun ChannelDetailScreen(
     id: LiveChannel.Id,
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
-    val detail = viewModel.fetchChannel(id)
-    val items = viewModel.fetchVideoListItems(detail)
-    val detailState = detail.observeAsState()
+    val delegate = viewModel.getDelegate(id)
+    val detail = delegate.channelDetail.collectAsState(initial = null)
     ChannelDetailScreen(
-        pages = ChannelPage.findByPlatform(id.type),
-        channelDetail = { detailState.value }) { page ->
+        pages = delegate.tabs,
+        channelDetail = { detail.value }) { page ->
         when (page) {
             ChannelPage.ABOUT -> PlainTextPage {
-                detailState.value?.description ?: ""
+                detail.value?.description ?: ""
             }
 
             ChannelPage.DEBUG_CHANNEL -> PlainTextPage {
-                detailState.value?.toString() ?: ""
+                detail.value?.toString() ?: ""
             }
 
             ChannelPage.CHANNEL_SECTION -> {
-                val sectionState = viewModel.fetchChannelSection(id).observeAsState(emptyList())
+                val sectionState = delegate.channelSection.collectAsState(emptyList())
                 PlainListPage(
                     listProvider = { sectionState.value },
                     idProvider = { it.id },
@@ -91,7 +90,7 @@ fun ChannelDetailScreen(
             }
 
             ChannelPage.UPLOADED -> {
-                val itemsState = items.observeAsState(emptyList())
+                val itemsState = delegate.uploadedVideo.collectAsState(emptyList())
                 PlainListPage(
                     listProvider = { itemsState.value },
                     idProvider = { it.id },
@@ -100,7 +99,7 @@ fun ChannelDetailScreen(
             }
 
             ChannelPage.ACTIVITIES -> {
-                val logs = viewModel.fetchActivities(id).observeAsState(emptyList())
+                val logs = delegate.activities.collectAsState(initial = emptyList())
                 PlainListPage(
                     listProvider = { logs.value },
                     idProvider = { it.id },
@@ -245,8 +244,6 @@ fun <T> PlainListPage(
     )
 }
 
-class VideoListItemEntity(val id: IdBase, val thumbnailUrl: String, val title: String)
-
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun VideoListItem(
@@ -287,9 +284,9 @@ fun VideoListItem(
 }
 
 @Composable
-private fun ChannelSectionContent(cs: YouTubeChannelSection) {
+private fun ChannelSectionContent(cs: ChannelDetailChannelSection) {
     Column {
-        Text(text = cs.title ?: cs.type.name)
+        Text(text = cs.title)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             content = {
@@ -313,6 +310,8 @@ private fun ChannelSectionContent(cs: YouTubeChannelSection) {
                                 item = content.item[i],
                                 modifier = Modifier.fillParentMaxWidth(0.4f),
                             )
+
+                        else -> {}
                     }
                 }
             },
@@ -322,7 +321,7 @@ private fun ChannelSectionContent(cs: YouTubeChannelSection) {
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun SinglePlaylistContent(item: YouTubePlaylistItem, modifier: Modifier = Modifier) {
+fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         GlideImage(
             model = item.thumbnailUrl,
@@ -340,7 +339,7 @@ fun SinglePlaylistContent(item: YouTubePlaylistItem, modifier: Modifier = Modifi
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun MultiPlaylistContent(item: YouTubePlaylist, modifier: Modifier = Modifier) {
+fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         GlideImage(
             model = item.thumbnailUrl,

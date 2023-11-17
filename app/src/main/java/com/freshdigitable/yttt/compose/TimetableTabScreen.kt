@@ -30,7 +30,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.TimetablePage
@@ -77,11 +76,10 @@ fun TimetableTabScreen(
     }
     val menuItems = viewModel.menuItems.collectAsState(emptyList())
     val sheetState = rememberModalBottomSheetState()
-    val context = LocalContext.current
     ListItemMenuSheet(
         menuItemsProvider = { menuItems.value },
         sheetState = sheetState,
-        onMenuItemClicked = { viewModel.onMenuItemClicked(it, context::startActivity) },
+        onMenuItemClicked = { viewModel.onMenuItemClicked(it) },
         onDismissRequest = viewModel::onMenuClosed,
     )
 }

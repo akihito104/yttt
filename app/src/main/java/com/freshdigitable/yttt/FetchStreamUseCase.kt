@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -19,6 +20,7 @@ interface FetchStreamUseCase {
 
 class FetchYouTubeStreamUseCase @Inject constructor(
     private val liveRepository: YouTubeRepository,
+    private val facade: YouTubeFacade,
     private val accountRepository: AccountRepository,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke() {
@@ -29,7 +31,7 @@ class FetchYouTubeStreamUseCase @Inject constructor(
         fetchNewStreams()
         liveRepository.lastUpdateDatetime = Instant.now()
         liveRepository.cleanUp()
-        updateAsFreeChat()
+        facade.updateAsFreeChat()
         Log.d(TAG, "fetchLiveStreams: end")
     }
 
@@ -37,7 +39,7 @@ class FetchYouTubeStreamUseCase @Inject constructor(
         val first = liveRepository.findAllUnfinishedVideos()
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .map { it.id }.distinct()
-        val currentVideo = liveRepository.fetchVideoList(first).map { it.id }.toSet()
+        val currentVideo = facade.fetchVideoList(first).map { it.id }.toSet()
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
         val removed = first.subtract(currentVideo)
         Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
@@ -52,7 +54,7 @@ class FetchYouTubeStreamUseCase @Inject constructor(
             channelDetails.map { channelDetail -> async { fetchVideoTask(channelDetail) } }
         }
         val ids = task.awaitAll().flatten()
-        liveRepository.fetchVideoList(ids)
+        facade.fetchVideoList(ids)
     }
 
     private suspend fun fetchVideoTask(channelDetail: YouTubeChannelDetail): List<YouTubeVideo.Id> {
@@ -71,26 +73,66 @@ class FetchYouTubeStreamUseCase @Inject constructor(
         return emptyList()
     }
 
-    private suspend fun updateAsFreeChat() {
-        val unchecked = liveRepository.findAllUnfinishedVideos()
-        val regex = listOf(
+    companion object {
+        @Suppress("unused")
+        private val TAG = FetchYouTubeStreamUseCase::class.simpleName
+    }
+}
+
+class YouTubeFacade @Inject constructor(
+    private val repository: YouTubeRepository,
+) {
+    suspend fun fetchVideoList(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideo> {
+        val videos = repository.fetchVideoList(ids)
+        val unchecked = videos.filter { it.isFreeChat == null }
+            .associateWith { isFreeChat(it) }
+        val add = unchecked.entries.filter { (_, f) -> f }.map { it.key.id }
+        val remove = unchecked.map { it.key.id } - add.toSet()
+        if (add.isNotEmpty()) {
+            repository.addFreeChatItems(add)
+        }
+        if (remove.isNotEmpty()) {
+            repository.removeFreeChatItems(remove)
+        }
+        return repository.fetchVideoList(ids)
+    }
+
+    suspend fun fetchVideoDetail(id: YouTubeVideo.Id): YouTubeVideoDetail? {
+        val detail = repository.fetchVideoDetail(id) as? YouTubeVideoDetail ?: return null
+        if (detail.isFreeChat != null) {
+            return detail
+        }
+        val freeChat = isFreeChat(detail)
+        if (freeChat) {
+            repository.addFreeChatItems(listOf(id))
+        } else {
+            repository.removeFreeChatItems(listOf(id))
+        }
+        return repository.fetchVideoDetail(id) as? YouTubeVideoDetail
+    }
+
+    private fun isFreeChat(video: YouTubeVideo): Boolean {
+        return regex.any { video.title.contains(it) }
+    }
+
+    suspend fun updateAsFreeChat() {
+        val unchecked = repository.findAllUnfinishedVideos()
+        val freeChat = unchecked.filter { it.isFreeChat == null }
+            .filter { v -> regex.any { v.title.contains(it) } }
+            .map { it.id }
+        repository.addFreeChatItems(freeChat)
+        val unfinished = unchecked.filter { it.isFreeChat == null }.map { it.id } - freeChat.toSet()
+        repository.removeFreeChatItems(unfinished)
+    }
+
+    companion object {
+        private val regex = listOf(
             "free chat".toRegex(RegexOption.IGNORE_CASE),
             "フリーチャット".toRegex(),
             "ふりーちゃっと".toRegex(),
             "schedule".toRegex(RegexOption.IGNORE_CASE),
             "の予定".toRegex(),
         )
-        val freeChat = unchecked.filter { it.isFreeChat == null }
-            .filter { v -> regex.any { v.title.contains(it) } }
-            .map { it.id }
-        liveRepository.addFreeChatItems(freeChat)
-        val unfinished = unchecked.filter { it.isFreeChat == null }.map { it.id } - freeChat.toSet()
-        liveRepository.removeFreeChatItems(unfinished)
-    }
-
-    companion object {
-        @Suppress("unused")
-        private val TAG = FetchYouTubeStreamUseCase::class.simpleName
     }
 }
 
