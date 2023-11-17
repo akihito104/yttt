@@ -12,6 +12,7 @@ class AppLauncher @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     operator fun invoke(intent: Intent) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
     }
 }
