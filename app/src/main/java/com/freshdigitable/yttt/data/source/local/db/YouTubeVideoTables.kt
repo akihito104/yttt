@@ -9,6 +9,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import java.math.BigInteger
 import java.time.Instant
 
 @Entity(
@@ -40,6 +41,10 @@ class YouTubeVideoTable(
     val actualEndDateTime: Instant? = null,
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     val thumbnailUrl: String = "",
+    @ColumnInfo(name = "description", defaultValue = "")
+    val description: String = "",
+    @ColumnInfo(name = "viewer_count", defaultValue = "null")
+    val viewerCount: BigInteger? = null,
     @ColumnInfo(name = "visible", defaultValue = true.toString())
     val visible: Boolean = true,
 )
@@ -84,7 +89,7 @@ class YouTubeVideoExpireTable(
 
 @DatabaseView(
     "SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, " +
-        "v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, " +
+        "v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, v.description, v.viewer_count, " +
         "c.title AS channel_title, c.icon AS channel_icon, f.is_free_chat AS is_free_chat " +
         "FROM video AS v " +
         "INNER JOIN channel AS c ON c.id = v.channel_id " +
@@ -111,4 +116,8 @@ data class YouTubeVideoDbView(
     override val thumbnailUrl: String = "",
     @ColumnInfo(name = "is_free_chat", defaultValue = "null")
     override val isFreeChat: Boolean? = null,
+    @ColumnInfo(name = "description", defaultValue = "")
+    override val description: String = "",
+    @ColumnInfo(name = "viewer_count", defaultValue = "null")
+    override val viewerCount: BigInteger? = null,
 ) : YouTubeVideo

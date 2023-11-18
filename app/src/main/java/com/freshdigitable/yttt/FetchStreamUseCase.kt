@@ -6,7 +6,6 @@ import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -95,20 +94,6 @@ class YouTubeFacade @Inject constructor(
             repository.removeFreeChatItems(remove)
         }
         return repository.fetchVideoList(ids)
-    }
-
-    suspend fun fetchVideoDetail(id: YouTubeVideo.Id): YouTubeVideoDetail? {
-        val detail = repository.fetchVideoDetail(id) as? YouTubeVideoDetail ?: return null
-        if (detail.isFreeChat != null) {
-            return detail
-        }
-        val freeChat = isFreeChat(detail)
-        if (freeChat) {
-            repository.addFreeChatItems(listOf(id))
-        } else {
-            repository.removeFreeChatItems(listOf(id))
-        }
-        return repository.fetchVideoDetail(id) as? YouTubeVideoDetail
     }
 
     private fun isFreeChat(video: YouTubeVideo): Boolean {

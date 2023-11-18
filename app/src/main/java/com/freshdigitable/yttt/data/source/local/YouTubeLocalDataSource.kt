@@ -10,7 +10,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelAdditionTable
@@ -166,22 +165,6 @@ class YouTubeLocalDataSource @Inject constructor(
         }
     }
 
-    private val videoDetailCache = mutableMapOf<YouTubeVideo.Id, YouTubeVideoDetail>()
-    suspend fun fetchVideoDetail(id: YouTubeVideo.Id): YouTubeVideoDetail? {
-        return videoDetailCache[id]
-    }
-
-    suspend fun addVideoDetail(detail: Collection<YouTubeVideoDetail>) {
-        if (detail.isEmpty()) {
-            return
-        }
-        videoDetailCache.putAll(detail.map { it.id to it })
-    }
-
-    suspend fun removeVideoDetail(id: YouTubeVideo.Id) {
-        videoDetailCache.remove(id)
-    }
-
     suspend fun cleanUp() {
         removeNotExistVideos()
         dao.removeAllChannelLogs()
@@ -194,7 +177,6 @@ class YouTubeLocalDataSource @Inject constructor(
 
     private suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>) =
         withContext(Dispatchers.IO) {
-            ids.forEach { removeVideoDetail(it) }
             fetchByIds(ids) {
                 youtubeDao.removeFreeChatItems(it)
                 youtubeDao.removeLiveVideoExpire(it)
@@ -311,6 +293,8 @@ private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
     actualStartDateTime = actualStartDateTime,
     actualEndDateTime = actualEndDateTime,
     thumbnailUrl = thumbnailUrl,
+    description = description,
+    viewerCount = viewerCount,
 )
 
 private fun YouTubeChannelLog.toDbEntity(): YouTubeChannelLogTable = YouTubeChannelLogTable(

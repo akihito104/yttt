@@ -15,6 +15,8 @@ interface YouTubeVideo {
     val actualStartDateTime: Instant?
     val actualEndDateTime: Instant?
     val isFreeChat: Boolean? get() = null
+    val description: String
+    val viewerCount: BigInteger?
 
     fun isLiveStream(): Boolean = scheduledStartDateTime != null
     fun isNowOnAir(): Boolean = actualStartDateTime != null && actualEndDateTime == null
@@ -36,9 +38,6 @@ data class YouTubeVideoEntity(
     override val actualStartDateTime: Instant? = null,
     override val actualEndDateTime: Instant? = null,
     override val thumbnailUrl: String,
+    override val description: String,
+    override val viewerCount: BigInteger?,
 ) : YouTubeVideo
-
-interface YouTubeVideoDetail : YouTubeVideo {
-    val description: String
-    val viewerCount: BigInteger?
-}

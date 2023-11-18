@@ -8,12 +8,10 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import kotlinx.coroutines.flow.Flow
-import java.math.BigInteger
 import java.time.Instant
 import java.time.Period
 import javax.inject.Inject
@@ -64,7 +62,6 @@ class YouTubeRepository @Inject constructor(
         }
         val res = remoteSource.fetchVideoList(neededId)
         localSource.addVideo(res)
-        localSource.addVideoDetail(res)
         return cache + res
     }
 
@@ -85,21 +82,6 @@ class YouTubeRepository @Inject constructor(
             fetchChannelList(uploadedAtAnotherChannel)
         }
         return playlistItems.map { it.videoId }
-    }
-
-    suspend fun fetchVideoDetail(id: YouTubeVideo.Id): YouTubeVideo? {
-        val detailCache = localSource.fetchVideoDetail(id)
-        val cache = fetchVideoList(listOf(id)).firstOrNull()
-        if (cache == null) {
-            localSource.removeVideoDetail(id)
-            return null
-        }
-        return object : YouTubeVideoDetail, YouTubeVideo by cache {
-            override val description: String
-                get() = detailCache?.description ?: ""
-            override val viewerCount: BigInteger?
-                get() = detailCache?.viewerCount ?: BigInteger.ZERO
-        }
     }
 
     suspend fun cleanUp() {
