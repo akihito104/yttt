@@ -147,10 +147,10 @@ class YouTubeLocalDataSource @Inject constructor(
     suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(Dispatchers.IO) {
         val current = Instant.now()
         val defaultExpiredAt = current + EXPIRATION_DEFAULT
+        val v = dao.findFreeChatItems(video.map { it.id }).associateBy { it.videoId }
         val expiring = video.map {
-            val v = dao.findVideosById(listOf(it.id), current = Instant.EPOCH).firstOrNull()
             val expired = when {
-                it.isFreeChat == true || v?.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
+                it.isFreeChat == true || v[it.id]?.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
                 it.isUpcoming() -> defaultExpiredAt.coerceAtMost(checkNotNull(it.scheduledStartDateTime))
                 it.isNowOnAir() -> current + EXPIRATION_ON_AIR
                 it.isArchived -> EXPIRATION_MAX

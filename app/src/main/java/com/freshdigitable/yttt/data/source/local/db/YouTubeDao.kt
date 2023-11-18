@@ -105,6 +105,9 @@ interface YouTubeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addFreeChatItems(entities: Collection<FreeChatTable>)
 
+    @Query("SELECT * FROM free_chat WHERE video_id IN (:ids)")
+    suspend fun findFreeChatItems(ids: Collection<YouTubeVideo.Id>): List<FreeChatTable>
+
     @Query("DELETE FROM free_chat WHERE video_id IN(:ids)")
     suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>)
 
