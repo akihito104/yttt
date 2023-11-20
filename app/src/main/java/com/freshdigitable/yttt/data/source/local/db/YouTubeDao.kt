@@ -6,7 +6,10 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import kotlinx.coroutines.flow.Flow
@@ -15,8 +18,16 @@ import java.time.Instant
 
 @Dao
 interface YouTubeDao {
+    @Transaction
+    suspend fun addSubscriptions(subscriptions: Collection<YouTubeSubscription>) {
+        val channels = subscriptions.map { it.channel }.toSet()
+            .map { it.toDbEntity() }
+        addChannels(channels)
+        addSubscriptionEntities(subscriptions.map { it.toDbEntity() })
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addSubscriptions(subscriptions: Collection<YouTubeSubscriptionTable>)
+    suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscriptionTable>)
 
     @Query("DELETE FROM subscription WHERE id IN (:removed)")
     suspend fun removeSubscriptions(removed: Collection<YouTubeSubscription.Id>)
@@ -28,7 +39,28 @@ interface YouTubeDao {
     fun watchAllSubscriptions(): Flow<List<YouTubeSubscriptionDbView>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addChannelLogs(logs: Collection<YouTubeChannelLogTable>)
+    suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLogTable>)
+
+    @Transaction
+    suspend fun addChannelLogs(logs: Collection<YouTubeChannelLog>) {
+        val channels = logs.map { it.channelId }.distinct()
+            .filter { findChannel(it) == null }
+            .map { YouTubeChannelTable(id = it) }
+        val vIds = logs.map { it.videoId }.toSet()
+        val found = findVideosById(vIds).map { it.id }.toSet()
+        val videos = logs.distinctBy { it.videoId }
+            .filter { !found.contains(it.videoId) }
+            .map {
+                YouTubeVideoTable(
+                    id = it.videoId,
+                    channelId = it.channelId,
+                    thumbnailUrl = it.thumbnailUrl,
+                )
+            }
+        addChannels(channels)
+        addVideoEntities(videos)
+        addChannelLogEntities(logs.map { it.toDbEntity() })
+    }
 
     @Query(
         "SELECT * FROM channel_log" +
@@ -54,7 +86,14 @@ interface YouTubeDao {
     suspend fun removeAllChannelLogs()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addVideos(videos: Collection<YouTubeVideoTable>)
+    suspend fun addVideoEntities(videos: Collection<YouTubeVideoTable>)
+
+    suspend fun addVideos(videos: Map<YouTubeVideo, Instant>) {
+        val v = videos.keys.map { it.toDbEntity() }
+        val expiring = videos.entries.map { (v, e) -> YouTubeVideoExpireTable(v.id, e) }
+        addVideoEntities(v)
+        addLiveVideoExpire(expiring)
+    }
 
     @Query(
         "SELECT id FROM video AS v WHERE NOT EXISTS" +
@@ -64,7 +103,14 @@ interface YouTubeDao {
     suspend fun findUnusedVideoIds(): List<YouTubeVideo.Id>
 
     @Query("DELETE FROM video WHERE id IN (:videoIds)")
-    suspend fun removeVideos(videoIds: Collection<YouTubeVideo.Id>)
+    suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
+
+    @Transaction
+    suspend fun removeVideos(videoIds: Collection<YouTubeVideo.Id>) {
+        removeFreeChatItems(videoIds)
+        removeLiveVideoExpire(videoIds)
+        removeVideoEntities(videoIds)
+    }
 
     @Query(
         "SELECT v.* FROM (SELECT * FROM video_view WHERE id IN (:ids)) AS v " +
@@ -95,6 +141,18 @@ interface YouTubeDao {
 
     @Query("SELECT * FROM channel WHERE id = :id")
     suspend fun findChannel(id: YouTubeChannel.Id): YouTubeChannelTable?
+
+    @Transaction
+    suspend fun addChannelDetails(channelDetail: Collection<YouTubeChannelDetail>) {
+        val channels = channelDetail.map { it.toDbEntity() }
+        val additions = channelDetail.map { it.toAddition() }
+        val playlists = additions.mapNotNull { it.uploadedPlayList }
+            .distinct()
+            .map { YouTubePlaylistTable(it) }
+        addChannels(channels)
+        addPlaylists(playlists)
+        addChannelAddition(additions)
+    }
 
     @Query("SELECT * FROM channel_detail WHERE id IN (:id)")
     suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDbView>
@@ -137,6 +195,26 @@ interface YouTubeDao {
     @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
     suspend fun removePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id)
 
+    @Transaction
+    suspend fun setPlaylistItems(
+        id: YouTubePlaylist.Id,
+        lastModified: Instant = Instant.now(),
+        maxAge: Duration? = null,
+        items: Collection<YouTubePlaylistItem>,
+    ) {
+        if (items.isEmpty()) {
+            addPlaylist(YouTubePlaylistTable.createWithMaxAge(id))
+        } else if (maxAge == null) {
+            addPlaylist(YouTubePlaylistTable(id))
+        } else {
+            updatePlaylist(id, maxAge = maxAge)
+        }
+        removePlaylistItemsByPlaylistId(id)
+        if (items.isNotEmpty()) {
+            addPlaylistItems(items.map { it.toDbEntity() })
+        }
+    }
+
     companion object {
         private const val CONDITION_UNFINISHED_VIDEOS =
             "(schedule_start_datetime NOTNULL OR actual_start_datetime NOTNULL) " +
@@ -145,3 +223,59 @@ interface YouTubeDao {
             "WHERE $CONDITION_UNFINISHED_VIDEOS"
     }
 }
+
+private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTubeSubscriptionTable(
+    id = id, subscribeSince = subscribeSince, channelId = channel.id,
+)
+
+private fun YouTubeChannelLog.toDbEntity(): YouTubeChannelLogTable = YouTubeChannelLogTable(
+    id = id,
+    dateTime = dateTime,
+    videoId = videoId,
+    channelId = channelId,
+    thumbnailUrl = thumbnailUrl,
+)
+
+private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
+    id = id,
+    title = title,
+    channelId = channel.id,
+    scheduledStartDateTime = scheduledStartDateTime,
+    scheduledEndDateTime = scheduledEndDateTime,
+    actualStartDateTime = actualStartDateTime,
+    actualEndDateTime = actualEndDateTime,
+    thumbnailUrl = thumbnailUrl,
+    description = description,
+    viewerCount = viewerCount,
+)
+
+private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
+    YouTubeChannelAdditionTable(
+        id = id,
+        bannerUrl = bannerUrl,
+        uploadedPlayList = uploadedPlayList,
+        description = description,
+        customUrl = customUrl,
+        isSubscriberHidden = isSubscriberHidden,
+        keywordsRaw = keywords.joinToString(","),
+        publishedAt = publishedAt,
+        subscriberCount = subscriberCount,
+        videoCount = videoCount,
+        viewsCount = viewsCount,
+    )
+
+private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
+    id = id, title = title, iconUrl = iconUrl,
+)
+
+private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(
+    id,
+    playlistId,
+    title,
+    channel.id,
+    thumbnailUrl,
+    videoId,
+    description,
+    videoOwnerChannelId,
+    publishedAt
+)

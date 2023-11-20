@@ -96,18 +96,6 @@ data class YouTubePlaylistItemDb(
     override val publishedAt: Instant,
 ) : YouTubePlaylistItem
 
-fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(
-    id,
-    playlistId,
-    title,
-    channel.id,
-    thumbnailUrl,
-    videoId,
-    description,
-    videoOwnerChannelId,
-    publishedAt
-)
-
 data class YouTubePlaylistDb(
     @Embedded
     val playlist: YouTubePlaylistTable,
