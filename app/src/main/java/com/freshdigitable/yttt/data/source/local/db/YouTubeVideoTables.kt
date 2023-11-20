@@ -45,8 +45,6 @@ class YouTubeVideoTable(
     val description: String = "",
     @ColumnInfo(name = "viewer_count", defaultValue = "null")
     val viewerCount: BigInteger? = null,
-    @ColumnInfo(name = "visible", defaultValue = true.toString())
-    val visible: Boolean = true,
 )
 
 @Entity(
@@ -93,8 +91,7 @@ class YouTubeVideoExpireTable(
         "c.title AS channel_title, c.icon AS channel_icon, f.is_free_chat AS is_free_chat " +
         "FROM video AS v " +
         "INNER JOIN channel AS c ON c.id = v.channel_id " +
-        "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
-        "WHERE v.visible == 1",
+        "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id",
     viewName = "video_view",
 )
 data class YouTubeVideoDbView(

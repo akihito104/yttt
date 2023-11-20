@@ -133,9 +133,6 @@ interface YouTubeDao {
     @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
     fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDbView>>
 
-    @Query("UPDATE video SET visible = 0 WHERE id IN (:ids)")
-    suspend fun updateVideoInvisible(ids: Collection<YouTubeVideo.Id>)
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannels(channels: Collection<YouTubeChannelTable>)
 

@@ -42,7 +42,7 @@ class FetchYouTubeStreamUseCase @Inject constructor(
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
         val removed = first.subtract(currentVideo)
         Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
-        liveRepository.updateVideosInvisible(removed)
+        liveRepository.removeVideo(removed)
     }
 
     private suspend fun fetchNewStreams() {

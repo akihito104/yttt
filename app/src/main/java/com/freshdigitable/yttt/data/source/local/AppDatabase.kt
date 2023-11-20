@@ -3,9 +3,11 @@ package com.freshdigitable.yttt.data.source.local
 import android.content.Context
 import androidx.room.AutoMigration
 import androidx.room.Database
+import androidx.room.DeleteColumn
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.AutoMigrationSpec
 import com.freshdigitable.yttt.data.source.local.db.BigIntegerConverter
 import com.freshdigitable.yttt.data.source.local.db.CsvConverter
 import com.freshdigitable.yttt.data.source.local.db.DurationConverter
@@ -92,7 +94,7 @@ import dagger.hilt.components.SingletonComponent
         AutoMigration(from = 6, to = 7),
         AutoMigration(from = 7, to = 8),
         AutoMigration(from = 8, to = 9),
-        AutoMigration(from = 9, to = 10),
+        AutoMigration(from = 9, to = 10, spec = AppDatabase.MigrateRemoveVideoVisible::class),
     ]
 )
 @TypeConverters(
@@ -113,6 +115,9 @@ import dagger.hilt.components.SingletonComponent
 abstract class AppDatabase : RoomDatabase() {
     abstract val youtubeDao: YouTubeDao
     abstract val twitchDao: TwitchDao
+
+    @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
+    class MigrateRemoveVideoVisible : AutoMigrationSpec
 }
 
 @Module
