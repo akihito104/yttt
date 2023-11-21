@@ -70,10 +70,14 @@ class YouTubeRepository @Inject constructor(
         maxResult: Long = 10,
     ): List<YouTubeVideo.Id> {
         val cache = localSource.fetchPlaylistItems(id)
-        val playlistItems = cache.ifEmpty {
+        val playlistItems = if (cache == null) {
             val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
             localSource.setPlaylistItemsByPlaylistId(id, items)
             items
+        } else if (cache.isEmpty()) {
+            return emptyList()
+        } else {
+            cache
         }
         val uploadedAtAnotherChannel = playlistItems
             .filter { it.channel.id != it.videoOwnerChannelId }
