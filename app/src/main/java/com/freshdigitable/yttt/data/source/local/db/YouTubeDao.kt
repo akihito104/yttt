@@ -158,7 +158,19 @@ interface YouTubeDao {
     suspend fun addChannelAddition(addition: Collection<YouTubeChannelAdditionTable>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun addFreeChatItems(entities: Collection<FreeChatTable>)
+    suspend fun addFreeChatItemEntities(entities: Collection<FreeChatTable>)
+
+    @Transaction
+    suspend fun addFreeChatItems(
+        ids: Collection<YouTubeVideo.Id>,
+        isFreeChat: Boolean,
+        expiredAt: Instant,
+    ) {
+        val entities = ids.map { FreeChatTable(it, isFreeChat = isFreeChat) }
+        val expires = ids.map { YouTubeVideoExpireTable(it, expiredAt) }
+        addFreeChatItemEntities(entities)
+        addLiveVideoExpire(expires)
+    }
 
     @Query("SELECT * FROM free_chat WHERE video_id IN (:ids)")
     suspend fun findFreeChatItems(ids: Collection<YouTubeVideo.Id>): List<FreeChatTable>

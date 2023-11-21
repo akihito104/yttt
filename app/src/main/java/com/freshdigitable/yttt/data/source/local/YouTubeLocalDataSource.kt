@@ -11,7 +11,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
-import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import kotlinx.coroutines.Dispatchers
@@ -97,13 +96,11 @@ class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
-        val f = ids.map { FreeChatTable(it, isFreeChat = true) }
-        dao.addFreeChatItems(f)
+        dao.addFreeChatItems(ids, true, Instant.now() + EXPIRATION_FREE_CHAT)
     }
 
     override suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
-        val f = ids.map { FreeChatTable(it, isFreeChat = false) }
-        dao.addFreeChatItems(f)
+        dao.addFreeChatItems(ids, false, Instant.now() + EXPIRATION_DEFAULT)
     }
 
     suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(Dispatchers.IO) {
