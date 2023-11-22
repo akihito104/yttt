@@ -59,14 +59,14 @@ class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun fetchVideoTask(channelDetail: YouTubeChannelDetail): List<YouTubeVideo.Id> {
         val id = channelDetail.uploadedPlayList ?: return emptyList()
         try {
-            val ids = liveRepository.fetchVideoIdListByPlaylistId(id)
-            Log.d(TAG, "fetchLiveStreams: playlistId> $id,count>${ids.size}")
+            val ids = liveRepository.fetchPlaylistItems(id, maxResult = 10).map { it.videoId }
+            Log.d(TAG, "fetchVideoTask: playlistId> $id,count>${ids.size}")
             return ids
         } catch (e: Exception) {
             if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
-                Log.d(TAG, "fetchLiveStreams(reload ${channelDetail.customUrl}) did not update.")
+                Log.d(TAG, "fetchVideoTask(reload ${channelDetail.customUrl}): no items found.")
             } else {
-                Log.e(TAG, "fetchLiveStreams: channel>$channelDetail", e)
+                Log.e(TAG, "fetchVideoTask: channel>$channelDetail", e)
             }
         }
         return emptyList()

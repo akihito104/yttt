@@ -63,7 +63,7 @@ class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = channelDetail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
         val items = try {
-            repository.fetchPlaylistItems(pId)
+            repository.fetchPlaylistItems(pId, maxResult = 20)
         } catch (e: Exception) {
             return@map emptyList()
         }
@@ -94,7 +94,7 @@ class ChannelDetailDelegateForYouTube @AssistedInject constructor(
                 ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist(item)
             } else {
                 val p = repository.fetchPlaylist(content.item)
-                val item = repository.fetchPlaylistItems(content.item.first())
+                val item = repository.fetchPlaylistItems(content.item.first(), maxResult = 20)
                     .map { it.toLiveVideoThumbnail() }
                 return ChannelDetailChannelSection(
                     id = cs.id,

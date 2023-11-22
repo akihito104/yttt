@@ -65,10 +65,10 @@ class YouTubeRepository @Inject constructor(
         return cache + res
     }
 
-    suspend fun fetchVideoIdListByPlaylistId(
+    suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long = 10,
-    ): List<YouTubeVideo.Id> {
+    ): List<YouTubePlaylistItem> {
         val cache = localSource.fetchPlaylistItems(id)
         val playlistItems = if (cache == null) {
             val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
@@ -82,10 +82,11 @@ class YouTubeRepository @Inject constructor(
         val uploadedAtAnotherChannel = playlistItems
             .filter { it.channel.id != it.videoOwnerChannelId }
             .mapNotNull { it.videoOwnerChannelId }
+            .toSet()
         if (uploadedAtAnotherChannel.isNotEmpty()) {
             fetchChannelList(uploadedAtAnotherChannel)
         }
-        return playlistItems.map { it.videoId }
+        return playlistItems
     }
 
     suspend fun cleanUp() {
@@ -129,13 +130,6 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun fetchPlaylist(ids: Collection<YouTubePlaylist.Id>): List<YouTubePlaylist> {
         return remoteSource.fetchPlaylist(ids)
-    }
-
-    suspend fun fetchPlaylistItems(
-        id: YouTubePlaylist.Id,
-        maxResult: Long = 20,
-    ): List<YouTubePlaylistItem> {
-        return remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
     }
 
     override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
