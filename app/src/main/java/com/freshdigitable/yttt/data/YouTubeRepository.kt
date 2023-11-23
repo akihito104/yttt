@@ -62,7 +62,7 @@ class YouTubeRepository @Inject constructor(
         }
         val res = remoteSource.fetchVideoList(neededId)
         localSource.addVideo(res)
-        return cache + res
+        return localSource.fetchVideoList(ids)
     }
 
     suspend fun fetchPlaylistItems(
@@ -73,7 +73,7 @@ class YouTubeRepository @Inject constructor(
         val playlistItems = if (cache == null) {
             val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
             localSource.setPlaylistItemsByPlaylistId(id, items)
-            items
+            localSource.fetchPlaylistItems(id) ?: return emptyList()
         } else if (cache.isEmpty()) {
             return emptyList()
         } else {
