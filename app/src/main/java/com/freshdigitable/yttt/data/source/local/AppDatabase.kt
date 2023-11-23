@@ -39,6 +39,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIsArchivedDbView
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionDbView
@@ -47,6 +48,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDbView
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
 import dagger.Module
 import dagger.Provides
@@ -61,6 +63,7 @@ import dagger.hilt.components.SingletonComponent
         YouTubeChannelLogTable::class,
         YouTubeSubscriptionTable::class,
         YouTubeVideoTable::class,
+        YouTubeVideoIsArchivedTable::class,
         FreeChatTable::class,
         YouTubeVideoExpireTable::class,
         YouTubePlaylistTable::class,
@@ -82,6 +85,7 @@ import dagger.hilt.components.SingletonComponent
         YouTubeSubscriptionDbView::class,
         YouTubeChannelDetailDbView::class,
         YouTubePlaylistItemDb::class,
+        YouTubePlaylistItemIsArchivedDbView::class,
         TwitchStreamDbView::class,
     ],
     version = 10,

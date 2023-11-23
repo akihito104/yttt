@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "e7f2bf3756b75b110d388b0a31442a4b",
+    "identityHash": "04e21f875911adbfc6d0a61d7a12ba49",
     "entities": [
       {
         "tableName": "channel",
@@ -400,6 +400,32 @@
         ]
       },
       {
+        "tableName": "yt_video_is_archived",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`video_id` TEXT NOT NULL, `is_archived` INTEGER, PRIMARY KEY(`video_id`))",
+        "fields": [
+          {
+            "fieldPath": "videoId",
+            "columnName": "video_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isArchived",
+            "columnName": "is_archived",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "video_id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
         "tableName": "free_chat",
         "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`video_id` TEXT NOT NULL, `is_free_chat` INTEGER DEFAULT null, PRIMARY KEY(`video_id`), FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
@@ -531,7 +557,7 @@
       },
       {
         "tableName": "playlist_item",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `playlist_id` TEXT NOT NULL, `title` TEXT NOT NULL, `channel_id` TEXT NOT NULL, `thumbnail_url` TEXT NOT NULL, `video_id` TEXT NOT NULL, `description` TEXT NOT NULL, `video_owner_channel_id` TEXT DEFAULT null, `published_at` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `playlist_id` TEXT NOT NULL, `title` TEXT NOT NULL, `channel_id` TEXT NOT NULL, `thumbnail_url` TEXT NOT NULL, `video_id` TEXT NOT NULL, `description` TEXT NOT NULL, `video_owner_channel_id` TEXT DEFAULT null, `published_at` INTEGER NOT NULL, PRIMARY KEY(`id`, `playlist_id`), FOREIGN KEY(`playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "id",
@@ -592,10 +618,21 @@
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "id"
+            "id",
+            "playlist_id"
           ]
         },
         "indices": [
+          {
+            "name": "index_yt_playlist_item",
+            "unique": true,
+            "columnNames": [
+              "playlist_id",
+              "id"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_yt_playlist_item` ON `${TABLE_NAME}` (`playlist_id`, `id`)"
+          },
           {
             "name": "index_playlist_item_playlist_id",
             "unique": false,
@@ -1260,13 +1297,17 @@
         "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT p.*, c.icon AS channel_icon, c.title AS channel_title FROM playlist_item AS p INNER JOIN channel AS c ON c.id = p.channel_id"
       },
       {
+        "viewName": "yt_playlist_item_is_archived",
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT i.playlist_id, i.id AS playlist_item_id, v.is_archived FROM playlist_item AS i INNER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id"
+      },
+      {
         "viewName": "twitch_stream_view",
         "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT s.*, u.id AS u_id, u.display_name AS u_display_name, u.login_name AS u_login_name, u.description AS u_description, u.created_at AS u_created_at, u.views_count AS u_views_count, u.profile_image_url AS u_profile_image_url FROM twitch_stream AS s INNER JOIN (SELECT u.*, d.profile_image_url, d.views_count, d.created_at, d.description FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id) AS u ON u.id = s.user_id"
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e7f2bf3756b75b110d388b0a31442a4b')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '04e21f875911adbfc6d0a61d7a12ba49')"
     ]
   }
 }

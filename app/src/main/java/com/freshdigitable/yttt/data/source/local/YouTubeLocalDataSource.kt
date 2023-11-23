@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -63,7 +64,7 @@ class YouTubeLocalDataSource @Inject constructor(
      * returned empty list means that there is no items in the playlist (because of not updated yet or the playlist is to be private).
      */
     suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>? {
-        return dao.findPlaylistById(id, since = Instant.now())?.playlistItems
+        return dao.findPlaylistById(id, since = Instant.now())?.playlistItemsWithArchived
     }
 
     suspend fun setPlaylistItemsByPlaylistId(
@@ -109,13 +110,18 @@ class YouTubeLocalDataSource @Inject constructor(
     suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(Dispatchers.IO) {
         val current = Instant.now()
         val defaultExpiredAt = current + EXPIRATION_DEFAULT
-        val v = dao.findFreeChatItems(video.map { it.id }).associateBy { it.videoId }
-        val expiring = video.associateWith {
+        dao.addVideoIsArchivedEntities(video.map {
+            YouTubeVideoIsArchivedTable(it.id, it.isArchived)
+        })
+        val archived = video.filter { it.isArchived }.toSet()
+        val unfinished = video - archived
+        val v = dao.findFreeChatItems(unfinished.map { it.id }).associateBy { it.videoId }
+        val expiring = unfinished.associateWith {
             when {
                 it.isFreeChat == true || v[it.id]?.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
                 it.isUpcoming() -> defaultExpiredAt.coerceAtMost(checkNotNull(it.scheduledStartDateTime))
                 it.isNowOnAir() -> current + EXPIRATION_ON_AIR
-                it.isArchived -> EXPIRATION_MAX
+                it.isArchived -> EXPIRATION_MAX // for fail safe
                 else -> defaultExpiredAt
             }
         }
@@ -130,6 +136,16 @@ class YouTubeLocalDataSource @Inject constructor(
     private suspend fun removeNotExistVideos() {
         val removingId = dao.findUnusedVideoIds()
         removeVideo(removingId)
+        dao.removeVideoIsArchivedEntities(removingId)
+        database.withTransaction {
+            val archivedIds = dao.findAllArchivedVideos()
+            fetchByIds(archivedIds) { ids ->
+                addVideoIsArchivedEntities(ids.map {
+                    YouTubeVideoIsArchivedTable(it, true)
+                })
+            }
+            removeVideo(archivedIds)
+        }
     }
 
     suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>) =

@@ -5,11 +5,13 @@ import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEx
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import java.time.Duration
 import java.time.Instant
@@ -46,10 +48,17 @@ class YouTubePlaylistTable(
             parentColumns = ["id"],
             childColumns = ["playlist_id"],
         ),
-    ]
+    ],
+    primaryKeys = ["id", "playlist_id"],
+    indices = [
+        Index(
+            value = ["playlist_id", "id"],
+            name = "index_yt_playlist_item",
+            unique = true,
+        ),
+    ],
 )
 class YouTubePlaylistItemTable(
-    @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     val id: YouTubePlaylistItem.Id,
     @ColumnInfo(name = "playlist_id", index = true)
@@ -101,7 +110,42 @@ data class YouTubePlaylistDb(
     val playlist: YouTubePlaylistTable,
     @Relation(
         parentColumn = "id",
-        entityColumn = "playlist_id"
+        entityColumn = "playlist_id",
     )
     val playlistItems: List<YouTubePlaylistItemDb>,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "playlist_id",
+    )
+    val archived: List<YouTubePlaylistItemIsArchivedDbView>,
+) {
+    val playlistItemsWithArchived: List<YouTubePlaylistItemEx>
+        get() {
+            val a = archived.associateBy { it.playlistItemId }
+            return playlistItems.map { item ->
+                YouTubePlaylistItemExDb(
+                    item = item,
+                    isArchived = a[item.id]?.isArchived,
+                )
+            }
+        }
+}
+
+@DatabaseView(
+    "SELECT i.playlist_id, i.id AS playlist_item_id, v.is_archived FROM playlist_item AS i " +
+        "INNER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id",
+    viewName = "yt_playlist_item_is_archived",
 )
+class YouTubePlaylistItemIsArchivedDbView(
+    @ColumnInfo("playlist_id")
+    val playlistId: YouTubePlaylist.Id,
+    @ColumnInfo("playlist_item_id")
+    val playlistItemId: YouTubePlaylistItem.Id,
+    @ColumnInfo("is_archived")
+    val isArchived: Boolean?,
+)
+
+data class YouTubePlaylistItemExDb(
+    override val isArchived: Boolean?,
+    private val item: YouTubePlaylistItemDb,
+) : YouTubePlaylistItemEx, YouTubePlaylistItem by item

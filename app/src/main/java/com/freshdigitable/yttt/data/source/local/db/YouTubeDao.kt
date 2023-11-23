@@ -88,12 +88,18 @@ interface YouTubeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addVideoEntities(videos: Collection<YouTubeVideoTable>)
 
+    @Transaction
     suspend fun addVideos(videos: Map<YouTubeVideo, Instant>) {
         val v = videos.keys.map { it.toDbEntity() }
         val expiring = videos.entries.map { (v, e) -> YouTubeVideoExpireTable(v.id, e) }
         addVideoEntities(v)
         addLiveVideoExpire(expiring)
     }
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun addVideoIsArchivedEntities(items: Collection<YouTubeVideoIsArchivedTable>)
+    @Query("DELETE FROM yt_video_is_archived WHERE video_id IN (:ids)")
+    suspend fun removeVideoIsArchivedEntities(ids: Collection<YouTubeVideo.Id>)
 
     @Query(
         "SELECT id FROM video AS v WHERE NOT EXISTS" +
@@ -132,6 +138,9 @@ interface YouTubeDao {
 
     @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
     fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDbView>>
+
+    @Query("SELECT id FROM video WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
+    suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannels(channels: Collection<YouTubeChannelTable>)

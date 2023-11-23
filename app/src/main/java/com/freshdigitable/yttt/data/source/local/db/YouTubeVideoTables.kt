@@ -118,3 +118,12 @@ data class YouTubeVideoDbView(
     @ColumnInfo(name = "viewer_count", defaultValue = "null")
     override val viewerCount: BigInteger? = null,
 ) : YouTubeVideo
+
+@Entity(tableName = "yt_video_is_archived")
+class YouTubeVideoIsArchivedTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo("video_id")
+    val videoId: YouTubeVideo.Id, // archived video is not cached so not to be constrained by foreign key
+    @ColumnInfo("is_archived")
+    val isArchived: Boolean? = null,
+)

@@ -5,6 +5,7 @@ import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEx
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import kotlinx.coroutines.async
@@ -59,7 +60,9 @@ class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun fetchVideoTask(channelDetail: YouTubeChannelDetail): List<YouTubeVideo.Id> {
         val id = channelDetail.uploadedPlayList ?: return emptyList()
         try {
-            val ids = liveRepository.fetchPlaylistItems(id, maxResult = 10).map { it.videoId }
+            val ids = liveRepository.fetchPlaylistItems(id, maxResult = 10)
+                .filter { (it as? YouTubePlaylistItemEx)?.isArchived != true }
+                .map { it.videoId }
             Log.d(TAG, "fetchVideoTask: playlistId> $id,count>${ids.size}")
             return ids
         } catch (e: Exception) {
