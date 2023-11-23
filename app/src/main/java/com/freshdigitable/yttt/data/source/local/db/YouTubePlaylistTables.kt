@@ -24,7 +24,7 @@ class YouTubePlaylistTable(
     @ColumnInfo(name = "last_modified")
     val lastModified: Instant = Instant.now(),
     @ColumnInfo(name = "max_age")
-    val maxAge: Duration = MAX_AGE_DEFAULT,
+    val maxAge: Duration = Duration.ZERO,
 ) {
     companion object {
         val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
