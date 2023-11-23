@@ -63,7 +63,9 @@ class FetchYouTubeStreamUseCase @Inject constructor(
             val ids = liveRepository.fetchPlaylistItems(id, maxResult = 10)
                 .filter { (it as? YouTubePlaylistItemEx)?.isArchived != true }
                 .map { it.videoId }
-            Log.d(TAG, "fetchVideoTask: playlistId> $id,count>${ids.size}")
+            if (ids.isNotEmpty()) {
+                Log.d(TAG, "fetchVideoTask: playlistId> $id,count>${ids.size}")
+            }
             return ids
         } catch (e: Exception) {
             if ((e as? GoogleJsonResponseException)?.statusCode == 404) {

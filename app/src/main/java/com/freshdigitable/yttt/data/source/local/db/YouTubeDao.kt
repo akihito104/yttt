@@ -98,6 +98,7 @@ interface YouTubeDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addVideoIsArchivedEntities(items: Collection<YouTubeVideoIsArchivedTable>)
+
     @Query("DELETE FROM yt_video_is_archived WHERE video_id IN (:ids)")
     suspend fun removeVideoIsArchivedEntities(ids: Collection<YouTubeVideo.Id>)
 

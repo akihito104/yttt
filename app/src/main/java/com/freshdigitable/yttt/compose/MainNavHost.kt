@@ -213,7 +213,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 val authBackStack =
                     checkNotNull(navController.previousBackStackEntry) { "prevDestination: null" }
                 val nextRoute = authBackStack.destination.route
-                check(nextRoute == Auth.route) { "prevDestination: ${authBackStack.destination}" }
+//                check(nextRoute == Auth.route) { "prevDestination: ${authBackStack.destination}" }
                 Auth.Launch(
                     navController = navController,
                     isFromMenu = Auth.Mode.getValue(authBackStack.arguments) == Auth.Modes.MENU.name,
