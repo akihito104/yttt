@@ -148,10 +148,9 @@ class YouTubeLocalDataSource @Inject constructor(
         }
     }
 
-    suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>) =
-        withContext(Dispatchers.IO) {
-            fetchByIds(ids) { removeVideos(ids) }
-        }
+    suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>) = withContext(Dispatchers.IO) {
+        fetchByIds(ids) { removeVideos(it) }
+    }
 
     suspend fun findAllUnfinishedVideos(): List<YouTubeVideo> {
         return dao.findAllUnfinishedVideoList()
