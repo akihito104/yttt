@@ -42,7 +42,6 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConvert
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIsArchivedDbView
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionDbView
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDbView
@@ -82,7 +81,6 @@ import dagger.hilt.components.SingletonComponent
     ],
     views = [
         YouTubeVideoDbView::class,
-        YouTubeSubscriptionDbView::class,
         YouTubeChannelDetailDbView::class,
         YouTubePlaylistItemDb::class,
         YouTubePlaylistItemIsArchivedDbView::class,

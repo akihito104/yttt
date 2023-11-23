@@ -32,11 +32,11 @@ interface YouTubeDao {
     @Query("DELETE FROM subscription WHERE id IN (:removed)")
     suspend fun removeSubscriptions(removed: Collection<YouTubeSubscription.Id>)
 
-    @Query("SELECT * FROM subscription_view")
-    suspend fun findAllSubscriptions(): List<YouTubeSubscriptionDbView>
-
-    @Query("SELECT * FROM subscription_view")
-    fun watchAllSubscriptions(): Flow<List<YouTubeSubscriptionDbView>>
+    @Query(
+        "SELECT s.*, c.title AS channel_title, c.icon AS channel_icon FROM subscription AS s " +
+            "INNER JOIN channel AS c ON c.id = s.channel_id ORDER BY subs_order ASC"
+    )
+    suspend fun findAllSubscriptions(): List<YouTubeSubscriptionDb>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLogTable>)

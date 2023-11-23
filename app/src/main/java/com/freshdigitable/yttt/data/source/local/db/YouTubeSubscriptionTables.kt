@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
-import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -34,14 +33,7 @@ class YouTubeSubscriptionTable(
     val order: Int = Int.MAX_VALUE,
 )
 
-@DatabaseView(
-    "SELECT s.*, c.title AS channel_title, c.icon AS channel_icon " +
-        "FROM subscription AS s " +
-        "INNER JOIN channel AS c ON c.id = s.channel_id " +
-        "ORDER BY subs_order ASC",
-    viewName = "subscription_view"
-)
-data class YouTubeSubscriptionDbView(
+data class YouTubeSubscriptionDb(
     @ColumnInfo(name = "id")
     override val id: YouTubeSubscription.Id,
     @ColumnInfo(name = "subscription_since")

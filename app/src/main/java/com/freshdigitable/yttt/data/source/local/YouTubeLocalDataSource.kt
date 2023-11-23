@@ -27,7 +27,6 @@ class YouTubeLocalDataSource @Inject constructor(
     private val database: AppDatabase,
 ) : YoutubeDataSource {
     private val dao: YouTubeDao get() = database.youtubeDao
-    val subscriptions: Flow<List<YouTubeSubscription>> = dao.watchAllSubscriptions()
     val videos: Flow<List<YouTubeVideo>> = dao.watchAllUnfinishedVideos()
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> =

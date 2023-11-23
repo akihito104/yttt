@@ -22,7 +22,6 @@ class YouTubeRepository @Inject constructor(
     private val remoteSource: YouTubeRemoteDataSource,
     private val localSource: YouTubeLocalDataSource,
 ) : YoutubeDataSource {
-    val subscriptions: Flow<List<YouTubeSubscription>> = localSource.subscriptions
     val videos: Flow<List<YouTubeVideo>> = localSource.videos
     var lastUpdateDatetime: Instant? = null
 

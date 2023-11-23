@@ -6,7 +6,6 @@ import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.toLiveSubscription
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 interface FetchSubscriptionListSourceUseCase {
@@ -16,8 +15,10 @@ interface FetchSubscriptionListSourceUseCase {
 class FetchSubscriptionListSourceFromYouTubeUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FetchSubscriptionListSourceUseCase {
-    override fun invoke(): Flow<List<LiveSubscription>> = repository.subscriptions
-        .map { i -> i.map { it.toLiveSubscription() } }
+    override fun invoke(): Flow<List<LiveSubscription>> = flow {
+        val subs = repository.fetchAllSubscribe().map { it.toLiveSubscription() }
+        emit(subs)
+    }
 }
 
 class FetchSubscriptionListSourceFromTwitchUseCase @Inject constructor(
