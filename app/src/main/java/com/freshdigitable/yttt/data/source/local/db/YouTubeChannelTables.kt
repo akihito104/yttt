@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
-import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -72,11 +71,7 @@ data class YouTubeChannelAdditionTable(
         get() = keywordsRaw.split(",", " ")
 }
 
-@DatabaseView(
-    "SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id",
-    viewName = "channel_detail",
-)
-data class YouTubeChannelDetailDbView(
+data class YouTubeChannelDetailDb(
     @ColumnInfo(name = "title")
     override val title: String,
     @ColumnInfo(name = "icon")

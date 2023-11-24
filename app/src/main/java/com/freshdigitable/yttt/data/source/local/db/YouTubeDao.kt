@@ -161,8 +161,8 @@ interface YouTubeDao {
         addChannelAddition(additions)
     }
 
-    @Query("SELECT * FROM channel_detail WHERE id IN (:id)")
-    suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDbView>
+    @Query("SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id WHERE c.id IN (:id)")
+    suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDb>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelAddition(addition: Collection<YouTubeChannelAdditionTable>)

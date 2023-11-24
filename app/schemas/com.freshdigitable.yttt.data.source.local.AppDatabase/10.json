@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "81840028d9a307d52f64982673766aec",
+    "identityHash": "48d6ec442a0b6ebc76fd6f225b395a12",
     "entities": [
       {
         "tableName": "channel",
@@ -1285,10 +1285,6 @@
         "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, v.description, v.viewer_count, c.title AS channel_title, c.icon AS channel_icon, f.is_free_chat AS is_free_chat FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id"
       },
       {
-        "viewName": "channel_detail",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id"
-      },
-      {
         "viewName": "playlist_item_view",
         "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT p.*, c.icon AS channel_icon, c.title AS channel_title FROM playlist_item AS p INNER JOIN channel AS c ON c.id = p.channel_id"
       },
@@ -1303,7 +1299,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '81840028d9a307d52f64982673766aec')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '48d6ec442a0b6ebc76fd6f225b395a12')"
     ]
   }
 }
