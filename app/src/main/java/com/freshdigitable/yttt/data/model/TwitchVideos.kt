@@ -57,7 +57,7 @@ interface TwitchChannelSchedule {
     interface Stream {
         val id: Id
         val startTime: Instant
-        val endTime: Instant
+        val endTime: Instant?
         val title: String
         val canceledUntil: String?
         val category: StreamCategory?

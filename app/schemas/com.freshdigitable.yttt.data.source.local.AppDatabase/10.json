@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "48d6ec442a0b6ebc76fd6f225b395a12",
+    "identityHash": "e2cb0e68a516ce8002354d237007b421",
     "entities": [
       {
         "tableName": "channel",
@@ -1098,7 +1098,7 @@
       },
       {
         "tableName": "twitch_channel_schedule_stream",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `start_time` INTEGER NOT NULL, `end_time` INTEGER NOT NULL, `title` TEXT NOT NULL, `canceled_until` TEXT, `is_recurring` INTEGER NOT NULL, `user_id` TEXT NOT NULL, `category_id` TEXT, `category_name` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `start_time` INTEGER NOT NULL, `end_time` INTEGER, `title` TEXT NOT NULL, `canceled_until` TEXT, `is_recurring` INTEGER NOT NULL, `user_id` TEXT NOT NULL, `category_id` TEXT, `category_name` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "id",
@@ -1116,7 +1116,7 @@
             "fieldPath": "endTime",
             "columnName": "end_time",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
           },
           {
             "fieldPath": "title",
@@ -1299,7 +1299,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '48d6ec442a0b6ebc76fd6f225b395a12')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e2cb0e68a516ce8002354d237007b421')"
     ]
   }
 }

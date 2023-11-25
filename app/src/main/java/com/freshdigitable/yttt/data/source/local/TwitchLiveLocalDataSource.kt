@@ -67,7 +67,7 @@ class TwitchLiveLocalDataSource @Inject constructor(
         val schedule = dao.findChannelSchedule(id)
         val current = Instant.now()
         val finished = schedule.mapNotNull { it.segments }.flatten()
-            .filter { current.isAfter(it.endTime) }
+            .filter { it.endTime == null || current.isAfter(it.endTime) }
         if (finished.isEmpty()) {
             return schedule
         }
