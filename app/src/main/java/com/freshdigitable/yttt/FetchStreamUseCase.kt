@@ -4,9 +4,9 @@ import android.util.Log
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEx
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -47,31 +47,41 @@ class FetchYouTubeStreamUseCase @Inject constructor(
     }
 
     private suspend fun fetchNewStreams() {
-        val channelIds = liveRepository.fetchAllSubscribe(maxResult = 50).map { it.channel.id }
-        Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
-        val channelDetails = liveRepository.fetchChannelList(channelIds)
+        val subs = liveRepository.fetchAllSubscribeSummary()
+        val current = Instant.now()
+        val needsUpdate =
+            subs.filter { it.uploadedPlaylistId != null && it.needsUpdatePlaylist(current) }
+        Log.d(TAG, "fetchNewStreams: subs.size> ${subs.size}")
         val task = coroutineScope {
-            channelDetails.map { channelDetail -> async { fetchVideoTask(channelDetail) } }
+            needsUpdate.map { async { fetchVideoByPlaylistIdTask(it, current) } }
         }
         val ids = task.awaitAll().flatten()
+        Log.d(TAG, "fetchNewStreams: videoId.size> ${ids.size}")
         facade.fetchVideoList(ids)
     }
 
-    private suspend fun fetchVideoTask(channelDetail: YouTubeChannelDetail): List<YouTubeVideo.Id> {
-        val id = channelDetail.uploadedPlayList ?: return emptyList()
+    private suspend fun fetchVideoByPlaylistIdTask(
+        subscriptionSummary: YouTubeSubscriptionSummary,
+        current: Instant
+    ): List<YouTubeVideo.Id> {
+        val id = checkNotNull(subscriptionSummary.uploadedPlaylistId)
         try {
-            val ids = liveRepository.fetchPlaylistItems(id, maxResult = 10)
-                .filter { (it as? YouTubePlaylistItemEx)?.isArchived != true }
+            val itemIds = liveRepository.fetchPlaylistItemSummaries(
+                subscriptionSummary,
+                current,
+                maxResult = 10,
+            )
+                .filter { it.isArchived != true }
                 .map { it.videoId }
-            if (ids.isNotEmpty()) {
-                Log.d(TAG, "fetchVideoTask: playlistId> $id,count>${ids.size}")
+            if (itemIds.isNotEmpty()) {
+                Log.d(TAG, "fetchVideoByPlaylistIdTask: playlistId> $id,count>${itemIds.size}")
             }
-            return ids
+            return itemIds
         } catch (e: Exception) {
             if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
-                Log.d(TAG, "fetchVideoTask(reload ${channelDetail.customUrl}): no items found.")
+                Log.d(TAG, "fetchVideoByPlaylistIdTask(reload $id): no items found.")
             } else {
-                Log.e(TAG, "fetchVideoTask: channel>$channelDetail", e)
+                Log.e(TAG, "fetchVideoByPlaylistIdTask: playlist>$id", e)
             }
         }
         return emptyList()

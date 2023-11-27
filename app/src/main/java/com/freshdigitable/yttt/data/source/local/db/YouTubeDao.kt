@@ -38,6 +38,16 @@ interface YouTubeDao {
     )
     suspend fun findAllSubscriptions(): List<YouTubeSubscriptionDb>
 
+    @Query(
+        "SELECT s.id AS subscription_id, s.channel_id, c.uploaded_playlist_id, " +
+            "(c.last_modified + c.max_age) AS playlist_expired_at FROM subscription AS s " +
+            "LEFT OUTER JOIN ( " +
+            " SELECT c.id, c.uploaded_playlist_id, p.max_age, p.last_modified FROM channel_addition AS c " +
+            " INNER JOIN playlist AS p ON c.uploaded_playlist_id = p.id " +
+            ") AS c ON s.channel_id = c.id"
+    )
+    suspend fun findAllSubscriptionSummary(): List<YouTubeSubscriptionSummaryDb>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLogTable>)
 
@@ -194,12 +204,17 @@ interface YouTubeDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addPlaylists(playlist: List<YouTubePlaylistTable>)
 
-    @Transaction
     @Query("SELECT * FROM (SELECT * FROM playlist WHERE :since < (last_modified + max_age)) WHERE id = :id")
     suspend fun findPlaylistById(
         id: YouTubePlaylist.Id,
         since: Instant = Instant.EPOCH,
-    ): YouTubePlaylistDb?
+    ): YouTubePlaylistTable?
+
+    @Query("SELECT * FROM yt_playlist_item_summary AS s WHERE s.playlist_id = :id LIMIT :maxResult")
+    suspend fun findPlaylistItemSummary(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): List<YouTubePlaylistItemSummaryDb>
 
     @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
     suspend fun updatePlaylist(
@@ -222,9 +237,9 @@ interface YouTubeDao {
         items: Collection<YouTubePlaylistItem>,
     ) {
         if (items.isEmpty()) {
-            addPlaylist(YouTubePlaylistTable.createWithMaxAge(id))
+            addPlaylist(YouTubePlaylistTable.createWithMaxAge(id, lastModified))
         } else if (maxAge == null) {
-            addPlaylist(YouTubePlaylistTable(id))
+            addPlaylist(YouTubePlaylistTable(id, lastModified))
         } else {
             updatePlaylist(id, maxAge = maxAge)
         }
@@ -233,6 +248,12 @@ interface YouTubeDao {
             addPlaylistItems(items.map { it.toDbEntity() })
         }
     }
+
+    @Query(
+        "SELECT p.*, c.icon AS channel_icon, c.title AS channel_title FROM playlist_item AS p " +
+            "INNER JOIN channel AS c ON c.id = p.channel_id WHERE p.playlist_id = :id"
+    )
+    suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDb>
 
     companion object {
         private const val CONDITION_UNFINISHED_VIDEOS =

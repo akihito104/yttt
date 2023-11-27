@@ -24,10 +24,6 @@ interface YouTubePlaylistItem {
     data class Id(override val value: String) : YouTubeId
 }
 
-interface YouTubePlaylistItemEx : YouTubePlaylistItem {
-    val isArchived: Boolean?
-}
-
 data class YouTubePlaylistItemEntity(
     override val id: YouTubePlaylistItem.Id,
     override val playlistId: YouTubePlaylist.Id,

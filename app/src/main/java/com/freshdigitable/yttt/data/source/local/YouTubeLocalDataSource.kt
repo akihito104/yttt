@@ -12,7 +12,9 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +35,9 @@ class YouTubeLocalDataSource @Inject constructor(
         withContext(Dispatchers.IO) {
             dao.findAllSubscriptions()
         }
+
+    suspend fun fetchAllSubscriptionSummary(): List<YouTubeSubscriptionSummary> =
+        dao.findAllSubscriptionSummary()
 
     suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>) =
         withContext(Dispatchers.IO) {
@@ -63,8 +68,16 @@ class YouTubeLocalDataSource @Inject constructor(
      * returned empty list means that there is no items in the playlist (because of not updated yet or the playlist is to be private).
      */
     suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>? {
-        return dao.findPlaylistById(id, since = Instant.now())?.playlistItemsWithArchived
+        return database.withTransaction {
+            val p = dao.findPlaylistById(id, since = Instant.now()) ?: return@withTransaction null
+            dao.findPlaylistItemByPlaylistId(p.id)
+        }
     }
+
+    suspend fun fetchPlaylistItemSummary(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(id, maxResult)
 
     suspend fun setPlaylistItemsByPlaylistId(
         id: YouTubePlaylist.Id,
@@ -80,14 +93,15 @@ class YouTubeLocalDataSource @Inject constructor(
             dao.setPlaylistItems(id = id, items = items)
             return
         }
-        val cachedIds = cache.playlistItems.map { it.id }.toSet()
+        val playlistItems = dao.findPlaylistItemByPlaylistId(cache.id)
+        val cachedIds = playlistItems.map { it.id }.toSet()
         val newIds = items.map { it.id }.toSet()
         val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
         val maxAge = if (isNotModified) {
             val boarder = Instant.now().minus(YouTubePlaylistTable.RECENTLY_BOARDER)
             val isPublishedRecently = items.any { boarder.isAfter(it.publishedAt) }
             val maxAgeMax = YouTubePlaylistTable.getMaxAgeUpperLimit(isPublishedRecently)
-            cache.playlist.maxAge.multipliedBy(2).coerceAtMost(maxAgeMax)
+            cache.maxAge.multipliedBy(2).coerceAtMost(maxAgeMax)
         } else {
             YouTubePlaylistTable.MAX_AGE_DEFAULT
         }
@@ -128,8 +142,8 @@ class YouTubeLocalDataSource @Inject constructor(
     }
 
     suspend fun cleanUp() {
-        removeNotExistVideos()
         dao.removeAllChannelLogs()
+        removeNotExistVideos()
     }
 
     private suspend fun removeNotExistVideos() {

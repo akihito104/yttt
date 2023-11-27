@@ -1,17 +1,15 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
-import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import androidx.room.Relation
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEx
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import java.time.Duration
 import java.time.Instant
@@ -20,12 +18,18 @@ import java.time.Instant
 class YouTubePlaylistTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
-    val id: YouTubePlaylist.Id,
+    override val id: YouTubePlaylist.Id,
     @ColumnInfo(name = "last_modified")
-    val lastModified: Instant = Instant.now(),
+    val lastModified: Instant = Instant.EPOCH,
     @ColumnInfo(name = "max_age")
-    val maxAge: Duration = Duration.ZERO,
-) {
+    val maxAge: Duration = MAX_AGE_DEFAULT,
+) : YouTubePlaylist {
+    @Ignore
+    override val thumbnailUrl: String = "" // TODO
+
+    @Ignore
+    override val title: String = "" // TODO
+
     companion object {
         val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
         private val MAX_AGE_MAX: Duration = Duration.ofDays(1)
@@ -35,8 +39,8 @@ class YouTubePlaylistTable(
         fun getMaxAgeUpperLimit(isPublishedRecently: Boolean): Duration =
             if (isPublishedRecently) MAX_AGE_FOR_ACTIVE_ACCOUNT else MAX_AGE_MAX
 
-        fun createWithMaxAge(id: YouTubePlaylist.Id): YouTubePlaylistTable =
-            YouTubePlaylistTable(id, maxAge = MAX_AGE_MAX)
+        fun createWithMaxAge(id: YouTubePlaylist.Id, lastModified: Instant): YouTubePlaylistTable =
+            YouTubePlaylistTable(id, lastModified, maxAge = MAX_AGE_MAX)
     }
 }
 
@@ -79,11 +83,6 @@ class YouTubePlaylistItemTable(
     val publishedAt: Instant,
 )
 
-@DatabaseView(
-    "SELECT p.*, c.icon AS channel_icon, c.title AS channel_title FROM playlist_item AS p" +
-        " INNER JOIN channel AS c ON c.id = p.channel_id",
-    viewName = "playlist_item_view",
-)
 data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylistItem.Id,
@@ -104,48 +103,3 @@ data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
 ) : YouTubePlaylistItem
-
-data class YouTubePlaylistDb(
-    @Embedded
-    val playlist: YouTubePlaylistTable,
-    @Relation(
-        parentColumn = "id",
-        entityColumn = "playlist_id",
-    )
-    val playlistItems: List<YouTubePlaylistItemDb>,
-    @Relation(
-        parentColumn = "id",
-        entityColumn = "playlist_id",
-    )
-    val archived: List<YouTubePlaylistItemIsArchivedDbView>,
-) {
-    val playlistItemsWithArchived: List<YouTubePlaylistItemEx>
-        get() {
-            val a = archived.associateBy { it.playlistItemId }
-            return playlistItems.map { item ->
-                YouTubePlaylistItemExDb(
-                    item = item,
-                    isArchived = a[item.id]?.isArchived,
-                )
-            }
-        }
-}
-
-@DatabaseView(
-    "SELECT i.playlist_id, i.id AS playlist_item_id, v.is_archived FROM playlist_item AS i " +
-        "INNER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id",
-    viewName = "yt_playlist_item_is_archived",
-)
-class YouTubePlaylistItemIsArchivedDbView(
-    @ColumnInfo("playlist_id")
-    val playlistId: YouTubePlaylist.Id,
-    @ColumnInfo("playlist_item_id")
-    val playlistItemId: YouTubePlaylistItem.Id,
-    @ColumnInfo("is_archived")
-    val isArchived: Boolean?,
-)
-
-data class YouTubePlaylistItemExDb(
-    override val isArchived: Boolean?,
-    private val item: YouTubePlaylistItemDb,
-) : YouTubePlaylistItemEx, YouTubePlaylistItem by item

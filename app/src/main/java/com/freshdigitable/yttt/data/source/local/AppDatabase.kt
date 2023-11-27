@@ -36,9 +36,8 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConverter
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIsArchivedDbView
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemSummaryDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionIdConverter
@@ -80,8 +79,7 @@ import dagger.hilt.components.SingletonComponent
     ],
     views = [
         YouTubeVideoDbView::class,
-        YouTubePlaylistItemDb::class,
-        YouTubePlaylistItemIsArchivedDbView::class,
+        YouTubePlaylistItemSummaryDb::class,
         TwitchStreamDbView::class,
     ],
     version = 10,
