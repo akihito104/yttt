@@ -1,8 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
-import androidx.room.DatabaseView
-import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -84,40 +82,6 @@ class YouTubeVideoExpireTable(
     @ColumnInfo(name = "expired_at", defaultValue = "null")
     val expiredAt: Instant? = null,
 )
-
-@DatabaseView(
-    "SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, " +
-        "v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, v.description, v.viewer_count, " +
-        "c.title AS channel_title, c.icon AS channel_icon, f.is_free_chat AS is_free_chat " +
-        "FROM video AS v " +
-        "INNER JOIN channel AS c ON c.id = v.channel_id " +
-        "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id",
-    viewName = "video_view",
-)
-data class YouTubeVideoDbView(
-    @ColumnInfo(name = "id")
-    override val id: YouTubeVideo.Id,
-    @ColumnInfo(name = "title")
-    override val title: String,
-    @Embedded(prefix = "channel_")
-    override val channel: YouTubeChannelTable,
-    @ColumnInfo(name = "schedule_start_datetime")
-    override val scheduledStartDateTime: Instant?,
-    @ColumnInfo(name = "schedule_end_datetime")
-    override val scheduledEndDateTime: Instant?,
-    @ColumnInfo(name = "actual_start_datetime")
-    override val actualStartDateTime: Instant?,
-    @ColumnInfo(name = "actual_end_datetime")
-    override val actualEndDateTime: Instant?,
-    @ColumnInfo(name = "thumbnail", defaultValue = "")
-    override val thumbnailUrl: String = "",
-    @ColumnInfo(name = "is_free_chat", defaultValue = "null")
-    override val isFreeChat: Boolean? = null,
-    @ColumnInfo(name = "description", defaultValue = "")
-    override val description: String = "",
-    @ColumnInfo(name = "viewer_count", defaultValue = "null")
-    override val viewerCount: BigInteger? = null,
-) : YouTubeVideo
 
 @Entity(tableName = "yt_video_is_archived")
 class YouTubeVideoIsArchivedTable(

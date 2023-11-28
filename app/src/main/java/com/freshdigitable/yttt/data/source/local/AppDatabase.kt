@@ -42,7 +42,6 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDbView
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
@@ -78,7 +77,6 @@ import dagger.hilt.components.SingletonComponent
         TwitchChannelScheduleExpireTable::class,
     ],
     views = [
-        YouTubeVideoDbView::class,
         YouTubePlaylistItemSummaryDb::class,
         TwitchStreamDbView::class,
     ],

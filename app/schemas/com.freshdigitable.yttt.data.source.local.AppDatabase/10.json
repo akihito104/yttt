@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "ce3eba22d896c5594a9bfbee4228c372",
+    "identityHash": "88f9a33782e08b1e286f468b068f324d",
     "entities": [
       {
         "tableName": "channel",
@@ -1281,10 +1281,6 @@
     ],
     "views": [
       {
-        "viewName": "video_view",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, v.description, v.viewer_count, c.title AS channel_title, c.icon AS channel_icon, f.is_free_chat AS is_free_chat FROM video AS v INNER JOIN channel AS c ON c.id = v.channel_id LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id"
-      },
-      {
         "viewName": "yt_playlist_item_summary",
         "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived FROM playlist_item AS i LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id"
       },
@@ -1295,7 +1291,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ce3eba22d896c5594a9bfbee4228c372')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '88f9a33782e08b1e286f468b068f324d')"
     ]
   }
 }
