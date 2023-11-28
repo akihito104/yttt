@@ -16,6 +16,7 @@ import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
 import com.google.gson.stream.JsonWriter
 import dagger.Module
 import dagger.Provides
@@ -126,6 +127,11 @@ object TwitchModule {
         }
 
         override fun read(`in`: JsonReader?): O? {
+            val peek = `in`?.peek()
+            if (peek == JsonToken.NULL) {
+                `in`.nextNull()
+                return null
+            }
             val v: S? = when (S::class) {
                 String::class -> `in`?.nextString() as S?
                 Boolean::class -> `in`?.nextBoolean() as S?

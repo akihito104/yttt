@@ -1,14 +1,13 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
-import androidx.room.DatabaseView
-import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import java.math.BigInteger
 import java.time.Instant
 
 @Entity(
@@ -40,8 +39,10 @@ class YouTubeVideoTable(
     val actualEndDateTime: Instant? = null,
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     val thumbnailUrl: String = "",
-    @ColumnInfo(name = "visible", defaultValue = true.toString())
-    val visible: Boolean = true,
+    @ColumnInfo(name = "description", defaultValue = "")
+    val description: String = "",
+    @ColumnInfo(name = "viewer_count", defaultValue = "null")
+    val viewerCount: BigInteger? = null,
 )
 
 @Entity(
@@ -82,33 +83,11 @@ class YouTubeVideoExpireTable(
     val expiredAt: Instant? = null,
 )
 
-@DatabaseView(
-    "SELECT v.id, v.title, v.channel_id, v.schedule_start_datetime, v.schedule_end_datetime, " +
-        "v.actual_start_datetime, v.actual_end_datetime, v.thumbnail, " +
-        "c.title AS channel_title, c.icon AS channel_icon, f.is_free_chat AS is_free_chat " +
-        "FROM video AS v " +
-        "INNER JOIN channel AS c ON c.id = v.channel_id " +
-        "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
-        "WHERE v.visible == 1",
-    viewName = "video_view",
+@Entity(tableName = "yt_video_is_archived")
+class YouTubeVideoIsArchivedTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo("video_id")
+    val videoId: YouTubeVideo.Id, // archived video is not cached so not to be constrained by foreign key
+    @ColumnInfo("is_archived")
+    val isArchived: Boolean? = null,
 )
-data class YouTubeVideoDbView(
-    @ColumnInfo(name = "id")
-    override val id: YouTubeVideo.Id,
-    @ColumnInfo(name = "title")
-    override val title: String,
-    @Embedded(prefix = "channel_")
-    override val channel: YouTubeChannelTable,
-    @ColumnInfo(name = "schedule_start_datetime")
-    override val scheduledStartDateTime: Instant?,
-    @ColumnInfo(name = "schedule_end_datetime")
-    override val scheduledEndDateTime: Instant?,
-    @ColumnInfo(name = "actual_start_datetime")
-    override val actualStartDateTime: Instant?,
-    @ColumnInfo(name = "actual_end_datetime")
-    override val actualEndDateTime: Instant?,
-    @ColumnInfo(name = "thumbnail", defaultValue = "")
-    override val thumbnailUrl: String = "",
-    @ColumnInfo(name = "is_free_chat", defaultValue = "null")
-    override val isFreeChat: Boolean? = null,
-) : YouTubeVideo

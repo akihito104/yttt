@@ -8,12 +8,13 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import kotlinx.coroutines.flow.Flow
-import java.math.BigInteger
 import java.time.Instant
 import java.time.Period
 import javax.inject.Inject
@@ -24,7 +25,6 @@ class YouTubeRepository @Inject constructor(
     private val remoteSource: YouTubeRemoteDataSource,
     private val localSource: YouTubeLocalDataSource,
 ) : YoutubeDataSource {
-    val subscriptions: Flow<List<YouTubeSubscription>> = localSource.subscriptions
     val videos: Flow<List<YouTubeVideo>> = localSource.videos
     var lastUpdateDatetime: Instant? = null
 
@@ -35,6 +35,17 @@ class YouTubeRepository @Inject constructor(
         localSource.removeSubscribes(deleted)
         localSource.addSubscribes(res)
         return res
+    }
+
+    suspend fun fetchAllSubscribeSummary(): List<YouTubeSubscriptionSummary> {
+        fetchAllSubscribe(50)
+        val summary = localSource.fetchAllSubscriptionSummary()
+        val needsChannelDetail = summary.filter { it.uploadedPlaylistId == null }
+        if (needsChannelDetail.isEmpty()) {
+            return summary
+        }
+        fetchChannelList(needsChannelDetail.map { it.channelId })
+        return localSource.fetchAllSubscriptionSummary()
     }
 
     override suspend fun fetchLiveChannelLogs(
@@ -64,42 +75,43 @@ class YouTubeRepository @Inject constructor(
         }
         val res = remoteSource.fetchVideoList(neededId)
         localSource.addVideo(res)
-        localSource.addVideoDetail(res)
-        return cache + res
+        return localSource.fetchVideoList(ids)
     }
 
-    suspend fun fetchVideoIdListByPlaylistId(
+    suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long = 10,
-    ): List<YouTubeVideo.Id> {
+    ): List<YouTubePlaylistItem> {
         val cache = localSource.fetchPlaylistItems(id)
-        val playlistItems = cache.ifEmpty {
-            val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
-            localSource.setPlaylistItemsByPlaylistId(id, items)
-            items
+        if (cache != null) {
+            return cache
         }
-        val uploadedAtAnotherChannel = playlistItems
+        updatePlaylistItemCache(id, maxResult)
+        return localSource.fetchPlaylistItems(id) ?: return emptyList()
+    }
+
+    private suspend fun updatePlaylistItemCache(id: YouTubePlaylist.Id, maxResult: Long) {
+        val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
+        val uploadedAtAnotherChannel = items
             .filter { it.channel.id != it.videoOwnerChannelId }
             .mapNotNull { it.videoOwnerChannelId }
+            .toSet()
         if (uploadedAtAnotherChannel.isNotEmpty()) {
             fetchChannelList(uploadedAtAnotherChannel)
         }
-        return playlistItems.map { it.videoId }
+        localSource.setPlaylistItemsByPlaylistId(id, items)
     }
 
-    suspend fun fetchVideoDetail(id: YouTubeVideo.Id): YouTubeVideo? {
-        val detailCache = localSource.fetchVideoDetail(id)
-        val cache = fetchVideoList(listOf(id)).firstOrNull()
-        if (cache == null) {
-            localSource.removeVideoDetail(id)
-            return null
+    suspend fun fetchPlaylistItemSummaries(
+        summary: YouTubeSubscriptionSummary,
+        current: Instant = Instant.now(),
+        maxResult: Long = 10,
+    ): List<YouTubePlaylistItemSummary> {
+        val playlistId = checkNotNull(summary.uploadedPlaylistId)
+        if (summary.needsUpdatePlaylist(current)) {
+            updatePlaylistItemCache(playlistId, maxResult)
         }
-        return object : YouTubeVideoDetail, YouTubeVideo by cache {
-            override val description: String
-                get() = detailCache?.description ?: ""
-            override val viewerCount: BigInteger?
-                get() = detailCache?.viewerCount ?: BigInteger.ZERO
-        }
+        return localSource.fetchPlaylistItemSummary(playlistId, maxResult)
     }
 
     suspend fun cleanUp() {
@@ -110,11 +122,11 @@ class YouTubeRepository @Inject constructor(
         return localSource.findAllUnfinishedVideos()
     }
 
-    suspend fun updateVideosInvisible(removed: Collection<YouTubeVideo.Id>) {
+    suspend fun removeVideo(removed: Collection<YouTubeVideo.Id>) {
         if (removed.isEmpty()) {
             return
         }
-        localSource.updateVideosInvisible(removed)
+        localSource.removeVideo(removed)
     }
 
     suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
@@ -143,13 +155,6 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun fetchPlaylist(ids: Collection<YouTubePlaylist.Id>): List<YouTubePlaylist> {
         return remoteSource.fetchPlaylist(ids)
-    }
-
-    suspend fun fetchPlaylistItems(
-        id: YouTubePlaylist.Id,
-        maxResult: Long = 20,
-    ): List<YouTubePlaylistItem> {
-        return remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
     }
 
     override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) {

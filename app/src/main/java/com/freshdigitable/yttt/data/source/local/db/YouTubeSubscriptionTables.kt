@@ -8,7 +8,12 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import java.time.Instant
 
 @Entity(
@@ -34,14 +39,7 @@ class YouTubeSubscriptionTable(
     val order: Int = Int.MAX_VALUE,
 )
 
-@DatabaseView(
-    "SELECT s.*, c.title AS channel_title, c.icon AS channel_icon " +
-        "FROM subscription AS s " +
-        "INNER JOIN channel AS c ON c.id = s.channel_id " +
-        "ORDER BY subs_order ASC",
-    viewName = "subscription_view"
-)
-data class YouTubeSubscriptionDbView(
+data class YouTubeSubscriptionDb(
     @ColumnInfo(name = "id")
     override val id: YouTubeSubscription.Id,
     @ColumnInfo(name = "subscription_since")
@@ -51,3 +49,30 @@ data class YouTubeSubscriptionDbView(
     @ColumnInfo(name = "subs_order")
     override val order: Int,
 ) : YouTubeSubscription
+
+data class YouTubeSubscriptionSummaryDb(
+    @ColumnInfo("subscription_id")
+    override val subscriptionId: YouTubeSubscription.Id,
+    @ColumnInfo("channel_id")
+    override val channelId: YouTubeChannel.Id,
+    @ColumnInfo("uploaded_playlist_id")
+    override val uploadedPlaylistId: YouTubePlaylist.Id?,
+    @ColumnInfo("playlist_expired_at")
+    override val playlistExpiredAt: Instant?,
+) : YouTubeSubscriptionSummary
+
+@DatabaseView(
+    "SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived FROM playlist_item AS i " +
+        "LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id",
+    viewName = "yt_playlist_item_summary",
+)
+class YouTubePlaylistItemSummaryDb(
+    @ColumnInfo("playlist_id")
+    override val playlistId: YouTubePlaylist.Id,
+    @ColumnInfo("playlist_item_id")
+    override val playlistItemId: YouTubePlaylistItem.Id,
+    @ColumnInfo("video_id")
+    override val videoId: YouTubeVideo.Id,
+    @ColumnInfo("is_archived")
+    override val isArchived: Boolean?,
+) : YouTubePlaylistItemSummary

@@ -150,7 +150,6 @@ interface TwitchHelixService {
         // If not specified, the request returns segments starting after the current UTC date and time.
         // Specify the date and time in RFC3339 format (for example, 2022-09-01T00:00:00Z).
         @Query("start_time") startTime: Instant? = null,
-        @Query("end_time") endTime: Instant? = null,
         // The maximum number of items to return per page in the response.
         // The minimum page size is 1 item per page and the maximum is 25 items per page.
         // The default is 20.
@@ -314,7 +313,7 @@ class ChannelStreamSchedule(
         @SerializedName("start_time")
         override val startTime: Instant,
         @SerializedName("end_time")
-        override val endTime: Instant,
+        override val endTime: Instant?,
         @SerializedName("title")
         override val title: String,
         @SerializedName("canceled_until")

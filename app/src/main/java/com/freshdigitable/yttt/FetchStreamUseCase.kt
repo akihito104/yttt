@@ -4,9 +4,9 @@ import android.util.Log
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoDetail
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -43,31 +43,45 @@ class FetchYouTubeStreamUseCase @Inject constructor(
         Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
         val removed = first.subtract(currentVideo)
         Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
-        liveRepository.updateVideosInvisible(removed)
+        liveRepository.removeVideo(removed)
     }
 
     private suspend fun fetchNewStreams() {
-        val channelIds = liveRepository.fetchAllSubscribe(maxResult = 50).map { it.channel.id }
-        Log.d(TAG, "fetchSubscribeList: ${channelIds.size}")
-        val channelDetails = liveRepository.fetchChannelList(channelIds)
+        val subs = liveRepository.fetchAllSubscribeSummary()
+        val current = Instant.now()
+        val needsUpdate =
+            subs.filter { it.uploadedPlaylistId != null && it.needsUpdatePlaylist(current) }
+        Log.d(TAG, "fetchNewStreams: subs.size> ${subs.size}")
         val task = coroutineScope {
-            channelDetails.map { channelDetail -> async { fetchVideoTask(channelDetail) } }
+            needsUpdate.map { async { fetchVideoByPlaylistIdTask(it, current) } }
         }
         val ids = task.awaitAll().flatten()
+        Log.d(TAG, "fetchNewStreams: videoId.size> ${ids.size}")
         facade.fetchVideoList(ids)
     }
 
-    private suspend fun fetchVideoTask(channelDetail: YouTubeChannelDetail): List<YouTubeVideo.Id> {
-        val id = channelDetail.uploadedPlayList ?: return emptyList()
+    private suspend fun fetchVideoByPlaylistIdTask(
+        subscriptionSummary: YouTubeSubscriptionSummary,
+        current: Instant
+    ): List<YouTubeVideo.Id> {
+        val id = checkNotNull(subscriptionSummary.uploadedPlaylistId)
         try {
-            val ids = liveRepository.fetchVideoIdListByPlaylistId(id)
-            Log.d(TAG, "fetchLiveStreams: playlistId> $id,count>${ids.size}")
-            return ids
+            val itemIds = liveRepository.fetchPlaylistItemSummaries(
+                subscriptionSummary,
+                current,
+                maxResult = 10,
+            )
+                .filter { it.isArchived != true }
+                .map { it.videoId }
+            if (itemIds.isNotEmpty()) {
+                Log.d(TAG, "fetchVideoByPlaylistIdTask: playlistId> $id,count>${itemIds.size}")
+            }
+            return itemIds
         } catch (e: Exception) {
             if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
-                Log.d(TAG, "fetchLiveStreams(reload ${channelDetail.customUrl}) did not update.")
+                Log.d(TAG, "fetchVideoByPlaylistIdTask(reload $id): no items found.")
             } else {
-                Log.e(TAG, "fetchLiveStreams: channel>$channelDetail", e)
+                Log.e(TAG, "fetchVideoByPlaylistIdTask: playlist>$id", e)
             }
         }
         return emptyList()
@@ -95,20 +109,6 @@ class YouTubeFacade @Inject constructor(
             repository.removeFreeChatItems(remove)
         }
         return repository.fetchVideoList(ids)
-    }
-
-    suspend fun fetchVideoDetail(id: YouTubeVideo.Id): YouTubeVideoDetail? {
-        val detail = repository.fetchVideoDetail(id) as? YouTubeVideoDetail ?: return null
-        if (detail.isFreeChat != null) {
-            return detail
-        }
-        val freeChat = isFreeChat(detail)
-        if (freeChat) {
-            repository.addFreeChatItems(listOf(id))
-        } else {
-            repository.removeFreeChatItems(listOf(id))
-        }
-        return repository.fetchVideoDetail(id) as? YouTubeVideoDetail
     }
 
     private fun isFreeChat(video: YouTubeVideo): Boolean {

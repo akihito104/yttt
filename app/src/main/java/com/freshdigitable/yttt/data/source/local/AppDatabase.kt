@@ -3,10 +3,11 @@ package com.freshdigitable.yttt.data.source.local
 import android.content.Context
 import androidx.room.AutoMigration
 import androidx.room.Database
+import androidx.room.DeleteColumn
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
+import androidx.room.migration.AutoMigrationSpec
 import com.freshdigitable.yttt.data.source.local.db.BigIntegerConverter
 import com.freshdigitable.yttt.data.source.local.db.CsvConverter
 import com.freshdigitable.yttt.data.source.local.db.DurationConverter
@@ -29,22 +30,21 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserIdConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelAdditionTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelDetailDbView
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemSummaryDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionDbView
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDbView
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
 import dagger.Module
 import dagger.Provides
@@ -59,6 +59,7 @@ import dagger.hilt.components.SingletonComponent
         YouTubeChannelLogTable::class,
         YouTubeSubscriptionTable::class,
         YouTubeVideoTable::class,
+        YouTubeVideoIsArchivedTable::class,
         FreeChatTable::class,
         YouTubeVideoExpireTable::class,
         YouTubePlaylistTable::class,
@@ -76,13 +77,10 @@ import dagger.hilt.components.SingletonComponent
         TwitchChannelScheduleExpireTable::class,
     ],
     views = [
-        YouTubeVideoDbView::class,
-        YouTubeSubscriptionDbView::class,
-        YouTubeChannelDetailDbView::class,
-        YouTubePlaylistItemDb::class,
+        YouTubePlaylistItemSummaryDb::class,
         TwitchStreamDbView::class,
     ],
-    version = 9,
+    version = 10,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -92,6 +90,7 @@ import dagger.hilt.components.SingletonComponent
         AutoMigration(from = 6, to = 7),
         AutoMigration(from = 7, to = 8),
         AutoMigration(from = 8, to = 9),
+        AutoMigration(from = 9, to = 10, spec = AppDatabase.MigrateRemoveVideoVisible::class),
     ]
 )
 @TypeConverters(
@@ -112,6 +111,9 @@ import dagger.hilt.components.SingletonComponent
 abstract class AppDatabase : RoomDatabase() {
     abstract val youtubeDao: YouTubeDao
     abstract val twitchDao: TwitchDao
+
+    @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
+    class MigrateRemoveVideoVisible : AutoMigrationSpec
 }
 
 @Module

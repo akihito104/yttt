@@ -279,7 +279,7 @@ class TwitchStreamScheduleTable(
     @ColumnInfo(name = "start_time")
     override val startTime: Instant,
     @ColumnInfo(name = "end_time")
-    override val endTime: Instant,
+    override val endTime: Instant?,
     @ColumnInfo(name = "title")
     override val title: String,
     @ColumnInfo(name = "canceled_until")

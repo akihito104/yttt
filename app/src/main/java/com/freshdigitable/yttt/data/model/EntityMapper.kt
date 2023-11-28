@@ -126,13 +126,6 @@ fun TwitchStreamSchedule.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDet
         description = "",
     )
 
-fun YouTubeVideoDetail.toLiveVideoDetail(): LiveVideoDetail =
-    LiveVideoDetailImpl(
-        video = this.toLiveVideo(),
-        description = this.description,
-        viewerCount = this.viewerCount,
-    )
-
 fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): LiveSubscription =
     LiveSubscriptionEntity(
         id = id.mapTo(),
