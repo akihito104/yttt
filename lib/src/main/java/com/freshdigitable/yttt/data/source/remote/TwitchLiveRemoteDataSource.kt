@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data.source.remote
 
-import com.freshdigitable.yttt.BuildConfig
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -11,6 +10,7 @@ import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.AccountLocalDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
+import com.freshdigitable.yttt.lib.BuildConfig
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow

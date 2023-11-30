@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.lib
 
 import com.freshdigitable.yttt.compose.LaunchNavRoute
 import junit.framework.TestCase.assertEquals

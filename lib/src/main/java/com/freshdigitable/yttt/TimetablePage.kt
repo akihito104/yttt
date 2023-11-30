@@ -1,5 +1,7 @@
 package com.freshdigitable.yttt
 
+import com.freshdigitable.yttt.lib.R
+
 enum class TimetablePage(val type: Type = Type.SIMPLE) {
     OnAir {
         override val textRes: Int = R.string.tab_onAir

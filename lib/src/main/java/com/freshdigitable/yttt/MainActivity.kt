@@ -10,6 +10,7 @@ import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.LaunchNavRoute
 import com.freshdigitable.yttt.compose.navigation.composableWith
+import com.freshdigitable.yttt.lib.BuildConfig
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
