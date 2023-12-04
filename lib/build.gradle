@@ -1,8 +1,8 @@
 plugins {
-    id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
     id 'kotlin-kapt'
-    id 'com.google.dagger.hilt.android'
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -64,70 +64,62 @@ kotlin {
 }
 
 dependencies {
-    def room_version = "2.6.0"
-    def nav_version = "2.7.5"
-    def accompanist_version = "0.32.0" // for compose 1.5
-    def hilt_version = "2.48"
-
-    def composeBom = platform('androidx.compose:compose-bom:2023.09.00')
+    def composeBom = platform(libs.androidx.compose.bom)
     implementation composeBom
-    implementation "androidx.compose.runtime:runtime-livedata"
-    implementation "androidx.navigation:navigation-compose:$nav_version"
-    implementation 'androidx.hilt:hilt-navigation-compose:1.1.0'
+    implementation libs.androidx.compose.runtime.livedata
+    implementation libs.androidx.navigation.compose
+    implementation libs.androidx.hilt.navigation.compose
     androidTestImplementation composeBom
-    implementation "com.github.bumptech.glide:compose:1.0.0-alpha.1"
-    implementation "com.google.accompanist:accompanist-permissions:$accompanist_version"
+    implementation libs.glide.compose
+    implementation libs.accompanist.permissions
 
     // Choose one of the following:
     // Material Design
-    implementation 'androidx.compose.material:material'
-    implementation 'androidx.compose.material3:material3'
-    implementation "com.google.accompanist:accompanist-themeadapter-material3:$accompanist_version"
+    implementation libs.androidx.compose.material
+    implementation libs.androidx.compose.material3
+    implementation libs.accompanist.themeadapter.material3
 
     // Android Studio Preview support
-    implementation 'androidx.compose.ui:ui-tooling-preview'
-    debugImplementation 'androidx.compose.ui:ui-tooling'
+    implementation libs.androidx.compose.ui.tooling.preview
+    debugImplementation libs.androidx.compose.ui.tooling
 
-    implementation "androidx.work:work-runtime-ktx:2.8.1"
-    implementation 'androidx.hilt:hilt-work:1.1.0'
-    kapt 'androidx.hilt:hilt-compiler:1.1.0'
-    implementation 'androidx.core:core-ktx:1.12.0'
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation("androidx.activity:activity-ktx:1.8.0")
-    implementation "androidx.lifecycle:lifecycle-livedata-ktx:2.6.2"
-    // https://developers.google.com/android/guides/setup
-    implementation "com.google.android.gms:play-services-base:18.2.0"
-    implementation 'com.google.android.gms:play-services-auth:20.7.0'
-    //https://github.com/googleapis/google-api-java-client
-    implementation('com.google.api-client:google-api-client-android:2.2.0') {
+    implementation libs.androidx.work.runtime.ktx
+    implementation libs.androidx.hilt.work
+    kapt libs.androidx.hilt.compiler
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.appcompat
+    implementation(libs.androidx.activity.ktx)
+    implementation libs.androidx.lifecycle.livedata.ktx
+    implementation libs.play.services.base
+    implementation libs.play.services.auth
+
+    implementation(libs.google.api.client.android) {
         exclude group: 'org.apache.httpcomponents'
     }
-    // https://github.com/googleapis/google-api-java-client-services/blob/main/clients/google-api-services-youtube/v3/README.md
-    implementation('com.google.apis:google-api-services-youtube:v3-rev20230319-2.0.0') {
+    implementation(libs.google.api.services.youtube) {
         exclude group: 'org.apache.httpcomponents'
     }
-    implementation "com.google.dagger:hilt-android:$hilt_version"
-    kapt "com.google.dagger:hilt-compiler:$hilt_version"
+    implementation libs.hilt.android
+    kapt libs.hilt.compiler
 
-    implementation "androidx.datastore:datastore-preferences:1.0.0"
-    implementation "androidx.room:room-ktx:$room_version"
-    implementation "androidx.room:room-runtime:$room_version"
-    annotationProcessor "androidx.room:room-compiler:$room_version"
+    implementation libs.androidx.datastore.preferences
+    implementation libs.androidx.room.ktx
+    implementation libs.androidx.room.runtime
+    annotationProcessor libs.androidx.room.compiler
     // To use Kotlin annotation processing tool (kapt)
-    kapt "androidx.room:room-compiler:$room_version"
+    kapt libs.androidx.room.compiler
     // To use Kotlin Symbol Processing (KSP)
-//    ksp "androidx.room:room-compiler:$room_version"
-    // https://github.com/bumptech/glide
-    implementation 'com.github.bumptech.glide:glide:4.15.0'
-    kapt 'com.github.bumptech.glide:compiler:4.15.0'
-    implementation(platform("com.squareup.okhttp3:okhttp-bom:4.11.0"))
-    implementation("com.squareup.okhttp3:okhttp")
-    implementation 'com.squareup.okhttp3:logging-interceptor'
-    implementation "com.github.bumptech.glide:okhttp3-integration:4.15.0"
-    implementation "com.squareup.retrofit2:retrofit:2.9.0"
-    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+//    ksp libs.androidx.room.compiler
+    implementation libs.glide
+    kapt libs.glide.compiler
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
+    implementation libs.okhttp.logging.interceptor
+    implementation libs.okhttp3.integration
+    implementation libs.retrofit
+    implementation libs.converter.gson
 
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
 }
