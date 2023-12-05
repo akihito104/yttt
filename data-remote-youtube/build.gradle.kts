@@ -2,10 +2,12 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.hilt.android)
+    id("kotlin-kapt")
 }
 
 android {
-    namespace = "com.freshdigitable.yttt.data.model"
+    namespace = "com.freshdigitable.yttt.data.source.remote"
     compileSdk = 34
 
     defaultConfig {
@@ -31,7 +33,17 @@ kotlin {
 }
 
 dependencies {
-    implementation(libs.kotlinx.coroutines.core)
+    implementation(project(":common"))
+
+    implementation(libs.google.api.client.android) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation(libs.google.api.services.youtube) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

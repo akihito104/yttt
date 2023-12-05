@@ -2,9 +2,9 @@ package com.freshdigitable.yttt.di
 
 import android.content.Context
 import android.content.Intent
+import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.source.AccountLocalDataSource
 import com.freshdigitable.yttt.data.source.remote.HttpRequestInitializerImpl
-import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.util.ExponentialBackOff

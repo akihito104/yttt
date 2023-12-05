@@ -18,6 +18,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.AccountLocalDataSource
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpRequest
 import com.google.api.client.http.HttpRequestInitializer
@@ -39,6 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.math.BigInteger
 import java.time.Instant
 import javax.inject.Inject
@@ -119,13 +121,23 @@ class YouTubeRemoteDataSource @Inject constructor(
         id: YouTubePlaylist.Id,
         maxResult: Long = 20,
         pageToken: String? = null,
-    ): List<YouTubePlaylistItem> = fetch {
-        playlistItems()
-            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-            .setPlaylistId(id.value)
-            .setMaxResults(maxResult)
-            .setPageToken(pageToken)
-    }.items.map { it.toLivePlaylistItem() }
+    ): List<YouTubePlaylistItem> {
+        return try {
+            fetch {
+                playlistItems()
+                    .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+                    .setPlaylistId(id.value)
+                    .setMaxResults(maxResult)
+                    .setPageToken(pageToken)
+            }.items.map { it.toLivePlaylistItem() }
+        } catch (e: Exception) {
+            if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
+                emptyList()
+            } else {
+                throw IOException(e)
+            }
+        }
+    }
 
     suspend fun fetchPlaylist(
         ids: Collection<YouTubePlaylist.Id>,

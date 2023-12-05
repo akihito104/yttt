@@ -4,10 +4,9 @@ import android.util.Log
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
-import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
-import com.google.api.client.googleapis.json.GoogleJsonResponseException
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -78,11 +77,7 @@ class FetchYouTubeStreamUseCase @Inject constructor(
             }
             return itemIds
         } catch (e: Exception) {
-            if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
-                Log.d(TAG, "fetchVideoByPlaylistIdTask(reload $id): no items found.")
-            } else {
-                Log.e(TAG, "fetchVideoByPlaylistIdTask: playlist>$id", e)
-            }
+            Log.e(TAG, "fetchVideoByPlaylistIdTask: playlist>$id", e)
         }
         return emptyList()
     }
