@@ -55,7 +55,8 @@ interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {
     }
 
     interface Content<T> {
-        data class Playlist(override val item: List<YouTubePlaylist.Id>) : Content<YouTubePlaylist.Id>
+        data class Playlist(override val item: List<YouTubePlaylist.Id>) :
+            Content<YouTubePlaylist.Id>
         data class Channels(override val item: List<YouTubeChannel.Id>) : Content<YouTubeChannel.Id>
 
         val item: List<T>

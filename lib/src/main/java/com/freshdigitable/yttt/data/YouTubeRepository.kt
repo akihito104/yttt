@@ -6,13 +6,13 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
