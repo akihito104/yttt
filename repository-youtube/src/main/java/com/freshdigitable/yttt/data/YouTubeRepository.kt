@@ -12,8 +12,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
-import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
-import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import java.time.Period
@@ -22,8 +20,8 @@ import javax.inject.Singleton
 
 @Singleton
 class YouTubeRepository @Inject constructor(
-    private val remoteSource: YouTubeRemoteDataSource,
-    private val localSource: YouTubeLocalDataSource,
+    private val remoteSource: YoutubeDataSource.Remote,
+    private val localSource: YoutubeDataSource.Local,
 ) : YoutubeDataSource {
     val videos: Flow<List<YouTubeVideo>> = localSource.videos
     var lastUpdateDatetime: Instant? = null

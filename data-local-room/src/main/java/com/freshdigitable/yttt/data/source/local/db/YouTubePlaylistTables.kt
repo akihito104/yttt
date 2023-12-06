@@ -15,7 +15,7 @@ import java.time.Duration
 import java.time.Instant
 
 @Entity(tableName = "playlist")
-class YouTubePlaylistTable(
+internal class YouTubePlaylistTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylist.Id,
@@ -62,7 +62,7 @@ class YouTubePlaylistTable(
         ),
     ],
 )
-class YouTubePlaylistItemTable(
+internal class YouTubePlaylistItemTable(
     @ColumnInfo(name = "id")
     val id: YouTubePlaylistItem.Id,
     @ColumnInfo(name = "playlist_id", index = true)
@@ -83,7 +83,7 @@ class YouTubePlaylistItemTable(
     val publishedAt: Instant,
 )
 
-data class YouTubePlaylistItemDb(
+internal data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylistItem.Id,
     @ColumnInfo(name = "playlist_id")

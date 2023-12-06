@@ -12,7 +12,7 @@ import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 
-abstract class Converter<S, O>(
+internal abstract class Converter<S, O>(
     private val serialize: (O) -> S,
     private val createObject: (S) -> O,
 ) {
@@ -23,39 +23,39 @@ abstract class Converter<S, O>(
     fun toObject(value: S?): O? = value?.let { createObject(it) }
 }
 
-class InstantConverter : Converter<Long, Instant>(
+internal class InstantConverter : Converter<Long, Instant>(
     serialize = { it.toEpochMilli() },
     createObject = { Instant.ofEpochMilli(it) },
 )
 
-class DurationConverter : Converter<Long, Duration>(
+internal class DurationConverter : Converter<Long, Duration>(
     serialize = { it.toMillis() },
     createObject = { Duration.ofMillis(it) }
 )
 
-abstract class IdConverter<E : IdBase>(createObject: (String) -> E) :
+internal abstract class IdConverter<E : IdBase>(createObject: (String) -> E) :
     Converter<String, E>(serialize = { it.value }, createObject = createObject)
 
-class YouTubeChannelIdConverter :
+internal class YouTubeChannelIdConverter :
     IdConverter<YouTubeChannel.Id>(createObject = { YouTubeChannel.Id(it) })
 
-class YouTubeSubscriptionIdConverter : IdConverter<YouTubeSubscription.Id>(
+internal class YouTubeSubscriptionIdConverter : IdConverter<YouTubeSubscription.Id>(
     createObject = { YouTubeSubscription.Id(it) }
 )
 
-class YouTubeVideoIdConverter :
+internal class YouTubeVideoIdConverter :
     IdConverter<YouTubeVideo.Id>(createObject = { YouTubeVideo.Id(it) })
 
-class YouTubeChannelLogIdConverter :
+internal class YouTubeChannelLogIdConverter :
     IdConverter<YouTubeChannelLog.Id>(createObject = { YouTubeChannelLog.Id(it) })
 
-class YouTubePlaylistIdConverter :
+internal class YouTubePlaylistIdConverter :
     IdConverter<YouTubePlaylist.Id>(createObject = { YouTubePlaylist.Id(it) })
 
-class YouTubePlaylistItemIdConverter :
+internal class YouTubePlaylistItemIdConverter :
     IdConverter<YouTubePlaylistItem.Id>(createObject = { YouTubePlaylistItem.Id(it) })
 
-class BigIntegerConverter : Converter<Long, BigInteger>(
+internal class BigIntegerConverter : Converter<Long, BigInteger>(
     serialize = { it.toLong() },
     createObject = { BigInteger.valueOf(it) }
 )

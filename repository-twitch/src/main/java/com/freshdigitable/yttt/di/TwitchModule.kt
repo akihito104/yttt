@@ -4,7 +4,9 @@ import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchVideo
+import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
+import com.freshdigitable.yttt.data.source.remote.TwitchLiveRemoteDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchOauth
 import com.freshdigitable.yttt.data.source.remote.TwitchTokenInterceptor
 import com.google.gson.Gson
@@ -18,6 +20,7 @@ import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
 import com.google.gson.stream.JsonWriter
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -31,7 +34,7 @@ import java.time.Instant
 
 @Module
 @InstallIn(SingletonComponent::class)
-object TwitchModule {
+internal object TwitchModule {
     @Provides
     fun provideGson(): Gson = GsonBuilder()
         .registerTypeAdapter<Instant, String>(
@@ -143,4 +146,11 @@ object TwitchModule {
             return deserialize(v)
         }
     })
+
+    @Module
+    @InstallIn(SingletonComponent::class)
+    interface Bind {
+        @Binds
+        fun bindTwitchDataSourceRemote(dataSource: TwitchLiveRemoteDataSource): TwitchLiveDataSource.Remote
+    }
 }

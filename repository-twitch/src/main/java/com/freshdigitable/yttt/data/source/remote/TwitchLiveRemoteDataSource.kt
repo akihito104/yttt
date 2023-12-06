@@ -27,10 +27,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TwitchLiveRemoteDataSource @Inject constructor(
+internal class TwitchLiveRemoteDataSource @Inject constructor(
     private val oauth: TwitchOauth,
     private val helix: TwitchHelixService,
-) : TwitchLiveDataSource {
+) : TwitchLiveDataSource.Remote {
     override suspend fun getAuthorizeUrl(): String = withContext(Dispatchers.IO) {
         val response = oauth.authorizeImplicitly(
             clientId = BuildConfig.TWITCH_CLIENT_ID,
@@ -74,13 +74,10 @@ class TwitchLiveRemoteDataSource @Inject constructor(
         return fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
     }
 
-    override suspend fun fetchFollowedStreams(): List<TwitchStream> {
-        val me = fetchMe() ?: return emptyList()
-        return fetchFollowedStreams(me.id)
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
+        val id = me ?: fetchMe()?.id ?: return emptyList()
+        return fetchAll { getFollowedStreams(id.value, cursor = it) }
     }
-
-    suspend fun fetchFollowedStreams(id: TwitchUser.Id): List<TwitchStream> =
-        fetchAll { getFollowedStreams(id.value, cursor = it) }
 
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,

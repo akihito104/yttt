@@ -25,26 +25,26 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YouTubeLocalDataSource @Inject constructor(
+internal class YouTubeLocalDataSource @Inject constructor(
     private val database: AppDatabase,
-) : YoutubeDataSource {
+) : YoutubeDataSource.Local {
     private val dao: YouTubeDao get() = database.youtubeDao
-    val videos: Flow<List<YouTubeVideo>> = dao.watchAllUnfinishedVideos()
+    override val videos: Flow<List<YouTubeVideo>> = dao.watchAllUnfinishedVideos()
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> =
         withContext(Dispatchers.IO) {
             dao.findAllSubscriptions()
         }
 
-    suspend fun fetchAllSubscriptionSummary(): List<YouTubeSubscriptionSummary> =
+    override suspend fun fetchAllSubscriptionSummary(): List<YouTubeSubscriptionSummary> =
         dao.findAllSubscriptionSummary()
 
-    suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>) =
+    override suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>) =
         withContext(Dispatchers.IO) {
             dao.addSubscriptions(subscriptions)
         }
 
-    suspend fun removeSubscribes(subscriptions: Collection<YouTubeSubscription.Id>) {
+    override suspend fun removeSubscribes(subscriptions: Collection<YouTubeSubscription.Id>) {
         dao.removeSubscriptions(subscriptions)
     }
 
@@ -59,7 +59,7 @@ class YouTubeLocalDataSource @Inject constructor(
         return dao.findChannelLogs(channelId, maxResult)
     }
 
-    suspend fun addLiveChannelLogs(channelLogs: List<YouTubeChannelLog>) {
+    override suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>) {
         dao.addChannelLogs(channelLogs)
     }
 
@@ -67,19 +67,19 @@ class YouTubeLocalDataSource @Inject constructor(
      * returns playlist item list. `null` means that list items have not cached yet or have expired (needs download from remote).
      * returned empty list means that there is no items in the playlist (because of not updated yet or the playlist is to be private).
      */
-    suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>? {
+    override suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>? {
         return database.withTransaction {
             val p = dao.findPlaylistById(id, since = Instant.now()) ?: return@withTransaction null
             dao.findPlaylistItemByPlaylistId(p.id)
         }
     }
 
-    suspend fun fetchPlaylistItemSummary(
-        id: YouTubePlaylist.Id,
+    override suspend fun fetchPlaylistItemSummary(
+        playlistId: YouTubePlaylist.Id,
         maxResult: Long,
-    ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(id, maxResult)
+    ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(playlistId, maxResult)
 
-    suspend fun setPlaylistItemsByPlaylistId(
+    override suspend fun setPlaylistItemsByPlaylistId(
         id: YouTubePlaylist.Id,
         items: Collection<YouTubePlaylistItem>,
     ) {
@@ -120,7 +120,7 @@ class YouTubeLocalDataSource @Inject constructor(
         dao.addFreeChatItems(ids, false, Instant.now() + EXPIRATION_DEFAULT)
     }
 
-    suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(Dispatchers.IO) {
+    override suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(Dispatchers.IO) {
         val current = Instant.now()
         val defaultExpiredAt = current + EXPIRATION_DEFAULT
         dao.addVideoIsArchivedEntities(video.map {
@@ -141,7 +141,7 @@ class YouTubeLocalDataSource @Inject constructor(
         dao.addVideos(expiring)
     }
 
-    suspend fun cleanUp() {
+    override suspend fun cleanUp() {
         dao.removeAllChannelLogs()
         removeNotExistVideos()
     }
@@ -161,29 +161,30 @@ class YouTubeLocalDataSource @Inject constructor(
         }
     }
 
-    suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>) = withContext(Dispatchers.IO) {
-        fetchByIds(ids) { removeVideos(it) }
-    }
+    override suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>): Unit =
+        withContext(Dispatchers.IO) {
+            fetchByIds(ids) { removeVideos(it) }
+        }
 
-    suspend fun findAllUnfinishedVideos(): List<YouTubeVideo> {
+    override suspend fun findAllUnfinishedVideos(): List<YouTubeVideo> {
         return dao.findAllUnfinishedVideoList()
     }
 
-    suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
+    override suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
         return dao.findChannelDetail(ids)
     }
 
-    suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>) {
+    override suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>) {
         dao.addChannelDetails(channelDetail)
     }
 
     private val channelSections = mutableMapOf<YouTubeChannel.Id, List<YouTubeChannelSection>>()
-    fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
+    override suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
         return channelSections[id] ?: emptyList()
     }
 
-    fun addChannelSection(channelSection: List<YouTubeChannelSection>) {
-        channelSections[channelSection[0].channelId] = channelSection
+    override suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>) {
+        channelSections[channelSection.first().channelId] = channelSection.toList()
     }
 
     private suspend fun <I : YouTubeId, O> fetchByIds(

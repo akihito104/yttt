@@ -27,7 +27,7 @@ import java.time.Instant
     ],
     indices = [Index("channel_id")],
 )
-class YouTubeSubscriptionTable(
+internal class YouTubeSubscriptionTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     val id: YouTubeSubscription.Id,
@@ -39,7 +39,7 @@ class YouTubeSubscriptionTable(
     val order: Int = Int.MAX_VALUE,
 )
 
-data class YouTubeSubscriptionDb(
+internal data class YouTubeSubscriptionDb(
     @ColumnInfo(name = "id")
     override val id: YouTubeSubscription.Id,
     @ColumnInfo(name = "subscription_since")
@@ -50,7 +50,7 @@ data class YouTubeSubscriptionDb(
     override val order: Int,
 ) : YouTubeSubscription
 
-data class YouTubeSubscriptionSummaryDb(
+internal data class YouTubeSubscriptionSummaryDb(
     @ColumnInfo("subscription_id")
     override val subscriptionId: YouTubeSubscription.Id,
     @ColumnInfo("channel_id")
@@ -66,7 +66,7 @@ data class YouTubeSubscriptionSummaryDb(
         "LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id",
     viewName = "yt_playlist_item_summary",
 )
-class YouTubePlaylistItemSummaryDb(
+internal class YouTubePlaylistItemSummaryDb(
     @ColumnInfo("playlist_id")
     override val playlistId: YouTubePlaylist.Id,
     @ColumnInfo("playlist_item_id")

@@ -17,7 +17,7 @@ import java.math.BigInteger
 import java.time.Instant
 
 @Entity(tableName = "channel")
-data class YouTubeChannelTable(
+internal data class YouTubeChannelTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     override val id: YouTubeChannel.Id,
@@ -42,7 +42,7 @@ data class YouTubeChannelTable(
         ),
     ],
 )
-data class YouTubeChannelAdditionTable(
+internal data class YouTubeChannelAdditionTable(
     @PrimaryKey
     @ColumnInfo(name = "id")
     val id: YouTubeChannel.Id,
@@ -71,7 +71,7 @@ data class YouTubeChannelAdditionTable(
         get() = keywordsRaw.split(",", " ")
 }
 
-data class YouTubeChannelDetailDb(
+internal data class YouTubeChannelDetailDb(
     @ColumnInfo(name = "title")
     override val title: String,
     @ColumnInfo(name = "icon")
@@ -99,7 +99,7 @@ data class YouTubeChannelDetailDb(
     ],
     indices = [Index("channel_id"), Index("video_id")],
 )
-data class YouTubeChannelLogTable(
+internal data class YouTubeChannelLogTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     override val id: YouTubeChannelLog.Id,

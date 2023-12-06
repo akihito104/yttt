@@ -15,7 +15,7 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import java.time.Instant
 
 @Entity(tableName = "twitch_user")
-data class TwitchUserTable(
+internal data class TwitchUserTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     override val id: TwitchUser.Id,
@@ -35,7 +35,7 @@ data class TwitchUserTable(
         ),
     ],
 )
-class TwitchUserDetailTable(
+internal class TwitchUserDetailTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "user_id")
     val id: TwitchUser.Id,
@@ -49,7 +49,7 @@ class TwitchUserDetailTable(
     val description: String,
 )
 
-data class TwitchUserDetailDbView(
+internal data class TwitchUserDetailDbView(
     @Embedded
     private val user: TwitchUserTable,
     @ColumnInfo("description")
@@ -83,7 +83,7 @@ data class TwitchUserDetailDbView(
         ),
     ],
 )
-class TwitchUserDetailExpireTable(
+internal class TwitchUserDetailExpireTable(
     @PrimaryKey
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
@@ -107,7 +107,7 @@ class TwitchUserDetailExpireTable(
     ],
     primaryKeys = ["user_id", "follower_user_id"]
 )
-class TwitchBroadcasterTable(
+internal class TwitchBroadcasterTable(
     @ColumnInfo(name = "user_id")
     val id: TwitchUser.Id,
     @ColumnInfo(name = "follower_user_id", index = true)
@@ -126,7 +126,7 @@ class TwitchBroadcasterTable(
         ),
     ],
 )
-class TwitchBroadcasterExpireTable(
+internal class TwitchBroadcasterExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("follower_user_id", index = true)
     val followerId: TwitchUser.Id,
@@ -134,7 +134,7 @@ class TwitchBroadcasterExpireTable(
     val expireAt: Instant,
 )
 
-data class TwitchBroadcasterDb(
+internal data class TwitchBroadcasterDb(
     @Embedded
     private val user: TwitchUserTable,
     @ColumnInfo("followed_at")
@@ -151,7 +151,7 @@ data class TwitchBroadcasterDb(
         ),
     ],
 )
-class TwitchAuthorizedUserTable(
+internal class TwitchAuthorizedUserTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("user_id")
     val userId: TwitchUser.Id,
@@ -167,7 +167,7 @@ class TwitchAuthorizedUserTable(
         ),
     ],
 )
-class TwitchStreamTable(
+internal class TwitchStreamTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     val id: TwitchStream.Id,
@@ -200,7 +200,7 @@ class TwitchStreamTable(
     value = "SELECT s.*, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} FROM twitch_stream AS s " +
         "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON u.id = s.user_id",
 )
-data class TwitchStreamDbView(
+internal data class TwitchStreamDbView(
     @Embedded
     private val streamEntity: TwitchStreamTable,
     @Embedded(TwitchUserDetailDbView.SQL_EMBED_PREFIX)
@@ -229,7 +229,7 @@ data class TwitchStreamDbView(
         ),
     ],
 )
-class TwitchStreamExpireTable(
+internal class TwitchStreamExpireTable(
     @PrimaryKey
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
@@ -247,7 +247,7 @@ class TwitchStreamExpireTable(
         ),
     ],
 )
-class TwitchChannelVacationScheduleTable(
+internal class TwitchChannelVacationScheduleTable(
     @PrimaryKey
     @ColumnInfo(name = "user_id", index = true)
     val userId: TwitchUser.Id,
@@ -255,7 +255,7 @@ class TwitchChannelVacationScheduleTable(
     val vacation: TwitchChannelVacationSchedule?,
 )
 
-class TwitchChannelVacationSchedule(
+internal class TwitchChannelVacationSchedule(
     @ColumnInfo(name = "vacation_start")
     override val startTime: Instant,
     @ColumnInfo(name = "vacation_end")
@@ -272,7 +272,7 @@ class TwitchChannelVacationSchedule(
         ),
     ],
 )
-class TwitchStreamScheduleTable(
+internal class TwitchStreamScheduleTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     override val id: TwitchChannelSchedule.Stream.Id,
@@ -292,14 +292,14 @@ class TwitchStreamScheduleTable(
     val userId: TwitchUser.Id,
 ) : TwitchChannelSchedule.Stream
 
-class TwitchStreamCategory(
+internal class TwitchStreamCategory(
     @ColumnInfo(name = "category_id")
     override val id: String,
     @ColumnInfo(name = "category_name")
     override val name: String,
 ) : TwitchChannelSchedule.StreamCategory
 
-class TwitchChannelScheduleDb(
+internal class TwitchChannelScheduleDb(
     @Relation(
         parentColumn = "${TwitchUserDetailDbView.SQL_EMBED_PREFIX}id",
         entityColumn = "user_id"
@@ -321,7 +321,7 @@ class TwitchChannelScheduleDb(
         ),
     ],
 )
-class TwitchChannelScheduleExpireTable(
+internal class TwitchChannelScheduleExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("user_id")
     val userId: TwitchUser.Id,

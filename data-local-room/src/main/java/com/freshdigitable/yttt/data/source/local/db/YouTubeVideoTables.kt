@@ -21,7 +21,7 @@ import java.time.Instant
     ],
     indices = [Index("channel_id")],
 )
-class YouTubeVideoTable(
+internal class YouTubeVideoTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     val id: YouTubeVideo.Id,
@@ -56,7 +56,7 @@ class YouTubeVideoTable(
     ],
     indices = [Index("video_id")],
 )
-class FreeChatTable(
+internal class FreeChatTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("video_id")
     val videoId: YouTubeVideo.Id,
@@ -75,7 +75,7 @@ class FreeChatTable(
     ],
     indices = [Index("video_id")],
 )
-class YouTubeVideoExpireTable(
+internal class YouTubeVideoExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "video_id")
     val videoId: YouTubeVideo.Id,
@@ -84,7 +84,7 @@ class YouTubeVideoExpireTable(
 )
 
 @Entity(tableName = "yt_video_is_archived")
-class YouTubeVideoIsArchivedTable(
+internal class YouTubeVideoIsArchivedTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("video_id")
     val videoId: YouTubeVideo.Id, // archived video is not cached so not to be constrained by foreign key

@@ -15,9 +15,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TwitchLiveLocalDataSource @Inject constructor(
+internal class TwitchLiveLocalDataSource @Inject constructor(
     private val dao: TwitchDao,
-) : TwitchLiveDataSource {
+) : TwitchLiveDataSource.Local {
     override val onAir: Flow<List<TwitchStream>> = dao.watchStream()
     override val upcoming: Flow<List<TwitchChannelSchedule>> = dao.watchChannelSchedule()
 
@@ -28,13 +28,13 @@ class TwitchLiveLocalDataSource @Inject constructor(
         return dao.findUserDetail(ids)
     }
 
-    suspend fun addUsers(users: Collection<TwitchUserDetail>) {
+    override suspend fun addUsers(users: Collection<TwitchUserDetail>) {
         dao.addUserDetails(users)
     }
 
     override suspend fun fetchMe(): TwitchUserDetail? = dao.findMe()
 
-    suspend fun setMe(me: TwitchUserDetail) {
+    override suspend fun setMe(me: TwitchUserDetail) {
         dao.setMe(me)
     }
 
@@ -42,18 +42,21 @@ class TwitchLiveLocalDataSource @Inject constructor(
         return dao.findBroadcastersByFollowerId(userId)
     }
 
-    suspend fun replaceAllFollowings(userId: TwitchUser.Id, followings: List<TwitchBroadcaster>) {
+    override suspend fun replaceAllFollowings(
+        userId: TwitchUser.Id,
+        followings: Collection<TwitchBroadcaster>,
+    ) {
         dao.replaceAllBroadcasters(userId, followings)
     }
 
-    suspend fun addFollowedStreams(followedStreams: List<TwitchStream>) {
+    override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) {
         val me = fetchMe() ?: return
         dao.replaceAllStreams(me.id, followedStreams)
     }
 
-    override suspend fun fetchFollowedStreams(): List<TwitchStream> {
-        val me = fetchMe() ?: return emptyList()
-        val expiredAt = dao.findStreamExpire(me.id)?.expiredAt
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
+        val id = me ?: fetchMe()?.id ?: return emptyList()
+        val expiredAt = dao.findStreamExpire(id)?.expiredAt
         if (expiredAt?.isBefore(Instant.now()) == true) {
             return emptyList()
         }
@@ -75,7 +78,7 @@ class TwitchLiveLocalDataSource @Inject constructor(
         return dao.findChannelSchedule(id)
     }
 
-    suspend fun setFollowedStreamSchedule(schedule: List<TwitchChannelSchedule>) {
+    override suspend fun setFollowedStreamSchedule(schedule: Collection<TwitchChannelSchedule>) {
         dao.replaceChannelSchedules(schedule)
     }
 

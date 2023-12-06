@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data.source.remote
 
-import android.util.Log
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -15,12 +14,9 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionEntity
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoEntity
-import com.freshdigitable.yttt.data.source.AccountLocalDataSource
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
-import com.google.api.client.http.HttpRequest
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
@@ -47,10 +43,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YouTubeRemoteDataSource @Inject constructor(
+internal class YouTubeRemoteDataSource @Inject constructor(
     httpRequestInitializer: HttpRequestInitializer,
     private val coroutineScope: CoroutineScope,
-) : YoutubeDataSource {
+) : YoutubeDataSource.Remote {
     private val youtube = YouTube.Builder(
         NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
     ).build()
@@ -100,7 +96,7 @@ class YouTubeRemoteDataSource @Inject constructor(
                 .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
         }.map { it.toLiveVideo() }
 
-    suspend fun fetchChannelList(
+    override suspend fun fetchChannelList(
         ids: Collection<YouTubeChannel.Id>,
     ): List<YouTubeChannelDetail> = fetchList(ids, getItems = { items }) { chunked ->
         channels()
@@ -109,7 +105,7 @@ class YouTubeRemoteDataSource @Inject constructor(
             .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
     }.map { YouTubeChannelImpl(it) }
 
-    suspend fun fetchChannelSection(
+    override suspend fun fetchChannelSection(
         channelId: YouTubeChannel.Id,
     ): List<YouTubeChannelSection> = fetch {
         channelSections()
@@ -117,10 +113,10 @@ class YouTubeRemoteDataSource @Inject constructor(
             .setChannelId(channelId.value)
     }.items.map { YouTubeChannelSectionImpl(it) }
 
-    suspend fun fetchPlaylistItems(
+    override suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
-        maxResult: Long = 20,
-        pageToken: String? = null,
+        maxResult: Long,
+        pageToken: String?,
     ): List<YouTubePlaylistItem> {
         return try {
             fetch {
@@ -139,7 +135,7 @@ class YouTubeRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun fetchPlaylist(
+    override suspend fun fetchPlaylist(
         ids: Collection<YouTubePlaylist.Id>,
     ): List<YouTubePlaylist> = fetchList(ids, getItems = { items }) { chunked ->
         playlists()
@@ -200,18 +196,6 @@ class YouTubeRemoteDataSource @Inject constructor(
 
         // https://developers.google.com/youtube/v3/docs/videos/list#parameters
         private const val VIDEO_MAX_FETCH_SIZE = 50
-    }
-}
-
-internal class HttpRequestInitializerImpl(
-    private val credential: GoogleAccountCredential,
-    private val dataStore: AccountLocalDataSource,
-) : HttpRequestInitializer {
-    override fun initialize(request: HttpRequest?) {
-        Log.d("YouTubeLiveRemoteDataSource", "init: ${request?.url}")
-        val account = checkNotNull(dataStore.getAccount()) { "google account is null." }
-        credential.selectedAccountName = account
-        credential.initialize(request)
     }
 }
 

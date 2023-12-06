@@ -1,10 +1,8 @@
 package com.freshdigitable.yttt.data.source.local
 
-import android.content.Context
 import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.DeleteColumn
-import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.AutoMigrationSpec
@@ -46,11 +44,6 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
-import dagger.Module
-import dagger.Provides
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
 
 @Database(
     entities = [
@@ -108,22 +101,10 @@ import dagger.hilt.components.SingletonComponent
     TwitchStreamIdConverter::class,
     CsvConverter::class,
 )
-abstract class AppDatabase : RoomDatabase() {
-    abstract val youtubeDao: YouTubeDao
-    abstract val twitchDao: TwitchDao
+internal abstract class AppDatabase : RoomDatabase() {
+    internal abstract val youtubeDao: YouTubeDao
+    internal abstract val twitchDao: TwitchDao
 
     @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
-    class MigrateRemoveVideoVisible : AutoMigrationSpec
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-object DbModule {
-    @Provides
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "ytttdb")
-            .build()
-
-    @Provides
-    fun provideTwitchDao(database: AppDatabase): TwitchDao = database.twitchDao
+    internal class MigrateRemoveVideoVisible : AutoMigrationSpec
 }

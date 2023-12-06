@@ -16,7 +16,7 @@ interface TwitchLiveDataSource {
     suspend fun findUsersById(ids: Collection<TwitchUser.Id>? = null): List<TwitchUserDetail>
     suspend fun fetchMe(): TwitchUserDetail?
     suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster>
-    suspend fun fetchFollowedStreams(): List<TwitchStream>
+    suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): List<TwitchStream>
     suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int = 10,
@@ -27,4 +27,18 @@ interface TwitchLiveDataSource {
         id: TwitchUser.Id,
         itemCount: Int = 20,
     ): List<TwitchVideoDetail>
+
+    interface Local : TwitchLiveDataSource {
+        suspend fun addUsers(users: Collection<TwitchUserDetail>)
+        suspend fun setMe(me: TwitchUserDetail)
+        suspend fun replaceAllFollowings(
+            userId: TwitchUser.Id,
+            followings: Collection<TwitchBroadcaster>,
+        )
+
+        suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>)
+        suspend fun setFollowedStreamSchedule(schedule: Collection<TwitchChannelSchedule>)
+    }
+
+    interface Remote : TwitchLiveDataSource
 }

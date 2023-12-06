@@ -20,7 +20,7 @@ import java.time.Duration
 import java.time.Instant
 
 @Dao
-interface YouTubeDao {
+internal interface YouTubeDao {
     @Transaction
     suspend fun addSubscriptions(subscriptions: Collection<YouTubeSubscription>) {
         val channels = subscriptions.map { it.channel }.toSet()
@@ -329,7 +329,7 @@ private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTube
     publishedAt
 )
 
-data class YouTubeVideoDb(
+internal data class YouTubeVideoDb(
     @Embedded
     private val video: YouTubeVideoTable,
     @Embedded("c_")

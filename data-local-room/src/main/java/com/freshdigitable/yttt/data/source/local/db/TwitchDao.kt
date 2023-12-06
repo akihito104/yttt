@@ -17,7 +17,7 @@ import java.time.Duration
 import java.time.Instant
 
 @Dao
-interface TwitchDao {
+internal interface TwitchDao {
     @Transaction
     suspend fun setMe(me: TwitchUserDetail) {
         addUserDetails(listOf(me))
