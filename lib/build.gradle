@@ -56,7 +56,7 @@ kotlin {
 
 dependencies {
     implementation project(":common")
-    implementation project(":data-remote-youtube")
+    implementation project(':repository-youtube')
     implementation project(":data-local-room")
 
     def composeBom = platform(libs.androidx.compose.bom)

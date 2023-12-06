@@ -34,6 +34,7 @@ kotlin {
 
 dependencies {
     implementation(project(":common"))
+    implementation(project(":data-local-room"))
 
     implementation(libs.google.api.client.android) {
         exclude(group = "org.apache.httpcomponents")
@@ -41,6 +42,8 @@ dependencies {
     implementation(libs.google.api.services.youtube) {
         exclude(group = "org.apache.httpcomponents")
     }
+    implementation(libs.play.services.base)
+    implementation(libs.play.services.auth)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
 

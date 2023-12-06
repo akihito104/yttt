@@ -16,5 +16,5 @@ rootProject.name = "yttt"
 include ':app'
 include ':lib'
 include ':common'
-include ':data-remote-youtube'
+include ':repository-youtube'
 include ':data-local-room'
