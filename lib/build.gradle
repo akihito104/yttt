@@ -14,22 +14,9 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
-
-        def twitchPFile = rootProject.file("twitch.properties")
-        def twitchProperties = new Properties()
-        if (twitchPFile.exists()) {
-            try (def inputStream = new FileInputStream(twitchPFile)) {
-                twitchProperties.load(inputStream)
-            }
-        }
-        buildConfigField("String", "TWITCH_CLIENT_ID",
-                "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\"")
-        buildConfigField("String", "TWITCH_REDIRECT_URI",
-                "\"${twitchProperties.getOrDefault("twitch_redirect_uri", "")}\"")
     }
 
     buildFeatures {
-        buildConfig true
         compose true
     }
     composeOptions {
@@ -57,7 +44,7 @@ kotlin {
 dependencies {
     implementation project(":common")
     implementation project(':repository-youtube')
-    implementation project(":data-local-room")
+    implementation project(":repository-twitch")
 
     def composeBom = platform(libs.androidx.compose.bom)
     implementation composeBom
@@ -96,10 +83,7 @@ dependencies {
     kapt libs.glide.compiler
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
-    implementation libs.okhttp.logging.interceptor
     implementation libs.okhttp3.integration
-    implementation libs.retrofit
-    implementation libs.converter.gson
 
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit

@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -10,7 +11,6 @@ import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.AccountLocalDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
-import com.freshdigitable.yttt.lib.BuildConfig
 import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -280,9 +280,7 @@ data class FollowingStream(
 ) : TwitchStream {
     override val user: TwitchUser
         get() = TwitchUserRemote(
-            TwitchUser.Id(userId),
-            loginName = loginName,
-            displayName = displayName
+            TwitchUser.Id(userId), loginName = loginName, displayName = displayName
         )
 }
 
@@ -391,7 +389,8 @@ class TwitchVideoRemote(
     @SerializedName("muted_segments")
     override val mutedSegments: List<MutedSegmentRemote>,
 ) : TwitchVideoDetail {
-    override val user: TwitchUser = object : TwitchUser {
+    override val user: TwitchUser = object :
+        TwitchUser {
         override val id: TwitchUser.Id
             get() = TwitchUser.Id(userId)
         override val loginName: String
