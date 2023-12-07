@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt
 
 import com.freshdigitable.yttt.compose.TabData
+import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -9,7 +10,6 @@ import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toLocalDateTime
 import com.freshdigitable.yttt.data.model.toTwitchVideoList
-import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -81,7 +81,7 @@ class FetchYouTubeFreeChatItemSourceUseCase @Inject constructor(
 
 class TimetablePageFacadeImpl @Inject constructor(
     items: Map<TimetablePage, @JvmSuppressWildcards Set<FetchTimetableItemSourceUseCase>>,
-    prefs: AndroidPreferencesDataStore,
+    settingRepository: SettingRepository,
 ) : TimetablePageFacade {
     private val sorterTable = mapOf<TimetablePage, (List<LiveVideo>) -> List<LiveVideo>>(
         TimetablePage.OnAir to { i ->
@@ -104,7 +104,7 @@ class TimetablePageFacadeImpl @Inject constructor(
     override fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo>> =
         checkNotNull(sourceTable[page])
 
-    private val extraHourOfDay = prefs.changeDateTime.map {
+    private val extraHourOfDay = settingRepository.changeDateTime.map {
         Duration.ofHours(((it ?: 24) - 24).toLong())
     }
     private val upcomingItems: Flow<Map<String, List<LiveVideo>>> =

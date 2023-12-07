@@ -2,7 +2,7 @@ package com.freshdigitable.yttt
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
+import com.freshdigitable.yttt.data.SettingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -13,16 +13,16 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AppSettingsViewModel @Inject constructor(
-    private val dataStore: AndroidPreferencesDataStore,
+    private val repository: SettingRepository,
 ) : ViewModel() {
-    val changeDateTime: StateFlow<String> = dataStore.changeDateTime
+    val changeDateTime: StateFlow<String> = repository.changeDateTime
         .map { it ?: 24 }
         .map { "$it:00" }
         .stateIn(viewModelScope, SharingStarted.Eagerly, "24:00")
 
     fun onClick(value: Int) {
         viewModelScope.launch {
-            dataStore.putTimeToChangeDate(value)
+            repository.putTimeToChangeDate(value)
         }
     }
 

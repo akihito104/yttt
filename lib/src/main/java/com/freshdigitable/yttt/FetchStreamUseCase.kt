@@ -2,6 +2,7 @@ package com.freshdigitable.yttt
 
 import android.util.Log
 import com.freshdigitable.yttt.data.AccountRepository
+import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
@@ -21,6 +22,7 @@ class FetchYouTubeStreamUseCase @Inject constructor(
     private val liveRepository: YouTubeRepository,
     private val facade: YouTubeFacade,
     private val accountRepository: AccountRepository,
+    private val settingRepository: SettingRepository,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke() {
         if (!accountRepository.hasAccount()) {
@@ -28,7 +30,7 @@ class FetchYouTubeStreamUseCase @Inject constructor(
         }
         updateStreams()
         fetchNewStreams()
-        liveRepository.lastUpdateDatetime = Instant.now()
+        settingRepository.lastUpdateDatetime = Instant.now()
         liveRepository.cleanUp()
         facade.updateAsFreeChat()
         Log.d(TAG, "fetchLiveStreams: end")
@@ -118,6 +120,11 @@ class YouTubeFacade @Inject constructor(
         repository.addFreeChatItems(freeChat)
         val unfinished = unchecked.filter { it.isFreeChat == null }.map { it.id } - freeChat.toSet()
         repository.removeFreeChatItems(unfinished)
+    }
+
+    suspend fun addFreeChatFromWorker(id: YouTubeVideo.Id) {
+        val v = repository.fetchVideoList(listOf(id))
+        repository.addFreeChatItems(v.map { it.id })
     }
 
     companion object {

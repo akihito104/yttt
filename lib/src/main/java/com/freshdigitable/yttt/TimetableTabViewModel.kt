@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.TimetableMenuItem
+import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.mapTo
@@ -25,7 +26,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TimetableTabViewModel @Inject constructor(
-    private val liveRepository: YouTubeRepository,
+    private val settingRepository: SettingRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     private val contextMenuDelegate: TimetableContextMenuDelegate,
     timetablePageFacade: TimetablePageFacade,
@@ -34,7 +35,7 @@ class TimetableTabViewModel @Inject constructor(
     val isLoading: LiveData<Boolean> = _isLoading
     val canUpdate: Boolean
         get() {
-            val lastUpdateDatetime = liveRepository.lastUpdateDatetime ?: return true
+            val lastUpdateDatetime = settingRepository.lastUpdateDatetime ?: return true
             return (lastUpdateDatetime + Duration.ofMinutes(30)) <= Instant.now()
         }
 

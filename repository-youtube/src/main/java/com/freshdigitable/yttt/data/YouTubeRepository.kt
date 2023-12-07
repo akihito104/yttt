@@ -24,7 +24,6 @@ class YouTubeRepository @Inject constructor(
     private val localSource: YoutubeDataSource.Local,
 ) : YoutubeDataSource {
     val videos: Flow<List<YouTubeVideo>> = localSource.videos
-    var lastUpdateDatetime: Instant? = null
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> {
         val res = remoteSource.fetchAllSubscribe(maxResult)
