@@ -33,7 +33,7 @@ import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.YouTubeOauthViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
-import com.freshdigitable.yttt.data.TwitchOauthToken
+import com.freshdigitable.yttt.data.model.TwitchOauthToken
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted

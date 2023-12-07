@@ -7,7 +7,7 @@ import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
 import com.freshdigitable.yttt.data.source.remote.TwitchLiveRemoteDataSource
-import com.freshdigitable.yttt.data.source.remote.TwitchOauth
+import com.freshdigitable.yttt.data.source.remote.TwitchOauthService
 import com.freshdigitable.yttt.data.source.remote.TwitchTokenInterceptor
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -77,11 +77,11 @@ internal object TwitchModule {
         retrofit.create(TwitchHelixService::class.java)
 
     @Provides
-    fun provideTwitchOauthService(): TwitchOauth {
+    fun provideTwitchOauthService(): TwitchOauthService {
         val retrofit = Retrofit.Builder()
             .baseUrl("https://id.twitch.tv/")
             .build()
-        return retrofit.create(TwitchOauth::class.java)
+        return retrofit.create(TwitchOauthService::class.java)
     }
 
     private inline fun <reified O, reified S> GsonBuilder.registerJsonDeserializer(

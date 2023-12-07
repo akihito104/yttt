@@ -14,11 +14,11 @@ import androidx.navigation.navDeepLink
 import com.freshdigitable.yttt.compose.MainNavRoute.Subscription
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
-import com.freshdigitable.yttt.data.TwitchOauthToken
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.TwitchOauthToken
 import kotlin.reflect.KClass
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {

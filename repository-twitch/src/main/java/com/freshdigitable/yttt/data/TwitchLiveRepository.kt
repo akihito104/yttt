@@ -95,12 +95,3 @@ class TwitchLiveRepository @Inject constructor(
         private val TAG = TwitchLiveRepository::class.simpleName
     }
 }
-
-data class TwitchOauthToken(
-    val accessToken: String,
-    val scope: String,
-    val state: String,
-    val tokenType: String,
-) {
-    companion object
-}
