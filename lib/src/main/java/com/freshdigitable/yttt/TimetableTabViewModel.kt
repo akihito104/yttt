@@ -29,8 +29,8 @@ class TimetableTabViewModel @Inject constructor(
     private val settingRepository: SettingRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     private val contextMenuDelegate: TimetableContextMenuDelegate,
-    timetablePageFacade: TimetablePageFacade,
-) : ViewModel(), TimetablePageFacade by timetablePageFacade {
+    timetablePageDelegate: TimetablePageDelegate,
+) : ViewModel(), TimetablePageDelegate by timetablePageDelegate {
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
     val canUpdate: Boolean

@@ -19,7 +19,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
-interface TimetablePageFacade {
+interface TimetablePageDelegate {
     fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo>>
     fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<LiveVideo>>>
     val tabs: Flow<List<TabData>>
@@ -79,10 +79,10 @@ class FetchYouTubeFreeChatItemSourceUseCase @Inject constructor(
         repository.videos.map { v -> v.filter { it.isFreeChat == true }.map { it.toLiveVideo() } }
 }
 
-class TimetablePageFacadeImpl @Inject constructor(
+class TimetablePageDelegateImpl @Inject constructor(
     items: Map<TimetablePage, @JvmSuppressWildcards Set<FetchTimetableItemSourceUseCase>>,
     settingRepository: SettingRepository,
-) : TimetablePageFacade {
+) : TimetablePageDelegate {
     private val sorterTable = mapOf<TimetablePage, (List<LiveVideo>) -> List<LiveVideo>>(
         TimetablePage.OnAir to { i ->
             i.sortedByDescending { it.actualStartDateTime }

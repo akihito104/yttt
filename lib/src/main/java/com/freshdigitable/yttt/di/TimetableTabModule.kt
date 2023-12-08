@@ -7,8 +7,8 @@ import com.freshdigitable.yttt.FetchYouTubeFreeChatItemSourceUseCase
 import com.freshdigitable.yttt.FetchYouTubeOnAirItemSourceUseCase
 import com.freshdigitable.yttt.FetchYouTubeUpcomingItemSourceUseCase
 import com.freshdigitable.yttt.TimetablePage
-import com.freshdigitable.yttt.TimetablePageFacade
-import com.freshdigitable.yttt.TimetablePageFacadeImpl
+import com.freshdigitable.yttt.TimetablePageDelegate
+import com.freshdigitable.yttt.TimetablePageDelegateImpl
 import dagger.Binds
 import dagger.MapKey
 import dagger.Module
@@ -52,7 +52,7 @@ interface TimetableTabModules {
     ): Set<FetchTimetableItemSourceUseCase>
 
     @Binds
-    fun bindFacade(facade: TimetablePageFacadeImpl): TimetablePageFacade
+    fun bindDelegate(facade: TimetablePageDelegateImpl): TimetablePageDelegate
 
     @Binds
     @IntoSet
