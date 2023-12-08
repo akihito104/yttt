@@ -1,9 +1,9 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.timetable.youtube
 
 import android.util.Log
+import com.freshdigitable.yttt.FetchStreamUseCase
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.SettingRepository
-import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
@@ -15,11 +15,7 @@ import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 import javax.inject.Inject
 
-interface FetchStreamUseCase {
-    suspend operator fun invoke()
-}
-
-class FetchYouTubeStreamUseCase @Inject constructor(
+internal class FetchYouTubeStreamUseCase @Inject constructor(
     private val liveRepository: YouTubeRepository,
     private val facade: YouTubeFacade,
     private val accountRepository: AccountRepository,
@@ -88,25 +84,5 @@ class FetchYouTubeStreamUseCase @Inject constructor(
     companion object {
         @Suppress("unused")
         private val TAG = FetchYouTubeStreamUseCase::class.simpleName
-    }
-}
-
-class FetchTwitchStreamUseCase @Inject constructor(
-    private val twitchRepository: TwitchLiveRepository,
-    private val accountRepository: AccountRepository,
-) : FetchStreamUseCase {
-    override suspend operator fun invoke() {
-        if (accountRepository.getTwitchToken() == null) {
-            return
-        }
-        val me = twitchRepository.fetchMe() ?: return
-        val streams = twitchRepository.fetchFollowedStreams()
-        val following = twitchRepository.fetchAllFollowings(me.id)
-        val tasks = coroutineScope {
-            following.map { async { twitchRepository.fetchFollowedStreamSchedule(it.id) } }
-        }
-        val schedules = tasks.awaitAll()
-        val users = streams.map { it.user.id } + schedules.flatten().map { it.broadcaster.id }
-        twitchRepository.findUsersById(users)
     }
 }

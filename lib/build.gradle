@@ -45,6 +45,7 @@ dependencies {
     implementation project(":common")
     implementation project(':repository-youtube')
     implementation project(":repository-twitch")
+    implementation project(":repository-appuser")
 
     def composeBom = platform(libs.androidx.compose.bom)
     implementation composeBom
@@ -78,7 +79,6 @@ dependencies {
     implementation libs.hilt.android
     kapt libs.hilt.compiler
 
-    implementation libs.androidx.datastore.preferences
     implementation libs.glide
     kapt libs.glide.compiler
     implementation(platform(libs.okhttp.bom))

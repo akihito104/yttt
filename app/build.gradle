@@ -43,6 +43,8 @@ kotlin {
 
 dependencies {
     implementation(project(":lib"))
+    implementation(project(":feature-timetable-youtube"))
+    implementation(project(":feature-timetable-twitch"))
 
     implementation libs.androidx.work.runtime.ktx
     implementation libs.androidx.hilt.work

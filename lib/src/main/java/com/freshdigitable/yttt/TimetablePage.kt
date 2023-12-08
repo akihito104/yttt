@@ -2,19 +2,11 @@ package com.freshdigitable.yttt
 
 import com.freshdigitable.yttt.lib.R
 
-enum class TimetablePage(val type: Type = Type.SIMPLE) {
-    OnAir {
-        override val textRes: Int = R.string.tab_onAir
-    },
-    Upcoming(type = Type.GROUPED) {
-        override val textRes: Int = R.string.tab_upcoming
-    },
-    FreeChat {
-        override val textRes: Int = R.string.tab_freechat
+internal val TimetablePage.textRes: Int
+    get() {
+        return when (this) {
+            TimetablePage.OnAir -> R.string.tab_onAir
+            TimetablePage.Upcoming -> R.string.tab_upcoming
+            TimetablePage.FreeChat -> R.string.tab_freechat
+        }
     }
-    ;
-
-    abstract val textRes: Int
-
-    enum class Type { SIMPLE, GROUPED, }
-}

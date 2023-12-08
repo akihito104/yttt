@@ -32,10 +32,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.freshdigitable.yttt.TimetableMenuItem
 import com.freshdigitable.yttt.TimetablePage
 import com.freshdigitable.yttt.TimetableTabViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.textRes
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,13 +125,6 @@ private fun ColumnScope.MenuContent(
         )
     }
     Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))
-}
-
-enum class TimetableMenuItem(val text: String) {
-    ADD_FREE_CHAT("check as free chat"),
-    REMOVE_FREE_CHAT("uncheck as free chat"),
-    LAUNCH_LIVE("watch live"),
-    ;
 }
 
 @OptIn(ExperimentalFoundationApi::class)
