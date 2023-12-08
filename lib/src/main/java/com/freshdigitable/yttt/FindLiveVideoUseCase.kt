@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt
 
 import com.freshdigitable.yttt.data.TwitchLiveRepository
+import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
