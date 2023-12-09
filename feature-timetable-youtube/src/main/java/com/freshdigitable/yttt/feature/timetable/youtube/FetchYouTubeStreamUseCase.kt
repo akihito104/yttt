@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.feature.timetable.youtube
 
 import android.util.Log
-import com.freshdigitable.yttt.FetchStreamUseCase
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
@@ -9,6 +8,7 @@ import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.feature.timetable.FetchStreamUseCase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

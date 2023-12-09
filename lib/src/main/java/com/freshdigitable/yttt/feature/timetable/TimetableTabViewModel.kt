@@ -1,9 +1,10 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.timetable
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.FindLiveVideoUseCase
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap

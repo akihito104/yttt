@@ -1,6 +1,5 @@
-package com.freshdigitable.yttt.di
+package com.freshdigitable.yttt.feature.timetable
 
-import com.freshdigitable.yttt.TimetablePage
 import dagger.MapKey
 import javax.inject.Qualifier
 

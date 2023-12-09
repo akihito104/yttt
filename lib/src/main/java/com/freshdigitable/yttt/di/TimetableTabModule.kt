@@ -1,9 +1,11 @@
 package com.freshdigitable.yttt.di
 
-import com.freshdigitable.yttt.FetchTimetableItemSourceUseCase
-import com.freshdigitable.yttt.TimetablePage
-import com.freshdigitable.yttt.TimetablePageDelegate
-import com.freshdigitable.yttt.TimetablePageDelegateImpl
+import com.freshdigitable.yttt.feature.timetable.FetchTimetableItemSourceUseCase
+import com.freshdigitable.yttt.feature.timetable.TimetablePage
+import com.freshdigitable.yttt.feature.timetable.TimetablePageDelegate
+import com.freshdigitable.yttt.feature.timetable.TimetablePageDelegateImpl
+import com.freshdigitable.yttt.feature.timetable.TimetableTabKey
+import com.freshdigitable.yttt.feature.timetable.TimetableTabQualifier
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

@@ -1,12 +1,12 @@
 package com.freshdigitable.yttt.feature.timetable.youtube.di
 
-import com.freshdigitable.yttt.FetchStreamUseCase
-import com.freshdigitable.yttt.FetchTimetableItemSourceUseCase
-import com.freshdigitable.yttt.TimetableContextMenuSelector
-import com.freshdigitable.yttt.TimetablePage
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.di.IdBaseClassKey
-import com.freshdigitable.yttt.di.TimetableTabQualifier
+import com.freshdigitable.yttt.feature.timetable.FetchStreamUseCase
+import com.freshdigitable.yttt.feature.timetable.FetchTimetableItemSourceUseCase
+import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuSelector
+import com.freshdigitable.yttt.feature.timetable.TimetablePage
+import com.freshdigitable.yttt.feature.timetable.TimetableTabQualifier
 import com.freshdigitable.yttt.feature.timetable.youtube.FetchYouTubeFreeChatItemSourceUseCase
 import com.freshdigitable.yttt.feature.timetable.youtube.FetchYouTubeOnAirItemSourceUseCase
 import com.freshdigitable.yttt.feature.timetable.youtube.FetchYouTubeStreamUseCase

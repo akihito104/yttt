@@ -1,13 +1,13 @@
 package com.freshdigitable.yttt.feature.timetable.twitch.di
 
-import com.freshdigitable.yttt.FetchStreamUseCase
-import com.freshdigitable.yttt.FetchTimetableItemSourceUseCase
-import com.freshdigitable.yttt.TimetableContextMenuSelector
-import com.freshdigitable.yttt.TimetablePage
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.di.IdBaseClassKey
-import com.freshdigitable.yttt.di.TimetableTabQualifier
+import com.freshdigitable.yttt.feature.timetable.FetchStreamUseCase
+import com.freshdigitable.yttt.feature.timetable.FetchTimetableItemSourceUseCase
+import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuSelector
+import com.freshdigitable.yttt.feature.timetable.TimetablePage
+import com.freshdigitable.yttt.feature.timetable.TimetableTabQualifier
 import com.freshdigitable.yttt.feature.timetable.twitch.FetchTwitchOnAirItemSourceUseCase
 import com.freshdigitable.yttt.feature.timetable.twitch.FetchTwitchStreamUseCase
 import com.freshdigitable.yttt.feature.timetable.twitch.FetchTwitchUpcomingItemSourceUseCase

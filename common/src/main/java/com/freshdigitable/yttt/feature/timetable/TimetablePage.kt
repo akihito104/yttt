@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.timetable
 
 enum class TimetablePage(val type: Type = Type.SIMPLE) {
     OnAir,

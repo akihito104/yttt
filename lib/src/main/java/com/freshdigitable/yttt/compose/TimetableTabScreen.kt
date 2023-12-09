@@ -32,12 +32,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.freshdigitable.yttt.TimetableMenuItem
-import com.freshdigitable.yttt.TimetablePage
-import com.freshdigitable.yttt.TimetableTabViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.textRes
+import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
+import com.freshdigitable.yttt.feature.timetable.TimetablePage
+import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
+import com.freshdigitable.yttt.feature.timetable.textRes
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)

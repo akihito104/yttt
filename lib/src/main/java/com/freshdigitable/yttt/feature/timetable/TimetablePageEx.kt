@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.lib.R
 

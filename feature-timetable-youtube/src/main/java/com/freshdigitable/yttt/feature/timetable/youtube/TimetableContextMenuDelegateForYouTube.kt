@@ -1,11 +1,11 @@
 package com.freshdigitable.yttt.feature.timetable.youtube
 
 import com.freshdigitable.yttt.LaunchAppWithUrlUseCase
-import com.freshdigitable.yttt.TimetableContextMenuSelector
-import com.freshdigitable.yttt.TimetableMenuItem
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuSelector
+import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import javax.inject.Inject
 
 internal class TimetableContextMenuDelegateForYouTube @Inject constructor(
