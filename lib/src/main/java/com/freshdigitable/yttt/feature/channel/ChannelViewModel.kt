@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.channel
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -58,9 +58,4 @@ class CustomCrop(
         private val ID = checkNotNull(CustomCrop::class.java.canonicalName)
         private val ID_BYTES = ID.toByteArray(CHARSET)
     }
-}
-
-enum class ChannelPage {
-    ABOUT, CHANNEL_SECTION, UPLOADED, ACTIVITIES, DEBUG_CHANNEL,
-    ;
 }

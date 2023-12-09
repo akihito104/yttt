@@ -30,10 +30,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
-import com.freshdigitable.yttt.TwitchOauthViewModel
-import com.freshdigitable.yttt.YouTubeOauthViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
+import com.freshdigitable.yttt.feature.oauth.TwitchOauthViewModel
+import com.freshdigitable.yttt.feature.oauth.YouTubeOauthViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted

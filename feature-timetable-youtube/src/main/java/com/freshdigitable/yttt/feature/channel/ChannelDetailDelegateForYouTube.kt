@@ -1,15 +1,11 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.channel
 
 import android.util.Log
-import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
-import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.mapTo
@@ -24,19 +20,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
-interface ChannelDetailDelegate {
-    val tabs: Array<ChannelPage>
-    val channelDetail: Flow<LiveChannelDetail?>
-    val uploadedVideo: Flow<List<LiveVideoThumbnail>>
-    val channelSection: Flow<List<ChannelDetailChannelSection>>
-    val activities: Flow<List<LiveVideo>>
-
-    interface Factory {
-        fun create(id: LiveChannel.Id): ChannelDetailDelegate
-    }
-}
-
-class ChannelDetailDelegateForYouTube @AssistedInject constructor(
+internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
     @Assisted id: LiveChannel.Id,
 ) : ChannelDetailDelegate {
@@ -125,63 +109,5 @@ class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             .map { it.first }
             .map { it.toLiveVideo() }
         emit(videos)
-    }
-}
-
-class ChannelDetailDelegateForTwitch @AssistedInject constructor(
-    private val repository: TwitchLiveRepository,
-    @Assisted id: LiveChannel.Id,
-) : ChannelDetailDelegate {
-    @AssistedFactory
-    interface Factory : ChannelDetailDelegate.Factory {
-        override fun create(id: LiveChannel.Id): ChannelDetailDelegateForTwitch
-    }
-
-    init {
-        check(id.type == TwitchUser.Id::class) { "unsupported id type: ${id.type}" }
-    }
-
-    override val tabs: Array<ChannelPage> = arrayOf(
-        ChannelPage.ABOUT,
-        ChannelPage.UPLOADED,
-        ChannelPage.DEBUG_CHANNEL,
-    )
-    override val channelDetail: Flow<LiveChannelDetail?> = flow {
-        val u = repository.findUsersById(listOf(id.mapTo()))
-        emit(u.map { it.toLiveChannelDetail() }.firstOrNull())
-    }
-    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flow {
-        val res = repository.fetchVideosByUserId(id.mapTo()).map {
-            LiveVideoThumbnailEntity(
-                id = it.id.mapTo(),
-                thumbnailUrl = it.getThumbnailUrl(),
-                title = it.title,
-            )
-        }
-        emit(res)
-    }
-    override val channelSection: Flow<List<ChannelDetailChannelSection>>
-        get() = throw AssertionError("unsupported operation")
-    override val activities: Flow<List<LiveVideo>>
-        get() = throw AssertionError("unsupported operation")
-}
-
-class ChannelDetailChannelSection(
-    val id: IdBase,
-    val position: Int,
-    val title: String,
-    val content: ChannelDetailContent<*>?,
-) {
-    sealed class ChannelDetailContent<T> {
-        data class MultiPlaylist(override val item: List<LiveVideoThumbnail>) :
-            ChannelDetailContent<LiveVideoThumbnail>()
-
-        data class SinglePlaylist(override val item: List<LiveVideoThumbnail>) :
-            ChannelDetailContent<LiveVideoThumbnail>()
-
-        data class ChannelList(override val item: List<LiveChannel>) :
-            ChannelDetailContent<LiveChannel>()
-
-        abstract val item: List<T>
     }
 }

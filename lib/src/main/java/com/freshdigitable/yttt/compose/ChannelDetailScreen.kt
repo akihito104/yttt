@@ -35,10 +35,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import com.freshdigitable.yttt.ChannelDetailChannelSection
-import com.freshdigitable.yttt.ChannelPage
-import com.freshdigitable.yttt.ChannelViewModel
-import com.freshdigitable.yttt.CustomCrop
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
@@ -54,12 +50,16 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
+import com.freshdigitable.yttt.feature.channel.ChannelDetailChannelSection
+import com.freshdigitable.yttt.feature.channel.ChannelPage
+import com.freshdigitable.yttt.feature.channel.ChannelViewModel
+import com.freshdigitable.yttt.feature.channel.CustomCrop
 import kotlinx.coroutines.launch
 import java.math.BigInteger
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.time.Instant
-import java.util.*
+import java.util.Locale
 
 @Composable
 fun ChannelDetailScreen(

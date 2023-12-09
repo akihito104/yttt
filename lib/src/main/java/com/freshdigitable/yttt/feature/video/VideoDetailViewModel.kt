@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.video
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel

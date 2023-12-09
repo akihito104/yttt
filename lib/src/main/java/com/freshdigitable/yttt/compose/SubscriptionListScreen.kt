@@ -5,10 +5,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.freshdigitable.yttt.SubscriptionListViewModel
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveSubscription
+import com.freshdigitable.yttt.feature.subscription.SubscriptionListViewModel
 
 @Composable
 fun SubscriptionListScreen(

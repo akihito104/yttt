@@ -15,10 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.freshdigitable.yttt.TwitchOauthViewModel
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.feature.oauth.TwitchOauthViewModel
 import kotlinx.coroutines.launch
 
 @Composable

@@ -1,7 +1,8 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.oauth
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.GoogleService
 import com.google.android.gms.common.GoogleApiAvailability

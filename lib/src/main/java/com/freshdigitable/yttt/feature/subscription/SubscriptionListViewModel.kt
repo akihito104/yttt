@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature.subscription
 
 import androidx.lifecycle.ViewModel
 import com.freshdigitable.yttt.data.model.LivePlatform
