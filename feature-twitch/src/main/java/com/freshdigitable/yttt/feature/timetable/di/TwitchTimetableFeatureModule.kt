@@ -1,17 +1,17 @@
-package com.freshdigitable.yttt.feature.timetable.twitch.di
+package com.freshdigitable.yttt.feature.timetable.di
 
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.di.IdBaseClassKey
 import com.freshdigitable.yttt.feature.timetable.FetchStreamUseCase
 import com.freshdigitable.yttt.feature.timetable.FetchTimetableItemSourceUseCase
+import com.freshdigitable.yttt.feature.timetable.FetchTwitchOnAirItemSourceUseCase
+import com.freshdigitable.yttt.feature.timetable.FetchTwitchStreamUseCase
+import com.freshdigitable.yttt.feature.timetable.FetchTwitchUpcomingItemSourceUseCase
+import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegateForTwitch
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuSelector
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.TimetableTabQualifier
-import com.freshdigitable.yttt.feature.timetable.twitch.FetchTwitchOnAirItemSourceUseCase
-import com.freshdigitable.yttt.feature.timetable.twitch.FetchTwitchStreamUseCase
-import com.freshdigitable.yttt.feature.timetable.twitch.FetchTwitchUpcomingItemSourceUseCase
-import com.freshdigitable.yttt.feature.timetable.twitch.TimetableContextMenuDelegateForTwitch
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

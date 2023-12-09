@@ -1,11 +1,10 @@
-package com.freshdigitable.yttt.feature.timetable.twitch
+package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toTwitchVideoList
-import com.freshdigitable.yttt.feature.timetable.FetchTimetableItemSourceUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Duration

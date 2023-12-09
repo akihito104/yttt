@@ -1,8 +1,7 @@
-package com.freshdigitable.yttt.feature.timetable.twitch
+package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
-import com.freshdigitable.yttt.feature.timetable.FetchStreamUseCase
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

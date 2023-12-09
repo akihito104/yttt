@@ -1,9 +1,8 @@
-package com.freshdigitable.yttt.feature.timetable.youtube
+package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.toLiveVideo
-import com.freshdigitable.yttt.feature.timetable.FetchTimetableItemSourceUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
