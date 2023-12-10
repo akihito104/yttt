@@ -14,3 +14,11 @@ dependencyResolutionManagement {
 }
 rootProject.name = "yttt"
 include ':app'
+include ':lib'
+include ':common'
+include ':feature-youtube'
+include ':feature-twitch'
+include ':repository-youtube'
+include ':repository-twitch'
+include ':repository-appuser'
+include ':data-local-room'
