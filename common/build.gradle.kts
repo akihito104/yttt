@@ -36,6 +36,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    implementation(libs.kermit)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

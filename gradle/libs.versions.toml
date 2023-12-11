@@ -28,6 +28,7 @@ glide = "4.15.0"
 glide-compose = "1.0.0-alpha.1"
 okhttp = "4.11.0"
 retrofit = "2.9.0"
+kermit = "2.0.2"
 
 junit = "4.13.2"
 androidx-junit = "1.1.5"
@@ -66,6 +67,7 @@ google-api-services-youtube = { module = "com.google.apis:google-api-services-yo
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt-android" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt-android" }
 junit = { module = "junit:junit", version.ref = "junit" }
+kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 okhttp3-integration = { module = "com.github.bumptech.glide:okhttp3-integration", version.ref = "glide" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "play-services-auth" }

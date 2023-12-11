@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import android.util.Log
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
@@ -8,6 +7,8 @@ import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.logD
+import com.freshdigitable.yttt.logE
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -29,7 +30,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         settingRepository.lastUpdateDatetime = Instant.now()
         liveRepository.cleanUp()
         facade.updateAsFreeChat()
-        Log.d(TAG, "fetchLiveStreams: end")
+        logD { "fetchLiveStreams: end" }
     }
 
     private suspend fun updateStreams() {
@@ -37,9 +38,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .map { it.id }.distinct()
         val currentVideo = facade.fetchVideoList(first).map { it.id }.toSet()
-        Log.d(TAG, "fetchLiveStreams: currentVideo> ${currentVideo.size}")
+        logD { "fetchLiveStreams: currentVideo> ${currentVideo.size}" }
         val removed = first.subtract(currentVideo)
-        Log.d(TAG, "fetchLiveStreams: removed> ${removed.size}")
+        logD { "fetchLiveStreams: removed> ${removed.size}" }
         liveRepository.removeVideo(removed)
     }
 
@@ -48,12 +49,12 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val current = Instant.now()
         val needsUpdate =
             subs.filter { it.uploadedPlaylistId != null && it.needsUpdatePlaylist(current) }
-        Log.d(TAG, "fetchNewStreams: subs.size> ${subs.size}")
+        logD { "fetchNewStreams: subs.size> ${subs.size}" }
         val task = coroutineScope {
             needsUpdate.map { async { fetchVideoByPlaylistIdTask(it, current) } }
         }
         val ids = task.awaitAll().flatten()
-        Log.d(TAG, "fetchNewStreams: videoId.size> ${ids.size}")
+        logD { "fetchNewStreams: videoId.size> ${ids.size}" }
         facade.fetchVideoList(ids)
     }
 
@@ -71,17 +72,12 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 .filter { it.isArchived != true }
                 .map { it.videoId }
             if (itemIds.isNotEmpty()) {
-                Log.d(TAG, "fetchVideoByPlaylistIdTask: playlistId> $id,count>${itemIds.size}")
+                logD { "fetchVideoByPlaylistIdTask: playlistId> $id,count>${itemIds.size}" }
             }
             return itemIds
         } catch (e: Exception) {
-            Log.e(TAG, "fetchVideoByPlaylistIdTask: playlist>$id", e)
+            logE(throwable = e) { "fetchVideoByPlaylistIdTask: playlist>$id" }
         }
         return emptyList()
-    }
-
-    companion object {
-        @Suppress("unused")
-        private val TAG = FetchYouTubeStreamUseCase::class.simpleName
     }
 }

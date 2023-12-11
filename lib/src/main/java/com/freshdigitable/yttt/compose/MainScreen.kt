@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.compose
 
 import android.content.Intent
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
@@ -37,6 +36,7 @@ import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.lib.R
+import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.launch
 
 @Composable
@@ -44,10 +44,10 @@ fun MainScreen(shouldAuth: Boolean = false) {
     val navController = rememberNavController()
     val activity = LocalContext.current as ComponentActivity
     DisposableEffect(Unit) {
-        Log.d("MainScreen", "DisposableEffect: ")
+        logD("MainScreen") { "DisposableEffect: " }
         val listener = Consumer<Intent> {
             val handled = navController.handleDeepLink(it)
-            Log.d("MainScreen", "handleDeepLink(handled>$handled): ${it.data}")
+            logD("MainScreen") { "handleDeepLink(handled>$handled): ${it.data}" }
         }
         activity.addOnNewIntentListener(listener)
         onDispose { activity.removeOnNewIntentListener(listener) }

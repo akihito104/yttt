@@ -2,7 +2,6 @@ package com.freshdigitable.yttt
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -24,19 +23,17 @@ class AddFreeTalkWorker @AssistedInject constructor(
         val text = inputData.uri ?: return Result.failure()
         val url = Uri.parse(text)
         if (!url.isYouTubeUri) {
-            Log.d(TAG, "handleFreeTalk: ${url.scheme}, ${url.host}, ${url.pathSegments}")
+            logD { "handleFreeTalk: ${url.scheme}, ${url.host}, ${url.pathSegments}" }
             return Result.failure()
         }
         val value = url.pathSegments[1] ?: return Result.failure()
-        Log.d(TAG, "handleFreeTalk: $value")
+        logD { "handleFreeTalk: $value" }
         val id = YouTubeVideo.Id(value)
         facade.addFreeChatFromWorker(id)
         return Result.success()
     }
 
     companion object {
-        @Suppress("unused")
-        private val TAG = AddFreeTalkWorker::class.simpleName
         private const val KEY_URI = "uri"
 
         fun enqueue(context: Context, uri: String) {

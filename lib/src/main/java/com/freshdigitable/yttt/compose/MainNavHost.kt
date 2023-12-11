@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.compose
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.os.BundleCompat
@@ -19,6 +18,7 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
+import com.freshdigitable.yttt.logD
 import kotlin.reflect.KClass
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {
@@ -201,7 +201,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 it.getValue(backStackEntry.arguments)
                     ?: it.getValueFromDeepLinkIntent(backStackEntry.arguments)
             }
-            Log.d("TwitchLogin", "Content: ${backStackEntry.arguments}, $p")
+            logD("TwitchLogin") { "Content: ${backStackEntry.arguments}, $p" }
             if (p.values.all { it != null }) {
                 val token = TwitchOauthToken(
                     tokenType = requireNotNull(p[Params.TokenType]),
@@ -209,7 +209,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                     accessToken = requireNotNull(p[Params.AccessToken]),
                     scope = requireNotNull(p[Params.Scope]),
                 )
-                Log.d("TwitchLogin", "token: $token")
+                logD("TwitchLogin") { "token: $token" }
                 val authBackStack =
                     checkNotNull(navController.previousBackStackEntry) { "prevDestination: null" }
                 val nextRoute = authBackStack.destination.route
@@ -232,7 +232,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 Intent::class.java,
             )?.data ?: return null
             val query = uri.toString().split("#").last()
-            Log.d("MainNavHost", "getValueFromDeepLinkIntent:${this.argName} $query")
+            logD("MainNavHost") { "getValueFromDeepLinkIntent:${this.argName} $query" }
             return query.split("&").firstOrNull { it.startsWith("${this.argName}=") }
                 ?.split("=")?.last()
         }
