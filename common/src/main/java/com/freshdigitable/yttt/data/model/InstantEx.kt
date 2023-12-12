@@ -4,6 +4,15 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import javax.inject.Inject
+
+interface DateTimeProvider {
+    fun now(): Instant
+}
+
+internal class DateTimeProviderImpl @Inject constructor() : DateTimeProvider {
+    override fun now(): Instant = Instant.now()
+}
 
 /**
  * yyyy/MM/dd

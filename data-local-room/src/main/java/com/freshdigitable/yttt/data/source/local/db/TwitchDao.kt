@@ -13,14 +13,13 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import kotlinx.coroutines.flow.Flow
-import java.time.Duration
 import java.time.Instant
 
 @Dao
 internal interface TwitchDao {
     @Transaction
-    suspend fun setMe(me: TwitchUserDetail) {
-        addUserDetails(listOf(me))
+    suspend fun setMe(me: TwitchUserDetail, expiredAt: Instant) {
+        addUserDetails(listOf(me), expiredAt)
         setMeEntity(TwitchAuthorizedUserTable(me.id))
     }
 
@@ -36,7 +35,7 @@ internal interface TwitchDao {
     @Transaction
     suspend fun addUserDetails(
         users: Collection<TwitchUserDetail>,
-        expiredAt: Instant = Instant.now() + MAX_AGE_USER_DETAIL,
+        expiredAt: Instant,
     ) {
         val details = users.map { it.toTable() }
         val expires = users.map { TwitchUserDetailExpireTable(it.id, expiredAt) }
@@ -57,7 +56,7 @@ internal interface TwitchDao {
     )
     suspend fun findUserDetail(
         ids: Collection<TwitchUser.Id>,
-        current: Instant = Instant.now(),
+        current: Instant,
     ): List<TwitchUserDetailDbView>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -91,14 +90,14 @@ internal interface TwitchDao {
     )
     suspend fun findBroadcastersByFollowerId(
         id: TwitchUser.Id,
-        current: Instant = Instant.now(),
+        current: Instant,
     ): List<TwitchBroadcasterDb>
 
     @Transaction
     suspend fun replaceAllBroadcasters(
         followerId: TwitchUser.Id,
         broadcasters: Collection<TwitchBroadcaster>,
-        expiredAt: Instant = Instant.now() + MAX_AGE_BROADCASTER,
+        expiredAt: Instant,
     ) {
         removeBroadcastersByFollowerId(followerId)
         addBroadcasters(followerId, broadcasters)
@@ -109,11 +108,13 @@ internal interface TwitchDao {
     suspend fun removeBroadcastersByFollowerId(followerId: TwitchUser.Id)
 
     @Transaction
-    suspend fun replaceChannelSchedules(schedule: Collection<TwitchChannelSchedule>) {
+    suspend fun replaceChannelSchedules(
+        schedule: Collection<TwitchChannelSchedule>,
+        expiredAt: Instant,
+    ) {
         val userIds = schedule.map { it.broadcaster.id }.toSet()
         val streams = schedule.map { it.toStreamScheduleTable() }.flatten()
         val vacations = schedule.map { it.toVacationScheduleTable() }
-        val expiredAt = Instant.now() + MAX_AGE_CHANNEL_SCHEDULE
         val expire = userIds.map { TwitchChannelScheduleExpireTable(it, expiredAt) }
         removeChannelStreamSchedulesByUserIds(userIds)
         removeChannelScheduleExpireEntity(userIds)
@@ -156,7 +157,7 @@ internal interface TwitchDao {
     )
     suspend fun findChannelSchedule(
         id: TwitchUser.Id,
-        current: Instant = Instant.now(),
+        current: Instant,
     ): List<TwitchChannelScheduleDb>
 
     @Transaction
@@ -181,9 +182,13 @@ internal interface TwitchDao {
     suspend fun addStreams(streams: Collection<TwitchStreamTable>)
 
     @Transaction
-    suspend fun replaceAllStreams(me: TwitchUser.Id, streams: Collection<TwitchStream>) {
+    suspend fun replaceAllStreams(
+        me: TwitchUser.Id,
+        streams: Collection<TwitchStream>,
+        expiredAt: Instant,
+    ) {
         removeAllStreams()
-        setStreamExpire(TwitchStreamExpireTable(me, Instant.now() + MAX_AGE_STREAM))
+        setStreamExpire(TwitchStreamExpireTable(me, expiredAt))
         addUsers(streams.map { it.user.toTable() })
         addStreams(streams.map { it.toTable() })
     }
@@ -205,13 +210,6 @@ internal interface TwitchDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setStreamExpire(expiredAt: TwitchStreamExpireTable)
-
-    companion object {
-        private val MAX_AGE_BROADCASTER = Duration.ofHours(12)
-        private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
-        private val MAX_AGE_STREAM = Duration.ofMinutes(10)
-        private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
-    }
 }
 
 private fun TwitchUser.toTable(): TwitchUserTable = TwitchUserTable(id, loginName, displayName)

@@ -55,12 +55,12 @@ internal interface YouTubeDao {
     suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLogTable>)
 
     @Transaction
-    suspend fun addChannelLogs(logs: Collection<YouTubeChannelLog>) {
+    suspend fun addChannelLogs(logs: Collection<YouTubeChannelLog>, current: Instant) {
         val channels = logs.map { it.channelId }.distinct()
             .filter { findChannel(it) == null }
             .map { YouTubeChannelTable(id = it) }
         val vIds = logs.map { it.videoId }.toSet()
-        val found = findVideosById(vIds).map { it.id }.toSet()
+        val found = findVideosById(vIds, current).map { it.id }.toSet()
         val videos = logs.distinctBy { it.videoId }
             .filter { !found.contains(it.videoId) }
             .map {
@@ -140,7 +140,7 @@ internal interface YouTubeDao {
     )
     suspend fun findVideosById(
         ids: Collection<YouTubeVideo.Id>,
-        current: Instant = Instant.now(),
+        current: Instant,
     ): List<YouTubeVideoDb>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -224,7 +224,7 @@ internal interface YouTubeDao {
     @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
     suspend fun updatePlaylist(
         id: YouTubePlaylist.Id,
-        lastModified: Instant = Instant.now(),
+        lastModified: Instant,
         maxAge: Duration,
     )
 
@@ -237,7 +237,7 @@ internal interface YouTubeDao {
     @Transaction
     suspend fun setPlaylistItems(
         id: YouTubePlaylist.Id,
-        lastModified: Instant = Instant.now(),
+        lastModified: Instant,
         maxAge: Duration? = null,
         items: Collection<YouTubePlaylistItem>,
     ) {
@@ -246,7 +246,7 @@ internal interface YouTubeDao {
         } else if (maxAge == null) {
             addPlaylist(YouTubePlaylistTable(id, lastModified))
         } else {
-            updatePlaylist(id, maxAge = maxAge)
+            updatePlaylist(id, maxAge = maxAge, lastModified = lastModified)
         }
         removePlaylistItemsByPlaylistId(id)
         if (items.isNotEmpty()) {

@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -20,6 +21,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private val facade: YouTubeFacade,
     private val accountRepository: AccountRepository,
     private val settingRepository: SettingRepository,
+    private val dateTimeProvider: DateTimeProvider,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke() {
         if (!accountRepository.hasAccount()) {
@@ -27,7 +29,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         }
         updateStreams()
         fetchNewStreams()
-        settingRepository.lastUpdateDatetime = Instant.now()
+        settingRepository.lastUpdateDatetime = dateTimeProvider.now()
         liveRepository.cleanUp()
         facade.updateAsFreeChat()
         logD { "fetchLiveStreams: end" }
@@ -46,7 +48,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
     private suspend fun fetchNewStreams() {
         val subs = liveRepository.fetchAllSubscribeSummary()
-        val current = Instant.now()
+        val current = dateTimeProvider.now()
         val needsUpdate =
             subs.filter { it.uploadedPlaylistId != null && it.needsUpdatePlaylist(current) }
         logD { "fetchNewStreams: subs.size> ${subs.size}" }

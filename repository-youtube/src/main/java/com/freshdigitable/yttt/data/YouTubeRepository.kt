@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data
 
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -22,6 +23,7 @@ import javax.inject.Singleton
 class YouTubeRepository @Inject constructor(
     private val remoteSource: YoutubeDataSource.Remote,
     private val localSource: YoutubeDataSource.Local,
+    private val dateTimeProvider: DateTimeProvider,
 ) : YoutubeDataSource {
     val videos: Flow<List<YouTubeVideo>> = localSource.videos
 
@@ -54,7 +56,7 @@ class YouTubeRepository @Inject constructor(
             publishedAfter
         } else {
             val cache = localSource.fetchLiveChannelLogs(channelId, maxResult = 1).firstOrNull()
-            cache?.dateTime?.plusSeconds(1) ?: Instant.now().minus(activityMaxPeriod)
+            cache?.dateTime?.plusSeconds(1) ?: dateTimeProvider.now().minus(activityMaxPeriod)
         }
         val res = remoteSource.fetchLiveChannelLogs(channelId, pa, maxResult)
         localSource.addLiveChannelLogs(res)
@@ -101,7 +103,7 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun fetchPlaylistItemSummaries(
         summary: YouTubeSubscriptionSummary,
-        current: Instant = Instant.now(),
+        current: Instant = dateTimeProvider.now(),
         maxResult: Long = 10,
     ): List<YouTubePlaylistItemSummary> {
         val playlistId = checkNotNull(summary.uploadedPlaylistId)
