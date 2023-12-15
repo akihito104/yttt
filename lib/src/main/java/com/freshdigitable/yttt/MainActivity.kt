@@ -2,7 +2,6 @@ package com.freshdigitable.yttt
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.compose.NavHost
@@ -17,7 +16,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.d(TAG, "onCreate(${this}): ${intent.data}")
+        logD { "onCreate(${this}): ${intent.data}" }
         val startDestination =
             if (intent.isTwitchOauth) LaunchNavRoute.Main else LaunchNavRoute.Splash
         handleFreeTalkIntent()
@@ -37,8 +36,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        @Suppress("unused")
-        private val TAG = MainActivity::class.simpleName
         private val Intent.isTwitchOauth: Boolean
             get() = data?.toString()?.startsWith(BuildConfig.TWITCH_REDIRECT_URI) == true
     }

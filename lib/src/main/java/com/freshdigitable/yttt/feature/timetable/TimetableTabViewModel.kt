@@ -5,6 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.data.SettingRepository
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.video.FindLiveVideoUseCase
@@ -19,7 +20,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 
 @HiltViewModel
@@ -27,6 +27,7 @@ class TimetableTabViewModel @Inject constructor(
     private val settingRepository: SettingRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     private val contextMenuDelegate: TimetableContextMenuDelegate,
+    private val dateTimeProvider: DateTimeProvider,
     timetablePageDelegate: TimetablePageDelegate,
 ) : ViewModel(), TimetablePageDelegate by timetablePageDelegate {
     private val _isLoading = MutableLiveData(false)
@@ -34,7 +35,7 @@ class TimetableTabViewModel @Inject constructor(
     val canUpdate: Boolean
         get() {
             val lastUpdateDatetime = settingRepository.lastUpdateDatetime ?: return true
-            return (lastUpdateDatetime + Duration.ofMinutes(30)) <= Instant.now()
+            return (lastUpdateDatetime + Duration.ofMinutes(30)) <= dateTimeProvider.now()
         }
 
     fun loadList() {

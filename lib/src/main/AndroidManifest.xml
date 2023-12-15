@@ -4,7 +4,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
 
-    <application>
+    <application
+        android:theme="@style/Theme.Yttt"
+        >
         <activity
             android:name="com.freshdigitable.yttt.MainActivity"
             android:launchMode="singleTop"

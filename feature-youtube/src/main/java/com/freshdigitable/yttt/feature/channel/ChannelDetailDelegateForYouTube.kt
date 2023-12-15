@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.feature.channel
 
-import android.util.Log
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
@@ -12,6 +11,7 @@ import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toLiveVideoThumbnail
+import com.freshdigitable.yttt.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -60,7 +60,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
                 try {
                     fetchSectionItems(cs)
                 } catch (e: IOException) {
-                    Log.e("ChannelViewModel", "fetchChannelSection: error>${cs.title} ", e)
+                    logE(throwable = e) { "fetchChannelSection: error>${cs.title} " }
                     null
                 }
             }
