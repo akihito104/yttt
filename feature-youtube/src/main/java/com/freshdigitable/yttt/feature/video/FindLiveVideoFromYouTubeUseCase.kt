@@ -12,7 +12,7 @@ internal class FindLiveVideoFromYouTubeUseCase @Inject constructor(
 ) : FindLiveVideoUseCase {
     override suspend fun invoke(id: LiveVideo.Id): LiveVideo? {
         check(id.type == YouTubeVideo.Id::class)
-        val v = facade.fetchVideoList(listOf(id.mapTo())).firstOrNull()
+        val v = facade.fetchVideoList(setOf(id.mapTo())).firstOrNull()
         return v?.toLiveVideo()
     }
 }

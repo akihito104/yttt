@@ -46,7 +46,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
             dao.addSubscriptions(subscriptions)
         }
 
-    override suspend fun removeSubscribes(subscriptions: Collection<YouTubeSubscription.Id>) {
+    override suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>) {
         dao.removeSubscriptions(subscriptions)
     }
 
@@ -120,15 +120,15 @@ internal class YouTubeLocalDataSource @Inject constructor(
         )
     }
 
-    override suspend fun fetchVideoList(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideo> {
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> {
         return fetchByIds(ids) { findVideosById(it, current = dateTimeProvider.now()) }.flatten()
     }
 
-    override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
+    override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         dao.addFreeChatItems(ids, true, dateTimeProvider.now() + EXPIRATION_FREE_CHAT)
     }
 
-    override suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
+    override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         dao.addFreeChatItems(ids, false, dateTimeProvider.now() + EXPIRATION_DEFAULT)
     }
 
@@ -159,11 +159,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     private suspend fun removeNotExistVideos() {
-        val removingId = dao.findUnusedVideoIds()
+        val removingId = dao.findUnusedVideoIds().toSet()
         removeVideo(removingId)
         dao.removeVideoIsArchivedEntities(removingId)
         database.withTransaction {
-            val archivedIds = dao.findAllArchivedVideos()
+            val archivedIds = dao.findAllArchivedVideos().toSet()
             fetchByIds(archivedIds) { ids ->
                 addVideoIsArchivedEntities(ids.map {
                     YouTubeVideoIsArchivedTable(it, true)
@@ -173,7 +173,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>): Unit =
+    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit =
         withContext(Dispatchers.IO) {
             fetchByIds(ids) { removeVideos(it) }
         }
@@ -182,7 +182,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         return dao.findAllUnfinishedVideoList()
     }
 
-    override suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
+    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
         return dao.findChannelDetail(ids)
     }
 
@@ -200,8 +200,8 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     private suspend fun <I : YouTubeId, O> fetchByIds(
-        ids: Collection<I>,
-        query: suspend YouTubeDao.(Collection<I>) -> O,
+        ids: Set<I>,
+        query: suspend YouTubeDao.(Set<I>) -> O,
     ): List<O> {
         return if (ids.isEmpty()) {
             emptyList()
@@ -209,7 +209,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
             listOf(dao.query(ids))
         } else {
             val a = database.withTransaction {
-                ids.chunked(50).map { dao.query(it) }
+                ids.chunked(50).map { dao.query(it.toSet()) }
             }
             listOf(a).flatten()
         }

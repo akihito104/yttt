@@ -21,11 +21,11 @@ internal class TimetableContextMenuDelegateForYouTube @Inject constructor(
         val id = video.id
         when (item) {
             TimetableMenuItem.ADD_FREE_CHAT -> {
-                repository.addFreeChatItems(listOf(id.mapTo()))
+                repository.addFreeChatItems(setOf(id.mapTo()))
             }
 
             TimetableMenuItem.REMOVE_FREE_CHAT -> {
-                repository.removeFreeChatItems(listOf(id.mapTo()))
+                repository.removeFreeChatItems(setOf(id.mapTo()))
             }
 
             TimetableMenuItem.LAUNCH_LIVE -> {

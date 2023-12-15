@@ -22,7 +22,7 @@ class TwitchLiveRepository @Inject constructor(
 
     override suspend fun getAuthorizeUrl(): String = remoteDataSource.getAuthorizeUrl()
 
-    override suspend fun findUsersById(ids: Collection<TwitchUser.Id>?): List<TwitchUserDetail> {
+    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
         if (ids == null) {
             val me = checkNotNull(fetchMe())
             return listOf(me)

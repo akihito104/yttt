@@ -8,12 +8,12 @@ import javax.inject.Singleton
 class YouTubeFacade @Inject constructor(
     private val repository: YouTubeRepository,
 ) {
-    suspend fun fetchVideoList(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideo> {
+    suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> {
         val videos = repository.fetchVideoList(ids)
         val unchecked = videos.filter { it.isFreeChat == null }
             .associateWith { isFreeChat(it) }
-        val add = unchecked.entries.filter { (_, f) -> f }.map { it.key.id }
-        val remove = unchecked.map { it.key.id } - add.toSet()
+        val add = unchecked.entries.filter { (_, f) -> f }.map { it.key.id }.toSet()
+        val remove = unchecked.map { it.key.id }.toSet() - add
         if (add.isNotEmpty()) {
             repository.addFreeChatItems(add)
         }
@@ -31,15 +31,16 @@ class YouTubeFacade @Inject constructor(
         val unchecked = repository.findAllUnfinishedVideos()
         val freeChat = unchecked.filter { it.isFreeChat == null }
             .filter { v -> regex.any { v.title.contains(it) } }
-            .map { it.id }
+            .map { it.id }.toSet()
         repository.addFreeChatItems(freeChat)
-        val unfinished = unchecked.filter { it.isFreeChat == null }.map { it.id } - freeChat.toSet()
+        val unfinished =
+            unchecked.filter { it.isFreeChat == null }.map { it.id }.toSet() - freeChat.toSet()
         repository.removeFreeChatItems(unfinished)
     }
 
     suspend fun addFreeChatFromWorker(id: YouTubeVideo.Id) {
-        val v = repository.fetchVideoList(listOf(id))
-        repository.addFreeChatItems(v.map { it.id })
+        val v = repository.fetchVideoList(setOf(id))
+        repository.addFreeChatItems(v.map { it.id }.toSet())
     }
 
     companion object {

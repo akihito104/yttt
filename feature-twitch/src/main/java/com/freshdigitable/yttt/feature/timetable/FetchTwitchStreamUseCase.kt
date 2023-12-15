@@ -23,6 +23,6 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         }
         val schedules = tasks.awaitAll()
         val users = streams.map { it.user.id } + schedules.flatten().map { it.broadcaster.id }
-        twitchRepository.findUsersById(users)
+        twitchRepository.findUsersById(users.toSet())
     }
 }
