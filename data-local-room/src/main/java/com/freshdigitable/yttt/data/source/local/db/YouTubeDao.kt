@@ -3,10 +3,9 @@ package com.freshdigitable.yttt.data.source.local.db
 import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Embedded
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -29,7 +28,7 @@ internal interface YouTubeDao {
         addSubscriptionEntities(subscriptions.map { it.toDbEntity() })
     }
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscriptionTable>)
 
     @Query("DELETE FROM subscription WHERE id IN (:removed)")
@@ -51,7 +50,7 @@ internal interface YouTubeDao {
     )
     suspend fun findAllSubscriptionSummary(): List<YouTubeSubscriptionSummaryDb>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLogTable>)
 
     @Transaction
@@ -98,7 +97,7 @@ internal interface YouTubeDao {
     @Query("DELETE FROM channel_log")
     suspend fun removeAllChannelLogs()
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addVideoEntities(videos: Collection<YouTubeVideoTable>)
 
     @Transaction
@@ -109,7 +108,7 @@ internal interface YouTubeDao {
         addLiveVideoExpire(expiring)
     }
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addVideoIsArchivedEntities(items: Collection<YouTubeVideoIsArchivedTable>)
 
     @Query("DELETE FROM yt_video_is_archived WHERE video_id IN (:ids)")
@@ -143,7 +142,7 @@ internal interface YouTubeDao {
         current: Instant,
     ): List<YouTubeVideoDb>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addLiveVideoExpire(expire: Collection<YouTubeVideoExpireTable>)
 
     @Query("DELETE FROM video_expire WHERE video_id IN (:ids)")
@@ -158,7 +157,7 @@ internal interface YouTubeDao {
     @Query("SELECT id FROM video WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
     suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addChannels(channels: Collection<YouTubeChannelTable>)
 
     @Query("SELECT * FROM channel WHERE id = :id")
@@ -179,10 +178,10 @@ internal interface YouTubeDao {
     @Query("SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id WHERE c.id IN (:id)")
     suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDb>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addChannelAddition(addition: Collection<YouTubeChannelAdditionTable>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addFreeChatItemEntities(entities: Collection<FreeChatTable>)
 
     @Transaction
@@ -203,10 +202,10 @@ internal interface YouTubeDao {
     @Query("DELETE FROM free_chat WHERE video_id IN(:ids)")
     suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addPlaylist(playlist: YouTubePlaylistTable)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addPlaylists(playlist: List<YouTubePlaylistTable>)
 
     @Query("SELECT * FROM (SELECT * FROM playlist WHERE :since < (last_modified + max_age)) WHERE id = :id")
@@ -228,7 +227,7 @@ internal interface YouTubeDao {
         maxAge: Duration,
     )
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addPlaylistItems(items: Collection<YouTubePlaylistItemTable>)
 
     @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
