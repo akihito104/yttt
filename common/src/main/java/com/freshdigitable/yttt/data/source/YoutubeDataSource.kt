@@ -22,15 +22,17 @@ interface YoutubeDataSource {
     ): List<YouTubeChannelLog>
 
     suspend fun fetchVideoList(
-        ids: Collection<YouTubeVideo.Id>,
+        ids: Set<YouTubeVideo.Id>,
     ): List<YouTubeVideo>
 
-    suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>)
-    suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>)
+    suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
+    suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
+    suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail>
+    suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection>
 
     interface Local : YoutubeDataSource {
         val videos: Flow<List<YouTubeVideo>>
-        suspend fun removeSubscribes(subscriptions: Collection<YouTubeSubscription.Id>)
+        suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>)
         suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>)
         suspend fun fetchAllSubscriptionSummary(): List<YouTubeSubscriptionSummary>
         suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>)
@@ -48,10 +50,8 @@ interface YoutubeDataSource {
 
         suspend fun cleanUp()
         suspend fun findAllUnfinishedVideos(): List<YouTubeVideo>
-        suspend fun removeVideo(ids: Collection<YouTubeVideo.Id>)
-        suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail>
+        suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
         suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>)
-        suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection>
         suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>)
     }
 
@@ -62,8 +62,6 @@ interface YoutubeDataSource {
             pageToken: String? = null,
         ): List<YouTubePlaylistItem>
 
-        suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail>
-        suspend fun fetchChannelSection(channelId: YouTubeChannel.Id): List<YouTubeChannelSection>
-        suspend fun fetchPlaylist(ids: Collection<YouTubePlaylist.Id>): List<YouTubePlaylist>
+        suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist>
     }
 }

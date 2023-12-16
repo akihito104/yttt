@@ -17,7 +17,7 @@ internal class FetchTwitchOnAirItemSourceUseCase @Inject constructor(
     override operator fun invoke(): Flow<List<LiveVideo>> = repository.onAir.map {
         it.map { s ->
             val user = s.user as? TwitchUserDetail
-                ?: repository.findUsersById(listOf(s.user.id)).first()
+                ?: repository.findUsersById(setOf(s.user.id)).first()
             s.toLiveVideo(user)
         }
     }
@@ -33,7 +33,7 @@ internal class FetchTwitchUpcomingItemSourceUseCase @Inject constructor(
             .filter { it.schedule.startTime.isBefore(week) }
             .map { s ->
                 val user = s.user as? TwitchUserDetail
-                    ?: repository.findUsersById(listOf(s.user.id)).first()
+                    ?: repository.findUsersById(setOf(s.user.id)).first()
                 s.toLiveVideo(user)
             }
     }

@@ -23,7 +23,7 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
     override val onAir: Flow<List<TwitchStream>> = dao.watchStream()
     override val upcoming: Flow<List<TwitchChannelSchedule>> = dao.watchChannelSchedule()
 
-    override suspend fun findUsersById(ids: Collection<TwitchUser.Id>?): List<TwitchUserDetail> {
+    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
         if (ids == null) {
             return listOfNotNull(fetchMe())
         }

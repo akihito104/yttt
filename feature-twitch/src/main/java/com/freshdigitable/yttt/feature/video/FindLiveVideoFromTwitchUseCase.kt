@@ -19,7 +19,7 @@ internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
             else -> throw AssertionError("unsupported type: ${id.type}")
         }
         val d = repository.fetchStreamDetail(twitchVideoId) ?: return null
-        val u = (d.user as? TwitchUserDetail) ?: repository.findUsersById(listOf(d.user.id)).first()
+        val u = (d.user as? TwitchUserDetail) ?: repository.findUsersById(setOf(d.user.id)).first()
         return d.toLiveVideoDetail(u)
     }
 }

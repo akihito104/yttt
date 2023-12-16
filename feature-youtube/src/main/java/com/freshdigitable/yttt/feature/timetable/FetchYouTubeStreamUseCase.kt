@@ -38,7 +38,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun updateStreams() {
         val first = liveRepository.findAllUnfinishedVideos()
             .filter { it.isNowOnAir() || it.isUpcoming() }
-            .map { it.id }.distinct()
+            .map { it.id }.toSet()
         val currentVideo = facade.fetchVideoList(first).map { it.id }.toSet()
         logD { "fetchLiveStreams: currentVideo> ${currentVideo.size}" }
         val removed = first.subtract(currentVideo)
@@ -55,7 +55,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val task = coroutineScope {
             needsUpdate.map { async { fetchVideoByPlaylistIdTask(it, current) } }
         }
-        val ids = task.awaitAll().flatten()
+        val ids = task.awaitAll().flatten().toSet()
         logD { "fetchNewStreams: videoId.size> ${ids.size}" }
         facade.fetchVideoList(ids)
     }

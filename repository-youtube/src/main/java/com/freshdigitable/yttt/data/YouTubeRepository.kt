@@ -39,11 +39,11 @@ class YouTubeRepository @Inject constructor(
     suspend fun fetchAllSubscribeSummary(): List<YouTubeSubscriptionSummary> {
         fetchAllSubscribe(50)
         val summary = localSource.fetchAllSubscriptionSummary()
-        val needsChannelDetail = summary.filter { it.uploadedPlaylistId == null }
+        val needsChannelDetail = summary.filter { it.uploadedPlaylistId == null }.toSet()
         if (needsChannelDetail.isEmpty()) {
             return summary
         }
-        fetchChannelList(needsChannelDetail.map { it.channelId })
+        fetchChannelList(needsChannelDetail.map { it.channelId }.toSet())
         return localSource.fetchAllSubscriptionSummary()
     }
 
@@ -63,7 +63,7 @@ class YouTubeRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchVideoList(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideo> {
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> {
         if (ids.isEmpty()) {
             return emptyList()
         }
@@ -121,14 +121,14 @@ class YouTubeRepository @Inject constructor(
         return localSource.findAllUnfinishedVideos()
     }
 
-    suspend fun removeVideo(removed: Collection<YouTubeVideo.Id>) {
+    suspend fun removeVideo(removed: Set<YouTubeVideo.Id>) {
         if (removed.isEmpty()) {
             return
         }
         localSource.removeVideo(removed)
     }
 
-    suspend fun fetchChannelList(ids: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
+    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
         if (ids.isEmpty()) {
             return emptyList()
         }
@@ -142,7 +142,7 @@ class YouTubeRepository @Inject constructor(
         return remote
     }
 
-    suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
+    override suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
         val cache = localSource.fetchChannelSection(id)
         if (cache.isNotEmpty()) {
             return cache
@@ -152,15 +152,15 @@ class YouTubeRepository @Inject constructor(
         return remote
     }
 
-    suspend fun fetchPlaylist(ids: Collection<YouTubePlaylist.Id>): List<YouTubePlaylist> {
+    suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist> {
         return remoteSource.fetchPlaylist(ids)
     }
 
-    override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
+    override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         localSource.addFreeChatItems(ids)
     }
 
-    override suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>) {
+    override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         localSource.removeFreeChatItems(ids)
     }
 

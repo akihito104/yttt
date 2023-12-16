@@ -2,9 +2,9 @@ package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -44,10 +44,10 @@ internal interface TwitchDao {
         addUserDetailExpireEntities(expires)
     }
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addUserDetailEntities(details: Collection<TwitchUserDetailTable>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addUserDetailExpireEntities(expires: Collection<TwitchUserDetailExpireTable>)
 
     @Query(
@@ -59,7 +59,7 @@ internal interface TwitchDao {
         current: Instant,
     ): List<TwitchUserDetailDbView>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addUsers(user: Collection<TwitchUserTable>)
 
     @Query("SELECT * FROM twitch_user WHERE id = :id")
@@ -74,10 +74,10 @@ internal interface TwitchDao {
         addBroadcasterEntities(broadcasters.map { it.toTable(followerId) })
     }
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addBroadcasterExpireEntity(expires: TwitchBroadcasterExpireTable)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addBroadcasterEntities(broadcasters: Collection<TwitchBroadcasterTable>)
 
     @Query(
@@ -133,13 +133,13 @@ internal interface TwitchDao {
     @Query("DELETE FROM twitch_channel_schedule_stream WHERE id IN (:ids)")
     suspend fun removeChannelStreamSchedulesByIds(ids: Collection<TwitchChannelSchedule.Stream.Id>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addChannelStreamSchedules(streams: Collection<TwitchStreamScheduleTable>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addChannelVacationSchedules(streams: Collection<TwitchChannelVacationScheduleTable>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addChannelScheduleExpireEntity(schedule: Collection<TwitchChannelScheduleExpireTable>)
 
     @Query("DELETE FROM twitch_channel_schedule_expire WHERE user_id IN (:id)")
@@ -178,7 +178,7 @@ internal interface TwitchDao {
     @Query("SELECT * FROM twitch_channel_schedule_stream AS s WHERE s.id = :id")
     suspend fun findStreamScheduleEntity(id: TwitchChannelSchedule.Stream.Id): TwitchStreamScheduleTable?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun addStreams(streams: Collection<TwitchStreamTable>)
 
     @Transaction
@@ -208,7 +208,7 @@ internal interface TwitchDao {
     @Query("SELECT * FROM twitch_stream_expire WHERE user_id = :me")
     suspend fun findStreamExpire(me: TwitchUser.Id): TwitchStreamExpireTable?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun setStreamExpire(expiredAt: TwitchStreamExpireTable)
 }
 

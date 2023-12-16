@@ -88,7 +88,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
     ).filter { it.contentDetails?.upload != null }
         .map { it.toChannelLog() }
 
-    override suspend fun fetchVideoList(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideo> =
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> =
         fetchList(ids, getItems = { items }) { chunked ->
             videos()
                 .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
@@ -97,7 +97,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         }.map { it.toLiveVideo() }
 
     override suspend fun fetchChannelList(
-        ids: Collection<YouTubeChannel.Id>,
+        ids: Set<YouTubeChannel.Id>,
     ): List<YouTubeChannelDetail> = fetchList(ids, getItems = { items }) { chunked ->
         channels()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
@@ -106,11 +106,11 @@ internal class YouTubeRemoteDataSource @Inject constructor(
     }.map { YouTubeChannelImpl(it) }
 
     override suspend fun fetchChannelSection(
-        channelId: YouTubeChannel.Id,
+        id: YouTubeChannel.Id,
     ): List<YouTubeChannelSection> = fetch {
         channelSections()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-            .setChannelId(channelId.value)
+            .setChannelId(id.value)
     }.items.map { YouTubeChannelSectionImpl(it) }
 
     override suspend fun fetchPlaylistItems(
@@ -136,7 +136,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
     }
 
     override suspend fun fetchPlaylist(
-        ids: Collection<YouTubePlaylist.Id>,
+        ids: Set<YouTubePlaylist.Id>,
     ): List<YouTubePlaylist> = fetchList(ids, getItems = { items }) { chunked ->
         playlists()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
@@ -160,9 +160,9 @@ internal class YouTubeRemoteDataSource @Inject constructor(
     }
 
     private suspend fun <T, E> fetchList(
-        ids: Collection<IdBase>,
+        ids: Set<IdBase>,
         getItems: T.() -> List<E>,
-        requestParams: YouTube.(Collection<IdBase>) -> AbstractGoogleClientRequest<T>,
+        requestParams: YouTube.(Set<IdBase>) -> AbstractGoogleClientRequest<T>,
     ): List<E> {
         if (ids.isEmpty()) {
             return emptyList()
@@ -171,7 +171,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
             return fetch { requestParams(ids) }.getItems()
         }
         return ids.chunked(VIDEO_MAX_FETCH_SIZE)
-            .map { chunked -> coroutineScope.async { fetch { requestParams(chunked) }.getItems() } }
+            .map { chunked -> coroutineScope.async { fetch { requestParams(chunked.toSet()) }.getItems() } }
             .awaitAll()
             .flatten()
     }
@@ -181,10 +181,10 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         return withContext(Dispatchers.IO) { params.execute() }
     }
 
-    override suspend fun addFreeChatItems(ids: Collection<YouTubeVideo.Id>) =
+    override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) =
         throw UnsupportedOperationException()
 
-    override suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>) =
+    override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) =
         throw UnsupportedOperationException()
 
     companion object {

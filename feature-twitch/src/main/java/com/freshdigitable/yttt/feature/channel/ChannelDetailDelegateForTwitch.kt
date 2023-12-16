@@ -34,7 +34,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         ChannelPage.DEBUG_CHANNEL,
     )
     override val channelDetail: Flow<LiveChannelDetail?> = flow {
-        val u = repository.findUsersById(listOf(id.mapTo()))
+        val u = repository.findUsersById(setOf(id.mapTo()))
         emit(u.map { it.toLiveChannelDetail() }.firstOrNull())
     }
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flow {

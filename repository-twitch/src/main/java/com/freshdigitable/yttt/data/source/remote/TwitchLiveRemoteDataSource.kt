@@ -50,7 +50,7 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
         items
     }
 
-    override suspend fun findUsersById(ids: Collection<TwitchUser.Id>?): List<TwitchUserDetail> =
+    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> =
         fetch {
             val response = getUser(id = ids?.map { it.value }).execute()
             response.body()?.data ?: return@fetch emptyList()

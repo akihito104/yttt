@@ -41,7 +41,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         ChannelPage.DEBUG_CHANNEL,
     )
     override val channelDetail: Flow<LiveChannelDetail?> = flow {
-        val c = repository.fetchChannelList(listOf(id.mapTo())).firstOrNull()
+        val c = repository.fetchChannelList(setOf(id.mapTo())).firstOrNull()
         emit(c?.toLiveChannelDetail())
     }
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = channelDetail.map { d ->
@@ -74,10 +74,11 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             if (cs.type == YouTubeChannelSection.Type.MULTIPLE_PLAYLIST ||
                 cs.type == YouTubeChannelSection.Type.ALL_PLAYLIST
             ) {
-                val item = repository.fetchPlaylist(content.item).map { it.toLiveVideoThumbnail() }
+                val item =
+                    repository.fetchPlaylist(content.item.toSet()).map { it.toLiveVideoThumbnail() }
                 ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist(item)
             } else {
-                val p = repository.fetchPlaylist(content.item)
+                val p = repository.fetchPlaylist(content.item.toSet())
                 val item = repository.fetchPlaylistItems(content.item.first(), maxResult = 20)
                     .map { it.toLiveVideoThumbnail() }
                 return ChannelDetailChannelSection(
@@ -88,7 +89,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
                 )
             }
         } else if (content is YouTubeChannelSection.Content.Channels) {
-            val item = repository.fetchChannelList(content.item)
+            val item = repository.fetchChannelList(content.item.toSet())
             ChannelDetailChannelSection.ChannelDetailContent.ChannelList(item.map { it.toLiveChannelDetail() })
         } else {
             ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(emptyList())
@@ -103,7 +104,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
 
     override val activities: Flow<List<LiveVideo>> = flow {
         val logs = repository.fetchLiveChannelLogs(id.mapTo(), maxResult = 20)
-        val videos = repository.fetchVideoList(logs.map { it.videoId })
+        val videos = repository.fetchVideoList(logs.map { it.videoId }.toSet())
             .map { v -> v to logs.find { v.id == it.videoId } }
             .sortedBy { it.second?.dateTime }
             .map { it.first }
