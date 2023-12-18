@@ -45,6 +45,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 },
             )
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = "Timetable"
     }
 
     object Subscription : MainNavRoute(path = "subscription") {
@@ -63,6 +66,12 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                     navController.navigate(route)
                 },
             )
+        }
+
+        @Composable
+        override fun title(args: Bundle?): String = when (Page.getValue(args)) {
+            LivePlatform.YOUTUBE -> "Subscription Channels"
+            LivePlatform.TWITCH -> "Followings"
         }
     }
 
@@ -92,6 +101,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 ),
             )
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = "Channel Detail"
     }
 
     object VideoDetail : MainNavRoute(path = "videoDetail") {
@@ -120,6 +132,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 )
             )
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = "Stream Detail"
     }
 
     object Settings : MainNavRoute(path = "settings") {
@@ -127,6 +142,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             AppSettingsScreen()
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = "Setting"
     }
 
     object Auth : MainNavRoute(path = "auth") {
@@ -175,6 +193,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 twitchToken = twitchToken,
             )
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = "Authentication"
     }
 
     object TwitchLogin : MainNavRoute(path = "twitch_login") {
@@ -237,6 +258,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 ?.split("=")?.last()
         }
     }
+
+    @Composable
+    override fun title(args: Bundle?): String = "Twitch Authentication"
 }
 
 fun NavHostController.navigateToSubscriptionList(page: LivePlatform) =

@@ -1,5 +1,4 @@
 <resources>
-    <string name="app_name">yttt</string>
     <string name="tab_onAir" translatable="false">ON AIR(%1$d)</string>
     <string name="tab_upcoming" translatable="false">UPCOMING(%1$d)</string>
     <string name="tab_freechat" translatable="false">FREECHAT(%1$d)</string>

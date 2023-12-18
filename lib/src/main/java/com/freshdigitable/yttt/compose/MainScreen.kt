@@ -24,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.core.util.Consumer
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -35,7 +34,6 @@ import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.lib.R
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.launch
 
@@ -106,26 +104,26 @@ private fun MainScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopAppBarImpl(
     currentBackStackEntryProvider: () -> NavBackStackEntry?,
     onMenuIconClicked: () -> Unit,
     onUpClicked: () -> Unit,
 ) {
-    TopAppBar(
-        title = { Text(stringResource(id = R.string.app_name)) },
-        navigationIcon = {
-            val backStack = currentBackStackEntryProvider()
+    val backStack = currentBackStackEntryProvider()
+    val navRoute = MainNavRoute.routes.find { it.route == backStack?.destination?.route }
+    val title = navRoute?.title(backStack?.arguments)
+    TopAppBarImpl(
+        title = title,
+        icon = {
             val route = backStack?.destination?.route
             if (backStack.match(
                     MainNavRoute.Auth,
                     MainNavRoute.Auth.Mode to { it == null || it == MainNavRoute.Auth.Modes.INIT.name },
                 )
             ) {
-                return@TopAppBar
-            }
-            if (backStack == null || route == MainNavRoute.TimetableTab.route) {
+                // NOP
+            } else if (backStack == null || route == MainNavRoute.TimetableTab.route) {
                 Icon(
                     Icons.Filled.Menu,
                     contentDescription = "",
@@ -139,6 +137,21 @@ private fun TopAppBarImpl(
                 )
             }
         },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TopAppBarImpl(
+    title: String?,
+    icon: (@Composable () -> Unit)?,
+) {
+    TopAppBar(
+        title = {
+            val t = title ?: return@TopAppBar
+            Text(t)
+        },
+        navigationIcon = icon ?: {},
     )
 }
 
@@ -197,9 +210,14 @@ private fun NavHostController.navigate(item: DrawerMenuItem) {
 private fun MainScreenPreview() {
     AppTheme {
         TopAppBarImpl(
-            currentBackStackEntryProvider = { null },
-            onMenuIconClicked = { },
-            onUpClicked = { },
+            title = "Timetable",
+            icon = {
+                Icon(
+                    Icons.Filled.Menu,
+                    contentDescription = "",
+                    modifier = Modifier.clickable(onClick = {}),
+                )
+            }
         )
     }
 }

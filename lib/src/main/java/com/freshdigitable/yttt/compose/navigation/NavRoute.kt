@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.compose.navigation
 
+import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
@@ -45,6 +46,9 @@ abstract class NavRoute(
 
     @Composable
     abstract fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry)
+
+    @Composable
+    abstract fun title(args: Bundle?): String?
 }
 
 @Suppress("UNCHECKED_CAST")
