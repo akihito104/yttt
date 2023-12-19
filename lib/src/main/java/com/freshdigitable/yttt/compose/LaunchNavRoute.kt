@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.compose
 
+import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -47,4 +48,7 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
             MainScreen(shouldAuth = shouldAuth)
         }
     }
+
+    @Composable
+    override fun title(args: Bundle?): String? = null
 }

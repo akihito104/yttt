@@ -43,8 +43,9 @@ kotlin {
 
 dependencies {
     implementation(project(":lib"))
-    implementation implementation(project(':feature-youtube'))
-    implementation implementation(project(':feature-twitch'))
+    implementation(project(":common"))
+    implementation(project(':feature-youtube'))
+    implementation(project(':feature-twitch'))
 
     implementation libs.androidx.work.runtime.ktx
     implementation libs.androidx.hilt.work

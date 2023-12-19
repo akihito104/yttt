@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
+import com.freshdigitable.yttt.logI
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -15,14 +16,18 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         if (accountRepository.getTwitchToken() == null) {
             return
         }
+        logI { "start" }
         val me = twitchRepository.fetchMe() ?: return
         val streams = twitchRepository.fetchFollowedStreams()
+        logI { "stream: ${streams.size}" }
         val following = twitchRepository.fetchAllFollowings(me.id)
         val tasks = coroutineScope {
             following.map { async { twitchRepository.fetchFollowedStreamSchedule(it.id) } }
         }
-        val schedules = tasks.awaitAll()
-        val users = streams.map { it.user.id } + schedules.flatten().map { it.broadcaster.id }
+        val schedules = tasks.awaitAll().flatten()
+        logI { "schedule: ${schedules.size}" }
+        val users = streams.map { it.user.id } + schedules.map { it.broadcaster.id }
         twitchRepository.findUsersById(users.toSet())
+        logI { "end" }
     }
 }

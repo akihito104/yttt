@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.os.BundleCompat
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
@@ -18,6 +19,7 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
+import com.freshdigitable.yttt.lib.R
 import com.freshdigitable.yttt.logD
 import kotlin.reflect.KClass
 
@@ -45,6 +47,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 },
             )
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = "Timetable"
     }
 
     object Subscription : MainNavRoute(path = "subscription") {
@@ -63,6 +68,12 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                     navController.navigate(route)
                 },
             )
+        }
+
+        @Composable
+        override fun title(args: Bundle?): String = when (Page.getValue(args)) {
+            LivePlatform.YOUTUBE -> stringResource(R.string.title_youtube_subscriptions)
+            LivePlatform.TWITCH -> stringResource(R.string.title_twitch_followings)
         }
     }
 
@@ -92,6 +103,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 ),
             )
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = stringResource(R.string.title_channel_detail)
     }
 
     object VideoDetail : MainNavRoute(path = "videoDetail") {
@@ -120,6 +134,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 )
             )
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = stringResource(R.string.title_stream_detail)
     }
 
     object Settings : MainNavRoute(path = "settings") {
@@ -127,6 +144,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             AppSettingsScreen()
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = stringResource(R.string.title_setting)
     }
 
     object Auth : MainNavRoute(path = "auth") {
@@ -175,6 +195,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 twitchToken = twitchToken,
             )
         }
+
+        @Composable
+        override fun title(args: Bundle?): String = stringResource(R.string.title_account_setting)
     }
 
     object TwitchLogin : MainNavRoute(path = "twitch_login") {
@@ -237,6 +260,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 ?.split("=")?.last()
         }
     }
+
+    @Composable
+    override fun title(args: Bundle?): String = stringResource(R.string.title_twitch_authentication)
 }
 
 fun NavHostController.navigateToSubscriptionList(page: LivePlatform) =

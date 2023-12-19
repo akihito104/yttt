@@ -106,26 +106,26 @@ private fun MainScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopAppBarImpl(
     currentBackStackEntryProvider: () -> NavBackStackEntry?,
     onMenuIconClicked: () -> Unit,
     onUpClicked: () -> Unit,
 ) {
-    TopAppBar(
-        title = { Text(stringResource(id = R.string.app_name)) },
-        navigationIcon = {
-            val backStack = currentBackStackEntryProvider()
+    val backStack = currentBackStackEntryProvider()
+    val navRoute = MainNavRoute.routes.find { it.route == backStack?.destination?.route }
+    val title = navRoute?.title(backStack?.arguments)
+    TopAppBarImpl(
+        title = title,
+        icon = {
             val route = backStack?.destination?.route
             if (backStack.match(
                     MainNavRoute.Auth,
                     MainNavRoute.Auth.Mode to { it == null || it == MainNavRoute.Auth.Modes.INIT.name },
                 )
             ) {
-                return@TopAppBar
-            }
-            if (backStack == null || route == MainNavRoute.TimetableTab.route) {
+                // NOP
+            } else if (backStack == null || route == MainNavRoute.TimetableTab.route) {
                 Icon(
                     Icons.Filled.Menu,
                     contentDescription = "",
@@ -139,6 +139,21 @@ private fun TopAppBarImpl(
                 )
             }
         },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TopAppBarImpl(
+    title: String?,
+    icon: (@Composable () -> Unit)?,
+) {
+    TopAppBar(
+        title = {
+            val t = title ?: return@TopAppBar
+            Text(t)
+        },
+        navigationIcon = icon ?: {},
     )
 }
 
@@ -170,16 +185,16 @@ private enum class DrawerMenuItem(
     val text: @Composable () -> String,
 ) {
     SUBSCRIPTION_YOUTUBE(
-        text = { "YouTube Subscriptions" },
+        text = { stringResource(R.string.title_youtube_subscriptions) },
     ),
     SUBSCRIPTION_TWITCH(
-        text = { "Twitch Followings" },
+        text = { stringResource(R.string.title_twitch_followings) },
     ),
     AUTH_STATUS(
-        text = { "Auth status" },
+        text = { stringResource(R.string.title_account_setting) },
     ),
     APP_SETTING(
-        text = { "Settings" },
+        text = { stringResource(R.string.title_setting) },
     ),
 }
 
@@ -197,9 +212,14 @@ private fun NavHostController.navigate(item: DrawerMenuItem) {
 private fun MainScreenPreview() {
     AppTheme {
         TopAppBarImpl(
-            currentBackStackEntryProvider = { null },
-            onMenuIconClicked = { },
-            onUpClicked = { },
+            title = "Timetable",
+            icon = {
+                Icon(
+                    Icons.Filled.Menu,
+                    contentDescription = "",
+                    modifier = Modifier.clickable(onClick = {}),
+                )
+            }
         )
     }
 }
