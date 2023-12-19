@@ -2,4 +2,11 @@
     <string name="tab_onAir" translatable="false">ON AIR(%1$d)</string>
     <string name="tab_upcoming" translatable="false">UPCOMING(%1$d)</string>
     <string name="tab_freechat" translatable="false">FREECHAT(%1$d)</string>
+    <string name="title_youtube_subscriptions">YouTube Subscriptions</string>
+    <string name="title_twitch_followings">Twitch Followings</string>
+    <string name="title_channel_detail">Channel Detail</string>
+    <string name="title_stream_detail">Stream Detail</string>
+    <string name="title_account_setting">Account Setting</string>
+    <string name="title_twitch_authentication">Twitch Authentication</string>
+    <string name="title_setting">Setting</string>
 </resources>

@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.core.util.Consumer
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -34,6 +35,7 @@ import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LivePlatform
+import com.freshdigitable.yttt.lib.R
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.launch
 
@@ -183,16 +185,16 @@ private enum class DrawerMenuItem(
     val text: @Composable () -> String,
 ) {
     SUBSCRIPTION_YOUTUBE(
-        text = { "YouTube Subscriptions" },
+        text = { stringResource(R.string.title_youtube_subscriptions) },
     ),
     SUBSCRIPTION_TWITCH(
-        text = { "Twitch Followings" },
+        text = { stringResource(R.string.title_twitch_followings) },
     ),
     AUTH_STATUS(
-        text = { "Account Setting" },
+        text = { stringResource(R.string.title_account_setting) },
     ),
     APP_SETTING(
-        text = { "Setting" },
+        text = { stringResource(R.string.title_setting) },
     ),
 }
 
