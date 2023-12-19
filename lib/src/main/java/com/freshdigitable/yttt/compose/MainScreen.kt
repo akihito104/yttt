@@ -189,10 +189,10 @@ private enum class DrawerMenuItem(
         text = { "Twitch Followings" },
     ),
     AUTH_STATUS(
-        text = { "Auth status" },
+        text = { "Account Setting" },
     ),
     APP_SETTING(
-        text = { "Settings" },
+        text = { "Setting" },
     ),
 }
 

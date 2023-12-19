@@ -70,8 +70,8 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
 
         @Composable
         override fun title(args: Bundle?): String = when (Page.getValue(args)) {
-            LivePlatform.YOUTUBE -> "Subscription Channels"
-            LivePlatform.TWITCH -> "Followings"
+            LivePlatform.YOUTUBE -> "YouTube Subscriptions"
+            LivePlatform.TWITCH -> "Twitch Followings"
         }
     }
 
@@ -195,7 +195,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
         }
 
         @Composable
-        override fun title(args: Bundle?): String = "Authentication"
+        override fun title(args: Bundle?): String = "Account Setting"
     }
 
     object TwitchLogin : MainNavRoute(path = "twitch_login") {
