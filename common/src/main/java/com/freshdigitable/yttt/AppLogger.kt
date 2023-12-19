@@ -23,7 +23,7 @@ fun Any.logI(
     throwable: Throwable? = null,
     message: () -> String,
 ) {
-    Logger.i(tag, throwable, message = message)
+    AppLogger.i(tag, throwable, message)
 }
 
 fun Any.logW(
@@ -40,4 +40,10 @@ fun Any.logE(
     message: () -> String,
 ) {
     Logger.e(tag, throwable, message)
+}
+
+object AppLogger {
+    fun i(tag: String, throwable: Throwable? = null, message: () -> String) {
+        Logger.i(tag, throwable, message = message)
+    }
 }

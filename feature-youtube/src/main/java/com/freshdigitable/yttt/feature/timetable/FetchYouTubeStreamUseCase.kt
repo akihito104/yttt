@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.n
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.logE
+import com.freshdigitable.yttt.logI
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -27,12 +28,13 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         if (!accountRepository.hasAccount()) {
             return
         }
+        logI { "start" }
         updateStreams()
         fetchNewStreams()
         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
         liveRepository.cleanUp()
         facade.updateAsFreeChat()
-        logD { "fetchLiveStreams: end" }
+        logI { "end" }
     }
 
     private suspend fun updateStreams() {
@@ -40,10 +42,10 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .map { it.id }.toSet()
         val currentVideo = facade.fetchVideoList(first).map { it.id }.toSet()
-        logD { "fetchLiveStreams: currentVideo> ${currentVideo.size}" }
+        logI { "updateStreams: currentVideo> ${currentVideo.size}" }
         val removed = first.subtract(currentVideo)
-        logD { "fetchLiveStreams: removed> ${removed.size}" }
         liveRepository.removeVideo(removed)
+        logI { "updateStreams: removed> ${removed.size}" }
     }
 
     private suspend fun fetchNewStreams() {
@@ -51,12 +53,12 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val current = dateTimeProvider.now()
         val needsUpdate =
             subs.filter { it.uploadedPlaylistId != null && it.needsUpdatePlaylist(current) }
-        logD { "fetchNewStreams: subs.size> ${subs.size}" }
+        logI { "fetchNewStreams: subs.size> ${subs.size}" }
         val task = coroutineScope {
             needsUpdate.map { async { fetchVideoByPlaylistIdTask(it, current) } }
         }
         val ids = task.awaitAll().flatten().toSet()
-        logD { "fetchNewStreams: videoId.size> ${ids.size}" }
+        logI { "fetchNewStreams: videoId.size> ${ids.size}" }
         facade.fetchVideoList(ids)
     }
 
