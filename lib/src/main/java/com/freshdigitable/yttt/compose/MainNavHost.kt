@@ -62,7 +62,6 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             SubscriptionListScreen(
-                page = Page.getValue(backStackEntry.arguments),
                 onListItemClicked = {
                     val route = ChannelDetail.parseRoute(it)
                     navController.navigate(route)

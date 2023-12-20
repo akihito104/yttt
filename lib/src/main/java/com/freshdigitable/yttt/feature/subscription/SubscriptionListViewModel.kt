@@ -1,6 +1,8 @@
 package com.freshdigitable.yttt.feature.subscription
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import com.freshdigitable.yttt.compose.MainNavRoute
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchId
@@ -13,9 +15,10 @@ import javax.inject.Inject
 @HiltViewModel
 class SubscriptionListViewModel @Inject constructor(
     private val useCases: IdBaseClassMap<FetchSubscriptionListSourceUseCase>,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    fun getSubscriptionSource(platform: LivePlatform): Flow<List<LiveSubscription>> {
-        val id = when (platform) {
+    fun getSubscriptionSource(): Flow<List<LiveSubscription>> {
+        val id = when (MainNavRoute.Subscription.Page.getValue(savedStateHandle)) {
             LivePlatform.YOUTUBE -> YouTubeId::class
             LivePlatform.TWITCH -> TwitchId::class
         }

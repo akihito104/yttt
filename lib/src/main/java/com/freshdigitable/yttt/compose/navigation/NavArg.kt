@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.compose.navigation
 
 import android.os.Bundle
+import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavType
 
 interface NavArg<T> {
@@ -16,6 +17,10 @@ interface NavArg<T> {
         return type[bundle, argName] ?: if (nullable == false) defaultValue else null
     }
 
+    fun getValue(state: SavedStateHandle): T? {
+        return state[argName] ?: if (nullable == false) defaultValue else null
+    }
+
     fun getArgFormat(): String
     fun parsePath(value: T): String = if (value is Enum<*>) value.name else value.toString()
 
@@ -23,6 +28,7 @@ interface NavArg<T> {
         override val nullable: Boolean? get() = null
         override val defaultValue: T? get() = null
         override fun getValue(bundle: Bundle?): T = requireNotNull(super.getValue(bundle))
+        override fun getValue(state: SavedStateHandle): T = requireNotNull(super.getValue(state))
         override fun getArgFormat(): String = "{$argName}"
 
         companion object {
