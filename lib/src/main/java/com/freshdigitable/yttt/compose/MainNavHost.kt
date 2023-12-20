@@ -49,7 +49,7 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
         }
 
         @Composable
-        override fun title(args: Bundle?): String = "Timetable"
+        override fun title(args: Bundle?): String = stringResource(R.string.title_timetable)
     }
 
     object Subscription : MainNavRoute(path = "subscription") {

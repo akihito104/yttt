@@ -9,4 +9,5 @@
     <string name="title_account_setting">Account Setting</string>
     <string name="title_twitch_authentication">Twitch Authentication</string>
     <string name="title_setting">Setting</string>
+    <string name="title_timetable">Timetable</string>
 </resources>
