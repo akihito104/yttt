@@ -14,15 +14,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SubscriptionListViewModel @Inject constructor(
-    private val useCases: IdBaseClassMap<FetchSubscriptionListSourceUseCase>,
-    private val savedStateHandle: SavedStateHandle,
+    useCases: IdBaseClassMap<FetchSubscriptionListSourceUseCase>,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    fun getSubscriptionSource(): Flow<List<LiveSubscription>> {
-        val id = when (MainNavRoute.Subscription.Page.getValue(savedStateHandle)) {
-            LivePlatform.YOUTUBE -> YouTubeId::class
-            LivePlatform.TWITCH -> TwitchId::class
-        }
-        val fetchSubscriptionListSource = checkNotNull(useCases[id.java])
-        return fetchSubscriptionListSource()
+    private val id = when (MainNavRoute.Subscription.Page.getValue(savedStateHandle)) {
+        LivePlatform.YOUTUBE -> YouTubeId::class
+        LivePlatform.TWITCH -> TwitchId::class
     }
+    private val fetchSubscriptionListSource = checkNotNull(useCases[id.java])
+
+    fun getSubscriptionSource(): Flow<List<LiveSubscription>> = fetchSubscriptionListSource()
 }

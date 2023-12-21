@@ -7,21 +7,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.os.BundleCompat
+import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.navDeepLink
 import com.freshdigitable.yttt.compose.MainNavRoute.Subscription
+import com.freshdigitable.yttt.compose.navigation.LiveIdPathParam
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
 import com.freshdigitable.yttt.lib.R
 import com.freshdigitable.yttt.logD
-import kotlin.reflect.KClass
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {
@@ -77,30 +77,18 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     }
 
     object ChannelDetail : MainNavRoute(path = "channel") {
-        override val params: Array<Params<*>> = arrayOf(Params.Platform, Params.ChannelId)
+        private val navArgParams = LiveIdPathParam<LiveChannel.Id>()
+        override val params: Array<NavArg.PathParam<String>> = navArgParams.params
 
-        sealed class Params<T> : NavArg.PathParam<T> {
-            object ChannelId : Params<String>(),
-                NavArg.PathParam<String> by NavArg.PathParam.string("channel_id")
+        fun parseRoute(id: LiveChannel.Id): String =
+            super.parseRoute(*navArgParams.parseToPathParam(id))
 
-            object Platform : Params<String>(),
-                NavArg.PathParam<String> by NavArg.PathParam.string("platform")
-        }
-
-        fun parseRoute(id: LiveChannel.Id): String = super.parseRoute(
-            Params.Platform to id.type.java.name, Params.ChannelId to id.value,
-        )
+        fun getChannelId(savedStateHandle: SavedStateHandle): LiveChannel.Id =
+            navArgParams.parseToId(savedStateHandle) { v, t -> LiveChannel.Id(v, t) }
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val type = Params.Platform.getValue(backStackEntry.arguments)
-            @Suppress("UNCHECKED_CAST")
-            ChannelDetailScreen(
-                id = LiveChannel.Id(
-                    value = Params.ChannelId.getValue(backStackEntry.arguments),
-                    type = Class.forName(type).kotlin as KClass<out IdBase>,
-                ),
-            )
+            ChannelDetailScreen()
         }
 
         @Composable
@@ -108,30 +96,20 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     }
 
     object VideoDetail : MainNavRoute(path = "videoDetail") {
-        override val params: Array<Params<*>> = arrayOf(Params.Platform, Params.VideoId)
-
-        sealed class Params<T> : NavArg.PathParam<T> {
-            object VideoId : Params<String>(),
-                NavArg.PathParam<String> by NavArg.PathParam.string("video_id")
-
-            object Platform : Params<String>(),
-                NavArg.PathParam<String> by NavArg.PathParam.string("platform")
-        }
+        private val liveIdPathParam = LiveIdPathParam<LiveVideo.Id>()
+        override val params: Array<NavArg.PathParam<String>> = liveIdPathParam.params
 
         fun parseRoute(id: LiveVideo.Id): String = super.parseRoute(
-            Params.Platform to id.type.java.name, Params.VideoId to id.value,
+            *liveIdPathParam.parseToPathParam(id)
         )
+
+        fun getId(savedStateHandle: SavedStateHandle): LiveVideo.Id {
+            return liveIdPathParam.parseToId(savedStateHandle) { v, t -> LiveVideo.Id(v, t) }
+        }
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val type = Params.Platform.getValue(backStackEntry.arguments)
-            @Suppress("UNCHECKED_CAST")
-            VideoDetailScreen(
-                id = LiveVideo.Id(
-                    value = Params.VideoId.getValue(backStackEntry.arguments),
-                    type = Class.forName(type).kotlin as KClass<out IdBase>,
-                )
-            )
+            VideoDetailScreen()
         }
 
         @Composable

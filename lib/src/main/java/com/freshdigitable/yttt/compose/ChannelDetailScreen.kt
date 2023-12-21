@@ -63,13 +63,11 @@ import java.util.Locale
 
 @Composable
 fun ChannelDetailScreen(
-    id: LiveChannel.Id,
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
-    val delegate = viewModel.getDelegate(id)
-    val detail = delegate.channelDetail.collectAsState(initial = null)
+    val detail = viewModel.channelDetail.collectAsState(initial = null)
     ChannelDetailScreen(
-        pages = delegate.tabs,
+        pages = viewModel.tabs,
         channelDetail = { detail.value }) { page ->
         when (page) {
             ChannelPage.ABOUT -> PlainTextPage {
@@ -81,7 +79,7 @@ fun ChannelDetailScreen(
             }
 
             ChannelPage.CHANNEL_SECTION -> {
-                val sectionState = delegate.channelSection.collectAsState(emptyList())
+                val sectionState = viewModel.channelSection.collectAsState(emptyList())
                 PlainListPage(
                     listProvider = { sectionState.value },
                     idProvider = { it.id },
@@ -90,7 +88,7 @@ fun ChannelDetailScreen(
             }
 
             ChannelPage.UPLOADED -> {
-                val itemsState = delegate.uploadedVideo.collectAsState(emptyList())
+                val itemsState = viewModel.uploadedVideo.collectAsState(emptyList())
                 PlainListPage(
                     listProvider = { itemsState.value },
                     idProvider = { it.id },
@@ -99,7 +97,7 @@ fun ChannelDetailScreen(
             }
 
             ChannelPage.ACTIVITIES -> {
-                val logs = delegate.activities.collectAsState(initial = emptyList())
+                val logs = viewModel.activities.collectAsState(initial = emptyList())
                 PlainListPage(
                     listProvider = { logs.value },
                     idProvider = { it.id },

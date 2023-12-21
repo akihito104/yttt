@@ -4,21 +4,33 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
-import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.compose.MainNavRoute
+import com.freshdigitable.yttt.data.model.LiveChannelDetail
+import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import java.security.MessageDigest
 import javax.inject.Inject
 
 @HiltViewModel
 class ChannelViewModel @Inject constructor(
-    private val delegateFactory: IdBaseClassMap<ChannelDetailDelegate.Factory>,
-) : ViewModel() {
-    fun getDelegate(id: LiveChannel.Id): ChannelDetailDelegate =
-        checkNotNull(delegateFactory[id.type.java]).create(id)
+    delegateFactory: IdBaseClassMap<ChannelDetailDelegate.Factory>,
+    savedStateHandle: SavedStateHandle,
+) : ViewModel(), ChannelDetailDelegate {
+    private val channelId = MainNavRoute.ChannelDetail.getChannelId(savedStateHandle)
+    private val delegate = checkNotNull(delegateFactory[channelId.type.java]).create(channelId)
+
+    override val tabs: Array<ChannelPage> get() = delegate.tabs
+    override val channelDetail: Flow<LiveChannelDetail?> get() = delegate.channelDetail
+    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> get() = delegate.uploadedVideo
+    override val channelSection: Flow<List<ChannelDetailChannelSection>> get() = delegate.channelSection
+    override val activities: Flow<List<LiveVideo>> get() = delegate.activities
 }
 
 class CustomCrop(

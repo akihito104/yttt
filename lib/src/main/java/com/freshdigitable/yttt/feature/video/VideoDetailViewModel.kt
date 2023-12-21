@@ -1,9 +1,11 @@
 package com.freshdigitable.yttt.feature.video
 
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.compose.MainNavRoute
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,12 +13,14 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VideoDetailViewModel @Inject constructor(
-    private val findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
+    findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    fun fetchViewDetail(id: LiveVideo.Id): LiveData<LiveVideo?> {
-        val findLiveVideo = checkNotNull(findLiveVideoTable[id.type.java])
+    private val videoId = MainNavRoute.VideoDetail.getId(savedStateHandle)
+    private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
+    fun fetchViewDetail(): LiveData<LiveVideo?> {
         return liveData(viewModelScope.coroutineContext) {
-            val detail = findLiveVideo(id)
+            val detail = findLiveVideo(videoId)
             if (detail == null) { // TODO: informing video is not found
                 emit(null)
                 return@liveData

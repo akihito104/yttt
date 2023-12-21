@@ -30,10 +30,9 @@ import java.math.BigInteger
 
 @Composable
 fun VideoDetailScreen(
-    id: LiveVideo.Id,
     viewModel: VideoDetailViewModel = hiltViewModel(),
 ) {
-    val item = viewModel.fetchViewDetail(id).observeAsState()
+    val item = viewModel.fetchViewDetail().observeAsState()
     VideoDetailScreen(videoProvider = { item.value })
 }
 
