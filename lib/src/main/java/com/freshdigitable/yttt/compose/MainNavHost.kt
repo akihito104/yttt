@@ -140,15 +140,6 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             val isFromMenu = Mode.getValue(backStackEntry.arguments) == Modes.MENU.name
-            Launch(navController = navController, isFromMenu = isFromMenu)
-        }
-
-        @Composable
-        fun Launch(
-            navController: NavHostController,
-            isFromMenu: Boolean,
-            twitchToken: TwitchOauthToken? = null,
-        ) {
             val context = LocalContext.current
             AuthScreen(
                 onStartLoginTwitch = {
@@ -169,7 +160,6 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                         }
                     }
                 },
-                twitchToken = twitchToken,
             )
         }
 
@@ -202,26 +192,25 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                     ?: it.getValueFromDeepLinkIntent(backStackEntry.arguments)
             }
             logD("TwitchLogin") { "Content: ${backStackEntry.arguments}, $p" }
-            if (p.values.all { it != null }) {
-                val token = TwitchOauthToken(
-                    tokenType = requireNotNull(p[Params.TokenType]),
-                    state = requireNotNull(p[Params.State]),
-                    accessToken = requireNotNull(p[Params.AccessToken]),
-                    scope = requireNotNull(p[Params.Scope]),
-                )
-                logD("TwitchLogin") { "token: $token" }
-                val authBackStack =
-                    checkNotNull(navController.previousBackStackEntry) { "prevDestination: null" }
-                val nextRoute = authBackStack.destination.route
+            check(p.values.all { it != null })
+
+            val token = TwitchOauthToken(
+                tokenType = requireNotNull(p[Params.TokenType]),
+                state = requireNotNull(p[Params.State]),
+                accessToken = requireNotNull(p[Params.AccessToken]),
+                scope = requireNotNull(p[Params.Scope]),
+            )
+            logD("TwitchLogin") { "token: $token" }
+//            val authBackStack =
+//                checkNotNull(navController.previousBackStackEntry) { "prevDestination: null" }
+//            val nextRoute = authBackStack.destination.route
 //                check(nextRoute == Auth.route) { "prevDestination: ${authBackStack.destination}" }
-                Auth.Launch(
-                    navController = navController,
-                    isFromMenu = Auth.Mode.getValue(authBackStack.arguments) == Auth.Modes.MENU.name,
-                    twitchToken = token,
-                )
-            } else {
-                TwitchOauthScreen()
-            }
+            TwitchAuthRedirectionDialog(
+                token,
+                onDismiss = {
+                    navController.navigateToAuth(Auth.Modes.MENU) // TODO
+                }
+            )
         }
 
         private fun Params.getValueFromDeepLinkIntent(bundle: Bundle?): String? {

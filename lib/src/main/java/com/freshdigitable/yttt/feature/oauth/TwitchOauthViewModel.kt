@@ -31,6 +31,7 @@ class TwitchOauthViewModel @Inject constructor(
     suspend fun getAuthorizeUrl(): String = twitchRepository.getAuthorizeUrl()
 
     fun putToken(token: TwitchOauthToken) {
+        // TODO: check OAuth2 State
         viewModelScope.launch {
             accountRepository.putTwitchToken(token.accessToken)
         }
