@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.feature.subscription.di
 
-import com.freshdigitable.yttt.data.model.TwitchId
-import com.freshdigitable.yttt.di.IdBaseClassKey
+import com.freshdigitable.yttt.data.model.Twitch
+import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.feature.subscription.FetchSubscriptionListSourceFromTwitchUseCase
 import com.freshdigitable.yttt.feature.subscription.FetchSubscriptionListSourceUseCase
 import dagger.Binds
@@ -16,7 +16,7 @@ import dagger.multibindings.IntoMap
 internal interface TwitchSubscriptionModule {
     @Binds
     @IntoMap
-    @IdBaseClassKey(TwitchId::class)
+    @LivePlatformKey(Twitch::class)
     fun bindFetchSubscriptionListFromTwitchUseCase(
         useCase: FetchSubscriptionListSourceFromTwitchUseCase,
     ): FetchSubscriptionListSourceUseCase

@@ -19,9 +19,12 @@ import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
+import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.lib.R
 import com.freshdigitable.yttt.logD
+import kotlin.reflect.KClass
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {
@@ -55,9 +58,16 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object Subscription : MainNavRoute(path = "subscription") {
         override val params: Array<Page> = arrayOf(Page)
 
-        object Page : NavArg.PathParam<LivePlatform> by NavArg.PathParam.enum("subscription_page")
+        object Page : NavArg.PathParam<String> by NavArg.PathParam.string("subscription_page")
 
-        fun parseRoute(page: LivePlatform): String = super.parseRoute(Page to page)
+        fun parseRoute(page: LivePlatform): String =
+            super.parseRoute(Page to page::class.java.name)
+
+        @Suppress("UNCHECKED_CAST")
+        fun getPlatform(savedStateHandle: SavedStateHandle): KClass<out LivePlatform> {
+            val cls = Page.getValue(savedStateHandle)
+            return Class.forName(cls).kotlin as KClass<out LivePlatform>
+        }
 
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
@@ -71,8 +81,9 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
 
         @Composable
         override fun title(args: Bundle?): String = when (Page.getValue(args)) {
-            LivePlatform.YOUTUBE -> stringResource(R.string.title_youtube_subscriptions)
-            LivePlatform.TWITCH -> stringResource(R.string.title_twitch_followings)
+            YouTube::class.java.name -> stringResource(R.string.title_youtube_subscriptions)
+            Twitch::class.java.name -> stringResource(R.string.title_twitch_followings)
+            else -> throw AssertionError("unsupported platform: ${Page.getValue(args)}")
         }
     }
 
