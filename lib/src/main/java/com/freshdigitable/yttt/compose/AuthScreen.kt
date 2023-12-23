@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Text
@@ -48,13 +49,9 @@ import kotlinx.coroutines.launch
 fun AuthScreen(
     viewModel: YouTubeOauthViewModel = hiltViewModel(),
     twitchOauthViewModel: TwitchOauthViewModel = hiltViewModel(),
-    twitchToken: TwitchOauthToken? = null,
     onStartLoginTwitch: (String) -> Unit,
     onSetupCompleted: (() -> Unit)?,
 ) {
-    if (twitchToken != null) {
-        twitchOauthViewModel.putToken(twitchToken)
-    }
     val googleServiceState = viewModel.googleServiceState.collectAsState(initial = null)
     AuthScreen(
         youTubeAuthStateHolder = rememberYouTubeAuthStateHolder(
@@ -248,6 +245,32 @@ fun TwitchListItem(
 }
 
 @Composable
+fun TwitchAuthRedirectionDialog(
+    token: TwitchOauthToken,
+    onDismiss: () -> Unit,
+    viewModel: TwitchOauthViewModel = hiltViewModel(),
+) {
+    viewModel.putToken(token)
+    TwitchAuthRedirectionDialog(
+        text = "Your Twitch account is connected successfully.",
+        onDismiss = onDismiss,
+    )
+}
+
+@Composable
+private fun TwitchAuthRedirectionDialog(
+    text: String,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        title = { Text("Twitch Authentication") },
+        text = { Text(text = text) },
+        onDismissRequest = onDismiss,
+        confirmButton = { Text("confirm") },
+    )
+}
+
+@Composable
 private fun rememberTwitchAuthStateHolder(
     authorizeUriProvider: suspend () -> String,
     hasTwitchToken: Flow<Boolean>,
@@ -307,6 +330,17 @@ private fun AuthScreenPreview() {
             ),
             googleServiceStateProvider = { YouTubeOauthViewModel.AuthState.Succeeded },
             onSetupCompleted = {},
+        )
+    }
+}
+
+@LightModePreview
+@Composable
+private fun TwitchDialogPreview() {
+    AppTheme {
+        TwitchAuthRedirectionDialog(
+            text = "Your Twitch account is connected successfully.",
+            onDismiss = {},
         )
     }
 }

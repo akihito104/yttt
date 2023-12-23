@@ -6,17 +6,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.feature.subscription.SubscriptionListViewModel
 
 @Composable
 fun SubscriptionListScreen(
     viewModel: SubscriptionListViewModel = hiltViewModel(),
-    page: LivePlatform,
     onListItemClicked: (LiveChannel.Id) -> Unit,
 ) {
-    val subs = viewModel.getSubscriptionSource(page).collectAsState(initial = emptyList())
+    val subs = viewModel.getSubscriptionSource().collectAsState(initial = emptyList())
     ListPage(
         itemProvider = { subs.value },
         onListItemClicked = onListItemClicked,

@@ -212,7 +212,7 @@ private fun NavHostController.navigate(item: DrawerMenuItem) {
 private fun MainScreenPreview() {
     AppTheme {
         TopAppBarImpl(
-            title = "Timetable",
+            title = stringResource(id = R.string.title_timetable),
             icon = {
                 Icon(
                     Icons.Filled.Menu,
