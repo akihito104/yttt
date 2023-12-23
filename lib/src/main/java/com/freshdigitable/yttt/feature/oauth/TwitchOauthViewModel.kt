@@ -1,9 +1,11 @@
 package com.freshdigitable.yttt.feature.oauth
 
+import android.content.Intent
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.LaunchAppWithUrlUseCase
 import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
@@ -21,6 +23,7 @@ import javax.inject.Inject
 class TwitchOauthViewModel @Inject constructor(
     private val twitchRepository: TwitchLiveRepository,
     private val accountRepository: AccountRepository,
+    private val launchApp: LaunchAppWithUrlUseCase,
 ) : ViewModel() {
     val hasTokenState: StateFlow<Boolean> = accountRepository.twitchToken
         .map { it != null }
@@ -28,7 +31,6 @@ class TwitchOauthViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
     fun hasToken(): Boolean = accountRepository.getTwitchToken() != null
-    suspend fun getAuthorizeUrl(): String = twitchRepository.getAuthorizeUrl()
 
     fun putToken(token: TwitchOauthToken) {
         // TODO: check OAuth2 State
@@ -40,6 +42,16 @@ class TwitchOauthViewModel @Inject constructor(
     fun getMe(): LiveData<TwitchUser> = liveData {
         val user = twitchRepository.fetchMe() ?: throw IllegalStateException()
         emit(user)
+    }
+
+    private suspend fun getAuthorizeUrl(): String = twitchRepository.getAuthorizeUrl()
+    fun onLogin() {
+        viewModelScope.launch {
+            val url = getAuthorizeUrl()
+            launchApp(url) {
+                addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
+            }
+        }
     }
 
     companion object {

@@ -1,10 +1,8 @@
 package com.freshdigitable.yttt.compose
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.core.os.BundleCompat
 import androidx.lifecycle.SavedStateHandle
@@ -22,6 +20,7 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
 import com.freshdigitable.yttt.data.model.YouTube
+import com.freshdigitable.yttt.feature.oauth.TwitchAuthRedirectionDialog
 import com.freshdigitable.yttt.lib.R
 import com.freshdigitable.yttt.logD
 import kotlin.reflect.KClass
@@ -138,37 +137,15 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     }
 
     object Auth : MainNavRoute(path = "auth") {
-        override val params: Array<out NavArg<*>> = arrayOf(Mode)
-
-        object Mode : NavArg.QueryParam<String> by NavArg.QueryParam.nonNullString(
-            "mode", Modes.INIT.name,
-        )
-
-        enum class Modes { INIT, MENU, }
-
-        fun parseRoute(mode: Modes): String = super.parseRoute(Mode to mode.name)
-
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val isFromMenu = Mode.getValue(backStackEntry.arguments) == Modes.MENU.name
-            val context = LocalContext.current
             AuthScreen(
-                onStartLoginTwitch = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(it)).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
-                    }
-                    context.startActivity(intent)
-                },
-                onSetupCompleted = if (isFromMenu) {
-                    null
-                } else {
-                    {
-                        navController.navigate(TimetableTab.route) {
-                            popUpTo(Auth.route) {
-                                inclusive = true
-                            }
-                            launchSingleTop = true
+                onSetupCompleted = {
+                    navController.navigate(TimetableTab.route) {
+                        popUpTo(Auth.route) {
+                            inclusive = true
                         }
+                        launchSingleTop = true
                     }
                 },
             )
@@ -212,14 +189,10 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 scope = requireNotNull(p[Params.Scope]),
             )
             logD("TwitchLogin") { "token: $token" }
-//            val authBackStack =
-//                checkNotNull(navController.previousBackStackEntry) { "prevDestination: null" }
-//            val nextRoute = authBackStack.destination.route
-//                check(nextRoute == Auth.route) { "prevDestination: ${authBackStack.destination}" }
             TwitchAuthRedirectionDialog(
                 token,
                 onDismiss = {
-                    navController.navigateToAuth(Auth.Modes.MENU) // TODO
+                    navController.navigate(route)
                 }
             )
         }
@@ -244,6 +217,3 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
 
 fun NavHostController.navigateToSubscriptionList(page: LivePlatform) =
     navigate(Subscription.parseRoute(page))
-
-fun NavHostController.navigateToAuth(mode: MainNavRoute.Auth.Modes) =
-    navigate(MainNavRoute.Auth.parseRoute(mode))

@@ -120,11 +120,7 @@ private fun TopAppBarImpl(
         title = title,
         icon = {
             val route = backStack?.destination?.route
-            if (backStack.match(
-                    MainNavRoute.Auth,
-                    MainNavRoute.Auth.Mode to { it == null || it == MainNavRoute.Auth.Modes.INIT.name },
-                )
-            ) {
+            if (route == MainNavRoute.Auth.route) { // TODO use isInit value
                 // NOP
             } else if (backStack == null || route == MainNavRoute.TimetableTab.route) {
                 Icon(
@@ -203,7 +199,7 @@ private fun NavHostController.navigate(item: DrawerMenuItem) {
     when (item) {
         DrawerMenuItem.SUBSCRIPTION_YOUTUBE -> navigateToSubscriptionList(YouTube) // TODO
         DrawerMenuItem.SUBSCRIPTION_TWITCH -> navigateToSubscriptionList(Twitch)
-        DrawerMenuItem.AUTH_STATUS -> navigateToAuth(MainNavRoute.Auth.Modes.MENU)
+        DrawerMenuItem.AUTH_STATUS -> navigate(MainNavRoute.Auth.route)
         DrawerMenuItem.APP_SETTING -> navigate(MainNavRoute.Settings.route)
     }
 }

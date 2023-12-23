@@ -20,8 +20,8 @@ class AppLauncher @Inject constructor(
 class LaunchAppWithUrlUseCase @Inject constructor(
     private val appLauncher: AppLauncher,
 ) {
-    operator fun invoke(url: String) {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+    operator fun invoke(url: String, applier: Intent.() -> Unit = {}) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply(applier)
         appLauncher(intent)
     }
 }
