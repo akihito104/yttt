@@ -18,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
-import com.freshdigitable.yttt.compose.AuthListItem
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.YouTube
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -32,12 +31,13 @@ internal object YouTubeAccountSettingListItem : AccountSettingListItem {
     override val platform: LivePlatform = YouTube
 
     @Composable
-    override fun ListBodyContent() {
-        ListItem()
+    override fun ListBodyContent(listItem: @Composable (AccountSettingListItem.ListBody) -> Unit) {
+        ListItem(listItem = listItem)
     }
 
     @Composable
     private fun ListItem(
+        listItem: @Composable (AccountSettingListItem.ListBody) -> Unit,
         viewModel: YouTubeOauthViewModel = hiltViewModel(),
     ) {
         val googleServiceState = viewModel.googleServiceState.collectAsState(initial = null)
@@ -49,6 +49,7 @@ internal object YouTubeAccountSettingListItem : AccountSettingListItem {
                 hasGoogleAccount = { viewModel.hasAccount() },
             ),
             googleServiceStateProvider = { googleServiceState.value },
+            listItem = listItem,
         )
     }
 }
@@ -57,6 +58,7 @@ internal object YouTubeAccountSettingListItem : AccountSettingListItem {
 private fun YouTubeListItem(
     holder: YouTubeAuthStateHolder,
     googleServiceStateProvider: () -> YouTubeOauthViewModel.AuthState?,
+    listItem: @Composable (AccountSettingListItem.ListBody) -> Unit,
 ) {
     val googleServiceState = googleServiceStateProvider()
     if (googleServiceState is YouTubeOauthViewModel.AuthState.ServiceConnectionRecoverable) {
@@ -64,15 +66,17 @@ private fun YouTubeListItem(
         holder.showDialog(activity, googleServiceState.code)
     }
     val hasNoAccount = googleServiceState is YouTubeOauthViewModel.AuthState.HasNoAccount
-    AuthListItem(
-        title = "YouTube",
-        enabled = { hasNoAccount },
-        buttonText = { googleServiceState.stateText() },
-    ) {
-        if (hasNoAccount) {
-            holder.launchPermissionRequestOrPickAccount()
+    listItem(
+        AccountSettingListItem.ListBody(
+            title = "YouTube",
+            enabled = { hasNoAccount },
+            buttonText = { googleServiceState.stateText() },
+        ) {
+            if (hasNoAccount) {
+                holder.launchPermissionRequestOrPickAccount()
+            }
         }
-    }
+    )
 }
 
 @Composable

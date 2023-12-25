@@ -6,7 +6,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.compose.AppTheme
-import com.freshdigitable.yttt.compose.AuthListItem
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.Twitch
@@ -16,20 +15,23 @@ internal object TwitchAccountSettingListItem : AccountSettingListItem {
     override val platform: LivePlatform = Twitch
 
     @Composable
-    override fun ListBodyContent() {
-        ListItem()
+    override fun ListBodyContent(listItem: @Composable (AccountSettingListItem.ListBody) -> Unit) {
+        ListItem(listItem = listItem)
     }
 
     @Composable
     private fun ListItem(
+        listItem: @Composable (AccountSettingListItem.ListBody) -> Unit,
         viewModel: TwitchOauthViewModel = hiltViewModel(),
     ) {
         val hasToken = viewModel.hasTokenState.collectAsState()
-        AuthListItem(
-            title = "Twitch",
-            enabled = { !hasToken.value },
-            buttonText = { if (hasToken.value) "connected" else "auth" },
-            onClick = viewModel::onLogin,
+        listItem(
+            AccountSettingListItem.ListBody(
+                title = "Twitch",
+                enabled = { !hasToken.value },
+                buttonText = { if (hasToken.value) "connected" else "auth" },
+                onClick = viewModel::onLogin,
+            )
         )
     }
 }

@@ -45,8 +45,8 @@ private fun AuthScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxSize(),
     ) {
-        listItems.forEach {
-            it.ListBodyContent()
+        listItems.forEach { item ->
+            item.ListBodyContent { AuthListItem(it) }
         }
         if (completeButtonVisible()) {
             Button(
@@ -60,20 +60,17 @@ private fun AuthScreen(
 }
 
 @Composable
-fun AuthListItem(
-    title: String,
-    enabled: () -> Boolean,
-    buttonText: @Composable () -> String,
-    onClick: () -> Unit,
+private fun AuthListItem(
+    body: AccountSettingListItem.ListBody,
 ) {
     ListItem(
-        headlineContent = { Text(title) },
+        headlineContent = { Text(body.title) },
         trailingContent = {
             Button(
-                enabled = enabled(),
-                onClick = onClick,
+                enabled = body.enabled(),
+                onClick = body.onClick,
             ) {
-                Text(text = buttonText())
+                Text(text = body.buttonText())
             }
         },
     )
@@ -89,5 +86,20 @@ private fun AuthScreenPreview() {
             completeButtonEnabled = { true },
             onSetupCompleted = {},
         )
+    }
+}
+
+@LightModePreview
+@Composable
+fun AuthListItemPreview() {
+    AppTheme {
+        Column {
+            AuthListItem(AccountSettingListItem.ListBody(
+                title = "YouTube", enabled = { false }, buttonText = { "connected" }) {}
+            )
+            AuthListItem(AccountSettingListItem.ListBody(
+                title = "Twitch", enabled = { true }, buttonText = { "auth" }) {}
+            )
+        }
     }
 }
