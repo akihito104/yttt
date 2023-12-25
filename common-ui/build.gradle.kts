@@ -2,12 +2,10 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.hilt.android)
-    id("kotlin-kapt")
 }
 
 android {
-    namespace = "com.freshdigitable.yttt.feature.timetable.youtube"
+    namespace = "com.freshdigitable.yttt.ui"
     compileSdk = 34
 
     defaultConfig {
@@ -16,14 +14,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
-
     buildFeatures {
         compose = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.4.2"
     }
-
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -41,30 +37,17 @@ kotlin {
 
 dependencies {
     implementation(project(":common"))
-    implementation(project(":common-ui"))
-    implementation(project(":repository-youtube"))
-    implementation(project(":repository-appuser"))
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
-    implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.compose.runtime.livedata)
-    implementation(libs.accompanist.permissions)
+    implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.livedata.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.play.services.base)
-    implementation(libs.play.services.auth)
-
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
-
+    implementation(libs.accompanist.themeadapter.material3)
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)
-    testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

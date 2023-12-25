@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace 'com.freshdigitable.yttt.lib'
-    compileSdkPreview = "UpsideDownCake"
+    compileSdk = 34
 
     defaultConfig {
         minSdk 26
@@ -43,6 +43,8 @@ kotlin {
 
 dependencies {
     implementation project(":common")
+    implementation project(":common-ui")
+    implementation project(":feature-twitch")
     implementation project(':repository-youtube')
     implementation project(":repository-twitch")
     implementation project(":repository-appuser")
@@ -54,13 +56,11 @@ dependencies {
     implementation libs.androidx.hilt.navigation.compose
     androidTestImplementation composeBom
     implementation libs.glide.compose
-    implementation libs.accompanist.permissions
 
     // Choose one of the following:
     // Material Design
     implementation libs.androidx.compose.material
     implementation libs.androidx.compose.material3
-    implementation libs.accompanist.themeadapter.material3
 
     // Android Studio Preview support
     implementation libs.androidx.compose.ui.tooling.preview
@@ -73,8 +73,6 @@ dependencies {
     implementation libs.androidx.appcompat
     implementation(libs.androidx.activity.ktx)
     implementation libs.androidx.lifecycle.livedata.ktx
-    implementation libs.play.services.base
-    implementation libs.play.services.auth
 
     implementation libs.hilt.android
     kapt libs.hilt.compiler

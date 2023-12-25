@@ -1,11 +1,9 @@
 package com.freshdigitable.yttt.feature.oauth.di
 
 import com.freshdigitable.yttt.data.model.Twitch
-import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.feature.oauth.AccountSettingListItem
 import com.freshdigitable.yttt.feature.oauth.TwitchAccountSettingListItem
-import com.freshdigitable.yttt.feature.oauth.YouTubeAccountSettingListItem
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -15,12 +13,7 @@ import dagger.multibindings.IntoMap
 
 @Module
 @InstallIn(ViewModelComponent::class)
-internal interface AccountSettingModules {
-    @Binds
-    @IntoMap
-    @LivePlatformKey(YouTube::class)
-    fun bindYouTubeListItem(item: YouTubeAccountSettingListItem): AccountSettingListItem
-
+internal interface TwitchAccountSettingModules {
     @Binds
     @IntoMap
     @LivePlatformKey(Twitch::class)
@@ -29,9 +22,6 @@ internal interface AccountSettingModules {
     @Module
     @InstallIn(ViewModelComponent::class)
     class Providers {
-        @Provides
-        fun provideYouTubeListItem(): YouTubeAccountSettingListItem = YouTubeAccountSettingListItem
-
         @Provides
         fun provideTwitchListItem(): TwitchAccountSettingListItem = TwitchAccountSettingListItem
     }
