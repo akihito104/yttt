@@ -16,6 +16,7 @@ rootProject.name = "yttt"
 include ':app'
 include ':lib'
 include ':common'
+include ':common-ui'
 include ':feature-youtube'
 include ':feature-twitch'
 include ':repository-youtube'

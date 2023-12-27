@@ -51,7 +51,7 @@ class CustomCrop(
         val matrix = Matrix().apply {
             postTranslate(dx, dy)
         }
-        val bitmap = pool.get(w, h, toTransform.config ?: Bitmap.Config.ARGB_8888).apply {
+        val bitmap = pool.get(w, h, toTransform.config).apply {
             setHasAlpha(toTransform.hasAlpha())
         }
         val canvas = Canvas(bitmap)

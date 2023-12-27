@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.feature.subscription.di
 
-import com.freshdigitable.yttt.data.model.YouTubeId
-import com.freshdigitable.yttt.di.IdBaseClassKey
+import com.freshdigitable.yttt.data.model.YouTube
+import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.feature.subscription.FetchSubscriptionListSourceFromYouTubeUseCase
 import com.freshdigitable.yttt.feature.subscription.FetchSubscriptionListSourceUseCase
 import dagger.Binds
@@ -15,7 +15,7 @@ import dagger.multibindings.IntoMap
 internal interface YouTubeSubscriptionModule {
     @Binds
     @IntoMap
-    @IdBaseClassKey(YouTubeId::class)
+    @LivePlatformKey(YouTube::class)
     fun bindFetchSubscriptionListFromYouTubeUseCase(
         useCase: FetchSubscriptionListSourceFromYouTubeUseCase,
     ): FetchSubscriptionListSourceUseCase

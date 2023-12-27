@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.source.local
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -40,9 +41,17 @@ class AndroidPreferencesDataStore @Inject constructor(
         }
     }
 
+    val isInit: Flow<Boolean> = dataStore.data.map { it[DS_IS_INIT] ?: it.asMap().keys.isEmpty() }
+    suspend fun putIsInit(value: Boolean) {
+        dataStore.edit {
+            it[DS_IS_INIT] = value
+        }
+    }
+
     companion object {
         private val DS_ACCOUNT_NAME = stringPreferencesKey("accountName")
         private val DS_TWITCH_TOKEN = stringPreferencesKey("twitchToken")
         private val DS_CHANGE_DATE = intPreferencesKey("timeToChangeDate")
+        private val DS_IS_INIT = booleanPreferencesKey("isInit")
     }
 }

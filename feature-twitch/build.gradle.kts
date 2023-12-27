@@ -17,6 +17,13 @@ android {
         consumerProguardFiles("consumer-rules.pro")
     }
 
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.4.2"
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -34,11 +41,19 @@ kotlin {
 
 dependencies {
     implementation(project(":common"))
+    implementation(project(":common-ui"))
     implementation(project(":repository-twitch"))
     implementation(project(":repository-appuser"))
 
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.compose.runtime.livedata)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.livedata.ktx)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
