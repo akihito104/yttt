@@ -15,7 +15,7 @@ import dagger.multibindings.IntoMap
 @Suppress("unused")
 @InstallIn(ViewModelComponent::class)
 @Module
-interface TimetableTabModules {
+internal interface TimetableTabModules {
     @Binds
     @IntoMap
     @TimetableTabKey(TimetablePage.OnAir)

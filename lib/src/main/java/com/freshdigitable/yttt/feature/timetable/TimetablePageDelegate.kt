@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import com.freshdigitable.yttt.compose.TabData
+import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
@@ -15,13 +15,13 @@ import java.time.Duration
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
-interface TimetablePageDelegate {
+internal interface TimetablePageDelegate {
     fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo>>
     fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<LiveVideo>>>
-    val tabs: Flow<List<TabData>>
+    val tabs: Flow<List<TimetableTabData>>
 }
 
-class TimetablePageDelegateImpl @Inject constructor(
+internal class TimetablePageDelegateImpl @Inject constructor(
     items: Map<TimetablePage, @JvmSuppressWildcards Set<FetchTimetableItemSourceUseCase>>,
     settingRepository: SettingRepository,
 ) : TimetablePageDelegate {
@@ -67,9 +67,9 @@ class TimetablePageDelegateImpl @Inject constructor(
     override fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<LiveVideo>>> =
         checkNotNull(groupedItemLists[page])
 
-    override val tabs: Flow<List<TabData>> = combine(
+    override val tabs: Flow<List<TimetableTabData>> = combine(
         sourceTable.entries.map { (k, v) ->
-            v.map { it.size }.distinctUntilChanged().map { TabData(k, it) }
+            v.map { it.size }.distinctUntilChanged().map { TimetableTabData(k, it) }
         }
     ) {
         it.toList().sorted()

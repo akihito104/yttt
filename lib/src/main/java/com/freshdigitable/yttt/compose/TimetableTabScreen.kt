@@ -1,25 +1,18 @@
 package com.freshdigitable.yttt.compose
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SheetState
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -42,7 +35,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimetableTabScreen(
+internal fun TimetableTabScreen(
     viewModel: TimetableTabViewModel = hiltViewModel(),
     onListItemClicked: (LiveVideo.Id) -> Unit,
 ) {
@@ -51,7 +44,7 @@ fun TimetableTabScreen(
             viewModel.loadList()
         }
     }
-    val tabData = viewModel.tabs.collectAsState(initial = TabData.initialValues())
+    val tabData = viewModel.tabs.collectAsState(initial = TimetableTabData.initialValues())
     val refreshing = viewModel.isLoading.observeAsState(false)
     val onMenuClicked: (LiveVideo.Id) -> Unit = viewModel::onMenuClicked
     val listContents: List<LazyListScope.() -> Unit> = TimetablePage.values().map {
@@ -67,7 +60,7 @@ fun TimetableTabScreen(
             }
         }
     }
-    TimetableTabScreen(
+    HorizontalPagerWithTabScreen(
         tabDataProvider = { tabData.value },
     ) { index ->
         TimetableScreen(
@@ -127,52 +120,22 @@ private fun ColumnScope.MenuContent(
     Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun TimetableTabScreen(
-    tabDataProvider: () -> List<TabData>,
-    page: @Composable (Int) -> Unit,
-) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        val tabData = tabDataProvider()
-        val pagerState = rememberPagerState { tabData.size }
-        ScrollableTabRow(
-            selectedTabIndex = pagerState.currentPage,
-            modifier = Modifier.wrapContentSize(),
-        ) {
-            val coroutineScope = rememberCoroutineScope()
-            tabData.forEachIndexed { index, data ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = {
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(index)
-                        }
-                    },
-                    text = { Text(text = data.text()) }
-                )
-            }
-        }
-        HorizontalPager(
-            state = pagerState,
-            pageContent = { page(it) },
-        )
-    }
-}
-
 @Immutable
-class TabData(
+internal class TimetableTabData(
     private val page: TimetablePage,
     private val count: Int
-) : Comparable<TabData> {
+) : TabData {
     @Composable
     @ReadOnlyComposable
-    fun text(): String = stringResource(id = page.textRes, count)
-    override fun compareTo(other: TabData): Int = page.ordinal - other.page.ordinal
+    override fun title(): String = stringResource(id = page.textRes, count)
+    override fun compareTo(other: TabData): Int {
+        val o = other as? TimetableTabData ?: return -1
+        return page.ordinal - o.page.ordinal
+    }
 
     companion object {
-        fun initialValues(): List<TabData> {
-            return TimetablePage.values().map { TabData(it, 0) }
+        fun initialValues(): List<TimetableTabData> {
+            return TimetablePage.values().map { TimetableTabData(it, 0) }
         }
     }
 }
@@ -181,12 +144,12 @@ class TabData(
 @Composable
 private fun TimetableTabScreenPreview() {
     AppTheme {
-        TimetableTabScreen(
+        HorizontalPagerWithTabScreen(
             tabDataProvider = {
                 listOf(
-                    TabData(TimetablePage.OnAir, 10),
-                    TabData(TimetablePage.Upcoming, 3),
-                    TabData(TimetablePage.FreeChat, 7),
+                    TimetableTabData(TimetablePage.OnAir, 10),
+                    TimetableTabData(TimetablePage.Upcoming, 3),
+                    TimetableTabData(TimetablePage.FreeChat, 7),
                 )
             },
         ) { Text("page: $it") }
