@@ -69,7 +69,7 @@ fun LazyListScope.groupedContent(
     onMenuClicked: (LiveVideo.Id) -> Unit,
 ) {
     itemsProvider().forEach { (datetime, items) ->
-        stickyHeader {
+        stickyHeader(key = datetime) {
             LiveVideoHeaderView(label = datetime)
         }
         itemsIndexed(
