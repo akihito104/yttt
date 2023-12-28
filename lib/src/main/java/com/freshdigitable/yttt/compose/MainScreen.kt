@@ -31,7 +31,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.lib.R
@@ -150,15 +149,6 @@ private fun TopAppBarImpl(
         },
         navigationIcon = icon ?: {},
     )
-}
-
-private fun <K : NavArg<*>> NavBackStackEntry?.match(
-    route: MainNavRoute,
-    vararg args: Pair<K, (Any?) -> Boolean>,
-): Boolean {
-    if (this == null) return false
-    if (this.destination.route != route.route) return false
-    return args.all { (k, v) -> v(k.getValue(this.arguments)) }
 }
 
 @Composable
