@@ -8,17 +8,26 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.feature.subscription.SubscriptionListViewModel
+import com.freshdigitable.yttt.feature.subscription.SubscriptionTabData
 
 @Composable
 fun SubscriptionListScreen(
     viewModel: SubscriptionListViewModel = hiltViewModel(),
     onListItemClicked: (LiveChannel.Id) -> Unit,
 ) {
-    val subs = viewModel.getSubscriptionSource().collectAsState(initial = emptyList())
-    ListPage(
-        itemProvider = { subs.value },
-        onListItemClicked = onListItemClicked,
-    )
+    val tabs = viewModel.tabData.collectAsState(initial = viewModel.initialTab)
+    val lists = viewModel.sources.entries.associate { (p, s) ->
+        p to s.collectAsState(initial = emptyList())
+    }
+    HorizontalPagerWithTabScreen(
+        tabDataProvider = { tabs.value }
+    ) { tab ->
+        val platform = (tab as SubscriptionTabData).platform
+        ListPage(
+            itemProvider = { checkNotNull(lists[platform]).value },
+            onListItemClicked = onListItemClicked,
+        )
+    }
 }
 
 @Composable

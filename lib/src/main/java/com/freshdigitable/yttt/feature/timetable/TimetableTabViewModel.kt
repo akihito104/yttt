@@ -23,7 +23,7 @@ import java.time.Duration
 import javax.inject.Inject
 
 @HiltViewModel
-class TimetableTabViewModel @Inject constructor(
+internal class TimetableTabViewModel @Inject constructor(
     private val settingRepository: SettingRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     private val contextMenuDelegate: TimetableContextMenuDelegate,

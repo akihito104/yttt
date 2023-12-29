@@ -31,11 +31,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
-import com.freshdigitable.yttt.data.model.Twitch
-import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.lib.R
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.launch
@@ -154,15 +151,6 @@ private fun TopAppBarImpl(
     )
 }
 
-private fun <K : NavArg<*>> NavBackStackEntry?.match(
-    route: MainNavRoute,
-    vararg args: Pair<K, (Any?) -> Boolean>,
-): Boolean {
-    if (this == null) return false
-    if (this.destination.route != route.route) return false
-    return args.all { (k, v) -> v(k.getValue(this.arguments)) }
-}
-
 @Composable
 private fun NavigationDrawerImpl(
     items: Collection<DrawerMenuItem> = DrawerMenuItem.values().toList(),
@@ -181,11 +169,8 @@ private fun NavigationDrawerImpl(
 private enum class DrawerMenuItem(
     val text: @Composable () -> String,
 ) {
-    SUBSCRIPTION_YOUTUBE(
-        text = { stringResource(R.string.title_youtube_subscriptions) },
-    ),
-    SUBSCRIPTION_TWITCH(
-        text = { stringResource(R.string.title_twitch_followings) },
+    SUBSCRIPTION(
+        text = { stringResource(R.string.title_subscription) },
     ),
     AUTH_STATUS(
         text = { stringResource(R.string.title_account_setting) },
@@ -197,8 +182,7 @@ private enum class DrawerMenuItem(
 
 private fun NavHostController.navigate(item: DrawerMenuItem) {
     when (item) {
-        DrawerMenuItem.SUBSCRIPTION_YOUTUBE -> navigateToSubscriptionList(YouTube) // TODO
-        DrawerMenuItem.SUBSCRIPTION_TWITCH -> navigateToSubscriptionList(Twitch)
+        DrawerMenuItem.SUBSCRIPTION -> navigate(MainNavRoute.Subscription.route)
         DrawerMenuItem.AUTH_STATUS -> navigate(MainNavRoute.Auth.route)
         DrawerMenuItem.APP_SETTING -> navigate(MainNavRoute.Settings.route)
     }
