@@ -160,7 +160,7 @@ private fun TimetableTabScreenPreview() {
                     TimetableTabData(TimetablePage.FreeChat, 7),
                 )
             },
-        ) { Text("page: $it") }
+        ) { Text("page: ${(it as TimetableTabData).page.name}") }
     }
 }
 
