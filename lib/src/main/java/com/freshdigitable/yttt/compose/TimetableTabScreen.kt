@@ -46,27 +46,16 @@ internal fun TimetableTabScreen(
     }
     val tabData = viewModel.tabs.collectAsState(initial = TimetableTabData.initialValues())
     val refreshing = viewModel.isLoading.observeAsState(false)
-    val onMenuClicked: (LiveVideo.Id) -> Unit = viewModel::onMenuClicked
-    val listContents: List<LazyListScope.() -> Unit> = TimetablePage.values().map {
-        when (it.type) {
-            TimetablePage.Type.SIMPLE -> {
-                val item = viewModel.getSimpleItemList(it).collectAsState(initial = emptyList())
-                return@map { simpleContent({ item.value }, onListItemClicked, onMenuClicked) }
-            }
-
-            TimetablePage.Type.GROUPED -> {
-                val item = viewModel.getGroupedItemList(it).collectAsState(initial = emptyMap())
-                return@map { groupedContent({ item.value }, onListItemClicked, onMenuClicked) }
-            }
-        }
-    }
+    val listContents: Map<TimetablePage, LazyListScope.() -> Unit> = TimetablePage.values()
+        .associateWith { timetableContent(it, onListItemClicked, viewModel) }
     HorizontalPagerWithTabScreen(
         tabDataProvider = { tabData.value },
-    ) { index ->
+    ) { tab ->
+        val p = (tab as TimetableTabData).page
         TimetableScreen(
             refreshingProvider = { refreshing.value },
             onRefresh = viewModel::loadList,
-            listContent = listContents[index],
+            listContent = checkNotNull(listContents[p]),
         )
     }
     val menuItems = viewModel.menuItems.collectAsState(emptyList())
@@ -77,6 +66,25 @@ internal fun TimetableTabScreen(
         onMenuItemClicked = { viewModel.onMenuItemClicked(it) },
         onDismissRequest = viewModel::onMenuClosed,
     )
+}
+
+@Composable
+private fun timetableContent(
+    page: TimetablePage,
+    onListItemClicked: (LiveVideo.Id) -> Unit,
+    viewModel: TimetableTabViewModel,
+): LazyListScope.() -> Unit {
+    when (page.type) {
+        TimetablePage.Type.SIMPLE -> {
+            val item = viewModel.getSimpleItemList(page).collectAsState(initial = emptyList())
+            return { simpleContent({ item.value }, onListItemClicked, viewModel::onMenuClicked) }
+        }
+
+        TimetablePage.Type.GROUPED -> {
+            val item = viewModel.getGroupedItemList(page).collectAsState(initial = emptyMap())
+            return { groupedContent({ item.value }, onListItemClicked, viewModel::onMenuClicked) }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -122,7 +130,7 @@ private fun ColumnScope.MenuContent(
 
 @Immutable
 internal class TimetableTabData(
-    private val page: TimetablePage,
+    internal val page: TimetablePage,
     private val count: Int
 ) : TabData {
     @Composable

@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HorizontalPagerWithTabScreen(
     tabDataProvider: () -> List<TabData>,
-    page: @Composable (Int) -> Unit,
+    page: @Composable (TabData) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         val tabData = tabDataProvider()
@@ -42,7 +42,7 @@ fun HorizontalPagerWithTabScreen(
         }
         HorizontalPager(
             state = pagerState,
-            pageContent = { page(it) },
+            pageContent = { page(tabData[it]) },
         )
     }
 }

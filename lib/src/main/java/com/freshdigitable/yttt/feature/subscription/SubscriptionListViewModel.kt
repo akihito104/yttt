@@ -32,8 +32,8 @@ class SubscriptionListViewModel @Inject constructor(
 }
 
 @Immutable
-private class SubscriptionTabData(
-    private val platform: LivePlatform,
+internal class SubscriptionTabData(
+    internal val platform: LivePlatform,
     private val count: Int
 ) : TabData {
     @Composable
