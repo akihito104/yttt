@@ -3,8 +3,6 @@ package com.freshdigitable.yttt.data.model
 import java.math.BigInteger
 import java.time.Instant
 
-interface YouTubeId : IdBase
-
 interface YouTubeVideo {
     val id: Id
     val title: String

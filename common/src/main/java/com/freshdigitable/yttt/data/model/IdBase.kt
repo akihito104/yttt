@@ -12,14 +12,6 @@ interface LivePlatform {
     val name: String
 }
 
-object YouTube : LivePlatform {
-    override val name: String = "YouTube"
-}
-
-object Twitch : LivePlatform {
-    override val name: String = "Twitch"
-}
-
 interface LiveId : IdBase {
     val type: KClass<*>
 }
