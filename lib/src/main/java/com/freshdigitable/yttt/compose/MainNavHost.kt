@@ -24,14 +24,12 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {
         val routes: Collection<NavRoute>
             get() = setOf(
-                Auth,
                 TimetableTab,
                 Subscription,
                 ChannelDetail,
                 VideoDetail,
-                TwitchLogin,
                 Settings,
-            )
+            ) + AuthRoute.routes
     }
 
     object TimetableTab : MainNavRoute(path = "ttt") {
@@ -114,6 +112,15 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
         override fun title(args: Bundle?): String = stringResource(R.string.title_setting)
     }
 
+    @Composable
+    override fun title(args: Bundle?): String = stringResource(R.string.title_twitch_authentication)
+}
+
+sealed class AuthRoute(path: String) : NavRoute(path) {
+    companion object {
+        val routes = setOf(Auth, TwitchLogin)
+    }
+
     object Auth : MainNavRoute(path = "auth") {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
@@ -188,7 +195,4 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 ?.split("=")?.last()
         }
     }
-
-    @Composable
-    override fun title(args: Bundle?): String = stringResource(R.string.title_twitch_authentication)
 }

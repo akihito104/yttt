@@ -1,15 +1,23 @@
 package com.freshdigitable.yttt.compose
 
 import android.os.Bundle
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
-import com.freshdigitable.yttt.compose.navigation.NavArg
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.navigation.NavRoute
+import com.freshdigitable.yttt.compose.navigation.composableWith
 
 sealed class LaunchNavRoute(path: String) : NavRoute(path) {
     companion object {
-        val routes: Collection<NavRoute> get() = setOf(Splash, Main)
+        val routes: Collection<NavRoute> get() = setOf(Splash, Main, Auth)
     }
 
     object Splash : LaunchNavRoute("splash") {
@@ -17,8 +25,7 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             LaunchScreen(
                 onTransition = { canLoadList ->
-                    val p = if (canLoadList) Main.Destinations.TIMETABLE else Main.Destinations.AUTH
-                    val route = Main.parseRoute(p)
+                    val route = if (canLoadList) Main.route else Auth.route
                     navController.navigate(route) {
                         popUpTo(Splash.route) {
                             inclusive = true
@@ -30,22 +37,26 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
         }
     }
 
-    object Main : LaunchNavRoute("main") {
-        override val params: Array<out NavArg<*>> = arrayOf(Destination)
-
-        object Destination : NavArg.QueryParam<String> by NavArg.QueryParam.nonNullString(
-            "dest", Destinations.AUTH.name,
-        )
-
-        enum class Destinations { AUTH, TIMETABLE }
-
-        fun parseRoute(path: Destinations): String = super.parseRoute(Destination to path.name)
-
+    object Auth : LaunchNavRoute("init_auth") {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val next = Destination.getValue(backStackEntry.arguments)
-            val shouldAuth = next == Destinations.AUTH.name
-            MainScreen(shouldAuth = shouldAuth)
+            Scaffold(
+                topBar = { TopAppBar(title = { Text(text = "Account setup") }) }
+            ) {
+                Column(Modifier.padding(it)) {
+                    val nc = rememberNavController()
+                    NavHost(navController = nc, startDestination = route) {
+                        composableWith(nc, AuthRoute.routes)
+                    }
+                }
+            }
+        }
+    }
+
+    object Main : LaunchNavRoute("main") {
+        @Composable
+        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+            MainScreen()
         }
     }
 
