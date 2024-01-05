@@ -3,17 +3,17 @@ package com.freshdigitable.yttt.compose
 import android.os.Bundle
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.TopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.navigation.NavRoute
-import com.freshdigitable.yttt.compose.navigation.composableWith
+import com.freshdigitable.yttt.lib.R
 
 sealed class LaunchNavRoute(path: String) : NavRoute(path) {
     companion object {
@@ -30,7 +30,9 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
                         popUpTo(Splash.route) {
                             inclusive = true
                         }
-                        launchSingleTop = true
+                        if (route == Main.route) {
+                            launchSingleTop = true
+                        }
                     }
                 },
             )
@@ -40,16 +42,16 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
     object Auth : LaunchNavRoute("init_auth") {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            Scaffold(
-                topBar = { TopAppBar(title = { Text(text = "Account setup") }) }
-            ) {
-                Column(Modifier.padding(it)) {
-                    val nc = rememberNavController()
-                    NavHost(navController = nc, startDestination = route) {
-                        composableWith(nc, AuthRoute.routes)
+            InitialAccountSettingScreen(
+                onComplete = {
+                    navController.navigate(Main.route) {
+                        popUpTo(route) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
                     }
-                }
-            }
+                },
+            )
         }
     }
 
@@ -62,4 +64,18 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
 
     @Composable
     override fun title(args: Bundle?): String? = null
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InitialAccountSettingScreen(
+    onComplete: () -> Unit,
+) {
+    Scaffold(
+        topBar = { TopAppBar(title = { Text(text = stringResource(R.string.title_account_setting)) }) }
+    ) {
+        Column(Modifier.padding(it)) {
+            AuthScreen(onSetupCompleted = onComplete)
+        }
+    }
 }

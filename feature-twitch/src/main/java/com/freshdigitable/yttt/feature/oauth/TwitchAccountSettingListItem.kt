@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.feature.oauth
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -9,7 +10,6 @@ import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.Twitch
-import com.freshdigitable.yttt.data.model.TwitchOauthToken
 
 internal object TwitchAccountSettingListItem : AccountSettingListItem {
     override val platform: LivePlatform = Twitch
@@ -25,6 +25,13 @@ internal object TwitchAccountSettingListItem : AccountSettingListItem {
         viewModel: TwitchOauthViewModel = hiltViewModel(),
     ) {
         val hasToken = viewModel.hasTokenState.collectAsState()
+        val oauthStatus = viewModel.oauthStatus.collectAsState()
+        if (oauthStatus.value == TwitchOauthStatus.SUCCEEDED) {
+            TwitchAuthRedirectionDialog(
+                text = "Your Twitch account is connected successfully.",
+                onDismiss = viewModel::clearOauthStatus,
+            )
+        }
         listItem(
             AccountSettingListItem.ListBody(
                 title = "Twitch",
@@ -37,19 +44,6 @@ internal object TwitchAccountSettingListItem : AccountSettingListItem {
 }
 
 @Composable
-fun TwitchAuthRedirectionDialog(
-    token: TwitchOauthToken,
-    onDismiss: () -> Unit,
-    viewModel: TwitchOauthViewModel = hiltViewModel(),
-) {
-    viewModel.putToken(token)
-    TwitchAuthRedirectionDialog(
-        text = "Your Twitch account is connected successfully.",
-        onDismiss = onDismiss,
-    )
-}
-
-@Composable
 private fun TwitchAuthRedirectionDialog(
     text: String,
     onDismiss: () -> Unit,
@@ -58,7 +52,11 @@ private fun TwitchAuthRedirectionDialog(
         title = { Text("Twitch Authentication") },
         text = { Text(text = text) },
         onDismissRequest = onDismiss,
-        confirmButton = { Text("confirm") },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("confirm")
+            }
+        },
     )
 }
 

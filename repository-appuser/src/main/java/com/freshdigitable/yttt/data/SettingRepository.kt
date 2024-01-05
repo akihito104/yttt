@@ -17,7 +17,7 @@ class SettingRepository @Inject constructor(
 
     var lastUpdateDatetime: Instant? = null
 
-    val isInit: Flow<Boolean> = preferences.isInit
+    val isInit: Flow<Boolean?> = preferences.isInit
     suspend fun putIsInit(isInit: Boolean) {
         preferences.putIsInit(isInit)
     }

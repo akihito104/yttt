@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.di.ClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -21,6 +22,7 @@ class AccountSettingViewModel @Inject constructor(
     val completeButtonEnabled: StateFlow<Boolean> = flowOf(true) // TODO
         .stateIn(viewModelScope, SharingStarted.Lazily, true)
     val completeButtonVisible: StateFlow<Boolean> = settingRepository.isInit
+        .filterNotNull()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
     fun getPlatformList(): List<AccountSettingListItem> {

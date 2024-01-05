@@ -41,7 +41,7 @@ class AndroidPreferencesDataStore @Inject constructor(
         }
     }
 
-    val isInit: Flow<Boolean> = dataStore.data.map { it[DS_IS_INIT] ?: it.asMap().keys.isEmpty() }
+    val isInit: Flow<Boolean?> = dataStore.data.map { it[DS_IS_INIT] }
     suspend fun putIsInit(value: Boolean) {
         dataStore.edit {
             it[DS_IS_INIT] = value

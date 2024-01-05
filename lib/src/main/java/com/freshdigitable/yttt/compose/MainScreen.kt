@@ -175,7 +175,7 @@ private enum class DrawerMenuItem(
 private fun NavHostController.navigate(item: DrawerMenuItem) {
     when (item) {
         DrawerMenuItem.SUBSCRIPTION -> navigate(MainNavRoute.Subscription.route)
-        DrawerMenuItem.AUTH_STATUS -> navigate(AuthRoute.Auth.route)
+        DrawerMenuItem.AUTH_STATUS -> navigate(MainNavRoute.Auth.route)
         DrawerMenuItem.APP_SETTING -> navigate(MainNavRoute.Settings.route)
     }
 }

@@ -18,7 +18,7 @@ import com.freshdigitable.yttt.feature.oauth.AccountSettingViewModel
 @Composable
 fun AuthScreen(
     viewModel: AccountSettingViewModel = hiltViewModel(),
-    onSetupCompleted: () -> Unit,
+    onSetupCompleted: (() -> Unit)? = null,
 ) {
     val completeButtonEnabled = viewModel.completeButtonEnabled.collectAsState(true)
     val completeButtonVisible = viewModel.completeButtonVisible.collectAsState(false)
@@ -28,7 +28,7 @@ fun AuthScreen(
         completeButtonVisible = { completeButtonVisible.value },
         onSetupCompleted = {
             viewModel.onInitialSetupCompleted()
-            onSetupCompleted()
+            onSetupCompleted?.invoke()
         },
     )
 }
