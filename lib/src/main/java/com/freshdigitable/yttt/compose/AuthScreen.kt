@@ -21,24 +21,23 @@ fun AuthScreen(
     onSetupCompleted: (() -> Unit)? = null,
 ) {
     val completeButtonEnabled = viewModel.completeButtonEnabled.collectAsState(true)
-    val completeButtonVisible = viewModel.completeButtonVisible.collectAsState(false)
     AuthScreen(
         listItems = viewModel.getPlatformList(),
         completeButtonEnabled = { completeButtonEnabled.value },
-        completeButtonVisible = { completeButtonVisible.value },
-        onSetupCompleted = {
-            viewModel.onInitialSetupCompleted()
-            onSetupCompleted?.invoke()
-        },
+        onSetupCompleted = if (onSetupCompleted != null) {
+            {
+                viewModel.onInitialSetupCompleted()
+                onSetupCompleted.invoke()
+            }
+        } else null,
     )
 }
 
 @Composable
 private fun AuthScreen(
     listItems: Collection<AccountSettingListItem>,
-    completeButtonVisible: () -> Boolean,
     completeButtonEnabled: () -> Boolean,
-    onSetupCompleted: () -> Unit,
+    onSetupCompleted: (() -> Unit)? = null,
 ) {
     Column(
         verticalArrangement = Arrangement.Center,
@@ -48,7 +47,7 @@ private fun AuthScreen(
         listItems.forEach { item ->
             item.ListBodyContent { AuthListItem(it) }
         }
-        if (completeButtonVisible()) {
+        if (onSetupCompleted != null) {
             Button(
                 enabled = completeButtonEnabled(),
                 onClick = onSetupCompleted,
@@ -82,7 +81,6 @@ private fun AuthScreenPreview() {
     AppTheme {
         AuthScreen(
             listItems = emptyList(),
-            completeButtonVisible = { true },
             completeButtonEnabled = { true },
             onSetupCompleted = {},
         )
