@@ -48,9 +48,29 @@ class AndroidPreferencesDataStore @Inject constructor(
         }
     }
 
+    val twitchOauthState: Flow<String?> = dataStore.data.map { it[DS_TWITCH_STATE] }
+    suspend fun putTwitchOauthState(value: String) {
+        dataStore.edit { it[DS_TWITCH_STATE] = value }
+    }
+
+    suspend fun clearTwitchOauthState() {
+        dataStore.edit { it.remove(DS_TWITCH_STATE) }
+    }
+
+    val twitchOauthStatus: Flow<String?> = dataStore.data.map { it[DS_TWITCH_STATUS] }
+    suspend fun putTwitchOauthStatus(value: String) {
+        dataStore.edit { it[DS_TWITCH_STATUS] = value }
+    }
+
+    suspend fun clearTwitchOauthStatus() {
+        dataStore.edit { it.remove(DS_TWITCH_STATUS) }
+    }
+
     companion object {
         private val DS_ACCOUNT_NAME = stringPreferencesKey("accountName")
         private val DS_TWITCH_TOKEN = stringPreferencesKey("twitchToken")
+        private val DS_TWITCH_STATE = stringPreferencesKey("twitchOauthState")
+        private val DS_TWITCH_STATUS = stringPreferencesKey("twitchOauthStatus")
         private val DS_CHANGE_DATE = intPreferencesKey("timeToChangeDate")
         private val DS_IS_INIT = booleanPreferencesKey("isInit")
     }

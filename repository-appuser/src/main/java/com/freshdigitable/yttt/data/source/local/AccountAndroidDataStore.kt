@@ -34,4 +34,24 @@ internal class AccountAndroidDataStore @Inject constructor(
     override suspend fun putTwitchToken(token: String) {
         dataStore.putTwitchToken(token)
     }
+
+    override val twitchOauthState: Flow<String?> = dataStore.twitchOauthState
+        .stateIn(coroutineScope, SharingStarted.Eagerly, null)
+
+    override suspend fun putTwitchOauthState(value: String) {
+        dataStore.putTwitchOauthState(value)
+    }
+
+    override suspend fun clearTwitchOauthState() {
+        dataStore.clearTwitchOauthState()
+    }
+
+    override val twitchOauthStatus: Flow<String?> = dataStore.twitchOauthStatus
+    override suspend fun putTwitchOauthStatus(value: String) {
+        dataStore.putTwitchOauthStatus(value)
+    }
+
+    override suspend fun clearTwitchOauthStatus() {
+        dataStore.clearTwitchOauthStatus()
+    }
 }

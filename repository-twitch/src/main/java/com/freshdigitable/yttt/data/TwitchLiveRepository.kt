@@ -20,7 +20,8 @@ class TwitchLiveRepository @Inject constructor(
     override val onAir: Flow<List<TwitchStream>> = localDataSource.onAir
     override val upcoming: Flow<List<TwitchChannelSchedule>> = localDataSource.upcoming
 
-    override suspend fun getAuthorizeUrl(): String = remoteDataSource.getAuthorizeUrl()
+    override suspend fun getAuthorizeUrl(state: String): String =
+        remoteDataSource.getAuthorizeUrl(state)
 
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
         if (ids == null) {
