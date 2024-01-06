@@ -1,15 +1,23 @@
 package com.freshdigitable.yttt.compose
 
 import android.os.Bundle
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
-import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
+import com.freshdigitable.yttt.lib.R
 
 sealed class LaunchNavRoute(path: String) : NavRoute(path) {
     companion object {
-        val routes: Collection<NavRoute> get() = setOf(Splash, Main)
+        val routes: Collection<NavRoute> get() = setOf(Splash, Main, Auth)
     }
 
     object Splash : LaunchNavRoute("splash") {
@@ -17,10 +25,27 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
             LaunchScreen(
                 onTransition = { canLoadList ->
-                    val p = if (canLoadList) Main.Destinations.TIMETABLE else Main.Destinations.AUTH
-                    val route = Main.parseRoute(p)
+                    val route = if (canLoadList) Main.route else Auth.route
                     navController.navigate(route) {
                         popUpTo(Splash.route) {
+                            inclusive = true
+                        }
+                        if (route == Main.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                },
+            )
+        }
+    }
+
+    object Auth : LaunchNavRoute("init_auth") {
+        @Composable
+        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+            InitialAccountSettingScreen(
+                onComplete = {
+                    navController.navigate(Main.route) {
+                        popUpTo(route) {
                             inclusive = true
                         }
                         launchSingleTop = true
@@ -31,24 +56,26 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
     }
 
     object Main : LaunchNavRoute("main") {
-        override val params: Array<out NavArg<*>> = arrayOf(Destination)
-
-        object Destination : NavArg.QueryParam<String> by NavArg.QueryParam.nonNullString(
-            "dest", Destinations.AUTH.name,
-        )
-
-        enum class Destinations { AUTH, TIMETABLE }
-
-        fun parseRoute(path: Destinations): String = super.parseRoute(Destination to path.name)
-
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val next = Destination.getValue(backStackEntry.arguments)
-            val shouldAuth = next == Destinations.AUTH.name
-            MainScreen(shouldAuth = shouldAuth)
+            MainScreen()
         }
     }
 
     @Composable
     override fun title(args: Bundle?): String? = null
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InitialAccountSettingScreen(
+    onComplete: () -> Unit,
+) {
+    Scaffold(
+        topBar = { TopAppBar(title = { Text(text = stringResource(R.string.title_account_setting)) }) }
+    ) {
+        Column(Modifier.padding(it)) {
+            AuthScreen(onSetupCompleted = onComplete)
+        }
+    }
 }

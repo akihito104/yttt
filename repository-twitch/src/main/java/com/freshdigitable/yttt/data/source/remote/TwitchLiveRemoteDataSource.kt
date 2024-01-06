@@ -22,11 +22,12 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
     private val oauth: TwitchOauthService,
     private val helix: TwitchHelixService,
 ) : TwitchLiveDataSource.Remote {
-    override suspend fun getAuthorizeUrl(): String = withContext(Dispatchers.IO) {
+    override suspend fun getAuthorizeUrl(state: String): String = withContext(Dispatchers.IO) {
         val response = oauth.authorizeImplicitly(
             clientId = BuildConfig.TWITCH_CLIENT_ID,
             redirectUri = BuildConfig.TWITCH_REDIRECT_URI,
             scope = "user:read:follows",
+            state = state,
         ).execute()
         response.raw().request.url.toString()
     }

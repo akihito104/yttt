@@ -105,7 +105,7 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun getAuthorizeUrl(): String = throw AssertionError()
+    override suspend fun getAuthorizeUrl(state: String): String = throw AssertionError()
 
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,

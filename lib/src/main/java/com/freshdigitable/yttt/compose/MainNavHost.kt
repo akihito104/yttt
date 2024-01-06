@@ -1,36 +1,28 @@
 package com.freshdigitable.yttt.compose
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
-import androidx.core.os.BundleCompat
 import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import androidx.navigation.navDeepLink
 import com.freshdigitable.yttt.compose.navigation.LiveIdPathParam
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.TwitchOauthToken
-import com.freshdigitable.yttt.feature.oauth.TwitchAuthRedirectionDialog
 import com.freshdigitable.yttt.lib.R
-import com.freshdigitable.yttt.logD
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {
         val routes: Collection<NavRoute>
             get() = setOf(
-                Auth,
                 TimetableTab,
                 Subscription,
                 ChannelDetail,
                 VideoDetail,
-                TwitchLogin,
                 Settings,
+                Auth,
             )
     }
 
@@ -117,76 +109,11 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object Auth : MainNavRoute(path = "auth") {
         @Composable
         override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            AuthScreen(
-                onSetupCompleted = {
-                    navController.navigate(TimetableTab.route) {
-                        popUpTo(Auth.route) {
-                            inclusive = true
-                        }
-                        launchSingleTop = true
-                    }
-                },
-            )
+            AuthScreen()
         }
 
         @Composable
         override fun title(args: Bundle?): String = stringResource(R.string.title_account_setting)
-    }
-
-    object TwitchLogin : MainNavRoute(path = "twitch_login") {
-        override val params: Array<Params> = arrayOf(
-            Params.AccessToken, Params.Scope, Params.State, Params.TokenType,
-        )
-
-        sealed class Params(override val argName: String) :
-            NavArg.QueryParam<String?> by NavArg.QueryParam.string(argName) {
-            object TokenType : Params("token_type")
-            object State : Params("state")
-            object AccessToken : Params("access_token")
-            object Scope : Params("scope")
-        }
-
-        override val deepLinks = listOf(navDeepLink {
-            uriPattern = "https://$path/#${params.joinToString("&") { it.getArgFormat() }}"
-            action = Intent.ACTION_VIEW
-        })
-
-        @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
-            val p = params.associateWith {
-                it.getValue(backStackEntry.arguments)
-                    ?: it.getValueFromDeepLinkIntent(backStackEntry.arguments)
-            }
-            logD("TwitchLogin") { "Content: ${backStackEntry.arguments}, $p" }
-            check(p.values.all { it != null })
-
-            val token = TwitchOauthToken(
-                tokenType = requireNotNull(p[Params.TokenType]),
-                state = requireNotNull(p[Params.State]),
-                accessToken = requireNotNull(p[Params.AccessToken]),
-                scope = requireNotNull(p[Params.Scope]),
-            )
-            logD("TwitchLogin") { "token: $token" }
-            TwitchAuthRedirectionDialog(
-                token,
-                onDismiss = {
-                    navController.navigate(route)
-                }
-            )
-        }
-
-        private fun Params.getValueFromDeepLinkIntent(bundle: Bundle?): String? {
-            if (bundle == null) return null
-            val uri = BundleCompat.getParcelable(
-                bundle,
-                NavController.KEY_DEEP_LINK_INTENT,
-                Intent::class.java,
-            )?.data ?: return null
-            val query = uri.toString().split("#").last()
-            logD("MainNavHost") { "getValueFromDeepLinkIntent:${this.argName} $query" }
-            return query.split("&").firstOrNull { it.startsWith("${this.argName}=") }
-                ?.split("=")?.last()
-        }
     }
 
     @Composable

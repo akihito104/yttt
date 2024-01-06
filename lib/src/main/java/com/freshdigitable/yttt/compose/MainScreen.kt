@@ -20,7 +20,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -38,7 +37,7 @@ import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.launch
 
 @Composable
-fun MainScreen(shouldAuth: Boolean = false) {
+fun MainScreen() {
     val navController = rememberNavController()
     val activity = LocalContext.current as ComponentActivity
     DisposableEffect(Unit) {
@@ -51,11 +50,7 @@ fun MainScreen(shouldAuth: Boolean = false) {
         onDispose { activity.removeOnNewIntentListener(listener) }
     }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val startDestination = remember(shouldAuth) {
-        if (shouldAuth) MainNavRoute.Auth else MainNavRoute.TimetableTab
-    }
     MainScreen(
-        startDestination = startDestination,
         drawerState = drawerState,
         navController = navController,
     )
@@ -63,7 +58,6 @@ fun MainScreen(shouldAuth: Boolean = false) {
 
 @Composable
 private fun MainScreen(
-    startDestination: MainNavRoute,
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
     navController: NavHostController = rememberNavController(),
 ) {
@@ -96,7 +90,7 @@ private fun MainScreen(
             NavHost(
                 modifier = Modifier.padding(padding),
                 navController = navController,
-                startDestination = startDestination.route,
+                startDestination = MainNavRoute.TimetableTab.route,
             ) {
                 composableWith(navController = navController, navRoutes = MainNavRoute.routes)
             }
@@ -117,9 +111,7 @@ private fun TopAppBarImpl(
         title = title,
         icon = {
             val route = backStack?.destination?.route
-            if (route == MainNavRoute.Auth.route) { // TODO use isInit value
-                // NOP
-            } else if (backStack == null || route == MainNavRoute.TimetableTab.route) {
+            if (backStack == null || route == MainNavRoute.TimetableTab.route) {
                 Icon(
                     Icons.Filled.Menu,
                     contentDescription = "",
