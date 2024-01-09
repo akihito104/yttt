@@ -1,6 +1,8 @@
 package com.freshdigitable.yttt.compose
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -23,12 +26,14 @@ import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.data.model.YouTube
 
 @Composable
 fun LiveChannelListItemView(
+    modifier: Modifier = Modifier,
     iconUrl: String,
     title: String,
-    modifier: Modifier = Modifier,
+    platformColor: Color? = null,
     iconSize: Dp = 40.dp,
     textOffset: Dp = 16.dp,
     textSize: TextUnit = 16.sp,
@@ -37,6 +42,7 @@ fun LiveChannelListItemView(
     LiveChannelContentView(
         iconUrl = iconUrl,
         title = title,
+        platformColor = platformColor,
         modifier = modifier
             .clickable(onClick = onClick)
             .padding(vertical = 8.dp)
@@ -49,9 +55,10 @@ fun LiveChannelListItemView(
 
 @Composable
 fun LiveChannelContentView(
+    modifier: Modifier = Modifier,
     iconUrl: String,
     title: String,
-    modifier: Modifier = Modifier,
+    platformColor: Color? = null,
     iconSize: Dp = 36.dp,
     textOffset: Dp = 8.dp,
     textSize: TextUnit = 14.sp,
@@ -65,6 +72,7 @@ fun LiveChannelContentView(
         LiveChannelIcon(
             iconUrl = iconUrl,
             iconSize = iconSize,
+            platformColor = platformColor,
             modifier = Modifier.align(Alignment.Top),
         )
         Spacer(modifier = Modifier.size(textOffset))
@@ -80,25 +88,36 @@ fun LiveChannelContentView(
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun LiveChannelIcon(
-    iconUrl: String,
-    iconSize: Dp,
     modifier: Modifier = Modifier,
+    iconUrl: String,
+    platformColor: Color? = null,
+    iconSize: Dp,
 ) {
-    if (iconUrl.isEmpty()) {
-        Icon(
-            imageVector = Icons.Default.AccountCircle,
-            contentDescription = "",
-            modifier = modifier
-                .size(iconSize)
-        )
-    } else {
-        GlideImage(
-            model = iconUrl,
-            contentDescription = "",
-            modifier = modifier
-                .size(iconSize)
-                .clip(CircleShape),
-        )
+    Box {
+        if (iconUrl.isEmpty()) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "",
+                modifier = modifier
+                    .size(iconSize)
+            )
+        } else {
+            GlideImage(
+                model = iconUrl,
+                contentDescription = "",
+                modifier = modifier
+                    .size(iconSize)
+                    .clip(CircleShape),
+            )
+        }
+        if (platformColor != null) {
+            Box(
+                Modifier
+                    .background(color = platformColor)
+                    .size(iconSize * 0.3f)
+                    .align(Alignment.BottomEnd)
+            )
+        }
     }
 }
 
@@ -106,7 +125,11 @@ fun LiveChannelIcon(
 @Composable
 private fun LiveChannelListItemViewPreview() {
     AppTheme {
-        LiveChannelListItemView("", "title") {}
+        LiveChannelListItemView(
+            iconUrl = "",
+            title = "title",
+            platformColor = Color(YouTube.color),
+        ) {}
     }
 }
 
@@ -114,6 +137,6 @@ private fun LiveChannelListItemViewPreview() {
 @Composable
 private fun LiveChannelContentViewPreview() {
     AppTheme {
-        LiveChannelContentView("", "title")
+        LiveChannelContentView(iconUrl = "", title = "title", platformColor = Color(YouTube.color))
     }
 }

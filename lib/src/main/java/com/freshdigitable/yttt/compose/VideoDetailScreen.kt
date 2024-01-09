@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,7 +27,6 @@ import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
-
 
 @Composable
 fun VideoDetailScreen(
@@ -45,9 +45,9 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideo?) {
             .wrapContentHeight()
             .verticalScroll(rememberScrollState()),
     ) {
-        val video = videoProvider()
+        val video = videoProvider() ?: return
         GlideImage(
-            model = video?.thumbnailUrl ?: "",
+            model = video.thumbnailUrl,
             contentDescription = "",
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
@@ -60,10 +60,10 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideo?) {
             modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Text(
-                text = video?.title ?: "",
+                text = video.title,
                 fontSize = 18.sp,
             )
-            val statsText = video?.statsText ?: ""
+            val statsText = video.statsText
             if (statsText.isNotEmpty()) {
                 Text(
                     text = statsText,
@@ -71,8 +71,9 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideo?) {
                 )
             }
             LiveChannelContentView(
-                iconUrl = video?.channel?.iconUrl ?: "",
-                title = video?.channel?.title ?: "",
+                iconUrl = video.channel.iconUrl,
+                title = video.channel.title,
+                platformColor = Color(video.channel.platform.color)
             )
             if (video is LiveVideoDetail) {
                 Text(
