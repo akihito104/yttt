@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import androidx.annotation.ColorInt
 import kotlin.reflect.KClass
 
 interface IdBase {
@@ -10,6 +11,9 @@ interface IdBase {
 
 interface LivePlatform {
     val name: String
+
+    @get:ColorInt
+    val color: Long
 }
 
 interface LiveId : IdBase {
