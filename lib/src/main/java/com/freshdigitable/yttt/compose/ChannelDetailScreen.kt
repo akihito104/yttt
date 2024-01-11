@@ -41,6 +41,7 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
+import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
@@ -399,6 +400,7 @@ fun ChannelScreenPreview() {
                 id = YouTubeVideo.Id("a").mapTo(),
                 title = "channel title",
                 iconUrl = "",
+                platform = YouTube,
                 bannerUrl = "",
                 subscriberCount = BigInteger.valueOf(52400),
                 isSubscriberHidden = false,

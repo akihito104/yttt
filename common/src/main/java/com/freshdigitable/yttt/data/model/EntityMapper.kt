@@ -29,18 +29,21 @@ fun TwitchUserDetail.toLiveChannel(): LiveChannel = LiveChannelEntity(
     id = id.mapTo(),
     title = displayName,
     iconUrl = profileImageUrl,
+    platform = Twitch,
 )
 
 fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
     id = id.mapTo(),
     title = title,
     iconUrl = iconUrl,
+    platform = YouTube,
 )
 
 fun TwitchUserDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
     id = id.mapTo(),
     title = this.displayName,
     iconUrl = this.profileImageUrl,
+    platform = Twitch,
     bannerUrl = "",
     customUrl = loginName,
     description = description,
@@ -67,6 +70,7 @@ fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelD
     viewsCount = viewsCount,
     publishedAt = publishedAt,
     iconUrl = iconUrl,
+    platform = YouTube,
 )
 
 fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo = LiveVideoEntity(

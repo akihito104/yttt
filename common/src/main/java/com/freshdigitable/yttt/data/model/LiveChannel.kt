@@ -8,6 +8,7 @@ interface LiveChannel {
     val id: Id
     val title: String
     val iconUrl: String
+    val platform: LivePlatform
 
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
@@ -22,6 +23,7 @@ data class LiveChannelEntity(
     override val id: LiveChannel.Id,
     override val title: String,
     override val iconUrl: String,
+    override val platform: LivePlatform,
 ) : LiveChannel
 
 interface LiveChannelAddition {
@@ -43,6 +45,7 @@ data class LiveChannelDetailEntity(
     override val id: LiveChannel.Id,
     override val title: String,
     override val iconUrl: String,
+    override val platform: LivePlatform,
     override val bannerUrl: String?,
     override val subscriberCount: BigInteger,
     override val isSubscriberHidden: Boolean,
@@ -52,5 +55,5 @@ data class LiveChannelDetailEntity(
     override val customUrl: String,
     override val keywords: Collection<String>,
     override val description: String?,
-    override val uploadedPlayList: YouTubePlaylist.Id?
+    override val uploadedPlayList: YouTubePlaylist.Id?,
 ) : LiveChannelDetail
