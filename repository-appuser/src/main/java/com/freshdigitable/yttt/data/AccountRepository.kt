@@ -1,13 +1,15 @@
 package com.freshdigitable.yttt.data
 
-import com.freshdigitable.yttt.data.source.AccountDataStore
-import com.freshdigitable.yttt.data.source.AccountLocalDataSource
+import com.freshdigitable.yttt.data.source.TwitchAccountDataStore
+import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AccountRepository @Inject constructor(
-    localDataStore: AccountLocalDataSource,
-) : AccountDataStore by localDataStore {
-    fun hasAccount(): Boolean = getAccount() != null
-}
+class YouTubeAccountRepository @Inject constructor(
+    local: YouTubeAccountDataStore.Local
+) : YouTubeAccountDataStore by local
+
+class TwitchAccountRepository @Inject constructor(
+    local: TwitchAccountDataStore.Local
+) : TwitchAccountDataStore by local

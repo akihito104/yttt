@@ -3,8 +3,8 @@ package com.freshdigitable.yttt.feature.oauth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
-import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.GoogleService
+import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.google.android.gms.common.GoogleApiAvailability
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class YouTubeOauthViewModel @Inject constructor(
-    private val accountRepository: AccountRepository,
+    private val accountRepository: YouTubeAccountRepository,
     private val googleService: GoogleService,
     private val newChooseAccountIntentProvider: NewChooseAccountIntentProvider,
 ) : ViewModel() {

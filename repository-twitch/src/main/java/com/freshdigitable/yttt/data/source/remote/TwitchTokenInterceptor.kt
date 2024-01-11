@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.data.BuildConfig
-import com.freshdigitable.yttt.data.source.AccountLocalDataSource
+import com.freshdigitable.yttt.data.source.TwitchAccountDataStore
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
@@ -9,7 +9,7 @@ import javax.inject.Singleton
 
 @Singleton
 internal class TwitchTokenInterceptor @Inject constructor(
-    private val accountDataSource: AccountLocalDataSource,
+    private val accountDataSource: TwitchAccountDataStore.Local,
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()

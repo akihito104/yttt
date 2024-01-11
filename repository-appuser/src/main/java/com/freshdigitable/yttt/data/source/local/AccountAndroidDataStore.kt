@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local
 
-import com.freshdigitable.yttt.data.source.AccountLocalDataSource
+import com.freshdigitable.yttt.data.source.TwitchAccountDataStore
+import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,10 +13,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-internal class AccountAndroidDataStore @Inject constructor(
-    private val dataStore: AndroidPreferencesDataStore,
+internal class YouTubeAccountLocalDataSource @Inject constructor(
+    private val dataStore: YouTubeAccountAndroidDataSource,
     coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-) : AccountLocalDataSource {
+) : YouTubeAccountDataStore.Local {
     private val _googleAccount: StateFlow<String?> = dataStore.googleAccountName
         .stateIn(coroutineScope, SharingStarted.Eagerly, null)
     override val googleAccount: Flow<String?> = _googleAccount
@@ -25,7 +26,13 @@ internal class AccountAndroidDataStore @Inject constructor(
     override suspend fun putAccount(account: String) {
         dataStore.putAccount(account)
     }
+}
 
+@Singleton
+internal class TwitchAccountLocalDataSource @Inject constructor(
+    private val dataStore: TwitchAccountAndroidDataSource,
+    coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+) : TwitchAccountDataStore.Local {
     override val twitchToken: StateFlow<String?> = dataStore.twitchToken
         .stateIn(coroutineScope, SharingStarted.Eagerly, null)
 

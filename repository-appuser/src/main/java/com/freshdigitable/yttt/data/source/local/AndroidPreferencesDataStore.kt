@@ -15,24 +15,6 @@ import javax.inject.Singleton
 class AndroidPreferencesDataStore @Inject constructor(
     private val dataStore: DataStore<Preferences>,
 ) {
-    val googleAccountName: Flow<String?> = dataStore.data
-        .map { it[DS_ACCOUNT_NAME] }
-
-    suspend fun putAccount(account: String) {
-        dataStore.edit {
-            it[DS_ACCOUNT_NAME] = account
-        }
-    }
-
-    val twitchToken: Flow<String?> = dataStore.data
-        .map { it[DS_TWITCH_TOKEN] }
-
-    suspend fun putTwitchToken(token: String) {
-        dataStore.edit {
-            it[DS_TWITCH_TOKEN] = token
-        }
-    }
-
     val changeDateTime: Flow<Int?> = dataStore.data.map { it[DS_CHANGE_DATE] }
 
     suspend fun putTimeToChangeDate(value: Int) {
@@ -45,6 +27,43 @@ class AndroidPreferencesDataStore @Inject constructor(
     suspend fun putIsInit(value: Boolean) {
         dataStore.edit {
             it[DS_IS_INIT] = value
+        }
+    }
+
+    companion object {
+        private val DS_CHANGE_DATE = intPreferencesKey("timeToChangeDate")
+        private val DS_IS_INIT = booleanPreferencesKey("isInit")
+    }
+}
+
+@Singleton
+class YouTubeAccountAndroidDataSource @Inject constructor(
+    private val dataStore: DataStore<Preferences>,
+) {
+    val googleAccountName: Flow<String?> = dataStore.data
+        .map { it[DS_ACCOUNT_NAME] }
+
+    suspend fun putAccount(account: String) {
+        dataStore.edit {
+            it[DS_ACCOUNT_NAME] = account
+        }
+    }
+
+    companion object {
+        private val DS_ACCOUNT_NAME = stringPreferencesKey("accountName")
+    }
+}
+
+@Singleton
+class TwitchAccountAndroidDataSource @Inject constructor(
+    private val dataStore: DataStore<Preferences>,
+) {
+    val twitchToken: Flow<String?> = dataStore.data
+        .map { it[DS_TWITCH_TOKEN] }
+
+    suspend fun putTwitchToken(token: String) {
+        dataStore.edit {
+            it[DS_TWITCH_TOKEN] = token
         }
     }
 
@@ -67,11 +86,8 @@ class AndroidPreferencesDataStore @Inject constructor(
     }
 
     companion object {
-        private val DS_ACCOUNT_NAME = stringPreferencesKey("accountName")
         private val DS_TWITCH_TOKEN = stringPreferencesKey("twitchToken")
         private val DS_TWITCH_STATE = stringPreferencesKey("twitchOauthState")
         private val DS_TWITCH_STATUS = stringPreferencesKey("twitchOauthStatus")
-        private val DS_CHANGE_DATE = intPreferencesKey("timeToChangeDate")
-        private val DS_IS_INIT = booleanPreferencesKey("isInit")
     }
 }

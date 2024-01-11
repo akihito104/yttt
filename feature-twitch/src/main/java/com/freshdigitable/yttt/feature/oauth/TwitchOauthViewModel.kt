@@ -4,8 +4,8 @@ import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.LaunchAppWithUrlUseCase
-import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.BuildConfig
+import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
 import com.freshdigitable.yttt.logD
@@ -23,7 +23,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TwitchOauthViewModel @Inject constructor(
     private val twitchRepository: TwitchLiveRepository,
-    private val accountRepository: AccountRepository,
+    private val accountRepository: TwitchAccountRepository,
     private val launchApp: LaunchAppWithUrlUseCase,
 ) : ViewModel() {
     val hasTokenState: StateFlow<Boolean> = accountRepository.twitchToken
@@ -62,7 +62,7 @@ class TwitchOauthViewModel @Inject constructor(
 }
 
 class TwitchOauthParser @Inject constructor(
-    private val accountRepository: AccountRepository,
+    private val accountRepository: TwitchAccountRepository,
     private val coroutineScope: CoroutineScope,
 ) {
     private val state = accountRepository.twitchOauthState
