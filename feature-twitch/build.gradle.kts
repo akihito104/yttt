@@ -43,7 +43,6 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":common-ui"))
     implementation(project(":repository-twitch"))
-    implementation(project(":repository-appuser"))
 
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
