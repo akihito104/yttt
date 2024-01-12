@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.okhttp3.integration)
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)

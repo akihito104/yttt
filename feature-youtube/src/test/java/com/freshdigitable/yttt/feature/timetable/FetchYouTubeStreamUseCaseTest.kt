@@ -1,8 +1,8 @@
 package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.MockkResponseRule
-import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.SettingRepository
+import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -31,7 +31,7 @@ class FetchYouTubeStreamUseCaseTest {
     lateinit var facade: YouTubeFacade
 
     @MockK
-    lateinit var accountRepository: AccountRepository
+    lateinit var accountRepository: YouTubeAccountRepository
 
     @MockK
     lateinit var settingRepository: SettingRepository

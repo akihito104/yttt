@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import com.freshdigitable.yttt.data.AccountRepository
+import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.logI
 import kotlinx.coroutines.async
@@ -10,7 +10,7 @@ import javax.inject.Inject
 
 internal class FetchTwitchStreamUseCase @Inject constructor(
     private val twitchRepository: TwitchLiveRepository,
-    private val accountRepository: AccountRepository,
+    private val accountRepository: TwitchAccountRepository,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke() {
         if (accountRepository.getTwitchToken() == null) {

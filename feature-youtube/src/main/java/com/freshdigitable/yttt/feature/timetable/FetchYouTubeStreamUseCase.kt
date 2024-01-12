@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import com.freshdigitable.yttt.data.AccountRepository
 import com.freshdigitable.yttt.data.SettingRepository
+import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -20,7 +20,7 @@ import javax.inject.Inject
 internal class FetchYouTubeStreamUseCase @Inject constructor(
     private val liveRepository: YouTubeRepository,
     private val facade: YouTubeFacade,
-    private val accountRepository: AccountRepository,
+    private val accountRepository: YouTubeAccountRepository,
     private val settingRepository: SettingRepository,
     private val dateTimeProvider: DateTimeProvider,
 ) : FetchStreamUseCase {

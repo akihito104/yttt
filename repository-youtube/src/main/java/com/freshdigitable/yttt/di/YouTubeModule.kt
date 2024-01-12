@@ -3,7 +3,7 @@ package com.freshdigitable.yttt.di
 import android.content.Context
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
-import com.freshdigitable.yttt.data.source.AccountLocalDataSource
+import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.remote.HttpRequestInitializerImpl
 import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
@@ -30,7 +30,7 @@ internal object YouTubeModule {
     @Provides
     fun provideHttpRequestInitializer(
         credential: GoogleAccountCredential,
-        dataStore: AccountLocalDataSource,
+        dataStore: YouTubeAccountDataStore.Local,
     ): HttpRequestInitializer = HttpRequestInitializerImpl(credential, dataStore)
 
     @Provides
