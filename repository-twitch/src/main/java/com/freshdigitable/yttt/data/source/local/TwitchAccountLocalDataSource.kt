@@ -33,6 +33,10 @@ internal class TwitchAccountLocalDataSource @Inject constructor(
         }
     }
 
+    override suspend fun clearTwitchToken() {
+        dataStore.edit { it.remove(DS_TWITCH_TOKEN) }
+    }
+
     override val twitchOauthState: Flow<String?> = dataStore.data.map { it[DS_TWITCH_STATE] }
     override suspend fun putTwitchOauthState(value: String) {
         dataStore.edit { it[DS_TWITCH_STATE] = value }

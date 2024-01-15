@@ -7,6 +7,7 @@ interface YouTubeAccountDataStore {
     fun getAccount(): String?
     suspend fun putAccount(account: String)
     fun hasAccount(): Boolean = getAccount() != null
+    suspend fun clearAccount()
 
     interface Local : YouTubeAccountDataStore
 }

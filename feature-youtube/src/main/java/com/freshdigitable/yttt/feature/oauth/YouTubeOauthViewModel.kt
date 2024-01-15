@@ -55,6 +55,12 @@ class YouTubeOauthViewModel @Inject constructor(
 
     fun createPickAccountIntent(): NewChooseAccountIntentProvider = newChooseAccountIntentProvider
 
+    fun clearAccount() {
+        viewModelScope.launch {
+            accountRepository.clearAccount()
+        }
+    }
+
     sealed class AuthState {
         object Succeeded : AuthState()
         object HasNoAccount : AuthState()

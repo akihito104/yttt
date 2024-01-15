@@ -50,6 +50,7 @@ internal object YouTubeAccountSettingListItem : AccountSettingListItem {
             ),
             googleServiceStateProvider = { googleServiceState.value },
             listItem = listItem,
+            onUnlinkClicked = viewModel::clearAccount
         )
     }
 }
@@ -59,6 +60,7 @@ private fun YouTubeListItem(
     holder: YouTubeAuthStateHolder,
     googleServiceStateProvider: () -> YouTubeOauthViewModel.AuthState?,
     listItem: @Composable (AccountSettingListItem.ListBody) -> Unit,
+    onUnlinkClicked: () -> Unit,
 ) {
     val googleServiceState = googleServiceStateProvider()
     if (googleServiceState is YouTubeOauthViewModel.AuthState.ServiceConnectionRecoverable) {
@@ -71,11 +73,13 @@ private fun YouTubeListItem(
             title = "YouTube",
             enabled = { hasNoAccount },
             buttonText = { googleServiceState.stateText() },
-        ) {
-            if (hasNoAccount) {
-                holder.launchPermissionRequestOrPickAccount()
-            }
-        }
+            onUnlink = onUnlinkClicked,
+            onClick = {
+                if (hasNoAccount) {
+                    holder.launchPermissionRequestOrPickAccount()
+                }
+            },
+        )
     )
 }
 
@@ -85,7 +89,7 @@ private fun YouTubeOauthViewModel.AuthState?.stateText(): String {
         YouTubeOauthViewModel.AuthState.HasNoAccount -> "auth"
         YouTubeOauthViewModel.AuthState.ServiceConnectionFailed -> "service denied"
         is YouTubeOauthViewModel.AuthState.ServiceConnectionRecoverable -> ""
-        YouTubeOauthViewModel.AuthState.Succeeded -> "connected"
+        YouTubeOauthViewModel.AuthState.Succeeded -> "linked"
         else -> "auth"
     }
 }

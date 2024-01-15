@@ -6,6 +6,7 @@ interface TwitchAccountDataStore {
     val twitchToken: Flow<String?>
     fun getTwitchToken(): String?
     suspend fun putTwitchToken(token: String)
+    suspend fun clearTwitchToken()
     val twitchOauthState: Flow<String?>
     suspend fun putTwitchOauthState(value: String)
     suspend fun clearTwitchOauthState()

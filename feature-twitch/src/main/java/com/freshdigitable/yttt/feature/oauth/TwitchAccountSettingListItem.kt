@@ -28,7 +28,7 @@ internal object TwitchAccountSettingListItem : AccountSettingListItem {
         val oauthStatus = viewModel.oauthStatus.collectAsState()
         if (oauthStatus.value == TwitchOauthStatus.SUCCEEDED) {
             TwitchAuthRedirectionDialog(
-                text = "Your Twitch account is connected successfully.",
+                text = "Your Twitch account is linked successfully.",
                 onDismiss = viewModel::clearOauthStatus,
             )
         }
@@ -36,8 +36,9 @@ internal object TwitchAccountSettingListItem : AccountSettingListItem {
             AccountSettingListItem.ListBody(
                 title = "Twitch",
                 enabled = { !hasToken.value },
-                buttonText = { if (hasToken.value) "connected" else "auth" },
+                buttonText = { if (hasToken.value) "linked" else "auth" },
                 onClick = viewModel::onLogin,
+                onUnlink = viewModel::onClearAccount,
             )
         )
     }
@@ -65,7 +66,7 @@ private fun TwitchAuthRedirectionDialog(
 private fun TwitchDialogPreview() {
     AppTheme {
         TwitchAuthRedirectionDialog(
-            text = "Your Twitch account is connected successfully.",
+            text = "Your Twitch account is linked successfully.",
             onDismiss = {},
         )
     }
