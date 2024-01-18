@@ -355,3 +355,6 @@ internal data class YouTubeVideoDb(
     override val viewerCount: BigInteger?
         get() = video.viewerCount
 }
+
+internal interface YouTubeDaoProviders : YouTubeChannelDaoProviders, YouTubeVideoDaoProviders,
+    YouTubePlaylistDaoProviders, YouTubeSubscriptionTable.Dao.Provider

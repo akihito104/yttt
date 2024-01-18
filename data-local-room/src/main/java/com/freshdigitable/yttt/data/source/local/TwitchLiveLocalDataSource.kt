@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
+import com.freshdigitable.yttt.data.source.local.di.TwitchQualifier
 import kotlinx.coroutines.flow.Flow
 import java.time.Duration
 import javax.inject.Inject
@@ -19,7 +20,7 @@ import javax.inject.Singleton
 @Singleton
 internal class TwitchLiveLocalDataSource @Inject constructor(
     private val database: AppDatabase,
-    private val deleteDao: Set<@JvmSuppressWildcards TableDeletable>,
+    @TwitchQualifier private val deleteDao: Set<@JvmSuppressWildcards TableDeletable>,
     private val dateTimeProvider: DateTimeProvider,
 ) : TwitchLiveDataSource.Local {
     private val dao: TwitchDao = database.twitchDao
@@ -117,7 +118,7 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
 
     override suspend fun deleteAllTables() {
         database.withTransaction {
-            database.query("PRAGMA defer_foreign_keys = TRUE", null)
+            database.deferForeignKeys()
             deleteDao.forEach { it.deleteTable() }
         }
     }

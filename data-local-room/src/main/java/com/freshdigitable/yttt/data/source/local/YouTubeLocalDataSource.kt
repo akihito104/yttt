@@ -17,6 +17,7 @@ import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
+import com.freshdigitable.yttt.data.source.local.di.YouTubeQualifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -29,6 +30,7 @@ import javax.inject.Singleton
 internal class YouTubeLocalDataSource @Inject constructor(
     private val database: AppDatabase,
     private val dateTimeProvider: DateTimeProvider,
+    @YouTubeQualifier private val deleteDao: Set<@JvmSuppressWildcards TableDeletable>,
 ) : YoutubeDataSource.Local {
     private val dao: YouTubeDao get() = database.youtubeDao
     override val videos: Flow<List<YouTubeVideo>> = dao.watchAllUnfinishedVideos()
@@ -197,6 +199,13 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>) {
         channelSections[channelSection.first().channelId] = channelSection.toList()
+    }
+
+    override suspend fun deleteAllTables() {
+        database.withTransaction {
+            database.deferForeignKeys()
+            deleteDao.forEach { it.deleteTable() }
+        }
     }
 
     private suspend fun <I : YouTubeId, O> fetchByIds(
