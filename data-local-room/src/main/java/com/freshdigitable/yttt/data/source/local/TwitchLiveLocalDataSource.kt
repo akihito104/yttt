@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.local
 
+import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -17,9 +18,11 @@ import javax.inject.Singleton
 
 @Singleton
 internal class TwitchLiveLocalDataSource @Inject constructor(
-    private val dao: TwitchDao,
+    private val database: AppDatabase,
+    private val deleteDao: Set<@JvmSuppressWildcards TableDeletable>,
     private val dateTimeProvider: DateTimeProvider,
 ) : TwitchLiveDataSource.Local {
+    private val dao: TwitchDao = database.twitchDao
     override val onAir: Flow<List<TwitchStream>> = dao.watchStream()
     override val upcoming: Flow<List<TwitchChannelSchedule>> = dao.watchChannelSchedule()
 
@@ -111,6 +114,13 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         id: TwitchUser.Id,
         itemCount: Int,
     ): List<TwitchVideoDetail> = emptyList()
+
+    override suspend fun deleteAllTables() {
+        database.withTransaction {
+            database.query("PRAGMA defer_foreign_keys = TRUE", null)
+            deleteDao.forEach { it.deleteTable() }
+        }
+    }
 
     companion object {
         private val MAX_AGE_BROADCASTER = Duration.ofHours(12)

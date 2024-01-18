@@ -57,6 +57,7 @@ class TwitchOauthViewModel @Inject constructor(
 
     fun onClearAccount() {
         viewModelScope.launch {
+            twitchRepository.deleteAllTables()
             accountRepository.clearTwitchToken()
         }
     }

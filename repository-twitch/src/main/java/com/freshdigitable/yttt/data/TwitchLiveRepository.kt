@@ -91,6 +91,10 @@ class TwitchLiveRepository @Inject constructor(
         itemCount: Int,
     ): List<TwitchVideoDetail> = remoteDataSource.fetchVideosByUserId(id, itemCount)
 
+    suspend fun deleteAllTables() {
+        localDataSource.deleteAllTables()
+    }
+
     companion object {
         @Suppress("unused")
         private val TAG = TwitchLiveRepository::class.simpleName

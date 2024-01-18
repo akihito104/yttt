@@ -17,6 +17,7 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchChannelScheduleExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchChannelVacationScheduleTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
+import com.freshdigitable.yttt.data.source.local.db.TwitchDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDbView
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamIdConverter
@@ -101,10 +102,14 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     TwitchStreamIdConverter::class,
     CsvConverter::class,
 )
-internal abstract class AppDatabase : RoomDatabase() {
+internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders {
     internal abstract val youtubeDao: YouTubeDao
     internal abstract val twitchDao: TwitchDao
 
     @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
     internal class MigrateRemoveVideoVisible : AutoMigrationSpec
+}
+
+internal interface TableDeletable {
+    suspend fun deleteTable()
 }
