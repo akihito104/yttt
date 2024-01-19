@@ -164,6 +164,10 @@ class YouTubeRepository @Inject constructor(
         localSource.removeFreeChatItems(ids)
     }
 
+    suspend fun deleteAllTables() {
+        localSource.deleteAllTables()
+    }
+
     companion object {
         private val activityMaxPeriod = Period.ofDays(7)
     }

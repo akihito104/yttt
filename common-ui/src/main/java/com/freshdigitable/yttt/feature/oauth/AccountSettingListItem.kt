@@ -19,5 +19,6 @@ interface AccountSettingListItem {
         val enabled: () -> Boolean,
         val buttonText: @Composable () -> String,
         val onClick: () -> Unit,
+        val onUnlink: () -> Unit,
     )
 }

@@ -34,6 +34,10 @@ internal class YouTubeAccountLocalDataSource @Inject constructor(
         }
     }
 
+    override suspend fun clearAccount() {
+        dataStore.edit { it.remove(DS_ACCOUNT_NAME) }
+    }
+
     companion object {
         private val DS_ACCOUNT_NAME = stringPreferencesKey("accountName")
     }

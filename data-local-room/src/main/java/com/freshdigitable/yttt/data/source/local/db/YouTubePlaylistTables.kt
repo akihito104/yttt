@@ -7,10 +7,12 @@ import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.Query
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Duration
 import java.time.Instant
 
@@ -41,6 +43,15 @@ internal class YouTubePlaylistTable(
 
         fun createWithMaxAge(id: YouTubePlaylist.Id, lastModified: Instant): YouTubePlaylistTable =
             YouTubePlaylistTable(id, lastModified, maxAge = MAX_AGE_MAX)
+    }
+
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM playlist")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubePlaylistDao: Dao
+        }
     }
 }
 
@@ -81,7 +92,16 @@ internal class YouTubePlaylistItemTable(
     val videoOwnerChannelId: YouTubeChannel.Id? = null,
     @ColumnInfo(name = "published_at")
     val publishedAt: Instant,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM playlist_item")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubePlaylistItemDao: Dao
+        }
+    }
+}
 
 internal data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "id")
@@ -103,3 +123,6 @@ internal data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
 ) : YouTubePlaylistItem
+
+internal interface YouTubePlaylistDaoProviders : YouTubePlaylistTable.Dao.Provider,
+    YouTubePlaylistItemTable.Dao.Provider

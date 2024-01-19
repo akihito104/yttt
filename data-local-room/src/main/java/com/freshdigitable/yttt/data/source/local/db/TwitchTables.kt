@@ -6,12 +6,14 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
+import androidx.room.Query
 import androidx.room.Relation
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
 
 @Entity(tableName = "twitch_user")
@@ -23,7 +25,16 @@ internal data class TwitchUserTable(
     override val loginName: String,
     @ColumnInfo(name = "display_name")
     override val displayName: String,
-) : TwitchUser
+) : TwitchUser {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_user")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchUserDao: Dao
+        }
+    }
+}
 
 @Entity(
     tableName = "twitch_user_detail",
@@ -47,7 +58,16 @@ internal class TwitchUserDetailTable(
     val createdAt: Instant,
     @ColumnInfo("description")
     val description: String,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_user_detail")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchUserDetailDao: Dao
+        }
+    }
+}
 
 internal data class TwitchUserDetailDbView(
     @Embedded
@@ -89,7 +109,16 @@ internal class TwitchUserDetailExpireTable(
     val userId: TwitchUser.Id,
     @ColumnInfo("expired_at", defaultValue = "null")
     val expiredAt: Instant? = null,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_user_detail_expire")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchUserDetailExpireDao: Dao
+        }
+    }
+}
 
 @Entity(
     tableName = "twitch_broadcaster",
@@ -114,7 +143,16 @@ internal class TwitchBroadcasterTable(
     val followerId: TwitchUser.Id,
     @ColumnInfo(name = "followed_at")
     val followedAt: Instant,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_broadcaster")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchBroadcasterDao: Dao
+        }
+    }
+}
 
 @Entity(
     tableName = "twitch_broadcaster_expire",
@@ -132,7 +170,16 @@ internal class TwitchBroadcasterExpireTable(
     val followerId: TwitchUser.Id,
     @ColumnInfo("expire_at")
     val expireAt: Instant,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_broadcaster_expire")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchBroadcasterExpireDao: Dao
+        }
+    }
+}
 
 internal data class TwitchBroadcasterDb(
     @Embedded
@@ -155,7 +202,16 @@ internal class TwitchAuthorizedUserTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("user_id")
     val userId: TwitchUser.Id,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_auth_user")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchAuthUserDao: Dao
+        }
+    }
+}
 
 @Entity(
     tableName = "twitch_stream",
@@ -193,7 +249,16 @@ internal class TwitchStreamTable(
     val tags: List<String>,
     @ColumnInfo(name = "is_mature")
     val isMature: Boolean,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_stream")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchStreamDao: Dao
+        }
+    }
+}
 
 @DatabaseView(
     viewName = "twitch_stream_view",
@@ -235,7 +300,16 @@ internal class TwitchStreamExpireTable(
     val userId: TwitchUser.Id,
     @ColumnInfo("expired_at")
     val expiredAt: Instant,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_stream_expire")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchStreamExpireDao: Dao
+        }
+    }
+}
 
 @Entity(
     tableName = "twitch_channel_schedule_vacation",
@@ -253,7 +327,16 @@ internal class TwitchChannelVacationScheduleTable(
     val userId: TwitchUser.Id,
     @Embedded
     val vacation: TwitchChannelVacationSchedule?,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_channel_schedule_vacation")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchChannelScheduleVacationDao: Dao
+        }
+    }
+}
 
 internal class TwitchChannelVacationSchedule(
     @ColumnInfo(name = "vacation_start")
@@ -290,7 +373,16 @@ internal class TwitchStreamScheduleTable(
     override val isRecurring: Boolean,
     @ColumnInfo(name = "user_id", index = true)
     val userId: TwitchUser.Id,
-) : TwitchChannelSchedule.Stream
+) : TwitchChannelSchedule.Stream {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_channel_schedule_stream")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchChannelScheduleStreamDao: Dao
+        }
+    }
+}
 
 internal class TwitchStreamCategory(
     @ColumnInfo(name = "category_id")
@@ -327,4 +419,20 @@ internal class TwitchChannelScheduleExpireTable(
     val userId: TwitchUser.Id,
     @ColumnInfo("expired_at")
     val expiredAt: Instant,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM twitch_channel_schedule_expire")
+        override suspend fun deleteTable()
+        interface Provider {
+            val twitchChannelScheduleExpireDao: Dao
+        }
+    }
+}
+
+internal interface TwitchDaoProviders : TwitchUserTable.Dao.Provider,
+    TwitchUserDetailTable.Dao.Provider, TwitchUserDetailExpireTable.Dao.Provider,
+    TwitchBroadcasterTable.Dao.Provider, TwitchBroadcasterExpireTable.Dao.Provider,
+    TwitchAuthorizedUserTable.Dao.Provider, TwitchStreamTable.Dao.Provider,
+    TwitchStreamExpireTable.Dao.Provider, TwitchChannelVacationScheduleTable.Dao.Provider,
+    TwitchStreamScheduleTable.Dao.Provider, TwitchChannelScheduleExpireTable.Dao.Provider

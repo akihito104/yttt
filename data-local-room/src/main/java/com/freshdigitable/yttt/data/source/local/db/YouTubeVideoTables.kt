@@ -5,8 +5,10 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.Query
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.math.BigInteger
 import java.time.Instant
 
@@ -43,7 +45,16 @@ internal class YouTubeVideoTable(
     val description: String = "",
     @ColumnInfo(name = "viewer_count", defaultValue = "null")
     val viewerCount: BigInteger? = null,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM video")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubeVideoDao: Dao
+        }
+    }
+}
 
 @Entity(
     tableName = "free_chat",
@@ -62,7 +73,16 @@ internal class FreeChatTable(
     val videoId: YouTubeVideo.Id,
     @ColumnInfo("is_free_chat", defaultValue = "null")
     val isFreeChat: Boolean? = null,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM free_chat")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubeFreeChatDao: Dao
+        }
+    }
+}
 
 @Entity(
     tableName = "video_expire",
@@ -81,7 +101,16 @@ internal class YouTubeVideoExpireTable(
     val videoId: YouTubeVideo.Id,
     @ColumnInfo(name = "expired_at", defaultValue = "null")
     val expiredAt: Instant? = null,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM video_expire")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubeVideoExpireDao: Dao
+        }
+    }
+}
 
 @Entity(tableName = "yt_video_is_archived")
 internal class YouTubeVideoIsArchivedTable(
@@ -90,4 +119,17 @@ internal class YouTubeVideoIsArchivedTable(
     val videoId: YouTubeVideo.Id, // archived video is not cached so not to be constrained by foreign key
     @ColumnInfo("is_archived")
     val isArchived: Boolean? = null,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM yt_video_is_archived")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubeVideoIsArchivedDao: Dao
+        }
+    }
+}
+
+internal interface YouTubeVideoDaoProviders : YouTubeVideoTable.Dao.Provider,
+    YouTubeVideoExpireTable.Dao.Provider, YouTubeVideoIsArchivedTable.Dao.Provider,
+    FreeChatTable.Dao.Provider

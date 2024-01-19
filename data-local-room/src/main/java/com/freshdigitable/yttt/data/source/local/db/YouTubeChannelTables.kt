@@ -7,12 +7,14 @@ import androidx.room.ForeignKey
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.Query
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelAddition
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.math.BigInteger
 import java.time.Instant
 
@@ -25,7 +27,16 @@ internal data class YouTubeChannelTable(
     override val title: String = "",
     @ColumnInfo(name = "icon", defaultValue = "")
     override val iconUrl: String = "",
-) : YouTubeChannel
+) : YouTubeChannel {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM channel")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubeChannelDao: Dao
+        }
+    }
+}
 
 @Entity(
     tableName = "channel_addition",
@@ -69,6 +80,15 @@ internal data class YouTubeChannelAdditionTable(
 ) : YouTubeChannelAddition {
     override val keywords: Collection<String>
         get() = keywordsRaw.split(",", " ")
+
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM channel_addition")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubeChannelAdditionDao: Dao
+        }
+    }
 }
 
 internal data class YouTubeChannelDetailDb(
@@ -111,4 +131,16 @@ internal data class YouTubeChannelLogTable(
     override val channelId: YouTubeChannel.Id,
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     override val thumbnailUrl: String = "",
-) : YouTubeChannelLog
+) : YouTubeChannelLog {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM channel_log")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubeChannelLogDao: Dao
+        }
+    }
+}
+
+internal interface YouTubeChannelDaoProviders : YouTubeChannelTable.Dao.Provider,
+    YouTubeChannelAdditionTable.Dao.Provider, YouTubeChannelLogTable.Dao.Provider

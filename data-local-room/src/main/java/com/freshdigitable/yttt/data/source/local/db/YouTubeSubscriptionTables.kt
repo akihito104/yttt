@@ -7,6 +7,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.Query
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -14,6 +15,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
 
 @Entity(
@@ -37,7 +39,16 @@ internal class YouTubeSubscriptionTable(
     val channelId: YouTubeChannel.Id,
     @ColumnInfo(name = "subs_order", defaultValue = Int.MAX_VALUE.toString())
     val order: Int = Int.MAX_VALUE,
-)
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("DELETE FROM subscription")
+        override suspend fun deleteTable()
+        interface Provider {
+            val youTubeSubscriptionDao: Dao
+        }
+    }
+}
 
 internal data class YouTubeSubscriptionDb(
     @ColumnInfo(name = "id")

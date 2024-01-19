@@ -53,6 +53,7 @@ interface YoutubeDataSource {
         suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
         suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>)
         suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>)
+        suspend fun deleteAllTables()
     }
 
     interface Remote : YoutubeDataSource {

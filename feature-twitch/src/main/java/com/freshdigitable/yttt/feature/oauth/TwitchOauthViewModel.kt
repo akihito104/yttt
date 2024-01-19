@@ -55,6 +55,13 @@ class TwitchOauthViewModel @Inject constructor(
         }
     }
 
+    fun onClearAccount() {
+        viewModelScope.launch {
+            twitchRepository.deleteAllTables()
+            accountRepository.clearTwitchToken()
+        }
+    }
+
     companion object {
         @Suppress("unused")
         private val TAG = TwitchOauthViewModel::class.simpleName
