@@ -15,7 +15,6 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import javax.inject.Inject
 import javax.inject.Singleton
 
 @Module
@@ -28,25 +27,22 @@ internal interface AccountDataStoreModule {
         fun provideSharedPreference(@ApplicationContext context: Context): SharedPreferences =
             context.getSharedPreferences(PREF_FILENAME, Context.MODE_PRIVATE)
 
+        @Singleton
         @Provides
-        fun provideDataStore(ds: DataStoreImpl): DataStore<Preferences> = ds.dataStore
+        fun provideDataStore(
+            @ApplicationContext context: Context,
+            prefs: SharedPreferences,
+        ): DataStore<Preferences> {
+            return PreferenceDataStoreFactory.create(
+                migrations = listOf(SharedPreferencesMigration({ prefs })),
+            ) {
+                context.preferencesDataStoreFile("settings")
+            }
+        }
 
+        @Singleton
         @Provides
         fun provideIoCoroutineScope(): CoroutineScope =
             CoroutineScope(Dispatchers.IO + SupervisorJob())
-    }
-}
-
-@Singleton
-internal class DataStoreImpl @Inject constructor(
-    @ApplicationContext context: Context,
-    prefs: SharedPreferences,
-) {
-    val dataStore: DataStore<Preferences> by lazy {
-        PreferenceDataStoreFactory.create(
-            migrations = listOf(SharedPreferencesMigration({ prefs })),
-        ) {
-            context.preferencesDataStoreFile("settings")
-        }
     }
 }
