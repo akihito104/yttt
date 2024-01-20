@@ -8,7 +8,6 @@ import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import com.freshdigitable.yttt.data.source.local.TwitchLiveLocalDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
-import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchAuthorizedUserTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterTable
@@ -21,15 +20,10 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchStreamTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelAdditionTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelDaoProviders
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistDaoProviders
+import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionDaoProviders
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDaoProviders
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -171,101 +165,18 @@ internal interface TwitchDaoModule {
     fun bindTwitchChannelScheduleExpireTableDao(dao: TwitchChannelScheduleExpireTable.Dao): TableDeletable
 }
 
-@Qualifier
-annotation class YouTubeQualifier
-
 @Module
 @InstallIn(SingletonComponent::class)
 internal interface YouTubeDaoModule {
-    companion object {
-        @Provides
-        fun provideYouTubeChannelDao(database: AppDatabase): YouTubeChannelTable.Dao =
-            database.youTubeChannelDao
-
-        @Provides
-        fun provideYouTubeChannelAdditionDao(database: AppDatabase): YouTubeChannelAdditionTable.Dao =
-            database.youTubeChannelAdditionDao
-
-        @Provides
-        fun provideYouTubeChannelLogDao(database: AppDatabase): YouTubeChannelLogTable.Dao =
-            database.youTubeChannelLogDao
-
-        @Provides
-        fun provideYouTubePlaylistDao(database: AppDatabase): YouTubePlaylistTable.Dao =
-            database.youTubePlaylistDao
-
-        @Provides
-        fun provideYouTubePlaylistItemDao(database: AppDatabase): YouTubePlaylistItemTable.Dao =
-            database.youTubePlaylistItemDao
-
-        @Provides
-        fun provideYouTubeSubscriptionDao(database: AppDatabase): YouTubeSubscriptionTable.Dao =
-            database.youTubeSubscriptionDao
-
-        @Provides
-        fun provideYouTubeVideoLogDao(database: AppDatabase): YouTubeVideoTable.Dao =
-            database.youTubeVideoDao
-
-        @Provides
-        fun provideYouTubeVideoExpireDao(database: AppDatabase): YouTubeVideoExpireTable.Dao =
-            database.youTubeVideoExpireDao
-
-        @Provides
-        fun provideYouTubeFreeChatDao(database: AppDatabase): FreeChatTable.Dao =
-            database.youTubeFreeChatDao
-
-        @Provides
-        fun provideYouTubeVideoIsArchivedDao(database: AppDatabase): YouTubeVideoIsArchivedTable.Dao =
-            database.youTubeVideoIsArchivedDao
-    }
+    @Binds
+    fun bindYouTubeVideoDaoProvider(db: AppDatabase): YouTubeVideoDaoProviders
 
     @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubeChannelDao(dao: YouTubeChannelTable.Dao): TableDeletable
+    fun bindYouTubeSubscriptionDaoProvider(db: AppDatabase): YouTubeSubscriptionDaoProviders
 
     @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubeChannelAdditionDao(dao: YouTubeChannelAdditionTable.Dao): TableDeletable
+    fun bindYouTubePlaylistDaoProvider(db: AppDatabase): YouTubePlaylistDaoProviders
 
     @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubeChannelLogDao(dao: YouTubeChannelLogTable.Dao): TableDeletable
-
-    @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubePlaylistDao(dao: YouTubePlaylistTable.Dao): TableDeletable
-
-    @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubePlaylistItemDao(dao: YouTubePlaylistItemTable.Dao): TableDeletable
-
-    @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubeSubscriptionDao(dao: YouTubeSubscriptionTable.Dao): TableDeletable
-
-    @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubeVideoDao(dao: YouTubeVideoTable.Dao): TableDeletable
-
-    @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubeVideoExpireDao(dao: YouTubeVideoExpireTable.Dao): TableDeletable
-
-    @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubeFreeChatDao(dao: FreeChatTable.Dao): TableDeletable
-
-    @Binds
-    @IntoSet
-    @YouTubeQualifier
-    fun bindYouTubeVideoIsArchivedDao(dao: YouTubeVideoIsArchivedTable.Dao): TableDeletable
+    fun bindYouTubeChannelDaoProvider(db: AppDatabase): YouTubeChannelDaoProviders
 }

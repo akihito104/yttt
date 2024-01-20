@@ -1,22 +1,20 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
-import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
-import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
+import javax.inject.Inject
 
 @Entity(
     tableName = "subscription",
@@ -42,6 +40,12 @@ internal class YouTubeSubscriptionTable(
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscriptionTable>)
+
+        @Query("DELETE FROM subscription WHERE id IN (:removed)")
+        suspend fun removeSubscriptions(removed: Collection<YouTubeSubscription.Id>)
+
         @Query("DELETE FROM subscription")
         override suspend fun deleteTable()
         interface Provider {
@@ -59,7 +63,19 @@ internal data class YouTubeSubscriptionDb(
     override val channel: YouTubeChannelTable,
     @ColumnInfo(name = "subs_order")
     override val order: Int,
-) : YouTubeSubscription
+) : YouTubeSubscription {
+    @androidx.room.Dao
+    internal interface Dao {
+        @Query(
+            "SELECT s.*, c.title AS channel_title, c.icon AS channel_icon FROM subscription AS s " +
+                "INNER JOIN channel AS c ON c.id = s.channel_id ORDER BY subs_order ASC"
+        )
+        suspend fun findAllSubscriptions(): List<YouTubeSubscriptionDb>
+        interface Provider {
+            val youtubeSubscriptionDbDao: Dao
+        }
+    }
+}
 
 internal data class YouTubeSubscriptionSummaryDb(
     @ColumnInfo("subscription_id")
@@ -70,20 +86,32 @@ internal data class YouTubeSubscriptionSummaryDb(
     override val uploadedPlaylistId: YouTubePlaylist.Id?,
     @ColumnInfo("playlist_expired_at")
     override val playlistExpiredAt: Instant?,
-) : YouTubeSubscriptionSummary
+) : YouTubeSubscriptionSummary {
+    @androidx.room.Dao
+    internal interface Dao {
+        @Query(
+            "SELECT s.id AS subscription_id, s.channel_id, c.uploaded_playlist_id, " +
+                "(c.last_modified + c.max_age) AS playlist_expired_at FROM subscription AS s " +
+                "LEFT OUTER JOIN ( " +
+                " SELECT c.id, c.uploaded_playlist_id, p.max_age, p.last_modified FROM channel_addition AS c " +
+                " INNER JOIN playlist AS p ON c.uploaded_playlist_id = p.id " +
+                ") AS c ON s.channel_id = c.id"
+        )
+        suspend fun findAllSubscriptionSummary(): List<YouTubeSubscriptionSummaryDb>
+        interface Provider {
+            val youTubeSubscriptionSummaryDbDao: Dao
+        }
+    }
+}
 
-@DatabaseView(
-    "SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived FROM playlist_item AS i " +
-        "LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id",
-    viewName = "yt_playlist_item_summary",
-)
-internal class YouTubePlaylistItemSummaryDb(
-    @ColumnInfo("playlist_id")
-    override val playlistId: YouTubePlaylist.Id,
-    @ColumnInfo("playlist_item_id")
-    override val playlistItemId: YouTubePlaylistItem.Id,
-    @ColumnInfo("video_id")
-    override val videoId: YouTubeVideo.Id,
-    @ColumnInfo("is_archived")
-    override val isArchived: Boolean?,
-) : YouTubePlaylistItemSummary
+internal interface YouTubeSubscriptionDaoProviders : YouTubeSubscriptionTable.Dao.Provider,
+    YouTubeSubscriptionDb.Dao.Provider, YouTubeSubscriptionSummaryDb.Dao.Provider
+
+internal interface YouTubeSubscriptionDao : YouTubeSubscriptionTable.Dao,
+    YouTubeSubscriptionDb.Dao, YouTubeSubscriptionSummaryDb.Dao
+
+internal class YouTubeSubscriptionDaoImpl @Inject constructor(
+    db: YouTubeSubscriptionDaoProviders,
+) : YouTubeSubscriptionDao, YouTubeSubscriptionTable.Dao by db.youTubeSubscriptionDao,
+    YouTubeSubscriptionDb.Dao by db.youtubeSubscriptionDbDao,
+    YouTubeSubscriptionSummaryDb.Dao by db.youTubeSubscriptionSummaryDbDao

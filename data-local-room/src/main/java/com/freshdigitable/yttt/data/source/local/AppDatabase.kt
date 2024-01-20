@@ -33,7 +33,6 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConverter
@@ -104,7 +103,6 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     CsvConverter::class,
 )
 internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProviders {
-    internal abstract val youtubeDao: YouTubeDao
     internal abstract val twitchDao: TwitchDao
 
     @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))

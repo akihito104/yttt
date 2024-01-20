@@ -8,6 +8,7 @@ import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelAddition
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -17,6 +18,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.math.BigInteger
 import java.time.Instant
+import javax.inject.Inject
 
 @Entity(tableName = "channel")
 internal data class YouTubeChannelTable(
@@ -28,8 +30,15 @@ internal data class YouTubeChannelTable(
     @ColumnInfo(name = "icon", defaultValue = "")
     override val iconUrl: String = "",
 ) : YouTubeChannel {
+
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addChannels(channels: Collection<YouTubeChannelTable>)
+
+        @Query("SELECT * FROM channel WHERE id = :id")
+        suspend fun findChannel(id: YouTubeChannel.Id): YouTubeChannelTable?
+
         @Query("DELETE FROM channel")
         override suspend fun deleteTable()
         interface Provider {
@@ -83,6 +92,9 @@ internal data class YouTubeChannelAdditionTable(
 
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addChannelAddition(addition: Collection<YouTubeChannelAdditionTable>)
+
         @Query("DELETE FROM channel_addition")
         override suspend fun deleteTable()
         interface Provider {
@@ -101,6 +113,15 @@ internal data class YouTubeChannelDetailDb(
 ) : YouTubeChannelDetail, YouTubeChannel, YouTubeChannelAddition by addition {
     @Ignore
     override val id: YouTubeChannel.Id = addition.id
+
+    @androidx.room.Dao
+    internal interface Dao {
+        @Query("SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id WHERE c.id IN (:id)")
+        suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDb>
+        interface Provider {
+            val youTubeChannelDetailDbDao: Dao
+        }
+    }
 }
 
 @Entity(
@@ -132,8 +153,32 @@ internal data class YouTubeChannelLogTable(
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     override val thumbnailUrl: String = "",
 ) : YouTubeChannelLog {
+
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLogTable>)
+
+        @Query(
+            "SELECT * FROM channel_log" +
+                " WHERE channel_id = :channelId AND datetime >= :publishedAfter" +
+                " ORDER BY datetime DESC LIMIT :maxResult"
+        )
+        suspend fun findChannelLogs(
+            channelId: YouTubeChannel.Id,
+            publishedAfter: Instant,
+            maxResult: Long? = Long.MAX_VALUE,
+        ): List<YouTubeChannelLogTable>
+
+        @Query(
+            "SELECT * FROM channel_log WHERE channel_id = :channelId" +
+                " ORDER BY datetime DESC LIMIT :maxResult"
+        )
+        suspend fun findChannelLogs(
+            channelId: YouTubeChannel.Id,
+            maxResult: Long? = Long.MAX_VALUE
+        ): List<YouTubeChannelLogTable>
+
         @Query("DELETE FROM channel_log")
         override suspend fun deleteTable()
         interface Provider {
@@ -143,4 +188,23 @@ internal data class YouTubeChannelLogTable(
 }
 
 internal interface YouTubeChannelDaoProviders : YouTubeChannelTable.Dao.Provider,
-    YouTubeChannelAdditionTable.Dao.Provider, YouTubeChannelLogTable.Dao.Provider
+    YouTubeChannelAdditionTable.Dao.Provider, YouTubeChannelLogTable.Dao.Provider,
+    YouTubeChannelDetailDb.Dao.Provider
+
+internal interface YouTubeChannelDao : YouTubeChannelTable.Dao, YouTubeChannelAdditionTable.Dao,
+    YouTubeChannelLogTable.Dao, YouTubeChannelDetailDb.Dao
+
+internal class YouTubeChannelDaoImpl @Inject constructor(
+    private val db: YouTubeChannelDaoProviders,
+) : YouTubeChannelDao, YouTubeChannelTable.Dao by db.youTubeChannelDao,
+    YouTubeChannelAdditionTable.Dao by db.youTubeChannelAdditionDao,
+    YouTubeChannelLogTable.Dao by db.youTubeChannelLogDao,
+    YouTubeChannelDetailDb.Dao by db.youTubeChannelDetailDbDao {
+    override suspend fun deleteTable() {
+        listOf(
+            db.youTubeChannelDao,
+            db.youTubeChannelAdditionDao,
+            db.youTubeChannelLogDao
+        ).forEach { it.deleteTable() }
+    }
+}
