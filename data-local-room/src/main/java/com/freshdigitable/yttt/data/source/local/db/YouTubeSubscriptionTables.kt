@@ -48,9 +48,6 @@ internal class YouTubeSubscriptionTable(
 
         @Query("DELETE FROM subscription")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubeSubscriptionDao: Dao
-        }
     }
 }
 
@@ -71,9 +68,6 @@ internal data class YouTubeSubscriptionDb(
                 "INNER JOIN channel AS c ON c.id = s.channel_id ORDER BY subs_order ASC"
         )
         suspend fun findAllSubscriptions(): List<YouTubeSubscriptionDb>
-        interface Provider {
-            val youtubeSubscriptionDbDao: Dao
-        }
     }
 }
 
@@ -98,14 +92,14 @@ internal data class YouTubeSubscriptionSummaryDb(
                 ") AS c ON s.channel_id = c.id"
         )
         suspend fun findAllSubscriptionSummary(): List<YouTubeSubscriptionSummaryDb>
-        interface Provider {
-            val youTubeSubscriptionSummaryDbDao: Dao
-        }
     }
 }
 
-internal interface YouTubeSubscriptionDaoProviders : YouTubeSubscriptionTable.Dao.Provider,
-    YouTubeSubscriptionDb.Dao.Provider, YouTubeSubscriptionSummaryDb.Dao.Provider
+internal interface YouTubeSubscriptionDaoProviders {
+    val youTubeSubscriptionDao: YouTubeSubscriptionTable.Dao
+    val youtubeSubscriptionDbDao: YouTubeSubscriptionDb.Dao
+    val youTubeSubscriptionSummaryDbDao: YouTubeSubscriptionSummaryDb.Dao
+}
 
 internal interface YouTubeSubscriptionDao : YouTubeSubscriptionTable.Dao,
     YouTubeSubscriptionDb.Dao, YouTubeSubscriptionSummaryDb.Dao

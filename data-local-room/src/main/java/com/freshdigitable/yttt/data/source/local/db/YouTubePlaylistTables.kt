@@ -72,9 +72,6 @@ internal class YouTubePlaylistTable(
 
         @Query("DELETE FROM playlist")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubePlaylistDao: Dao
-        }
     }
 }
 
@@ -126,9 +123,6 @@ internal class YouTubePlaylistItemTable(
 
         @Query("DELETE FROM playlist_item")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubePlaylistItemDao: Dao
-        }
     }
 }
 
@@ -154,10 +148,6 @@ internal class YouTubePlaylistItemSummaryDb(
             id: YouTubePlaylist.Id,
             maxResult: Long,
         ): List<YouTubePlaylistItemSummaryDb>
-
-        interface Provider {
-            val youTubePlaylistItemSummaryDbDao: Dao
-        }
     }
 }
 
@@ -188,16 +178,15 @@ internal data class YouTubePlaylistItemDb(
                 "INNER JOIN channel AS c ON c.id = p.channel_id WHERE p.playlist_id = :id"
         )
         suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDb>
-
-        interface Provider {
-            val youTubePlaylistItemDbDao: Dao
-        }
     }
 }
 
-internal interface YouTubePlaylistDaoProviders : YouTubePlaylistTable.Dao.Provider,
-    YouTubePlaylistItemTable.Dao.Provider, YouTubePlaylistItemSummaryDb.Dao.Provider,
-    YouTubePlaylistItemDb.Dao.Provider
+internal interface YouTubePlaylistDaoProviders {
+    val youTubePlaylistDao: YouTubePlaylistTable.Dao
+    val youTubePlaylistItemDao: YouTubePlaylistItemTable.Dao
+    val youTubePlaylistItemSummaryDbDao: YouTubePlaylistItemSummaryDb.Dao
+    val youTubePlaylistItemDbDao: YouTubePlaylistItemDb.Dao
+}
 
 internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistItemTable.Dao,
     YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao

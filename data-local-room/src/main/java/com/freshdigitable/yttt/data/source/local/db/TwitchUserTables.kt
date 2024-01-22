@@ -35,9 +35,6 @@ internal data class TwitchUserTable(
 
         @Query("DELETE FROM twitch_user")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchUserDao: Dao
-        }
     }
 }
 
@@ -71,9 +68,6 @@ internal class TwitchUserDetailTable(
 
         @Query("DELETE FROM twitch_user_detail")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchUserDetailDao: Dao
-        }
     }
 }
 
@@ -143,9 +137,6 @@ internal class TwitchUserDetailExpireTable(
 
         @Query("DELETE FROM twitch_user_detail_expire")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchUserDetailExpireDao: Dao
-        }
     }
 }
 
@@ -183,9 +174,6 @@ internal class TwitchBroadcasterTable(
 
         @Query("DELETE FROM twitch_broadcaster")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchBroadcasterDao: Dao
-        }
     }
 }
 
@@ -213,9 +201,6 @@ internal class TwitchBroadcasterExpireTable(
 
         @Query("DELETE FROM twitch_broadcaster_expire")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchBroadcasterExpireDao: Dao
-        }
     }
 }
 
@@ -264,16 +249,16 @@ internal class TwitchAuthorizedUserTable(
 
         @Query("DELETE FROM twitch_auth_user")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchAuthUserDao: Dao
-        }
     }
 }
 
-internal interface TwitchUserDaoProviders : TwitchUserTable.Dao.Provider,
-    TwitchUserDetailTable.Dao.Provider, TwitchUserDetailExpireTable.Dao.Provider,
-    TwitchBroadcasterTable.Dao.Provider, TwitchBroadcasterExpireTable.Dao.Provider,
-    TwitchAuthorizedUserTable.Dao.Provider {
+internal interface TwitchUserDaoProviders {
+    val twitchUserDao: TwitchUserTable.Dao
+    val twitchUserDetailDao: TwitchUserDetailTable.Dao
+    val twitchBroadcasterDao: TwitchBroadcasterTable.Dao
+    val twitchUserDetailExpireDao: TwitchUserDetailExpireTable.Dao
+    val twitchBroadcasterExpireDao: TwitchBroadcasterExpireTable.Dao
+    val twitchAuthUserDao: TwitchAuthorizedUserTable.Dao
     val twitchBroadcasterDbDao: TwitchBroadcasterDb.Dao
     val twitchUserDetailViewDao: TwitchUserDetailDbView.Dao
 }

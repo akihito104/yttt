@@ -43,9 +43,6 @@ internal class TwitchChannelVacationScheduleTable(
 
         @Query("DELETE FROM twitch_channel_schedule_vacation")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchChannelScheduleVacationDao: Dao
-        }
     }
 }
 
@@ -101,9 +98,6 @@ internal class TwitchStreamScheduleTable(
 
         @Query("DELETE FROM twitch_channel_schedule_stream")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchChannelScheduleStreamDao: Dao
-        }
     }
 }
 
@@ -172,9 +166,6 @@ internal class TwitchChannelScheduleExpireTable(
 
         @Query("DELETE FROM twitch_channel_schedule_expire")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchChannelScheduleExpireDao: Dao
-        }
     }
 }
 
@@ -185,8 +176,10 @@ internal class TwitchStreamCategory(
     override val name: String,
 ) : TwitchChannelSchedule.StreamCategory
 
-internal interface TwitchScheduleDaoProviders : TwitchChannelVacationScheduleTable.Dao.Provider,
-    TwitchStreamScheduleTable.Dao.Provider, TwitchChannelScheduleExpireTable.Dao.Provider {
+internal interface TwitchScheduleDaoProviders {
+    val twitchChannelScheduleVacationDao: TwitchChannelVacationScheduleTable.Dao
+    val twitchChannelScheduleStreamDao: TwitchStreamScheduleTable.Dao
+    val twitchChannelScheduleExpireDao: TwitchChannelScheduleExpireTable.Dao
     val twitchScheduleDbDao: TwitchChannelScheduleDb.Dao
 }
 

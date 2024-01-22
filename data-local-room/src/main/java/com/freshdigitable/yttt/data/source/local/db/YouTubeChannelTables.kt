@@ -41,9 +41,6 @@ internal data class YouTubeChannelTable(
 
         @Query("DELETE FROM channel")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubeChannelDao: Dao
-        }
     }
 }
 
@@ -97,9 +94,6 @@ internal data class YouTubeChannelAdditionTable(
 
         @Query("DELETE FROM channel_addition")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubeChannelAdditionDao: Dao
-        }
     }
 }
 
@@ -118,9 +112,6 @@ internal data class YouTubeChannelDetailDb(
     internal interface Dao {
         @Query("SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id WHERE c.id IN (:id)")
         suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDb>
-        interface Provider {
-            val youTubeChannelDetailDbDao: Dao
-        }
     }
 }
 
@@ -181,15 +172,15 @@ internal data class YouTubeChannelLogTable(
 
         @Query("DELETE FROM channel_log")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubeChannelLogDao: Dao
-        }
     }
 }
 
-internal interface YouTubeChannelDaoProviders : YouTubeChannelTable.Dao.Provider,
-    YouTubeChannelAdditionTable.Dao.Provider, YouTubeChannelLogTable.Dao.Provider,
-    YouTubeChannelDetailDb.Dao.Provider
+internal interface YouTubeChannelDaoProviders {
+    val youTubeChannelDao: YouTubeChannelTable.Dao
+    val youTubeChannelAdditionDao: YouTubeChannelAdditionTable.Dao
+    val youTubeChannelDetailDbDao: YouTubeChannelDetailDb.Dao
+    val youTubeChannelLogDao: YouTubeChannelLogTable.Dao
+}
 
 internal interface YouTubeChannelDao : YouTubeChannelTable.Dao, YouTubeChannelAdditionTable.Dao,
     YouTubeChannelLogTable.Dao, YouTubeChannelDetailDb.Dao

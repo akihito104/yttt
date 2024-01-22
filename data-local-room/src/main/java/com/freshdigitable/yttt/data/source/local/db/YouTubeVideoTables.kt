@@ -72,9 +72,6 @@ internal class YouTubeVideoTable(
 
         @Query("DELETE FROM video")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubeVideoDao: Dao
-        }
 
         companion object {
             internal const val CONDITION_UNFINISHED_VIDEOS =
@@ -134,10 +131,6 @@ internal data class YouTubeVideoDb(
         @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
         fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
 
-        interface Provider {
-            val youtubeVideoDbDao: Dao
-        }
-
         companion object {
             private const val SQL_FIND_ALL_UNFINISHED_VIDEOS =
                 "$SQL_VIDEOS WHERE $CONDITION_UNFINISHED_VIDEOS"
@@ -176,9 +169,6 @@ internal class FreeChatTable(
 
         @Query("DELETE FROM free_chat")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubeFreeChatDao: Dao
-        }
     }
 }
 
@@ -210,9 +200,6 @@ internal class YouTubeVideoExpireTable(
 
         @Query("DELETE FROM video_expire")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubeVideoExpireDao: Dao
-        }
     }
 }
 
@@ -234,15 +221,16 @@ internal class YouTubeVideoIsArchivedTable(
 
         @Query("DELETE FROM yt_video_is_archived")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubeVideoIsArchivedDao: Dao
-        }
     }
 }
 
-internal interface YouTubeVideoDaoProviders : YouTubeVideoTable.Dao.Provider,
-    YouTubeVideoDb.Dao.Provider, YouTubeVideoExpireTable.Dao.Provider,
-    YouTubeVideoIsArchivedTable.Dao.Provider, FreeChatTable.Dao.Provider
+internal interface YouTubeVideoDaoProviders {
+    val youTubeVideoDao: YouTubeVideoTable.Dao
+    val youtubeVideoDbDao: YouTubeVideoDb.Dao
+    val youTubeVideoExpireDao: YouTubeVideoExpireTable.Dao
+    val youTubeFreeChatDao: FreeChatTable.Dao
+    val youTubeVideoIsArchivedDao: YouTubeVideoIsArchivedTable.Dao
+}
 
 internal interface YouTubeVideoDao : YouTubeVideoTable.Dao, YouTubeVideoDb.Dao,
     YouTubeVideoExpireTable.Dao, YouTubeVideoIsArchivedTable.Dao, FreeChatTable.Dao

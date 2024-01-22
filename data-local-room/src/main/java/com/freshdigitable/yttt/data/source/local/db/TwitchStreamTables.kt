@@ -62,9 +62,6 @@ internal class TwitchStreamTable(
 
         @Query("DELETE FROM twitch_stream")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchStreamDao: Dao
-        }
     }
 }
 
@@ -131,14 +128,12 @@ internal class TwitchStreamExpireTable(
 
         @Query("DELETE FROM twitch_stream_expire")
         override suspend fun deleteTable()
-        interface Provider {
-            val twitchStreamExpireDao: Dao
-        }
     }
 }
 
-internal interface TwitchStreamDaoProviders : TwitchStreamTable.Dao.Provider,
-    TwitchStreamExpireTable.Dao.Provider {
+internal interface TwitchStreamDaoProviders {
+    val twitchStreamDao: TwitchStreamTable.Dao
+    val twitchStreamExpireDao: TwitchStreamExpireTable.Dao
     val twitchStreamViewDao: TwitchStreamDbView.Dao
 }
 
