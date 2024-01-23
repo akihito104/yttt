@@ -12,6 +12,9 @@ import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.local.TableDeletable
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_ALIAS
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_PREFIX
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_USER_DETAIL
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
@@ -103,11 +106,11 @@ internal class TwitchStreamScheduleTable(
 
 internal class TwitchChannelScheduleDb(
     @Relation(
-        parentColumn = "${TwitchUserDetailDbView.SQL_EMBED_PREFIX}id",
+        parentColumn = "${SQL_EMBED_PREFIX}id",
         entityColumn = "user_id"
     )
     override val segments: List<TwitchStreamScheduleTable>?,
-    @Embedded(TwitchUserDetailDbView.SQL_EMBED_PREFIX)
+    @Embedded(SQL_EMBED_PREFIX)
     override val broadcaster: TwitchUserDetailDbView,
     @Embedded
     override val vacation: TwitchChannelVacationSchedule?,
@@ -116,12 +119,12 @@ internal class TwitchChannelScheduleDb(
     internal interface Dao {
         @Transaction
         @Query(
-            "SELECT s.vacation_start, s.vacation_end, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
+            "SELECT s.vacation_start, s.vacation_end, $SQL_EMBED_ALIAS " +
                 "FROM (SELECT ss.* FROM twitch_channel_schedule_vacation AS ss " +
                 " INNER JOIN twitch_channel_schedule_expire AS e ON ss.user_id = e.user_id " +
                 " WHERE :current < e.expired_at " +
                 ") AS s " +
-                "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id " +
+                "INNER JOIN ($SQL_USER_DETAIL) AS u ON s.user_id = u.id " +
                 "WHERE u.id = :id"
         )
         suspend fun findChannelSchedule(
@@ -131,9 +134,9 @@ internal class TwitchChannelScheduleDb(
 
         @Transaction
         @Query(
-            "SELECT s.vacation_start, s.vacation_end, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
+            "SELECT s.vacation_start, s.vacation_end, $SQL_EMBED_ALIAS " +
                 "FROM twitch_channel_schedule_vacation AS s " +
-                "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id"
+                "INNER JOIN ($SQL_USER_DETAIL) AS u ON s.user_id = u.id"
         )
         fun watchChannelSchedule(): Flow<List<TwitchChannelScheduleDb>>
     }

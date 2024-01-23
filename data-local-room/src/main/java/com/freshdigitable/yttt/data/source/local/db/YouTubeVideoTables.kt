@@ -67,7 +67,7 @@ internal class YouTubeVideoTable(
         @Query("DELETE FROM video WHERE id IN (:videoIds)")
         suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
 
-        @Query("SELECT id FROM video WHERE NOT (${CONDITION_UNFINISHED_VIDEOS})")
+        @Query("SELECT id FROM video WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
         suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
 
         @Query("DELETE FROM video")

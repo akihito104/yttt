@@ -11,6 +11,9 @@ import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.local.TableDeletable
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_ALIAS
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_PREFIX
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_USER_DETAIL
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
@@ -64,13 +67,13 @@ internal class TwitchStreamTable(
 
 @DatabaseView(
     viewName = "twitch_stream_view",
-    value = "SELECT s.*, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} FROM twitch_stream AS s " +
-        "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON u.id = s.user_id",
+    value = "SELECT s.*, $SQL_EMBED_ALIAS FROM twitch_stream AS s " +
+        "INNER JOIN ($SQL_USER_DETAIL) AS u ON u.id = s.user_id",
 )
 internal data class TwitchStreamDbView(
     @Embedded
     private val streamEntity: TwitchStreamTable,
-    @Embedded(TwitchUserDetailDbView.SQL_EMBED_PREFIX)
+    @Embedded(SQL_EMBED_PREFIX)
     override val user: TwitchUserDetailDbView,
 ) : TwitchStream {
     override val gameId: String get() = streamEntity.gameId

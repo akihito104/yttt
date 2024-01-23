@@ -98,12 +98,12 @@ internal data class TwitchUserDetailDbView(
     internal interface Dao {
         @Query(
             "SELECT u.* FROM twitch_auth_user AS a " +
-                "INNER JOIN (${SQL_USER_DETAIL}) AS u ON a.user_id = u.id LIMIT 1"
+                "INNER JOIN ($SQL_USER_DETAIL) AS u ON a.user_id = u.id LIMIT 1"
         )
         suspend fun findMe(): TwitchUserDetailDbView?
 
         @Query(
-            "SELECT v.* FROM (SELECT * FROM (${SQL_USER_DETAIL}) WHERE id IN (:ids)) AS v " +
+            "SELECT v.* FROM (SELECT * FROM ($SQL_USER_DETAIL) WHERE id IN (:ids)) AS v " +
                 "INNER JOIN (SELECT * FROM twitch_user_detail_expire WHERE :current < expired_at) AS e ON v.id = e.user_id"
         )
         suspend fun findUserDetail(
