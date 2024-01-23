@@ -82,7 +82,7 @@ internal class TwitchDao @Inject constructor(
         streams: Collection<TwitchStream>,
         expiredAt: Instant,
     ) = db.withTransaction {
-        removeAllStreams()
+        db.twitchStreamDao.deleteTable()
         setStreamExpire(TwitchStreamExpireTable(me, expiredAt))
         addUsers(streams.map { it.user.toTable() })
         addStreams(streams.map { it.toTable() })

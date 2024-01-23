@@ -58,9 +58,6 @@ internal class TwitchStreamTable(
         suspend fun addStreams(streams: Collection<TwitchStreamTable>)
 
         @Query("DELETE FROM twitch_stream")
-        suspend fun removeAllStreams()
-
-        @Query("DELETE FROM twitch_stream")
         override suspend fun deleteTable()
     }
 }
