@@ -1,10 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.db
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.Query
-import androidx.room.Transaction
-import androidx.room.Upsert
+import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -12,31 +8,26 @@ import com.freshdigitable.yttt.data.model.TwitchStreamSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
-import kotlinx.coroutines.flow.Flow
+import com.freshdigitable.yttt.data.source.local.AppDatabase
+import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import java.time.Instant
+import javax.inject.Inject
 
-@Dao
-internal interface TwitchDao {
-    @Transaction
-    suspend fun setMe(me: TwitchUserDetail, expiredAt: Instant) {
+internal class TwitchDao @Inject constructor(
+    private val db: AppDatabase,
+    private val userDao: TwitchUserDaoImpl,
+    private val scheduleDao: TwitchScheduleDaoImpl,
+    private val streamDao: TwitchStreamDaoImpl,
+) : TwitchUserDao by userDao, TwitchScheduleDao by scheduleDao, TwitchStreamDao by streamDao {
+    suspend fun setMe(me: TwitchUserDetail, expiredAt: Instant) = db.withTransaction {
         addUserDetails(listOf(me), expiredAt)
         setMeEntity(TwitchAuthorizedUserTable(me.id))
     }
 
-    @Insert
-    suspend fun setMeEntity(me: TwitchAuthorizedUserTable)
-
-    @Query(
-        "SELECT u.* FROM twitch_auth_user AS a " +
-            "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON a.user_id = u.id LIMIT 1"
-    )
-    suspend fun findMe(): TwitchUserDetailDbView?
-
-    @Transaction
     suspend fun addUserDetails(
         users: Collection<TwitchUserDetail>,
         expiredAt: Instant,
-    ) {
+    ) = db.withTransaction {
         val details = users.map { it.toTable() }
         val expires = users.map { TwitchUserDetailExpireTable(it.id, expiredAt) }
         addUsers(users.map { (it as TwitchUser).toTable() })
@@ -44,74 +35,28 @@ internal interface TwitchDao {
         addUserDetailExpireEntities(expires)
     }
 
-    @Upsert
-    suspend fun addUserDetailEntities(details: Collection<TwitchUserDetailTable>)
-
-    @Upsert
-    suspend fun addUserDetailExpireEntities(expires: Collection<TwitchUserDetailExpireTable>)
-
-    @Query(
-        "SELECT v.* FROM (SELECT * FROM (${TwitchUserDetailDbView.SQL_USER_DETAIL}) WHERE id IN (:ids)) AS v " +
-            "INNER JOIN (SELECT * FROM twitch_user_detail_expire WHERE :current < expired_at) AS e ON v.id = e.user_id"
-    )
-    suspend fun findUserDetail(
-        ids: Collection<TwitchUser.Id>,
-        current: Instant,
-    ): List<TwitchUserDetailDbView>
-
-    @Upsert
-    suspend fun addUsers(user: Collection<TwitchUserTable>)
-
-    @Query("SELECT * FROM twitch_user WHERE id = :id")
-    suspend fun findUser(id: TwitchUser.Id): TwitchUserTable?
-
-    @Transaction
-    suspend fun addBroadcasters(
+    private suspend fun addBroadcasters(
         followerId: TwitchUser.Id,
         broadcasters: Collection<TwitchBroadcaster>,
-    ) {
+    ) = db.withTransaction {
         addUsers(broadcasters.map { TwitchUserTable(it.id, it.loginName, it.displayName) })
         addBroadcasterEntities(broadcasters.map { it.toTable(followerId) })
     }
 
-    @Upsert
-    suspend fun addBroadcasterExpireEntity(expires: TwitchBroadcasterExpireTable)
-
-    @Upsert
-    suspend fun addBroadcasterEntities(broadcasters: Collection<TwitchBroadcasterTable>)
-
-    @Query(
-        "SELECT u.*, b.followed_at FROM " +
-            "(SELECT bb.* FROM twitch_broadcaster AS bb " +
-            " INNER JOIN twitch_broadcaster_expire AS e ON e.follower_user_id = bb.follower_user_id " +
-            " WHERE :current < e.expire_at) AS b " +
-            "INNER JOIN twitch_user AS u ON b.user_id = u.id " +
-            "WHERE b.follower_user_id = :id"
-    )
-    suspend fun findBroadcastersByFollowerId(
-        id: TwitchUser.Id,
-        current: Instant,
-    ): List<TwitchBroadcasterDb>
-
-    @Transaction
     suspend fun replaceAllBroadcasters(
         followerId: TwitchUser.Id,
         broadcasters: Collection<TwitchBroadcaster>,
         expiredAt: Instant,
-    ) {
+    ) = db.withTransaction {
         removeBroadcastersByFollowerId(followerId)
         addBroadcasters(followerId, broadcasters)
         addBroadcasterExpireEntity(TwitchBroadcasterExpireTable(followerId, expiredAt))
     }
 
-    @Query("DELETE FROM twitch_broadcaster WHERE follower_user_id = :followerId")
-    suspend fun removeBroadcastersByFollowerId(followerId: TwitchUser.Id)
-
-    @Transaction
     suspend fun replaceChannelSchedules(
         schedule: Collection<TwitchChannelSchedule>,
         expiredAt: Instant,
-    ) {
+    ) = db.withTransaction {
         val userIds = schedule.map { it.broadcaster.id }.toSet()
         val streams = schedule.map { it.toStreamScheduleTable() }.flatten()
         val vacations = schedule.map { it.toVacationScheduleTable() }
@@ -124,92 +69,29 @@ internal interface TwitchDao {
         addChannelScheduleExpireEntity(expire)
     }
 
-    @Query("DELETE FROM twitch_channel_schedule_stream WHERE user_id IN (:ids)")
-    suspend fun removeChannelStreamSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
-
-    @Query("DELETE FROM twitch_channel_schedule_vacation WHERE user_id IN (:ids)")
-    suspend fun removeChannelVacationSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
-
-    @Query("DELETE FROM twitch_channel_schedule_stream WHERE id IN (:ids)")
-    suspend fun removeChannelStreamSchedulesByIds(ids: Collection<TwitchChannelSchedule.Stream.Id>)
-
-    @Upsert
-    suspend fun addChannelStreamSchedules(streams: Collection<TwitchStreamScheduleTable>)
-
-    @Upsert
-    suspend fun addChannelVacationSchedules(streams: Collection<TwitchChannelVacationScheduleTable>)
-
-    @Upsert
-    suspend fun addChannelScheduleExpireEntity(schedule: Collection<TwitchChannelScheduleExpireTable>)
-
-    @Query("DELETE FROM twitch_channel_schedule_expire WHERE user_id IN (:id)")
-    suspend fun removeChannelScheduleExpireEntity(id: Collection<TwitchUser.Id>)
-
-    @Transaction
-    @Query(
-        "SELECT s.vacation_start, s.vacation_end, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
-            "FROM (SELECT ss.* FROM twitch_channel_schedule_vacation AS ss " +
-            " INNER JOIN twitch_channel_schedule_expire AS e ON ss.user_id = e.user_id " +
-            " WHERE :current < e.expired_at " +
-            ") AS s " +
-            "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id " +
-            "WHERE u.id = :id"
-    )
-    suspend fun findChannelSchedule(
-        id: TwitchUser.Id,
-        current: Instant,
-    ): List<TwitchChannelScheduleDb>
-
-    @Transaction
-    @Query(
-        "SELECT s.vacation_start, s.vacation_end, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
-            "FROM twitch_channel_schedule_vacation AS s " +
-            "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id"
-    )
-    fun watchChannelSchedule(): Flow<List<TwitchChannelScheduleDb>>
-
-    @Transaction
-    suspend fun findStreamSchedule(id: TwitchChannelSchedule.Stream.Id): TwitchVideo<TwitchChannelSchedule.Stream.Id>? {
-        val schedule = findStreamScheduleEntity(id) ?: return null
-        val user = findUser(schedule.userId) ?: return null
-        return TwitchStreamSchedule(user, schedule)
+    suspend fun findStreamSchedule(
+        id: TwitchChannelSchedule.Stream.Id
+    ): TwitchVideo<TwitchChannelSchedule.Stream.Id>? = db.withTransaction {
+        val schedule = findStreamScheduleEntity(id) ?: return@withTransaction null
+        val user = findUser(schedule.userId) ?: return@withTransaction null
+        TwitchStreamSchedule(user, schedule)
     }
 
-    @Query("SELECT * FROM twitch_channel_schedule_stream AS s WHERE s.id = :id")
-    suspend fun findStreamScheduleEntity(id: TwitchChannelSchedule.Stream.Id): TwitchStreamScheduleTable?
-
-    @Upsert
-    suspend fun addStreams(streams: Collection<TwitchStreamTable>)
-
-    @Transaction
     suspend fun replaceAllStreams(
         me: TwitchUser.Id,
         streams: Collection<TwitchStream>,
         expiredAt: Instant,
-    ) {
-        removeAllStreams()
+    ) = db.withTransaction {
+        db.twitchStreamDao.deleteTable()
         setStreamExpire(TwitchStreamExpireTable(me, expiredAt))
         addUsers(streams.map { it.user.toTable() })
         addStreams(streams.map { it.toTable() })
     }
 
-    @Query("SELECT * FROM twitch_stream_view AS v WHERE v.id = :id")
-    suspend fun findStream(id: TwitchStream.Id): TwitchStreamDbView
-
-    @Query("SELECT * FROM twitch_stream_view AS v ORDER BY v.started_at DESC")
-    fun watchStream(): Flow<List<TwitchStreamDbView>>
-
-    @Query("DELETE FROM twitch_stream")
-    suspend fun removeAllStreams()
-
-    @Query("SELECT * FROM twitch_stream_view AS v ORDER BY v.started_at DESC")
-    suspend fun findAllStreams(): List<TwitchStreamDbView>
-
-    @Query("SELECT * FROM twitch_stream_expire WHERE user_id = :me")
-    suspend fun findStreamExpire(me: TwitchUser.Id): TwitchStreamExpireTable?
-
-    @Upsert
-    suspend fun setStreamExpire(expiredAt: TwitchStreamExpireTable)
+    override suspend fun deleteTable() = db.withTransaction {
+        db.deferForeignKeys()
+        listOf(userDao, streamDao, scheduleDao).forEach { it.deleteTable() }
+    }
 }
 
 private fun TwitchUser.toTable(): TwitchUserTable = TwitchUserTable(id, loginName, displayName)
@@ -263,3 +145,6 @@ private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
     type = type,
     viewCount = viewCount,
 )
+
+internal interface TwitchDaoProviders : TwitchUserDaoProviders, TwitchStreamDaoProviders,
+    TwitchScheduleDaoProviders

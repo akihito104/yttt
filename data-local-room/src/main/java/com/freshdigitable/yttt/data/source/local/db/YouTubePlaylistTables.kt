@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
+import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -8,13 +9,16 @@ import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Duration
 import java.time.Instant
+import javax.inject.Inject
 
 @Entity(tableName = "playlist")
 internal class YouTubePlaylistTable(
@@ -47,11 +51,27 @@ internal class YouTubePlaylistTable(
 
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addPlaylist(playlist: YouTubePlaylistTable)
+
+        @Upsert
+        suspend fun addPlaylists(playlist: List<YouTubePlaylistTable>)
+
+        @Query("SELECT * FROM (SELECT * FROM playlist WHERE :since < (last_modified + max_age)) WHERE id = :id")
+        suspend fun findPlaylistById(
+            id: YouTubePlaylist.Id,
+            since: Instant = Instant.EPOCH,
+        ): YouTubePlaylistTable?
+
+        @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
+        suspend fun updatePlaylist(
+            id: YouTubePlaylist.Id,
+            lastModified: Instant,
+            maxAge: Duration,
+        )
+
         @Query("DELETE FROM playlist")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubePlaylistDao: Dao
-        }
     }
 }
 
@@ -95,11 +115,39 @@ internal class YouTubePlaylistItemTable(
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addPlaylistItems(items: Collection<YouTubePlaylistItemTable>)
+
+        @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
+        suspend fun removePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id)
+
         @Query("DELETE FROM playlist_item")
         override suspend fun deleteTable()
-        interface Provider {
-            val youTubePlaylistItemDao: Dao
-        }
+    }
+}
+
+@DatabaseView(
+    "SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived FROM playlist_item AS i " +
+        "LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id",
+    viewName = "yt_playlist_item_summary",
+)
+internal class YouTubePlaylistItemSummaryDb(
+    @ColumnInfo("playlist_id")
+    override val playlistId: YouTubePlaylist.Id,
+    @ColumnInfo("playlist_item_id")
+    override val playlistItemId: YouTubePlaylistItem.Id,
+    @ColumnInfo("video_id")
+    override val videoId: YouTubeVideo.Id,
+    @ColumnInfo("is_archived")
+    override val isArchived: Boolean?,
+) : YouTubePlaylistItemSummary {
+    @androidx.room.Dao
+    internal interface Dao {
+        @Query("SELECT * FROM yt_playlist_item_summary AS s WHERE s.playlist_id = :id LIMIT :maxResult")
+        suspend fun findPlaylistItemSummary(
+            id: YouTubePlaylist.Id,
+            maxResult: Long,
+        ): List<YouTubePlaylistItemSummaryDb>
     }
 }
 
@@ -122,7 +170,37 @@ internal data class YouTubePlaylistItemDb(
     override val videoOwnerChannelId: YouTubeChannel.Id?,
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
-) : YouTubePlaylistItem
+) : YouTubePlaylistItem {
+    @androidx.room.Dao
+    internal interface Dao {
+        @Query(
+            "SELECT p.*, c.icon AS channel_icon, c.title AS channel_title FROM playlist_item AS p " +
+                "INNER JOIN channel AS c ON c.id = p.channel_id WHERE p.playlist_id = :id"
+        )
+        suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDb>
+    }
+}
 
-internal interface YouTubePlaylistDaoProviders : YouTubePlaylistTable.Dao.Provider,
-    YouTubePlaylistItemTable.Dao.Provider
+internal interface YouTubePlaylistDaoProviders {
+    val youTubePlaylistDao: YouTubePlaylistTable.Dao
+    val youTubePlaylistItemDao: YouTubePlaylistItemTable.Dao
+    val youTubePlaylistItemSummaryDbDao: YouTubePlaylistItemSummaryDb.Dao
+    val youTubePlaylistItemDbDao: YouTubePlaylistItemDb.Dao
+}
+
+internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistItemTable.Dao,
+    YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao
+
+internal class YouTubePlaylistDaoImpl @Inject constructor(
+    private val db: YouTubePlaylistDaoProviders
+) : YouTubePlaylistDao, YouTubePlaylistTable.Dao by db.youTubePlaylistDao,
+    YouTubePlaylistItemTable.Dao by db.youTubePlaylistItemDao,
+    YouTubePlaylistItemSummaryDb.Dao by db.youTubePlaylistItemSummaryDbDao,
+    YouTubePlaylistItemDb.Dao by db.youTubePlaylistItemDbDao {
+    override suspend fun deleteTable() {
+        listOf(
+            db.youTubePlaylistDao,
+            db.youTubePlaylistItemDao
+        ).forEach { it.deleteTable() }
+    }
+}
