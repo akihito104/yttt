@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     id 'kotlin-kapt'
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.licensee)
 }
 
 android {
@@ -60,4 +61,12 @@ dependencies {
 
 kapt {
     correctErrorTypes true
+}
+
+licensee {
+    allow("Apache-2.0")
+    allow("MIT")
+    allowUrl("https://developer.android.com/studio/terms.html")
+    ignoreDependencies("junit")
+    ignoreDependencies("org.hamcrest")
 }

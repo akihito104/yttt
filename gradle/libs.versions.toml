@@ -2,6 +2,7 @@
 androidGradlePlugin = "8.2.0"
 kotlin = "1.8.10"
 kotlinxCoroutinesCore = "1.8.0-RC"
+licensee = "1.8.0"
 
 androidxComposeBom = "2023.09.00"
 accompanistPermissions = "0.32.0"
@@ -84,3 +85,4 @@ android-application = { id = "com.android.application", version.ref = "androidGr
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt-android" }
+licensee = { id = "app.cash.licensee", version.ref = "licensee" }
