@@ -3,6 +3,8 @@ androidGradlePlugin = "8.2.0"
 kotlin = "1.8.10"
 kotlinxCoroutinesCore = "1.8.0-RC"
 licensee = "1.8.0"
+oss-license-plugin = "0.10.6"
+oss-license-lib = "17.0.1"
 
 androidxComposeBom = "2023.09.00"
 accompanistPermissions = "0.32.0"
@@ -79,6 +81,7 @@ retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit
 okhttp-bom = { module = "com.squareup.okhttp3:okhttp-bom", version.ref = "okhttp" }
 okhttp = { module = "com.squareup.okhttp3:okhttp" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor" }
+oss-lisence-lib = { module = "com.google.android.gms:play-services-oss-licenses", version.ref = "oss-license-lib" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
@@ -86,3 +89,4 @@ android-library = { id = "com.android.library", version.ref = "androidGradlePlug
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt-android" }
 licensee = { id = "app.cash.licensee", version.ref = "licensee" }
+oss-license-plugin = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "oss-license-plugin" }

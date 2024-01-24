@@ -4,6 +4,7 @@ plugins {
     id 'kotlin-kapt'
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.licensee)
+    alias(libs.plugins.oss.license.plugin)
 }
 
 android {
@@ -53,6 +54,7 @@ dependencies {
     kapt libs.androidx.hilt.compiler
     implementation libs.hilt.android
     kapt libs.hilt.compiler
+    implementation libs.oss.lisence.lib
 
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
