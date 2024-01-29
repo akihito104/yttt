@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -42,9 +41,7 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     MainScreen(
-        drawerState = drawerState,
         navController = navController,
         navigation = viewModel.navigation,
         startDestination = viewModel.startDestination,
@@ -57,12 +54,12 @@ fun MainScreen(
 
 @Composable
 private fun MainScreen(
-    drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
     navController: NavHostController = rememberNavController(),
     navigation: Set<NavR>,
     startDestination: String,
     onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     ModalNavigationDrawer(
         drawerState = drawerState,
