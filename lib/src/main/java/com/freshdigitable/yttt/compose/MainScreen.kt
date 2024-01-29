@@ -173,7 +173,7 @@ internal enum class DrawerMenuItem(
         text = { stringResource(R.string.title_setting) },
     ),
     OSS_LICENSE(
-        text = { "OSS license" },
+        text = { stringResource(R.string.title_oss_license) },
     ),
 }
 
