@@ -1,13 +1,10 @@
 package com.freshdigitable.yttt.compose
 
-import android.content.Intent
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -19,54 +16,56 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.core.util.Consumer
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.freshdigitable.yttt.compose.navigation.NavActivity
+import com.freshdigitable.yttt.compose.navigation.NavR
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.lib.R
-import com.freshdigitable.yttt.logD
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
+import javax.inject.Qualifier
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    viewModel: MainViewModel = hiltViewModel()
+) {
     val navController = rememberNavController()
-    val activity = LocalContext.current as ComponentActivity
-    DisposableEffect(Unit) {
-        logD("MainScreen") { "DisposableEffect: " }
-        val listener = Consumer<Intent> {
-            val handled = navController.handleDeepLink(it)
-            logD("MainScreen") { "handleDeepLink(handled>$handled): ${it.data}" }
-        }
-        activity.addOnNewIntentListener(listener)
-        onDispose { activity.removeOnNewIntentListener(listener) }
-    }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     MainScreen(
-        drawerState = drawerState,
         navController = navController,
+        navigation = viewModel.navigation,
+        startDestination = viewModel.startDestination,
+        onDrawerMenuClick = {
+            val route = viewModel.getDrawerRoute(it)
+            navController.navigate(route)
+        },
     )
 }
 
 @Composable
 private fun MainScreen(
-    drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed),
     navController: NavHostController = rememberNavController(),
+    navigation: Set<NavR>,
+    startDestination: String,
+    onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             NavigationDrawerImpl(onClicked = {
-                navController.navigate(it)
+                onDrawerMenuClick(it)
                 coroutineScope.launch {
                     drawerState.close()
                 }
@@ -90,9 +89,9 @@ private fun MainScreen(
             NavHost(
                 modifier = Modifier.padding(padding),
                 navController = navController,
-                startDestination = MainNavRoute.TimetableTab.route,
+                startDestination = startDestination,
             ) {
-                composableWith(navController = navController, navRoutes = MainNavRoute.routes)
+                composableWith(navController = navController, navRoutes = navigation)
             }
         }
     }
@@ -158,7 +157,7 @@ private fun NavigationDrawerImpl(
     }
 }
 
-private enum class DrawerMenuItem(
+internal enum class DrawerMenuItem(
     val text: @Composable () -> String,
 ) {
     SUBSCRIPTION(
@@ -170,14 +169,9 @@ private enum class DrawerMenuItem(
     APP_SETTING(
         text = { stringResource(R.string.title_setting) },
     ),
-}
-
-private fun NavHostController.navigate(item: DrawerMenuItem) {
-    when (item) {
-        DrawerMenuItem.SUBSCRIPTION -> navigate(MainNavRoute.Subscription.route)
-        DrawerMenuItem.AUTH_STATUS -> navigate(MainNavRoute.Auth.route)
-        DrawerMenuItem.APP_SETTING -> navigate(MainNavRoute.Settings.route)
-    }
+    OSS_LICENSE(
+        text = { stringResource(R.string.title_oss_license) },
+    ),
 }
 
 @LightDarkModePreview
@@ -204,3 +198,22 @@ private fun NavDrawerPreview() {
         NavigationDrawerImpl(onClicked = {})
     }
 }
+
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
+) : ViewModel() {
+    val navigation: Set<NavR> = (MainNavRoute.routes + ossLicensePage).toSet()
+    val startDestination = MainNavRoute.TimetableTab.route
+    internal fun getDrawerRoute(item: DrawerMenuItem): String {
+        return when (item) {
+            DrawerMenuItem.SUBSCRIPTION -> MainNavRoute.Subscription.route
+            DrawerMenuItem.AUTH_STATUS -> MainNavRoute.Auth.route
+            DrawerMenuItem.APP_SETTING -> MainNavRoute.Settings.route
+            DrawerMenuItem.OSS_LICENSE -> ossLicensePage.path
+        }
+    }
+}
+
+@Qualifier
+annotation class OssLicenseNavigationQualifier

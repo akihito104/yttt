@@ -1,5 +1,8 @@
 package com.freshdigitable.yttt.compose.navigation
 
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
@@ -7,12 +10,18 @@ import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.navigation.activity
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import kotlin.reflect.KClass
+
+sealed interface NavR {
+    val path: String
+}
 
 abstract class NavRoute(
-    internal val path: String,
-) {
+    override val path: String,
+) : NavR {
     open val params: Array<out NavArg<*>>? = null
     private val pathParams: List<NavArg.PathParam<Any>>?
         get() = params?.filterIsInstance<NavArg.PathParam<Any>>()
@@ -51,27 +60,53 @@ abstract class NavRoute(
     abstract fun title(args: Bundle?): String?
 }
 
+abstract class NavActivity(
+    override val path: String,
+    val activityClass: KClass<out Activity>? = null,
+    val action: String? = Intent.ACTION_VIEW,
+    val data: Uri? = null,
+) : NavR
+
 @Suppress("UNCHECKED_CAST")
 fun <T> NavType<T?>.nonNull(): NavType<T> = this as NavType<T>
 
 fun NavGraphBuilder.composableWith(
     navController: NavHostController,
-    navRoutes: Collection<NavRoute>,
+    navRoutes: Collection<NavR>,
 ) {
     navRoutes.forEach { navRoute ->
-        composable(
-            navRoute.route,
-            arguments = navRoute.params?.map { navArg ->
-                navArgument(navArg.argName) {
-                    type = navArg.type
-                    navArg.nullable?.let {
-                        this.nullable = it
-                        this.defaultValue = navArg.defaultValue
-                    }
+        when (navRoute) {
+            is NavRoute -> composableWith(navController, navRoute)
+
+            is NavActivity -> {
+                activity(route = navRoute.path) {
+                    activityClass = navRoute.activityClass
+                    action = navRoute.action
+                    data = navRoute.data
                 }
-            } ?: emptyList(),
-            deepLinks = navRoute.deepLinks,
-            content = { navRoute.Content(navController = navController, backStackEntry = it) },
-        )
+            }
+        }
     }
+}
+
+private fun NavGraphBuilder.composableWith(
+    navController: NavHostController,
+    navRoute: NavRoute,
+) {
+    composable(
+        navRoute.route,
+        arguments = navRoute.params?.map { navArg ->
+            navArgument(navArg.argName) {
+                type = navArg.type
+                navArg.nullable?.let {
+                    this.nullable = it
+                    this.defaultValue = navArg.defaultValue
+                }
+            }
+        } ?: emptyList(),
+        deepLinks = navRoute.deepLinks,
+        content = {
+            navRoute.Content(navController = navController, backStackEntry = it)
+        },
+    )
 }

@@ -9,4 +9,5 @@
     <string name="title_twitch_authentication">Twitch Authentication</string>
     <string name="title_setting">Setting</string>
     <string name="title_timetable">Timetable</string>
+    <string name="title_oss_license">OSS license</string>
 </resources>
