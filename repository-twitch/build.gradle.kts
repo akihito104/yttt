@@ -23,15 +23,15 @@ android {
         val twitchProperties = Properties()
         if (twitchPFile.exists()) {
             FileInputStream(twitchPFile).use { twitchProperties.load(it) }
-            buildConfigField(
-                "String", "TWITCH_CLIENT_ID",
-                "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\""
-            )
-            buildConfigField(
-                "String", "TWITCH_REDIRECT_URI",
-                "\"${twitchProperties.getOrDefault("twitch_redirect_uri", "")}\""
-            )
         }
+        buildConfigField(
+            "String", "TWITCH_CLIENT_ID",
+            "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\""
+        )
+        buildConfigField(
+            "String", "TWITCH_REDIRECT_URI",
+            "\"${twitchProperties.getOrDefault("twitch_redirect_uri", "")}\""
+        )
     }
 
     buildFeatures {
