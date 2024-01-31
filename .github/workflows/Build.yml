@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build and lint check
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 30
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: validate gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 17
+
+      - name: setup gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: check license
+        run: ./gradlew :app:licensee
+
+      - name: upload licensee reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: licensee-reports
+          path: 'app/build/reports/licensee'
+
+      - name: assemble
+        if: always()
+        run: ./gradlew compileDebugSources
+
+      - name: android lint
+        if: always()
+        run: ./gradlew :app:lint
+
+      - name: upload lint reports (HTML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: '**/build/reports/lint-results-*.html'
+
+      - name: unit test
+        if: always()
+        run: ./gradlew testDebugUnitTest
+
+      - name: upload unit test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unittest-reports
+          path: '**/build/reports/tests'
