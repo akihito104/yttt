@@ -13,12 +13,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VideoDetailViewModel @Inject constructor(
-    findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
+    findLiveVideoTable: IdBaseClassMap<FindLiveVideoDetailAnnotatedUseCase>,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     private val videoId = MainNavRoute.VideoDetail.getId(savedStateHandle)
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
-    fun fetchViewDetail(): LiveData<LiveVideo?> {
+    fun fetchViewDetail(): LiveData<LiveVideoDetailAnnotated?> {
         return liveData(viewModelScope.coroutineContext) {
             val detail = findLiveVideo(videoId)
             if (detail == null) { // TODO: informing video is not found
