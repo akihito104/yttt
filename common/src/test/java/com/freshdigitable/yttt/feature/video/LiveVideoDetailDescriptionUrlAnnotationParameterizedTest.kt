@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
+import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
 import io.mockk.every
 import io.mockk.mockk
@@ -17,30 +18,35 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun params(): List<TestParam> = listOf(
-            TestParam.create(
-                tag = "has trailing slash",
+            TestParam.UrlTest(
+                name = "empty description",
+                description = "",
+                actual = emptyList(),
+            ),
+            TestParam.UrlTest.create(
+                name = "has trailing slash",
                 description = "https://example.com/",
                 TestParam.Actual(0, "https://example.com/"),
             ),
-            TestParam.create(
-                tag = "no trailing slash",
+            TestParam.UrlTest.create(
+                name = "no trailing slash",
                 description = "https://example.com",
                 TestParam.Actual(0, "https://example.com"),
             ),
-            TestParam.create(
-                tag = "has caption",
+            TestParam.UrlTest.create(
+                name = "has caption",
                 description = "link - https://example.com/",
                 TestParam.Actual(7, "https://example.com/"),
             ),
-            TestParam.create(
-                tag = "multibyte and line feed",
+            TestParam.UrlTest.create(
+                name = "multibyte and line feed",
                 description = """こんにちは✨
                     |link - https://example.com
                     |""".trimMargin(),
                 TestParam.Actual(7 + 7, "https://example.com"),
             ),
-            TestParam(
-                tag = "1 line contains 2 urls",
+            TestParam.UrlTest(
+                name = "1 line contains 2 urls",
                 description = """18:00 https://example.com/@account1 https://example.com/@account2
                     |19:00 https://example.com/@account3 https://example.com/@account4
                     |""".trimMargin(),
@@ -51,13 +57,13 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
                     TestParam.Actual(66 + 36, "https://example.com/@account4"),
                 ),
             ),
-            TestParam.create(
-                tag = "trailing unexpected parentheses",
+            TestParam.UrlTest.create(
+                name = "trailing unexpected parentheses",
                 description = "illust.: account00 (https://example.com/account00)",
                 TestParam.Actual(20, "https://example.com/account00")
             ),
-            TestParam(
-                tag = "no schema (well-known url: youtube.com)",
+            TestParam.UrlTest(
+                name = "no schema (well-known url: youtube.com)",
                 description = """goods - https://example.com/goods
                     |membership - www.youtube.com/@akihito104/join""".trimMargin(),
                 actual = listOf(
@@ -69,8 +75,17 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
                     ),
                 ),
             ),
-            TestParam(
-                tag = "item order with no schema (well-known url: youtube.com)",
+            TestParam.UrlTest(
+                name = "has schema (well-known url: youtube.com)",
+                description = """goods - https://example.com/goods
+                    |membership - https://www.youtube.com/@akihito104/join""".trimMargin(),
+                actual = listOf(
+                    TestParam.Actual(8, "https://example.com/goods"),
+                    TestParam.Actual(34 + 13, text = "https://www.youtube.com/@akihito104/join"),
+                ),
+            ),
+            TestParam.UrlTest(
+                name = "item order with no schema (well-known url: youtube.com)",
                 description = """goods - https://example.com/goods
                     |membership - www.youtube.com/@akihito104/join
                     |privacy policy - https://example.com/privacy
@@ -90,6 +105,44 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
                     ),
                 ),
             ),
+            TestParam.HashTagTest(
+                name = "empty description",
+                description = "",
+                actual = emptyList(),
+            ),
+            TestParam.HashTagTest.create(
+                name = "no line feed",
+                description = "fun art: #hashtag",
+                TestParam.Actual(9, "#hashtag"),
+            ),
+            TestParam.HashTagTest.create(
+                name = "has line feed",
+                description = """|
+                    |fun art: #hashtag
+                    |""".trimMargin(),
+                TestParam.Actual(10, "#hashtag"),
+            ),
+            TestParam.HashTagTest(
+                name = "multiple hashtags",
+                description = """#hashtag1
+                    |#hashtag2 #hashtag3
+                    |""".trimMargin(),
+                actual = listOf(
+                    TestParam.Actual(0, "#hashtag1"),
+                    TestParam.Actual(10, "#hashtag2"),
+                    TestParam.Actual(10 + 10, "#hashtag3"),
+                ),
+            ),
+            TestParam.HashTagTest(
+                name = "multibyte",
+                description = """配信タグ: #ハッシュタグ
+                    |ファンアート: ＃全角ハッシュタグ
+                    |""".trimMargin(),
+                actual = listOf(
+                    TestParam.Actual(6, "#ハッシュタグ"),
+                    TestParam.Actual(14 + 8, "＃全角ハッシュタグ"),
+                ),
+            ),
         )
     }
 
@@ -100,7 +153,7 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
             every { description } returns param.description
         }
         // exercise
-        val actual = detail.descriptionUrlAnnotation
+        val actual = param.sut(detail)
         // assertion
         assertEquals(
             param.actual.map {
@@ -108,20 +161,58 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
                     range = it.startPosition until (it.startPosition + it.text.length),
                     url = it.url,
                     text = it.text,
+                    tag = param.tag,
                 )
             },
             actual,
         )
     }
 
-    data class TestParam(
-        val tag: String? = null,
+    sealed class TestParam(
+        private val name: String? = null,
         val description: String,
         val actual: List<Actual>,
+        val tag: String,
+        val sut: (LiveVideoDetail) -> List<LinkAnnotationRange>,
     ) {
-        companion object {
-            fun create(tag: String? = null, description: String, actual: Actual): TestParam =
-                TestParam(tag, description, listOf(actual))
+        class UrlTest(
+            name: String?,
+            description: String,
+            actual: List<Actual>,
+        ) : TestParam(
+            "url:$name",
+            description,
+            actual,
+            tag = "URL",
+            sut = { it.descriptionUrlAnnotation },
+        ) {
+            companion object {
+                fun create(name: String? = null, description: String, actual: Actual): TestParam =
+                    UrlTest(name, description, listOf(actual))
+            }
+        }
+
+        class HashTagTest(
+            name: String?,
+            description: String,
+            actual: List<Actual>,
+        ) : TestParam(
+            "hashTag:$name",
+            description,
+            actual.map {
+                Actual(
+                    it.startPosition,
+                    it.text,
+                    "https://twitter.com/search?q=%23${it.text.substring(1)}",
+                )
+            },
+            tag = "hashtag",
+            sut = { it.descriptionHashTagAnnotation },
+        ) {
+            companion object {
+                fun create(name: String? = null, description: String, actual: Actual): TestParam =
+                    HashTagTest(name, description, listOf(actual))
+            }
         }
 
         data class Actual(
@@ -130,6 +221,6 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
             val url: String = text,
         )
 
-        override fun toString(): String = tag ?: description.lines().first()
+        override fun toString(): String = name ?: description.lines().first()
     }
 }

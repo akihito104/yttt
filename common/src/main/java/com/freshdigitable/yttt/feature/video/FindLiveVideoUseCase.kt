@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
+import java.util.regex.Pattern
 
 interface FindLiveVideoUseCase {
     suspend operator fun invoke(id: LiveVideo.Id): LiveVideo?
@@ -18,20 +19,34 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
         // https://stackoverflow.com/questions/36586166/android-patterns-web-url-broken
 //        private val WEB_URL_REGEX = Patterns.WEB_URL.toRegex()
         private val WEB_URL_REGEX = Regex("""http(s)?://[-\w.]+(:(\d+))?(/[^\s)]*)?""")
-        private val YOUTUBE_URL_REGEX = Regex("""(?<!http(s)?://)(www.)?youtube.com(/[^\s)]*)?""")
+        private val YOUTUBE_URL_REGEX =
+            Regex("""(?<!http(s)?://(www.)?)(www.)?youtube.com(/[^\s)]*)?""")
         val LiveVideoDetail.descriptionUrlAnnotation: List<LinkAnnotationRange>
             get() = (WEB_URL_REGEX.findAll(description).map {
                 LinkAnnotationRange(
                     range = it.range,
                     url = it.value,
+                    tag = "URL",
                 )
             } + YOUTUBE_URL_REGEX.findAll(description).map {
                 LinkAnnotationRange(
                     range = it.range,
                     url = "https://${it.value}",
                     text = it.value,
+                    tag = "URL",
                 )
             }).toList().sortedBy { it.range.first }
+        private val REGEX_HASHTAG =
+            Pattern.compile("""([#|＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+        val LiveVideoDetail.descriptionHashTagAnnotation: List<LinkAnnotationRange>
+            get() = REGEX_HASHTAG.findAll(description).map {
+                LinkAnnotationRange(
+                    range = it.range,
+                    text = it.value,
+                    url = "https://twitter.com/search?q=%23${it.value.drop(1)}",
+                    tag = "hashtag",
+                )
+            }.toList()
     }
 }
 
@@ -44,5 +59,5 @@ data class LinkAnnotationRange(
     val range: IntRange,
     val url: String,
     val text: String = url,
-    val tag: String = "URL",
+    val tag: String,
 )
