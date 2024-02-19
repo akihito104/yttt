@@ -134,13 +134,14 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
                 ),
             ),
             TestParam.HashTagTest(
-                name = "multibyte",
+                name = "multibyte (ja)",
                 description = """配信タグ: #ハッシュタグ
-                    |ファンアート: ＃全角ハッシュタグ
+                    |ファンアート: ＃全角ハッシュタグ　＃全角ハッシュタグR18
                     |""".trimMargin(),
                 actual = listOf(
                     TestParam.Actual(6, "#ハッシュタグ"),
                     TestParam.Actual(14 + 8, "＃全角ハッシュタグ"),
+                    TestParam.Actual(14 + 18, "＃全角ハッシュタグR18"),
                 ),
             ),
         )

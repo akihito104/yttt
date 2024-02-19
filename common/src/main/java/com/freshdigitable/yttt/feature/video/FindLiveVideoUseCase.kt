@@ -23,29 +23,21 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
             Regex("""(?<!http(s)?://(www.)?)(www.)?youtube.com(/[^\s)]*)?""")
         val LiveVideoDetail.descriptionUrlAnnotation: List<LinkAnnotationRange>
             get() = (WEB_URL_REGEX.findAll(description).map {
-                LinkAnnotationRange(
-                    range = it.range,
-                    url = it.value,
-                    tag = "URL",
-                )
+                LinkAnnotationRange.url(range = it.range, text = it.value)
             } + YOUTUBE_URL_REGEX.findAll(description).map {
-                LinkAnnotationRange(
+                LinkAnnotationRange.url(
                     range = it.range,
-                    url = "https://${it.value}",
                     text = it.value,
-                    tag = "URL",
+                    url = "https://${it.value}",
                 )
             }).toList().sortedBy { it.range.first }
         private val REGEX_HASHTAG =
-            Pattern.compile("""([#|＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+        // Pattern.UNICODE_CHARACTER_CLASS is not supported
+//            Pattern.compile("""([#|＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+            Pattern.compile("""([#|＃])[^\s　()<>{}\[\]#$'",.;:|\\]+""").toRegex()
         val LiveVideoDetail.descriptionHashTagAnnotation: List<LinkAnnotationRange>
             get() = REGEX_HASHTAG.findAll(description).map {
-                LinkAnnotationRange(
-                    range = it.range,
-                    text = it.value,
-                    url = "https://twitter.com/search?q=%23${it.value.drop(1)}",
-                    tag = "hashtag",
-                )
+                LinkAnnotationRange.hashtag(range = it.range, text = it.value)
             }.toList()
     }
 }
@@ -60,4 +52,17 @@ data class LinkAnnotationRange(
     val url: String,
     val text: String = url,
     val tag: String,
-)
+) {
+    companion object {
+        fun url(range: IntRange, text: String, url: String = text): LinkAnnotationRange =
+            LinkAnnotationRange(range = range, url = url, text = text, tag = "URL")
+
+        fun hashtag(range: IntRange, text: String): LinkAnnotationRange =
+            LinkAnnotationRange(
+                range = range,
+                text = text,
+                url = "https://twitter.com/search?q=%23${text.drop(1)}",
+                tag = "hashtag",
+            )
+    }
+}
