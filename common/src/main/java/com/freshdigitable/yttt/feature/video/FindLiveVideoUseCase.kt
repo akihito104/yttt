@@ -64,5 +64,11 @@ data class LinkAnnotationRange(
                 url = "https://twitter.com/search?q=%23${text.drop(1)}",
                 tag = "hashtag",
             )
+
+        fun LinkAnnotationRange.ellipsizeTextAt(length: Int): String {
+            if (tag != "URL") return text
+            if (text.length <= length) return text
+            return "${text.substring(0 until length)}..."
+        }
     }
 }

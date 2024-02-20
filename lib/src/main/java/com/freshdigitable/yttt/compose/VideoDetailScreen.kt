@@ -39,6 +39,7 @@ import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.video.LinkAnnotationRange
+import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Companion.ellipsizeTextAt
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
@@ -145,7 +146,7 @@ private fun LiveVideoDetailAnnotated.annotatedDescription(
             if (pos < a.range.first) {
                 appendRange(description, pos, a.range.first)
             }
-            annotateUrl(a.tag, a.url, a.text, linkStyle)
+            annotateUrl(a.tag, a.url, a.ellipsizeTextAt(37), linkStyle)
             pos = a.range.last + 1
         }
         if (pos < description.length) {
