@@ -34,7 +34,7 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
         private val REGEX_HASHTAG =
         // Pattern.UNICODE_CHARACTER_CLASS is not supported
 //            Pattern.compile("""([#|＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
-            Pattern.compile("""([#|＃])[^\s　()<>{}\[\]#$'",.;:|\\]+""").toRegex()
+            Pattern.compile("""([#|＃])[^\s　()<>{}\[\]（）【】「」『』#$'",.;:|\\]+""").toRegex()
         val LiveVideoDetail.descriptionHashTagAnnotation: List<LinkAnnotationRange>
             get() = REGEX_HASHTAG.findAll(description).map {
                 LinkAnnotationRange.hashtag(range = it.range, text = it.value)
