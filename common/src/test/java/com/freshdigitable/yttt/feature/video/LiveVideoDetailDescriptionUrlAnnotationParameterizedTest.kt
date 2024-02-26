@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Companion.ellipsizeTextAt
+import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Companion.ellipsizeTextIfNeeded
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
 import io.mockk.every
@@ -84,8 +84,7 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
                     TestParam.Expected.url(8, "https://example.com/goods"),
                     TestParam.Expected.url(
                         34 + 13,
-                        text = "https://www.youtube.com/@akihito104/join",
-                        ellipsized = "https://www.youtube.com/@akihito104/j...",
+                        "https://www.youtube.com/@akihito104/join",
                     ),
                 ),
             ),
@@ -93,9 +92,8 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
                 name = "item order with no schema (well-known url: youtube.com)",
                 description = """goods - https://example.com/goods
                     |membership - www.youtube.com/@akihito104/join
-                    |back number - https://youtube.com/playlist?list=ex
-                    |back number 2 - https://youtube.com/playlist?list=exa
-                    |back number 3 - https://youtube.com/playlist?list=exam
+                    |back number 1 - https://youtube.com/playlist?list=exampl
+                    |back number 2 - https://youtube.com/playlist?list=example
                     |""".trimMargin(),
                 expected = listOf(
                     TestParam.Expected.url(8, "https://example.com/goods"),
@@ -105,18 +103,12 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
                         url = "https://www.youtube.com/@akihito104/join",
                     ),
                     TestParam.Expected.url(
-                        34 + 46 + 14,
-                        "https://youtube.com/playlist?list=ex",
-                        ellipsized = "https://youtube.com/playlist?list=ex",
+                        34 + 46 + 16,
+                        "https://youtube.com/playlist?list=exampl",
                     ),
                     TestParam.Expected.url(
-                        34 + 46 + 51 + 16,
-                        "https://youtube.com/playlist?list=exa",
-                        ellipsized = "https://youtube.com/playlist?list=exa",
-                    ),
-                    TestParam.Expected.url(
-                        34 + 46 + 51 + 54 + 16,
-                        "https://youtube.com/playlist?list=exam",
+                        34 + 46 + 57 + 16,
+                        "https://youtube.com/playlist?list=example",
                         ellipsized = "https://youtube.com/playlist?list=exa...",
                     ),
                 ),
@@ -184,7 +176,7 @@ class LiveVideoDetailDescriptionUrlAnnotationParameterizedTest(
         }
         assertEquals(expected.values.toList(), actual)
         expected.forEach { (e, range) ->
-            assertEquals(e.ellipsized, range.ellipsizeTextAt(37))
+            assertEquals(e.ellipsized, range.ellipsizeTextIfNeeded())
         }
     }
 

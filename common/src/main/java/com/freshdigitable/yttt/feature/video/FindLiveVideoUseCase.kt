@@ -65,10 +65,13 @@ data class LinkAnnotationRange(
                 tag = "hashtag",
             )
 
-        fun LinkAnnotationRange.ellipsizeTextAt(length: Int): String {
+        fun LinkAnnotationRange.ellipsizeTextIfNeeded(
+            totalLength: Int = 40,
+            ellipsis: String = "...",
+        ): String {
             if (tag != "URL") return text
-            if (text.length <= length) return text
-            return "${text.substring(0 until length)}..."
+            if (text.length <= totalLength) return text
+            return "${text.substring(0 until totalLength - ellipsis.length)}..."
         }
     }
 }

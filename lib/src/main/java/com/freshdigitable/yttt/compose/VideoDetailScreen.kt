@@ -10,11 +10,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.LocalContentAlpha
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -39,7 +44,7 @@ import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.video.LinkAnnotationRange
-import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Companion.ellipsizeTextAt
+import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Companion.ellipsizeTextIfNeeded
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
@@ -62,6 +67,8 @@ fun VideoDetailScreen(
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
+    val ellipsized = remember { mutableStateOf<String?>(null) }
+    val urlHandler = LocalUriHandler.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -107,6 +114,13 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
                 DescriptionText(
                     fontSize = 14.sp,
                     annotatedDescription = video.annotatedDescription(linkStyle),
+                    onUrlClicked = {
+                        if (it.tag == "ellipsized") {
+                            ellipsized.value = it.item
+                        } else {
+                            urlHandler.openUri(it.item)
+                        }
+                    },
                 )
             }
             Text(
@@ -115,14 +129,25 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
             )
         }
     }
+    if (ellipsized.value != null) {
+        val url = checkNotNull(ellipsized.value)
+        EllipsizedUrlConfirmDialog(
+            text = url,
+            onConfirmClicked = {
+                urlHandler.openUri(url)
+                ellipsized.value = null
+            },
+            onDismissClicked = { ellipsized.value = null },
+        )
+    }
 }
 
 @Composable
 private fun DescriptionText(
     fontSize: TextUnit,
     annotatedDescription: AnnotatedString,
+    onUrlClicked: (AnnotatedString.Range<String>) -> Unit,
 ) {
-    val urlHandler = LocalUriHandler.current
     ClickableText(
         style = TextStyle.Default.copy(
             fontSize = fontSize,
@@ -132,7 +157,7 @@ private fun DescriptionText(
         onClick = { pos ->
             val annotation = annotatedDescription.getStringAnnotations(start = pos, end = pos)
                 .firstOrNull() ?: return@ClickableText
-            urlHandler.openUri(annotation.item)
+            onUrlClicked(annotation)
         },
     )
 }
@@ -146,7 +171,8 @@ private fun LiveVideoDetailAnnotated.annotatedDescription(
             if (pos < a.range.first) {
                 appendRange(description, pos, a.range.first)
             }
-            annotateUrl(a.tag, a.url, a.ellipsizeTextAt(37), linkStyle)
+            val tag: String = if (a.tag == "URL" && a.text.length > 40) "ellipsized" else a.tag
+            annotateUrl(tag, a.url, a.ellipsizeTextIfNeeded(40, "..."), linkStyle)
             pos = a.range.last + 1
         }
         if (pos < description.length) {
@@ -166,6 +192,29 @@ private fun AnnotatedString.Builder.annotateUrl(
         append(text)
     }
     pop()
+}
+
+@Composable
+private fun EllipsizedUrlConfirmDialog(
+    text: String,
+    onConfirmClicked: () -> Unit,
+    onDismissClicked: () -> Unit,
+    onDismissRequest: () -> Unit = onDismissClicked,
+) {
+    AlertDialog(
+        text = { Text(text = text) },
+        confirmButton = {
+            Button(onClick = onConfirmClicked) {
+                Text(text = "go to website")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissClicked) {
+                Text(text = "dismiss")
+            }
+        },
+        onDismissRequest = onDismissRequest,
+    )
 }
 
 private val LiveVideo.statsText: String
@@ -213,6 +262,19 @@ fun DescriptionTextPreview() {
                 appendLine("hello.")
                 annotateUrl(tag = "URL", url = "http://example.com/", spanStyle = linkStyle)
             },
+            onUrlClicked = {},
+        )
+    }
+}
+
+@LightDarkModePreview
+@Composable
+private fun EllipsizedUrlConfirmDialogPreview() {
+    AppTheme {
+        EllipsizedUrlConfirmDialog(
+            text = "https://www.example.com/veryverylongurl",
+            onConfirmClicked = { },
+            onDismissClicked = { },
         )
     }
 }
