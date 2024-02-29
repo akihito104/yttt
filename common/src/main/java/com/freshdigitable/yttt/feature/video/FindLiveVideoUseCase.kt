@@ -54,15 +54,16 @@ data class LinkAnnotationRange(
     val tag: String,
 ) {
     companion object {
-        fun url(range: IntRange, text: String, url: String = text): LinkAnnotationRange =
+        private const val TWITTER_SEARCH_API = "https://twitter.com/search?q=%23"
+        internal fun url(range: IntRange, text: String, url: String = text): LinkAnnotationRange =
             LinkAnnotationRange(range = range, url = url, text = text, tag = "URL")
 
-        fun hashtag(range: IntRange, text: String): LinkAnnotationRange =
+        internal fun hashtag(range: IntRange, text: String): LinkAnnotationRange =
             LinkAnnotationRange(
                 range = range,
                 text = text,
-                url = "https://twitter.com/search?q=%23${text.drop(1)}",
-                tag = "hashtag",
+                url = "$TWITTER_SEARCH_API${text.drop(1)}",
+                tag = "hashtag"
             )
 
         fun LinkAnnotationRange.ellipsizeTextIfNeeded(

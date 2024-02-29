@@ -72,12 +72,12 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                 Param(
                     name = "url",
                     description = "https://example.com/",
-                    actual = listOf(Param.Actual.url(0, "https://example.com/"))
+                    expected = listOf(Param.Expected.url(0, "https://example.com/"))
                 ),
                 Param(
                     name = "hashtag",
                     description = "#hashtag1",
-                    actual = listOf(Param.Actual.hashtag(0, "#hashtag1"))
+                    expected = listOf(Param.Expected.hashtag(0, "#hashtag1"))
                 ),
                 Param(
                     name = "hashtag and url",
@@ -86,11 +86,11 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                         |main: #hash_main
                         |fa: #hash_fa
                     """.trimMargin(),
-                    actual = listOf(
-                        Param.Actual.hashtag(0, "#hashtag1"),
-                        Param.Actual.url(10, "https://example.com/"),
-                        Param.Actual.hashtag(10 + 21 + 6, "#hash_main"),
-                        Param.Actual.hashtag(10 + 21 + 17 + 4, "#hash_fa"),
+                    expected = listOf(
+                        Param.Expected.hashtag(0, "#hashtag1"),
+                        Param.Expected.url(10, "https://example.com/"),
+                        Param.Expected.hashtag(10 + 21 + 6, "#hash_main"),
+                        Param.Expected.hashtag(10 + 21 + 17 + 4, "#hash_fa"),
                     )
                 ),
                 Param(
@@ -98,9 +98,9 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                     description = """#hashtag1
                         |https://example.com/#example
                     """.trimMargin(),
-                    actual = listOf(
-                        Param.Actual.hashtag(0, "#hashtag1"),
-                        Param.Actual.url(10, "https://example.com/#example"),
+                    expected = listOf(
+                        Param.Expected.hashtag(0, "#hashtag1"),
+                        Param.Expected.url(10, "https://example.com/#example"),
                     )
                 ),
             )
@@ -121,36 +121,34 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
             // verify
             assertNotNull(actual)
             checkNotNull(actual)
-            assertEquals(param.actual.size, actual.descriptionAnnotationRangeItems.size)
-            assertEquals(
-                param.actual.map {
-                    LinkAnnotationRange(
-                        range = it.startPosition until (it.startPosition + it.text.length),
-                        url = it.url,
-                        text = it.text,
-                        tag = it.tag,
-                    )
-                },
-                actual.descriptionAnnotationRangeItems,
-            )
+            assertEquals(param.expected.size, actual.descriptionAnnotationRangeItems.size)
+            param.expected.forEachIndexed { i, e ->
+                val a = actual.descriptionAnnotationRangeItems[i]
+                assertEquals(e.range, a.range)
+                assertEquals(e.text, a.text)
+                assertEquals(e.url, a.url)
+                assertEquals(e.tag, a.tag)
+            }
         }
 
         class Param(
             val name: String,
             val description: String,
-            val actual: List<Actual>,
+            val expected: List<Expected>,
         ) {
-            class Actual(
-                val startPosition: Int,
+            class Expected(
+                startPosition: Int,
                 val text: String,
                 val url: String = text,
                 val tag: String,
             ) {
-                companion object {
-                    fun url(startPosition: Int, text: String, url: String = text): Actual =
-                        Actual(startPosition, text, url, tag = "URL")
+                val range: IntRange = startPosition until (startPosition + text.length)
 
-                    fun hashtag(startPosition: Int, text: String): Actual = Actual(
+                companion object {
+                    fun url(startPosition: Int, text: String, url: String = text): Expected =
+                        Expected(startPosition, text, url, tag = "URL")
+
+                    fun hashtag(startPosition: Int, text: String): Expected = Expected(
                         startPosition,
                         text,
                         url = "https://twitter.com/search?q=%23${text.substring(1)}",
