@@ -44,7 +44,7 @@ import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.video.LinkAnnotationRange
-import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Companion.ellipsizeTextIfNeeded
+import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Url.Companion.ellipsize
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
@@ -115,10 +115,11 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
                     fontSize = 14.sp,
                     annotatedDescription = video.annotatedDescription(linkStyle),
                     onUrlClicked = {
-                        if (it.tag == "ellipsized") {
-                            ellipsized.value = it.item
+                        val linkAnnotation = LinkAnnotationRange.createFromTag(it.tag)
+                        if (linkAnnotation is LinkAnnotationRange.EllipsizedUrl) {
+                            ellipsized.value = linkAnnotation.url
                         } else {
-                            urlHandler.openUri(it.item)
+                            urlHandler.openUri(linkAnnotation.url)
                         }
                     },
                 )
@@ -166,13 +167,19 @@ private fun LiveVideoDetailAnnotated.annotatedDescription(
     linkStyle: SpanStyle
 ): AnnotatedString {
     var pos = 0
+    val items = descriptionAnnotationRangeItems.map {
+        if (it is LinkAnnotationRange.Url && it.text.length > 40) {
+            it.ellipsize(totalLength = 40, ellipsis = "...")
+        } else {
+            it
+        }
+    }.sortedBy { it.range.first }
     return buildAnnotatedString {
-        descriptionAnnotationRangeItems.forEach { a ->
+        items.forEach { a ->
             if (pos < a.range.first) {
                 appendRange(description, pos, a.range.first)
             }
-            val tag: String = if (a.tag == "URL" && a.text.length > 40) "ellipsized" else a.tag
-            annotateUrl(tag, a.url, a.ellipsizeTextIfNeeded(40, "..."), linkStyle)
+            annotateUrl(a.tag, a.url, a.text, linkStyle)
             pos = a.range.last + 1
         }
         if (pos < description.length) {

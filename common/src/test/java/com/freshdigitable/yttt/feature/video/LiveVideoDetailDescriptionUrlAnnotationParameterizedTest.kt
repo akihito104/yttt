@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Companion.ellipsizeTextIfNeeded
+import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Url.Companion.ellipsize
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
 import io.mockk.every
@@ -15,22 +15,21 @@ import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Enclosed::class)
 class LiveVideoDetailAnnotatedTest {
+    class Fundamental {
+        @Test
+        fun serializable() {
+            val sut = LinkAnnotationRange.Url(range = 0..10, text = "https://example.com/")
+            val actual = LinkAnnotationRange.createFromTag(sut.tag)
+            assertEquals(sut, actual)
+        }
+    }
+
     @RunWith(Parameterized::class)
     class EllipsizeText(private val param: TestParam) {
         companion object {
             @JvmStatic
             @Parameters
             fun params(): List<TestParam> = listOf(
-                TestParam(
-                    text = "#hashtag",
-                    tag = "hashtag",
-                    expected = "#hashtag",
-                ),
-                TestParam(
-                    text = "#hashtag_very_long_but_ellipsized_because_of_hashtag",
-                    tag = "hashtag",
-                    expected = "#hashtag_very_long_but_ellipsized_because_of_hashtag",
-                ),
                 TestParam(
                     text = "https://example.com/",
                     expected = "https://example.com/",
@@ -43,27 +42,31 @@ class LiveVideoDetailAnnotatedTest {
                     text = "https://example.com/very/long/so/ellipize",
                     expected = "https://example.com/very/long/so/elli...",
                 ),
+                TestParam(
+                    text = "https://example.com/very/long/so/ellipized/this",
+                    ellipsis = "…",
+                    expected = "https://example.com/very/long/so/ellipi…",
+                ),
             )
         }
 
         @Test
         fun test() {
             // setup
-            val sut = LinkAnnotationRange(
+            val sut = LinkAnnotationRange.Url(
                 text = param.text,
                 range = 0 until param.text.length, // do not care
-                tag = param.tag,
-                url = "--do not care--"
             )
             // exercise
-            val actual = sut.ellipsizeTextIfNeeded()
+            val actual = sut.ellipsize(param.totalLength, param.ellipsis).text
             // verify
             assertEquals(param.expected, actual)
         }
 
         data class TestParam(
             val text: String,
-            val tag: String = "URL",
+            val totalLength: Int = 40,
+            val ellipsis: String = "...",
             val expected: String,
         )
     }
@@ -223,7 +226,6 @@ class LiveVideoDetailAnnotatedTest {
                 assertEquals(e.range, a.range)
                 assertEquals(e.text, a.text)
                 assertEquals(e.url, a.url)
-                assertEquals(e.tag, a.tag)
             }
         }
 
@@ -256,17 +258,16 @@ class LiveVideoDetailAnnotatedTest {
                 private val startPosition: Int,
                 val text: String,
                 val url: String = text,
-                val tag: String,
             ) {
                 val range: IntRange = startPosition until (startPosition + text.length)
 
                 companion object {
                     fun url(startPosition: Int, text: String, url: String = text): Expected =
-                        Expected(startPosition, text, url, tag = "URL")
+                        Expected(startPosition, text, url)
 
                     fun hashtag(startPosition: Int, text: String): Expected {
                         val url = "https://twitter.com/search?q=%23${text.substring(1)}"
-                        return Expected(startPosition, text, url, tag = "hashtag")
+                        return Expected(startPosition, text, url)
                     }
                 }
             }

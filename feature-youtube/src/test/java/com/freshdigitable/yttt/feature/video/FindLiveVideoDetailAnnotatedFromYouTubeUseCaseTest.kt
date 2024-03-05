@@ -127,7 +127,6 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                 assertEquals(e.range, a.range)
                 assertEquals(e.text, a.text)
                 assertEquals(e.url, a.url)
-                assertEquals(e.tag, a.tag)
             }
         }
 
@@ -140,19 +139,17 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                 startPosition: Int,
                 val text: String,
                 val url: String = text,
-                val tag: String,
             ) {
                 val range: IntRange = startPosition until (startPosition + text.length)
 
                 companion object {
                     fun url(startPosition: Int, text: String, url: String = text): Expected =
-                        Expected(startPosition, text, url, tag = "URL")
+                        Expected(startPosition, text, url)
 
                     fun hashtag(startPosition: Int, text: String): Expected = Expected(
                         startPosition,
                         text,
                         url = "https://twitter.com/search?q=%23${text.substring(1)}",
-                        tag = "hashtag",
                     )
                 }
             }

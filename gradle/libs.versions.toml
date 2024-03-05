@@ -2,6 +2,7 @@
 androidGradlePlugin = "8.2.0"
 kotlin = "1.8.10"
 kotlinxCoroutinesCore = "1.8.0-RC"
+kotlinxSerializationJson = "1.6.3"
 licensee = "1.8.0"
 oss-license-plugin = "0.10.6"
 oss-license-lib = "17.0.1"
@@ -73,6 +74,7 @@ hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hil
 junit = { module = "junit:junit", version.ref = "junit" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 okhttp3-integration = { module = "com.github.bumptech.glide:okhttp3-integration", version.ref = "glide" }
 play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "play-services-auth" }
