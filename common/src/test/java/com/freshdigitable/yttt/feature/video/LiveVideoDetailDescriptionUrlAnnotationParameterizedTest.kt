@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Url.Companion.ellipsize
+import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionAccountAnnotation
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
 import io.mockk.every
@@ -17,8 +18,19 @@ import org.junit.runners.Parameterized.Parameters
 class LiveVideoDetailAnnotatedTest {
     class Fundamental {
         @Test
-        fun serializable() {
+        fun serializableUrl() {
             val sut = LinkAnnotationRange.Url(range = 0..10, text = "https://example.com/")
+            val actual = LinkAnnotationRange.createFromTag(sut.tag)
+            assertEquals(sut, actual)
+        }
+
+        @Test
+        fun serializableAccount() {
+            val sut = LinkAnnotationRange.Account(
+                range = 0..10,
+                text = "@account01",
+                urlCandidate = listOf("https://example.com/@account01"),
+            )
             val actual = LinkAnnotationRange.createFromTag(sut.tag)
             assertEquals(sut, actual)
         }
@@ -208,6 +220,32 @@ class LiveVideoDetailAnnotatedTest {
                         TestParam.Expected.hashtag(14 + 31 + 7, "#全角ハッシュタグコラボ"),
                     ),
                 ),
+                TestParam.account(
+                    name = "simple",
+                    description = "@account01",
+                    expected = TestParam.Expected.account(0, "@account01"),
+                ),
+                TestParam.account(
+                    name = "multiple at line",
+                    description = """@account01
+                        |@account02 @account03
+                    """.trimMargin(),
+                    expected = listOf(
+                        TestParam.Expected.account(0, "@account01"),
+                        TestParam.Expected.account(11, "@account02"),
+                        TestParam.Expected.account(11 + 11, "@account03"),
+                    ),
+                ),
+                TestParam.account(
+                    name = "account in url", // should remove in post process
+                    description = """@account01
+                        |https://www.youtube.com/@account02/join
+                    """.trimMargin(),
+                    expected = listOf(
+                        TestParam.Expected.account(0, "@account01"),
+                        TestParam.Expected.account(11 + 24, "@account02"),
+                    ),
+                ),
             )
         }
 
@@ -252,6 +290,19 @@ class LiveVideoDetailAnnotatedTest {
 
                 fun hashtag(name: String, description: String, expected: Expected): TestParam =
                     hashtag(name, description, listOf(expected))
+
+                fun account(
+                    name: String,
+                    description: String,
+                    expected: List<Expected>,
+                ): TestParam = TestParam(
+                    "account:$name",
+                    description,
+                    expected
+                ) { sut -> sut.descriptionAccountAnnotation { listOf("https://example.com/$it") } }
+
+                fun account(name: String, description: String, expected: Expected): TestParam =
+                    account(name, description, listOf(expected))
             }
 
             data class Expected(
@@ -269,6 +320,9 @@ class LiveVideoDetailAnnotatedTest {
                         val url = "https://twitter.com/search?q=%23${text.substring(1)}"
                         return Expected(startPosition, text, url)
                     }
+
+                    fun account(startPosition: Int, text: String): Expected =
+                        Expected(startPosition, text, "https://example.com/$text")
                 }
             }
 

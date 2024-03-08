@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveVideoDetail
+import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionAccountAnnotation
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
 import javax.inject.Inject
@@ -30,7 +31,16 @@ internal class FindLiveVideoDetailAnnotatedFromYouTubeUseCase @Inject constructo
         val hashtagAnnotation = v.descriptionHashTagAnnotation.filter { a ->
             urlAnnotation.map { it.range }.all { !it.contains(a.range.first) }
         }
-        val items = (urlAnnotation + hashtagAnnotation).sortedBy { it.range.first }
+        val accountAnnotation = v.descriptionAccountAnnotation {
+            listOf(
+                "https://youtube.com/$it",
+                "https://twitter.com/${it.substring(1)}",
+            )
+        }.filter { a ->
+            urlAnnotation.map { it.range }.all { !it.contains(a.range.first) }
+        }
+        val items = (urlAnnotation + hashtagAnnotation + accountAnnotation)
+            .sortedBy { it.range.first }
         return LiveVideoDetailAnnotatedEntity(v, items)
     }
 }

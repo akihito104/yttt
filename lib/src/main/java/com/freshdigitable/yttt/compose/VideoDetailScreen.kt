@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.compose
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -12,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -67,7 +69,7 @@ fun VideoDetailScreen(
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
-    val ellipsized = remember { mutableStateOf<String?>(null) }
+    val dialog = remember { mutableStateOf<LinkAnnotationRange?>(null) }
     val urlHandler = LocalUriHandler.current
     Column(
         modifier = Modifier
@@ -116,8 +118,10 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
                     annotatedDescription = video.annotatedDescription(linkStyle),
                     onUrlClicked = {
                         val linkAnnotation = LinkAnnotationRange.createFromTag(it.tag)
-                        if (linkAnnotation is LinkAnnotationRange.EllipsizedUrl) {
-                            ellipsized.value = linkAnnotation.url
+                        if (linkAnnotation is LinkAnnotationRange.EllipsizedUrl ||
+                            linkAnnotation is LinkAnnotationRange.Account
+                        ) {
+                            dialog.value = linkAnnotation
                         } else {
                             urlHandler.openUri(linkAnnotation.url)
                         }
@@ -130,16 +134,31 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
             )
         }
     }
-    if (ellipsized.value != null) {
-        val url = checkNotNull(ellipsized.value)
-        EllipsizedUrlConfirmDialog(
-            text = url,
+    when (val d = dialog.value) {
+        is LinkAnnotationRange.EllipsizedUrl -> EllipsizedUrlConfirmDialog(
+            text = d.url,
             onConfirmClicked = {
-                urlHandler.openUri(url)
-                ellipsized.value = null
+                urlHandler.openUri(d.url)
+                dialog.value = null
             },
-            onDismissClicked = { ellipsized.value = null },
+            onDismissClicked = { dialog.value = null },
         )
+
+        is LinkAnnotationRange.Account -> AccountDialog(
+            account = d.text,
+            urls = d.urlCandidate,
+            onUrlClicked = {
+                urlHandler.openUri(it)
+                dialog.value = null
+            },
+            onDismissRequest = { dialog.value = null },
+        )
+
+        null -> {
+            // NOP
+        }
+
+        else -> throw IllegalStateException("not supported type: $d")
     }
 }
 
@@ -224,6 +243,43 @@ private fun EllipsizedUrlConfirmDialog(
     )
 }
 
+@Composable
+fun AccountDialog(
+    account: String,
+    urls: List<String>,
+    onUrlClicked: (String) -> Unit,
+    onDismissRequest: () -> Unit,
+    onConfirmClicked: () -> Unit = onDismissRequest,
+) {
+    AlertDialog(
+        title = { Text(text = "Choose URL for $account") },
+        text = {
+            Column {
+                urls.forEach {
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                text = it,
+                                style = TextStyle.Default.copy(
+                                    color = linkStyle.color,
+                                    textDecoration = linkStyle.textDecoration,
+                                ),
+                            )
+                        },
+                        modifier = Modifier.clickable { onUrlClicked(it) }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirmClicked) {
+                Text(text = "dismiss")
+            }
+        },
+        onDismissRequest = onDismissRequest,
+    )
+}
+
 private val LiveVideo.statsText: String
     get() {
         val time = if (isNowOnAir()) {
@@ -282,6 +338,19 @@ private fun EllipsizedUrlConfirmDialogPreview() {
             text = "https://www.example.com/veryverylongurl",
             onConfirmClicked = { },
             onDismissClicked = { },
+        )
+    }
+}
+
+@LightDarkModePreview
+@Composable
+private fun AccountDialogPreview() {
+    AppTheme {
+        AccountDialog(
+            account = "@account01",
+            urls = listOf("https://example.com/1/@account01", "https://example.com/2/@account01"),
+            onUrlClicked = {},
+            onDismissRequest = {},
         )
     }
 }

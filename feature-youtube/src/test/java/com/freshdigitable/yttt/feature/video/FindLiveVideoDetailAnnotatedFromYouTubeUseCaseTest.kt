@@ -80,6 +80,11 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                     expected = listOf(Param.Expected.hashtag(0, "#hashtag1"))
                 ),
                 Param(
+                    name = "account",
+                    description = "@account01",
+                    expected = listOf(Param.Expected.account(0, "@account01")),
+                ),
+                Param(
                     name = "hashtag and url",
                     description = """#hashtag1
                         |https://example.com/
@@ -102,6 +107,17 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                         Param.Expected.hashtag(0, "#hashtag1"),
                         Param.Expected.url(10, "https://example.com/#example"),
                     )
+                ),
+                Param(
+                    name = "url has account",
+                    description = """#hashtag1
+                        |@account01 ( https://example.com/@account01 )
+                    """.trimMargin(),
+                    expected = listOf(
+                        Param.Expected.hashtag(0, "#hashtag1"),
+                        Param.Expected.account(10, "@account01"),
+                        Param.Expected.url(10 + 13, "https://example.com/@account01"),
+                    ),
                 ),
             )
         }
@@ -150,6 +166,10 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                         startPosition,
                         text,
                         url = "https://twitter.com/search?q=%23${text.substring(1)}",
+                    )
+
+                    fun account(startPosition: Int, text: String): Expected = Expected(
+                        startPosition, text, url = "https://youtube.com/$text",
                     )
                 }
             }

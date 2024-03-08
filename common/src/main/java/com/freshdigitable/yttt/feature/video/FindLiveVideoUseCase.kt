@@ -55,6 +55,18 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
             get() = REGEX_HASHTAG.findAll(description).map {
                 LinkAnnotationRange.Hashtag(range = it.range, text = it.value)
             }.toList()
+        private val REGEX_ACCOUNT = Pattern.compile("""@([\w_.-]{3,30})""").toRegex()
+        fun LiveVideoDetail.descriptionAccountAnnotation(
+            urlCreator: (String) -> List<String>,
+        ): List<LinkAnnotationRange> {
+            return REGEX_ACCOUNT.findAll(description).map {
+                LinkAnnotationRange.Account(
+                    range = it.range,
+                    text = it.value,
+                    urlCandidate = urlCreator(it.value),
+                )
+            }.toList()
+        }
     }
 }
 
@@ -112,12 +124,24 @@ sealed interface LinkAnnotationRange {
         }
     }
 
+    @Serializable
+    data class Account(
+        @Contextual
+        override val range: IntRange,
+        override val text: String,
+        val urlCandidate: List<String>,
+    ) : LinkAnnotationRange {
+        override val url: String
+            get() = urlCandidate.first()
+    }
+
     companion object {
         private val module = SerializersModule {
             polymorphic(LinkAnnotationRange::class) {
                 subclass(Url.serializer())
                 subclass(EllipsizedUrl.serializer())
                 subclass(Hashtag.serializer())
+                subclass(Account.serializer())
             }
             contextual(IntRange::class, IntRangeSerializer)
         }
