@@ -3,12 +3,14 @@ package com.freshdigitable.yttt.feature.video
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionAccountAnnotation
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveVideoDetail
-import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionAccountAnnotation
-import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
-import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
 import javax.inject.Inject
 
 internal class FindLiveVideoFromYouTubeUseCase @Inject constructor(

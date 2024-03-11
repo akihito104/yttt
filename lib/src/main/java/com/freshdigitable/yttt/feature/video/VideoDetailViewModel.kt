@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.MainNavRoute
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject

@@ -1,10 +1,11 @@
 package com.freshdigitable.yttt.feature.video
 
+import com.freshdigitable.yttt.data.model.LinkAnnotationRange
+import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.ellipsize
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Url.Companion.ellipsize
-import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionAccountAnnotation
-import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
-import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionAccountAnnotation
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals

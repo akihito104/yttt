@@ -3,6 +3,8 @@ package com.freshdigitable.yttt.feature.video
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUserDetail

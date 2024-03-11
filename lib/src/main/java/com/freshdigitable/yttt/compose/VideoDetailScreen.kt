@@ -40,14 +40,14 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.data.model.LinkAnnotationRange
+import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.ellipsize
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
-import com.freshdigitable.yttt.feature.video.LinkAnnotationRange
-import com.freshdigitable.yttt.feature.video.LinkAnnotationRange.Url.Companion.ellipsize
-import com.freshdigitable.yttt.feature.video.LiveVideoDetailAnnotated
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
 
