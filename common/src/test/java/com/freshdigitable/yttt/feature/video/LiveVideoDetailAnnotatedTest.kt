@@ -133,8 +133,13 @@ class LiveVideoDetailAnnotatedTest {
                 ),
                 TestParam.url(
                     name = "trailing unexpected parentheses",
-                    description = "illust.: account00 (https://example.com/account00)",
-                    TestParam.Expected.url(20, "https://example.com/account00")
+                    description = """illust.: account00 (https://example.com/account00)
+                        |mix: account01 【https://example.com/account01】
+                    """.trimMargin(),
+                    expected = listOf(
+                        TestParam.Expected.url(20, "https://example.com/account00"),
+                        TestParam.Expected.url(51 + 16, "https://example.com/account01"),
+                    )
                 ),
                 TestParam.url(
                     name = "no schema (well-known url: youtube.com)",
@@ -245,6 +250,16 @@ class LiveVideoDetailAnnotatedTest {
                     expected = listOf(
                         TestParam.Expected.account(0, "@account01"),
                         TestParam.Expected.account(11 + 24, "@account02"),
+                    ),
+                ),
+                TestParam.account(
+                    name = "account with parenthesis",
+                    description = """account01 (@account01)
+                        |account02 【@account02】
+                    """.trimMargin(),
+                    expected = listOf(
+                        TestParam.Expected.account(11, "@account01"),
+                        TestParam.Expected.account(23 + 11, "@account02"),
                     ),
                 ),
             )

@@ -16,17 +16,18 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
-import java.util.regex.Pattern
 
 interface LiveVideoDetailAnnotated : LiveVideoDetail {
     val descriptionAnnotationRangeItems: List<LinkAnnotationRange>
 
     companion object {
+        private const val PARENTHESIS = "()<>{}\\[\\]（）【】「」『』"
+
         // https://stackoverflow.com/questions/36586166/android-patterns-web-url-broken
 //        private val WEB_URL_REGEX = Patterns.WEB_URL.toRegex()
-        private val WEB_URL_REGEX = Regex("""http(s)?://[-\w.]+(:(\d+))?(/[^\s)]*)?""")
+        private val WEB_URL_REGEX = Regex("""http(s)?://[-\w.]+(:(\d+))?(/[^\s$PARENTHESIS]*)?""")
         private val YOUTUBE_URL_REGEX =
-            Regex("""(?<!http(s)?://(www.)?)(www.)?youtube.com(/[^\s)]*)?""")
+            Regex("""(?<!http(s)?://(www.)?)(www.)?youtube.com(/[^\s$PARENTHESIS]*)?""")
         val LiveVideoDetail.descriptionUrlAnnotation: List<LinkAnnotationRange>
             get() = (WEB_URL_REGEX.findAll(description).map {
                 LinkAnnotationRange.Url(range = it.range, text = it.value)
@@ -39,13 +40,13 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
             }).toList().sortedBy { it.range.first }
         private val REGEX_HASHTAG =
         // Pattern.UNICODE_CHARACTER_CLASS is not supported
-//            Pattern.compile("""([#|＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
-            Pattern.compile("""([#|＃])[^\s　()<>{}\[\]（）【】「」『』#$'",.;:|\\]+""").toRegex()
+//            Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+            Regex("""([#＃])[^\s　$PARENTHESIS#$'",.;:|\\]+""")
         val LiveVideoDetail.descriptionHashTagAnnotation: List<LinkAnnotationRange>
             get() = REGEX_HASHTAG.findAll(description).map {
                 LinkAnnotationRange.Hashtag(range = it.range, text = it.value)
             }.toList()
-        private val REGEX_ACCOUNT = Pattern.compile("""@([\w_.-]{3,30})""").toRegex()
+        private val REGEX_ACCOUNT = Regex("""@([\w_.-]{3,30})""")
         fun LiveVideoDetail.descriptionAccountAnnotation(
             urlCreator: (String) -> List<String>,
         ): List<LinkAnnotationRange> {
