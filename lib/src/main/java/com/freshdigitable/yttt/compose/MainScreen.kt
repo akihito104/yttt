@@ -144,7 +144,7 @@ private fun TopAppBarImpl(
 
 @Composable
 private fun NavigationDrawerImpl(
-    items: Collection<DrawerMenuItem> = DrawerMenuItem.values().toList(),
+    items: Collection<DrawerMenuItem> = DrawerMenuItem.entries,
     onClicked: (DrawerMenuItem) -> Unit,
 ) {
     ModalDrawerSheet {

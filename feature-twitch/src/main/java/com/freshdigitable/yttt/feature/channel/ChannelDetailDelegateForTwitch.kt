@@ -28,7 +28,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         check(id.type == TwitchUser.Id::class) { "unsupported id type: ${id.type}" }
     }
 
-    override val tabs: Array<ChannelPage> = arrayOf(
+    override val tabs: List<ChannelPage> = listOf(
         ChannelPage.ABOUT,
         ChannelPage.UPLOADED,
         ChannelPage.DEBUG_CHANNEL,

@@ -1,13 +1,14 @@
 [versions]
 androidGradlePlugin = "8.3.0"
-kotlin = "1.8.10"
+kotlin = "1.9.22"
 kotlinxCoroutinesCore = "1.8.0-RC"
 kotlinxSerializationJson = "1.6.3"
 licensee = "1.8.0"
 oss-license-plugin = "0.10.6"
 oss-license-lib = "17.0.1"
 
-androidxComposeBom = "2023.09.00"
+compose-compiler-extension = "1.5.10"
+androidxComposeBom = "2024.02.02"
 accompanistPermissions = "0.32.0"
 androidxActivityKtx = "1.8.0"
 appcompat = "1.6.1"

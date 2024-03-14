@@ -8,7 +8,7 @@ import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import kotlinx.coroutines.flow.Flow
 
 interface ChannelDetailDelegate {
-    val tabs: Array<ChannelPage>
+    val tabs: List<ChannelPage>
     val channelDetail: Flow<LiveChannelDetail?>
     val uploadedVideo: Flow<List<LiveVideoThumbnail>>
     val channelSection: Flow<List<ChannelDetailChannelSection>>
