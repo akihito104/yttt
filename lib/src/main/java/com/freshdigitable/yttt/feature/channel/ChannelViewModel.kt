@@ -26,7 +26,7 @@ class ChannelViewModel @Inject constructor(
     private val channelId = MainNavRoute.ChannelDetail.getChannelId(savedStateHandle)
     private val delegate = checkNotNull(delegateFactory[channelId.type.java]).create(channelId)
 
-    override val tabs: Array<ChannelPage> get() = delegate.tabs
+    override val tabs: List<ChannelPage> get() = delegate.tabs
     override val channelDetail: Flow<LiveChannelDetail?> get() = delegate.channelDetail
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> get() = delegate.uploadedVideo
     override val channelSection: Flow<List<ChannelDetailChannelSection>> get() = delegate.channelSection

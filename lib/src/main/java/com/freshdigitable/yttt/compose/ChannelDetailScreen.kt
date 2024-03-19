@@ -112,7 +112,7 @@ fun ChannelDetailScreen(
 @Composable
 private fun ChannelDetailScreen(
     channelDetail: () -> LiveChannelDetail?,
-    pages: Array<ChannelPage> = ChannelPage.values(),
+    pages: List<ChannelPage> = ChannelPage.entries,
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -177,7 +177,7 @@ private fun ChannelDetailHeader(
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
 private fun ChannelDetailPager(
-    pages: Array<ChannelPage>,
+    pages: List<ChannelPage>,
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {

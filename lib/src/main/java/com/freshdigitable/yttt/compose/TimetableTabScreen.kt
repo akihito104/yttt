@@ -46,7 +46,7 @@ internal fun TimetableTabScreen(
     }
     val tabData = viewModel.tabs.collectAsState(initial = TimetableTabData.initialValues())
     val refreshing = viewModel.isLoading.observeAsState(false)
-    val listContents: Map<TimetablePage, LazyListScope.() -> Unit> = TimetablePage.values()
+    val listContents: Map<TimetablePage, LazyListScope.() -> Unit> = TimetablePage.entries
         .associateWith { timetableContent(it, onListItemClicked, viewModel) }
     HorizontalPagerWithTabScreen(
         tabDataProvider = { tabData.value },
@@ -116,7 +116,7 @@ fun ListItemMenuSheet(
 
 @Composable
 private fun ColumnScope.MenuContent(
-    menuItems: Collection<TimetableMenuItem> = TimetableMenuItem.values().toList(),
+    menuItems: Collection<TimetableMenuItem> = TimetableMenuItem.entries,
     onMenuClicked: (TimetableMenuItem) -> Unit,
 ) {
     menuItems.forEach { i ->
@@ -143,7 +143,7 @@ internal class TimetableTabData(
 
     companion object {
         fun initialValues(): List<TimetableTabData> {
-            return TimetablePage.values().map { TimetableTabData(it, 0) }
+            return TimetablePage.entries.map { TimetableTabData(it, 0) }
         }
     }
 }
@@ -180,7 +180,7 @@ private fun ModalSheetPreview() {
 private fun ListItemMenuSheetPreview() {
     AppTheme {
         ListItemMenuSheet(
-            menuItemsProvider = { TimetableMenuItem.values().toList() },
+            menuItemsProvider = { TimetableMenuItem.entries },
             onMenuItemClicked = {},
         ) {}
     }
