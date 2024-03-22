@@ -19,9 +19,11 @@ class YtttApp : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
-    override val workManagerConfiguration: Configuration = Configuration.Builder()
-        .setWorkerFactory(workerFactory)
-        .build()
+    override val workManagerConfiguration: Configuration by lazy {
+        Configuration.Builder()
+            .setWorkerFactory(workerFactory)
+            .build()
+    }
 }
 
 object OssLicenseNav : NavActivity(
