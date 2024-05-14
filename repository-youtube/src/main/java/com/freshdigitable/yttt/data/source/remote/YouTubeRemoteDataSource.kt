@@ -32,10 +32,8 @@ import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.math.BigInteger
 import java.time.Instant
@@ -178,7 +176,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
 
     private suspend fun <T> fetch(requestParams: YouTube.() -> AbstractGoogleClientRequest<T>): T {
         val params = requestParams(youtube)
-        return withContext(Dispatchers.IO) { params.execute() }
+        return coroutineScope.async { params.execute() }.await()
     }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) =
