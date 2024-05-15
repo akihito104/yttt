@@ -99,6 +99,6 @@ enum class TwitchOauthStatus {
 
     companion object {
         fun findByName(status: String): TwitchOauthStatus? =
-            values().firstOrNull { it.name == status }
+            entries.firstOrNull { it.name == status }
     }
 }

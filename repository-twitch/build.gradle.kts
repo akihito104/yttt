@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.okhttp3.integration)
     implementation(libs.retrofit)
+    kapt(libs.retrofit.responseTypeKeeper)
     implementation(libs.converter.gson)
     implementation(libs.androidx.datastore.preferences)
 

@@ -33,7 +33,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         check(id.type == YouTubeChannel.Id::class) { "unsupported id type: ${id.type}" }
     }
 
-    override val tabs: Array<ChannelPage> = arrayOf(
+    override val tabs: List<ChannelPage> = listOf(
         ChannelPage.ABOUT,
         ChannelPage.CHANNEL_SECTION,
         ChannelPage.UPLOADED,
