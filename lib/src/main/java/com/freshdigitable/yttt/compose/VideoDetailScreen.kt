@@ -61,14 +61,18 @@ private val linkStyle
 @Composable
 fun VideoDetailScreen(
     viewModel: VideoDetailViewModel = hiltViewModel(),
+    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
 ) {
     val item = viewModel.fetchViewDetail().observeAsState()
-    VideoDetailScreen(videoProvider = { item.value })
+    VideoDetailScreen(videoProvider = { item.value }, thumbnailModifier)
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
+private fun VideoDetailScreen(
+    videoProvider: () -> LiveVideoDetailAnnotated?,
+    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+) {
     val dialog = remember { mutableStateOf<LinkAnnotationRange?>(null) }
     val urlHandler = LocalUriHandler.current
     Column(
@@ -83,6 +87,7 @@ private fun VideoDetailScreen(videoProvider: () -> LiveVideoDetailAnnotated?) {
             contentDescription = "",
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
+                .then(thumbnailModifier(video.id))
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .padding(bottom = 8.dp)

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.AppTheme
@@ -18,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var twitchConsumer: TwitchOauthParser
 
+    @OptIn(ExperimentalSharedTransitionApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         logD { "onCreate(${this}): ${intent.data}" }

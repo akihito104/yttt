@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
@@ -67,16 +70,35 @@ abstract class NavActivity(
     val data: Uri? = null,
 ) : NavR
 
+abstract class NavRouteWithSharedTransition(
+    override val path: String,
+) : NavRoute(path) {
+    @OptIn(ExperimentalSharedTransitionApi::class)
+    @Composable
+    abstract fun ContentWithSharedTransition(
+        navController: NavHostController,
+        backStackEntry: NavBackStackEntry,
+        sharedTransition: SharedTransitionScope,
+        animatedContentScope: AnimatedContentScope,
+    )
+
+    @Composable
+    override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) =
+        throw NotImplementedError()
+}
+
 @Suppress("UNCHECKED_CAST")
 fun <T> NavType<T?>.nonNull(): NavType<T> = this as NavType<T>
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 fun NavGraphBuilder.composableWith(
     navController: NavHostController,
     navRoutes: Collection<NavR>,
+    sharedTransition: SharedTransitionScope? = null,
 ) {
     navRoutes.forEach { navRoute ->
         when (navRoute) {
-            is NavRoute -> composableWith(navController, navRoute)
+            is NavRoute -> composableWith(navController, navRoute, sharedTransition)
 
             is NavActivity -> {
                 activity(route = navRoute.path) {
@@ -89,9 +111,11 @@ fun NavGraphBuilder.composableWith(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 private fun NavGraphBuilder.composableWith(
     navController: NavHostController,
     navRoute: NavRoute,
+    sharedTransition: SharedTransitionScope? = null,
 ) {
     composable(
         navRoute.route,
@@ -106,7 +130,12 @@ private fun NavGraphBuilder.composableWith(
         } ?: emptyList(),
         deepLinks = navRoute.deepLinks,
         content = {
-            navRoute.Content(navController = navController, backStackEntry = it)
+            if (sharedTransition == null) {
+                navRoute.Content(navController = navController, backStackEntry = it)
+            } else {
+                val nr = navRoute as NavRouteWithSharedTransition
+                nr.ContentWithSharedTransition(navController, it, sharedTransition, this@composable)
+            }
         },
     )
 }

@@ -1,5 +1,7 @@
 package com.freshdigitable.yttt.compose
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -52,6 +54,7 @@ fun MainScreen(
     )
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun MainScreen(
     navController: NavHostController = rememberNavController(),
@@ -86,12 +89,19 @@ private fun MainScreen(
                 )
             },
         ) { padding ->
-            NavHost(
-                modifier = Modifier.padding(padding),
-                navController = navController,
-                startDestination = startDestination,
-            ) {
-                composableWith(navController = navController, navRoutes = navigation)
+            SharedTransitionLayout {
+                NavHost(
+                    modifier = Modifier.padding(padding),
+                    navController = navController,
+                    startDestination = startDestination,
+                ) {
+                    composableWith(navController = navController, navRoutes = navigation)
+                    composableWith(
+                        navController,
+                        LiveVideoSharedTransitionRoute.routes,
+                        this@SharedTransitionLayout,
+                    )
+                }
             }
         }
     }
@@ -110,7 +120,7 @@ private fun TopAppBarImpl(
         title = title,
         icon = {
             val route = backStack?.destination?.route
-            if (backStack == null || route == MainNavRoute.TimetableTab.route) {
+            if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
                 Icon(
                     Icons.Filled.Menu,
                     contentDescription = "",
@@ -204,7 +214,7 @@ class MainViewModel @Inject constructor(
     @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
 ) : ViewModel() {
     val navigation: Set<NavR> = (MainNavRoute.routes + ossLicensePage).toSet()
-    val startDestination = MainNavRoute.TimetableTab.route
+    val startDestination = LiveVideoSharedTransitionRoute.TimetableTab.route
     internal fun getDrawerRoute(item: DrawerMenuItem): String {
         return when (item) {
             DrawerMenuItem.SUBSCRIPTION -> MainNavRoute.Subscription.route
