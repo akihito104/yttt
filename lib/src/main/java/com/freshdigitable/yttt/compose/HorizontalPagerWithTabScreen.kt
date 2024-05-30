@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HorizontalPagerWithTabScreen(
+    tabModifier: Modifier = Modifier,
     tabDataProvider: () -> List<TabData>,
     page: @Composable (TabData) -> Unit,
 ) {
@@ -25,7 +26,9 @@ fun HorizontalPagerWithTabScreen(
         val pagerState = rememberPagerState { tabData.size }
         ScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
-            modifier = Modifier.wrapContentSize(),
+            modifier = Modifier
+                .wrapContentSize()
+                .then(tabModifier),
         ) {
             val coroutineScope = rememberCoroutineScope()
             tabData.forEachIndexed { index, data ->

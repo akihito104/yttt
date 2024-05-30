@@ -35,10 +35,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onNewIntent(intent: Intent?) {
+    override fun onNewIntent(intent: Intent) {
         logD { "onNewIntent: $intent" }
         super.onNewIntent(intent)
-        twitchConsumer.consumeOAuthEvent(intent?.data.toString())
+        twitchConsumer.consumeOAuthEvent(intent.data.toString())
     }
 
     private fun handleFreeTalkIntent() {

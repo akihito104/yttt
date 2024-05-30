@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -96,6 +100,7 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
             )
 
         fun getTransitionId(id: LiveVideo.Id): String = "img-${id.value}"
+        fun getTitleTransitionId(id: LiveVideo.Id): String = "title-${id.value}"
     }
 
     object TimetableTab : LiveVideoSharedTransitionRoute(path = "ttt") {
@@ -108,18 +113,32 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
             animatedContentScope: AnimatedContentScope
         ) {
             with(sharedTransition) {
-                TimetableTabScreen(
-                    onListItemClicked = {
-                        val route = VideoDetail.parseRoute(it)
-                        navController.navigate(route)
-                    },
-                    thumbnailModifier = {
-                        Modifier.Companion.sharedElement(
-                            rememberSharedContentState(key = getTransitionId(it)),
-                            animatedContentScope,
-                        )
-                    },
-                )
+                with(animatedContentScope) {
+                    TimetableTabScreen(
+                        onListItemClicked = {
+                            val route = VideoDetail.parseRoute(it)
+                            navController.navigate(route)
+                        },
+                        tabModifier = Modifier
+                            .renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
+                            .animateEnterExit(
+                                enter = fadeIn() + slideInVertically { -it },
+                                exit = fadeOut() + slideOutVertically { -it },
+                            ),
+                        thumbnailModifier = {
+                            Modifier.Companion.sharedElement(
+                                rememberSharedContentState(key = getTransitionId(it)),
+                                animatedContentScope,
+                            )
+                        },
+                        titleModifier = {
+                            Modifier.Companion.sharedElement(
+                                rememberSharedContentState(key = getTitleTransitionId(it)),
+                                animatedContentScope,
+                            )
+                        }
+                    )
+                }
             }
         }
 
@@ -153,7 +172,15 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
                             rememberSharedContentState(key = getTransitionId(it)),
                             animatedContentScope,
                         )
-                    }
+                    },
+                    titleModifier = {
+                        Modifier.Companion
+                            .sharedElement(
+                                rememberSharedContentState(key = getTitleTransitionId(it)),
+                                animatedContentScope,
+                            )
+                            .skipToLookaheadSize()
+                    },
                 )
             }
         }

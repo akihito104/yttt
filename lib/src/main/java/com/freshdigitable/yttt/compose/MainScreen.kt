@@ -114,7 +114,8 @@ private fun TopAppBarImpl(
     onUpClicked: () -> Unit,
 ) {
     val backStack = currentBackStackEntryProvider()
-    val navRoute = MainNavRoute.routes.find { it.route == backStack?.destination?.route }
+    val navRoute = (MainNavRoute.routes + LiveVideoSharedTransitionRoute.routes)
+        .find { it.route == backStack?.destination?.route }
     val title = navRoute?.title(backStack?.arguments)
     TopAppBarImpl(
         title = title,

@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.bumptech.glide.Glide
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
@@ -62,9 +64,14 @@ private val linkStyle
 fun VideoDetailScreen(
     viewModel: VideoDetailViewModel = hiltViewModel(),
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
 ) {
     val item = viewModel.fetchViewDetail().observeAsState()
-    VideoDetailScreen(videoProvider = { item.value }, thumbnailModifier)
+    VideoDetailScreen(
+        videoProvider = { item.value },
+        thumbnailModifier = thumbnailModifier,
+        titleModifier = titleModifier,
+    )
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)
@@ -72,6 +79,7 @@ fun VideoDetailScreen(
 private fun VideoDetailScreen(
     videoProvider: () -> LiveVideoDetailAnnotated?,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
 ) {
     val dialog = remember { mutableStateOf<LinkAnnotationRange?>(null) }
     val urlHandler = LocalUriHandler.current
@@ -82,6 +90,7 @@ private fun VideoDetailScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         val video = videoProvider() ?: return
+        val context = LocalContext.current
         GlideImage(
             model = video.thumbnailUrl,
             contentDescription = "",
@@ -91,7 +100,13 @@ private fun VideoDetailScreen(
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .padding(bottom = 8.dp)
-        )
+        ) {
+            it.thumbnail(
+                Glide.with(context)
+                    .load(video.thumbnailUrl)
+                    .signature(video.glideSignature)
+            )
+        }
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(horizontal = 8.dp)
@@ -99,6 +114,7 @@ private fun VideoDetailScreen(
             Text(
                 text = video.title,
                 fontSize = 18.sp,
+                modifier = titleModifier(video.id),
             )
             val statsText = video.statsText
             if (statsText.isNotEmpty()) {

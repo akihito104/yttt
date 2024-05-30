@@ -52,6 +52,7 @@ fun LiveVideoListItemView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
     onItemClick: () -> Unit,
     onMenuClicked: (() -> Unit)? = null,
 ) {
@@ -59,7 +60,8 @@ fun LiveVideoListItemView(
         LiveVideoListItemView(
             video = video,
             modifier = modifier,
-            thumbnailModifier,
+            thumbnailModifier = thumbnailModifier,
+            titleModifier = titleModifier,
             onItemClick = onItemClick,
         )
     } else {
@@ -67,7 +69,8 @@ fun LiveVideoListItemView(
             LiveVideoListItemView(
                 video = video,
                 modifier = modifier,
-                thumbnailModifier,
+                thumbnailModifier = thumbnailModifier,
+                titleModifier = titleModifier,
                 onItemClick = onItemClick,
             )
             Icon(
@@ -87,6 +90,7 @@ private fun LiveVideoListItemView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
     onItemClick: () -> Unit,
 ) {
     Column(
@@ -128,6 +132,7 @@ private fun LiveVideoListItemView(
             text = video.title,
             fontSize = 18.sp,
             modifier = Modifier
+                .then(titleModifier)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
                 .padding(top = 4.dp)
@@ -149,7 +154,7 @@ private fun RowScope.ThumbnailView(
                 .then(thumbnailModifier)
                 .align(Top),
         ) {
-            it.signature(ThumbnailKey("${video.id.type}_${video.id.value}"))
+            it.signature(video.glideSignature)
         }
     } else {
         Image(
@@ -181,6 +186,8 @@ fun LiveVideoHeaderView(label: String) {
 private val thumbnailModifier: Modifier = Modifier
     .fillMaxWidth(fraction = 0.55f)
     .aspectRatio(16f / 9f)
+
+internal val LiveVideo.glideSignature: Key get() = ThumbnailKey("${id.type}_${id.value}")
 
 private data class ThumbnailKey(val id: String) : Key {
     override fun updateDiskCacheKey(messageDigest: MessageDigest) {
