@@ -51,14 +51,28 @@ import java.time.temporal.ChronoUnit
 fun LiveVideoListItemView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
+    thumbnailModifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
     onItemClick: () -> Unit,
     onMenuClicked: (() -> Unit)? = null,
 ) {
     if (onMenuClicked == null) {
-        LiveVideoListItemView(video = video, modifier = modifier, onItemClick = onItemClick)
+        LiveVideoListItemView(
+            video = video,
+            modifier = modifier,
+            thumbnailModifier = thumbnailModifier,
+            titleModifier = titleModifier,
+            onItemClick = onItemClick,
+        )
     } else {
         Box(modifier = Modifier) {
-            LiveVideoListItemView(video = video, modifier = modifier, onItemClick = onItemClick)
+            LiveVideoListItemView(
+                video = video,
+                modifier = modifier,
+                thumbnailModifier = thumbnailModifier,
+                titleModifier = titleModifier,
+                onItemClick = onItemClick,
+            )
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 modifier = Modifier
@@ -71,11 +85,12 @@ fun LiveVideoListItemView(
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 private fun LiveVideoListItemView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
+    thumbnailModifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
     onItemClick: () -> Unit,
 ) {
     Column(
@@ -89,7 +104,7 @@ private fun LiveVideoListItemView(
                 .fillMaxWidth()
                 .wrapContentHeight()
         ) {
-            ThumbnailView(video)
+            ThumbnailView(video, modifier = thumbnailModifier)
             Column(
                 modifier = Modifier
                     .wrapContentHeight()
@@ -117,6 +132,7 @@ private fun LiveVideoListItemView(
             text = video.title,
             fontSize = 18.sp,
             modifier = Modifier
+                .then(titleModifier)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
                 .padding(top = 4.dp)
@@ -126,20 +142,27 @@ private fun LiveVideoListItemView(
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-private fun RowScope.ThumbnailView(video: LiveVideo) {
+private fun RowScope.ThumbnailView(
+    video: LiveVideo,
+    modifier: Modifier = Modifier,
+) {
     if (video.thumbnailUrl.isNotEmpty()) {
         GlideImage(
             model = video.thumbnailUrl,
             contentDescription = "",
-            modifier = thumbnailModifier.align(Top)
+            modifier = modifier
+                .then(thumbnailModifier)
+                .align(Top),
         ) {
-            it.signature(ThumbnailKey("${video.id.type}_${video.id.value}"))
+            it.signature(video.glideSignature)
         }
     } else {
         Image(
             imageVector = Icons.Default.PlayArrow,
             contentDescription = "",
-            modifier = thumbnailModifier.align(Top),
+            modifier = modifier
+                .then(thumbnailModifier)
+                .align(Top),
         )
     }
 }
@@ -163,6 +186,8 @@ fun LiveVideoHeaderView(label: String) {
 private val thumbnailModifier: Modifier = Modifier
     .fillMaxWidth(fraction = 0.55f)
     .aspectRatio(16f / 9f)
+
+internal val LiveVideo.glideSignature: Key get() = ThumbnailKey("${id.type}_${id.value}")
 
 private data class ThumbnailKey(val id: String) : Key {
     override fun updateDiskCacheKey(messageDigest: MessageDigest) {

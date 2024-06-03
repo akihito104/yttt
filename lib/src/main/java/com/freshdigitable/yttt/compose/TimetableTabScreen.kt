@@ -38,6 +38,9 @@ import kotlinx.coroutines.launch
 internal fun TimetableTabScreen(
     viewModel: TimetableTabViewModel = hiltViewModel(),
     onListItemClicked: (LiveVideo.Id) -> Unit,
+    tabModifier: Modifier = Modifier,
+    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
 ) {
     LaunchedEffect(Unit) {
         if (viewModel.canUpdate) {
@@ -47,8 +50,17 @@ internal fun TimetableTabScreen(
     val tabData = viewModel.tabs.collectAsState(initial = TimetableTabData.initialValues())
     val refreshing = viewModel.isLoading.observeAsState(false)
     val listContents: Map<TimetablePage, LazyListScope.() -> Unit> = TimetablePage.entries
-        .associateWith { timetableContent(it, onListItemClicked, viewModel) }
+        .associateWith {
+            timetableContent(
+                it,
+                thumbnailModifier = thumbnailModifier,
+                titleModifier = titleModifier,
+                onListItemClicked,
+                viewModel,
+            )
+        }
     HorizontalPagerWithTabScreen(
+        tabModifier = tabModifier,
         tabDataProvider = { tabData.value },
     ) { tab ->
         val p = (tab as TimetableTabData).page
@@ -71,18 +83,36 @@ internal fun TimetableTabScreen(
 @Composable
 private fun timetableContent(
     page: TimetablePage,
+    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     onListItemClicked: (LiveVideo.Id) -> Unit,
     viewModel: TimetableTabViewModel,
 ): LazyListScope.() -> Unit {
     when (page.type) {
         TimetablePage.Type.SIMPLE -> {
             val item = viewModel.getSimpleItemList(page).collectAsState(initial = emptyList())
-            return { simpleContent({ item.value }, onListItemClicked, viewModel::onMenuClicked) }
+            return {
+                simpleContent(
+                    { item.value },
+                    thumbnailModifier = thumbnailModifier,
+                    titleModifier = titleModifier,
+                    onListItemClicked,
+                    viewModel::onMenuClicked,
+                )
+            }
         }
 
         TimetablePage.Type.GROUPED -> {
             val item = viewModel.getGroupedItemList(page).collectAsState(initial = emptyMap())
-            return { groupedContent({ item.value }, onListItemClicked, viewModel::onMenuClicked) }
+            return {
+                groupedContent(
+                    { item.value },
+                    thumbnailModifier = thumbnailModifier,
+                    titleModifier = titleModifier,
+                    onListItemClicked,
+                    viewModel::onMenuClicked,
+                )
+            }
         }
     }
 }
