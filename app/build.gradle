@@ -59,6 +59,7 @@ dependencies {
     kapt libs.hilt.compiler
     implementation libs.oss.lisence.lib
     implementation libs.androidx.appcompat
+    debugImplementation libs.leakcanary.android
 
     testImplementation libs.junit
     androidTestImplementation libs.androidx.junit
