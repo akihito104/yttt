@@ -99,8 +99,8 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
                 VideoDetail,
             )
 
-        fun getTransitionId(id: LiveVideo.Id): String = "img-${id.value}"
-        fun getTitleTransitionId(id: LiveVideo.Id): String = "title-${id.value}"
+        private val LiveVideo.Id.thumbnailTransitionKey: String get() = "img-${type.simpleName}-$value"
+        private val LiveVideo.Id.titleTransitionKey: String get() = "title-${type.simpleName}-$value"
     }
 
     object TimetableTab : LiveVideoSharedTransitionRoute(path = "ttt") {
@@ -127,13 +127,13 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
                             ),
                         thumbnailModifier = {
                             Modifier.Companion.sharedElement(
-                                rememberSharedContentState(key = getTransitionId(it)),
+                                rememberSharedContentState(key = it.thumbnailTransitionKey),
                                 animatedContentScope,
                             )
                         },
                         titleModifier = {
                             Modifier.Companion.sharedElement(
-                                rememberSharedContentState(key = getTitleTransitionId(it)),
+                                rememberSharedContentState(key = it.titleTransitionKey),
                                 animatedContentScope,
                             )
                         }
@@ -169,14 +169,14 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
                 VideoDetailScreen(
                     thumbnailModifier = {
                         Modifier.Companion.sharedElement(
-                            rememberSharedContentState(key = getTransitionId(it)),
+                            rememberSharedContentState(key = it.thumbnailTransitionKey),
                             animatedContentScope,
                         )
                     },
                     titleModifier = {
                         Modifier.Companion
                             .sharedElement(
-                                rememberSharedContentState(key = getTitleTransitionId(it)),
+                                rememberSharedContentState(key = it.titleTransitionKey),
                                 animatedContentScope,
                             )
                             .skipToLookaheadSize()
