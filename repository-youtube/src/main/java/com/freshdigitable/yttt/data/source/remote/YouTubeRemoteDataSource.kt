@@ -238,7 +238,7 @@ private fun Video.toLiveVideo(): YouTubeVideo = object : YouTubeVideo by YouTube
 
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
 private val ThumbnailDetails.url: String
-    get() = (maxres ?: high ?: standard ?: medium ?: default)?.url ?: ""
+    get() = (/*maxres ?:*/ standard ?: high ?: medium ?: default)?.url ?: ""
 
 private data class YouTubeChannelImpl(
     private val channel: Channel,

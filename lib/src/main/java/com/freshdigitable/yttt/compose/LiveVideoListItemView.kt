@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
@@ -31,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.Key
+import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -153,8 +155,9 @@ private fun RowScope.ThumbnailView(
             modifier = modifier
                 .then(thumbnailModifier)
                 .align(Top),
+            contentScale = ContentScale.FillWidth,
         ) {
-            it.signature(video.glideSignature)
+            it.downsample(DownsampleStrategy.FIT_CENTER).signature(video.glideSignature)
         }
     } else {
         Image(
