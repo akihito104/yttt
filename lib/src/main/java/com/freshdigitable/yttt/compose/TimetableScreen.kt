@@ -48,6 +48,8 @@ fun TimetableScreen(
 
 fun LazyListScope.simpleContent(
     itemsProvider: () -> List<LiveVideo>,
+    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     onListItemClicked: (LiveVideo.Id) -> Unit,
     onMenuClicked: (LiveVideo.Id) -> Unit,
 ) {
@@ -56,6 +58,8 @@ fun LazyListScope.simpleContent(
         key = { _, item -> item.id.value }) { _, item ->
         LiveVideoListItemView(
             video = item,
+            thumbnailModifier = thumbnailModifier(item.id),
+            titleModifier = titleModifier(item.id),
             onItemClick = { onListItemClicked(item.id) },
             onMenuClicked = { onMenuClicked(item.id) },
         )
@@ -65,6 +69,8 @@ fun LazyListScope.simpleContent(
 @OptIn(ExperimentalFoundationApi::class)
 fun LazyListScope.groupedContent(
     itemsProvider: () -> Map<String, List<LiveVideo>>,
+    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     onListItemClicked: (LiveVideo.Id) -> Unit,
     onMenuClicked: (LiveVideo.Id) -> Unit,
 ) {
@@ -77,6 +83,8 @@ fun LazyListScope.groupedContent(
             key = { _, item -> item.id.value }) { _, item ->
             LiveVideoListItemView(
                 video = item,
+                thumbnailModifier = thumbnailModifier(item.id),
+                titleModifier = titleModifier(item.id),
                 onItemClick = { onListItemClicked(item.id) },
                 onMenuClicked = { onMenuClicked(item.id) },
             )
