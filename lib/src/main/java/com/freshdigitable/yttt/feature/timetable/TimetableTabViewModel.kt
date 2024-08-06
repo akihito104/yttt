@@ -10,8 +10,6 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.video.FindLiveVideoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -42,7 +40,8 @@ internal class TimetableTabViewModel @Inject constructor(
         viewModelScope.launch {
             if (_isLoading.value == false) {
                 _isLoading.postValue(true)
-                fetchStreamTasks.map { async { it() } }.awaitAll()
+//                fetchStreamTasks.map { async { it() } }.awaitAll()
+                fetchStreamTasks.forEach { it() }
                 _isLoading.postValue(false)
             }
         }
