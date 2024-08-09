@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
+import com.freshdigitable.yttt.data.source.TwitchOauthStatus
 import com.freshdigitable.yttt.logD
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +32,6 @@ class TwitchOauthViewModel @Inject constructor(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
     val oauthStatus: StateFlow<TwitchOauthStatus?> = accountRepository.twitchOauthStatus
-        .map { if (it != null) TwitchOauthStatus.findByName(it) else null }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     private suspend fun getAuthorizeUrl(state: String): String =
@@ -42,7 +42,7 @@ class TwitchOauthViewModel @Inject constructor(
             val uuid = UUID.randomUUID().toString()
             val url = getAuthorizeUrl(uuid)
             accountRepository.putTwitchOauthState(uuid)
-            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.REQUESTED.name)
+            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.REQUESTED)
             launchApp(url) {
                 addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
             }
@@ -87,18 +87,8 @@ class TwitchOauthParser @Inject constructor(
         coroutineScope.launch {
             accountRepository.putTwitchToken(checkNotNull(token.accessToken))
             accountRepository.clearTwitchOauthState()
-            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.SUCCEEDED.name)
+            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.SUCCEEDED)
         }
         return true
-    }
-}
-
-enum class TwitchOauthStatus {
-    REQUESTED, SUCCEEDED,
-    ;
-
-    companion object {
-        fun findByName(status: String): TwitchOauthStatus? =
-            entries.firstOrNull { it.name == status }
     }
 }

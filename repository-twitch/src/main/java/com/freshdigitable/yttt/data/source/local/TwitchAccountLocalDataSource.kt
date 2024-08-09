@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.freshdigitable.yttt.data.source.TwitchAccountDataStore
+import com.freshdigitable.yttt.data.source.TwitchOauthStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -46,9 +47,12 @@ internal class TwitchAccountLocalDataSource @Inject constructor(
         dataStore.edit { it.remove(DS_TWITCH_STATE) }
     }
 
-    override val twitchOauthStatus: Flow<String?> = dataStore.data.map { it[DS_TWITCH_STATUS] }
-    override suspend fun putTwitchOauthStatus(value: String) {
-        dataStore.edit { it[DS_TWITCH_STATUS] = value }
+    override val twitchOauthStatus: Flow<TwitchOauthStatus?> = dataStore.data
+        .map { it[DS_TWITCH_STATUS] }
+        .map { TwitchOauthStatus.findByName(it) }
+
+    override suspend fun putTwitchOauthStatus(value: TwitchOauthStatus) {
+        dataStore.edit { it[DS_TWITCH_STATUS] = value.name }
     }
 
     override suspend fun clearTwitchOauthStatus() {

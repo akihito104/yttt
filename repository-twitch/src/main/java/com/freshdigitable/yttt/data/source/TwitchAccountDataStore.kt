@@ -10,9 +10,19 @@ interface TwitchAccountDataStore {
     val twitchOauthState: Flow<String?>
     suspend fun putTwitchOauthState(value: String)
     suspend fun clearTwitchOauthState()
-    val twitchOauthStatus: Flow<String?>
-    suspend fun putTwitchOauthStatus(value: String)
+    val twitchOauthStatus: Flow<TwitchOauthStatus?>
+    suspend fun putTwitchOauthStatus(value: TwitchOauthStatus)
     suspend fun clearTwitchOauthStatus()
 
     interface Local : TwitchAccountDataStore
+}
+
+enum class TwitchOauthStatus {
+    REQUESTED, SUCCEEDED,
+    ;
+
+    companion object {
+        fun findByName(status: String?): TwitchOauthStatus? =
+            if (status == null) null else entries.firstOrNull { it.name == status }
+    }
 }
