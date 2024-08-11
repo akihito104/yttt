@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -20,9 +22,11 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -32,8 +36,12 @@ import com.freshdigitable.yttt.compose.navigation.NavActivity
 import com.freshdigitable.yttt.compose.navigation.NavR
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.lib.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Qualifier
@@ -47,6 +55,7 @@ fun MainScreen(
         navController = navController,
         navigation = viewModel.navigation,
         startDestination = viewModel.startDestination,
+        showMenuBadge = { viewModel.showMenuBadge.value },
         onDrawerMenuClick = {
             val route = viewModel.getDrawerRoute(it)
             navController.navigate(route)
@@ -60,6 +69,7 @@ private fun MainScreen(
     navController: NavHostController = rememberNavController(),
     navigation: Set<NavR>,
     startDestination: String,
+    showMenuBadge: () -> Boolean,
     onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -80,6 +90,7 @@ private fun MainScreen(
                 val backStack = navController.currentBackStackEntryAsState()
                 TopAppBarImpl(
                     currentBackStackEntryProvider = { backStack.value },
+                    showMenuBadge = showMenuBadge,
                     onMenuIconClicked = {
                         coroutineScope.launch {
                             drawerState.open()
@@ -110,6 +121,7 @@ private fun MainScreen(
 @Composable
 private fun TopAppBarImpl(
     currentBackStackEntryProvider: () -> NavBackStackEntry?,
+    showMenuBadge: () -> Boolean,
     onMenuIconClicked: () -> Unit,
     onUpClicked: () -> Unit,
 ) {
@@ -122,11 +134,7 @@ private fun TopAppBarImpl(
         icon = {
             val route = backStack?.destination?.route
             if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
-                Icon(
-                    Icons.Filled.Menu,
-                    contentDescription = "",
-                    modifier = Modifier.clickable(onClick = onMenuIconClicked),
-                )
+                HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
             } else {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -136,6 +144,26 @@ private fun TopAppBarImpl(
             }
         },
     )
+}
+
+@Composable
+fun HamburgerMenuIcon(
+    showMenuBadge: () -> Boolean,
+    onMenuIconClicked: () -> Unit,
+) {
+    BadgedBox(
+        badge = {
+            if (showMenuBadge()) {
+                Badge(containerColor = Color.Red)
+            }
+        }
+    ) {
+        Icon(
+            Icons.Filled.Menu,
+            contentDescription = "",
+            modifier = Modifier.clickable(onClick = onMenuIconClicked),
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,7 +215,7 @@ internal enum class DrawerMenuItem(
 
 @LightDarkModePreview
 @Composable
-private fun MainScreenPreview() {
+private fun TopAppBarImplPreview() {
     AppTheme {
         TopAppBarImpl(
             title = stringResource(id = R.string.title_timetable),
@@ -204,6 +232,19 @@ private fun MainScreenPreview() {
 
 @LightDarkModePreview
 @Composable
+private fun HamburgerMenuIconPreview() {
+    AppTheme {
+        TopAppBarImpl(
+            currentBackStackEntryProvider = { null },
+            showMenuBadge = { true },
+            onMenuIconClicked = {},
+            onUpClicked = {},
+        )
+    }
+}
+
+@LightDarkModePreview
+@Composable
 private fun NavDrawerPreview() {
     AppTheme {
         NavigationDrawerImpl(onClicked = {})
@@ -213,9 +254,14 @@ private fun NavDrawerPreview() {
 @HiltViewModel
 class MainViewModel @Inject constructor(
     @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
+    accountRepository: TwitchAccountRepository,
 ) : ViewModel() {
     val navigation: Set<NavR> = (MainNavRoute.routes + ossLicensePage).toSet()
     val startDestination = LiveVideoSharedTransitionRoute.TimetableTab.route
+    val showMenuBadge = accountRepository.isTwitchTokenInvalidated
+        .map { it ?: false }
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
     internal fun getDrawerRoute(item: DrawerMenuItem): String {
         return when (item) {
             DrawerMenuItem.SUBSCRIPTION -> MainNavRoute.Subscription.route
