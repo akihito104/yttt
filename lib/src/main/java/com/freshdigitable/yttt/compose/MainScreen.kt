@@ -32,6 +32,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.freshdigitable.yttt.compose.DrawerMenuListItem.Companion.toListItem
 import com.freshdigitable.yttt.compose.navigation.NavActivity
 import com.freshdigitable.yttt.compose.navigation.NavR
 import com.freshdigitable.yttt.compose.navigation.composableWith
@@ -40,6 +41,8 @@ import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.lib.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -56,6 +59,7 @@ fun MainScreen(
         navigation = viewModel.navigation,
         startDestination = viewModel.startDestination,
         showMenuBadge = { viewModel.showMenuBadge.value },
+        drawerItems = { viewModel.drawerMenuItems.value },
         onDrawerMenuClick = {
             val route = viewModel.getDrawerRoute(it)
             navController.navigate(route)
@@ -70,6 +74,7 @@ private fun MainScreen(
     navigation: Set<NavR>,
     startDestination: String,
     showMenuBadge: () -> Boolean,
+    drawerItems: () -> List<DrawerMenuListItem>,
     onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -77,12 +82,15 @@ private fun MainScreen(
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            NavigationDrawerImpl(onClicked = {
-                onDrawerMenuClick(it)
-                coroutineScope.launch {
-                    drawerState.close()
-                }
-            })
+            NavigationDrawerImpl(
+                items = drawerItems,
+                onClicked = {
+                    onDrawerMenuClick(it)
+                    coroutineScope.launch {
+                        drawerState.close()
+                    }
+                },
+            )
         },
     ) {
         Scaffold(
@@ -183,14 +191,24 @@ private fun TopAppBarImpl(
 
 @Composable
 private fun NavigationDrawerImpl(
-    items: Collection<DrawerMenuItem> = DrawerMenuItem.entries,
+    items: () -> Collection<DrawerMenuListItem>,
     onClicked: (DrawerMenuItem) -> Unit,
 ) {
     ModalDrawerSheet {
-        items.forEach {
+        items().forEach {
             ListItem(
-                headlineContent = { Text(it.text()) },
-                modifier = Modifier.clickable(onClick = { onClicked(it) }),
+                headlineContent = {
+                    BadgedBox(
+                        badge = {
+                            if (it.showBadge) {
+                                Badge(containerColor = Color.Red)
+                            }
+                        }
+                    ) {
+                        Text(it.item.text())
+                    }
+                },
+                modifier = Modifier.clickable(onClick = { onClicked(it.item) }),
             )
         }
     }
@@ -247,7 +265,14 @@ private fun HamburgerMenuIconPreview() {
 @Composable
 private fun NavDrawerPreview() {
     AppTheme {
-        NavigationDrawerImpl(onClicked = {})
+        NavigationDrawerImpl(items = {
+            listOf(
+                DrawerMenuItem.SUBSCRIPTION.toListItem(),
+                DrawerMenuItem.AUTH_STATUS.toListItem(true),
+                DrawerMenuItem.APP_SETTING.toListItem(),
+                DrawerMenuItem.OSS_LICENSE.toListItem(),
+            )
+        }, onClicked = {})
     }
 }
 
@@ -261,6 +286,18 @@ class MainViewModel @Inject constructor(
     val showMenuBadge = accountRepository.isTwitchTokenInvalidated
         .map { it ?: false }
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
+    internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
+        listOf(
+            flowOf(DrawerMenuItem.SUBSCRIPTION.toListItem()),
+            accountRepository.isTwitchTokenInvalidated.map {
+                DrawerMenuItem.AUTH_STATUS.toListItem(it ?: false)
+            },
+            flowOf(DrawerMenuItem.APP_SETTING.toListItem()),
+            flowOf(DrawerMenuItem.OSS_LICENSE.toListItem()),
+        )
+    ) {
+        it.toList()
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     internal fun getDrawerRoute(item: DrawerMenuItem): String {
         return when (item) {
@@ -269,6 +306,19 @@ class MainViewModel @Inject constructor(
             DrawerMenuItem.APP_SETTING -> MainNavRoute.Settings.route
             DrawerMenuItem.OSS_LICENSE -> ossLicensePage.path
         }
+    }
+}
+
+internal data class DrawerMenuListItem(
+    val item: DrawerMenuItem,
+    val showBadge: Boolean = false,
+    val badgeContent: Int? = null,
+) {
+    companion object {
+        internal fun DrawerMenuItem.toListItem(
+            showBadge: Boolean = false,
+            badgeContent: Int? = null,
+        ): DrawerMenuListItem = DrawerMenuListItem(this, showBadge, badgeContent)
     }
 }
 
