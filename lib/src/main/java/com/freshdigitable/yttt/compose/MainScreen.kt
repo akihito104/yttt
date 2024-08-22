@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,12 +55,14 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     val navController = rememberNavController()
+    val showMenuBadge = viewModel.showMenuBadge.collectAsState()
+    val drawerMenuItems = viewModel.drawerMenuItems.collectAsState()
     MainScreen(
         navController = navController,
         navigation = viewModel.navigation,
         startDestination = viewModel.startDestination,
-        showMenuBadge = { viewModel.showMenuBadge.value },
-        drawerItems = { viewModel.drawerMenuItems.value },
+        showMenuBadge = { showMenuBadge.value },
+        drawerItems = { drawerMenuItems.value },
         onDrawerMenuClick = {
             val route = viewModel.getDrawerRoute(it)
             navController.navigate(route)
