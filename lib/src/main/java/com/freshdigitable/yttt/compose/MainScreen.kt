@@ -16,11 +16,17 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,10 +47,14 @@ import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.lib.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -63,6 +73,7 @@ fun MainScreen(
         startDestination = viewModel.startDestination,
         showMenuBadge = { showMenuBadge.value },
         drawerItems = { drawerMenuItems.value },
+        snackbarMessage = viewModel.snackbarMessage,
         onDrawerMenuClick = {
             val route = viewModel.getDrawerRoute(it)
             navController.navigate(route)
@@ -78,10 +89,29 @@ private fun MainScreen(
     startDestination: String,
     showMenuBadge: () -> Boolean,
     drawerItems: () -> List<DrawerMenuListItem>,
+    snackbarMessage: Flow<SnackbarAction>,
     onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage.collectLatest { action ->
+            val message = action.message
+            val res = snackbarHostState.showSnackbar(
+                message.message,
+                message.actionLabel,
+                message.withDismissAction,
+                message.duration
+            )
+            if (res == SnackbarResult.ActionPerformed) {
+                when (action) {
+                    is SnackbarAction.NavigationAction -> action(navController)
+                    is SnackbarAction.CustomAction -> action()
+                }
+            }
+        }
+    }
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
@@ -110,6 +140,7 @@ private fun MainScreen(
                     onUpClicked = { navController.navigateUp() },
                 )
             },
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { padding ->
             SharedTransitionLayout {
                 NavHost(
@@ -286,9 +317,6 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
     val navigation: Set<NavR> = (MainNavRoute.routes + ossLicensePage).toSet()
     val startDestination = LiveVideoSharedTransitionRoute.TimetableTab.route
-    val showMenuBadge = accountRepository.isTwitchTokenInvalidated
-        .map { it ?: false }
-        .stateIn(viewModelScope, SharingStarted.Lazily, false)
     internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
         listOf(
             flowOf(DrawerMenuItem.SUBSCRIPTION.toListItem()),
@@ -301,6 +329,23 @@ class MainViewModel @Inject constructor(
     ) {
         it.toList()
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val showMenuBadge = drawerMenuItems.map { i -> i.any { it.showBadge } }
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+    val snackbarMessage = merge(
+        accountRepository.isTwitchTokenInvalidated.filter { it ?: false }
+            .map {
+                SnackbarAction.NavigationAction(
+                    SnackbarMessage(
+                        message = "Your Twitch login credential has expired.",
+                        actionLabel = "account setting",
+                        withDismissAction = false,
+                        duration = SnackbarDuration.Short,
+                    )
+                ) {
+                    it.navigate(MainNavRoute.Auth.route)
+                }
+            }
+    )
 
     internal fun getDrawerRoute(item: DrawerMenuItem): String {
         return when (item) {
@@ -308,6 +353,36 @@ class MainViewModel @Inject constructor(
             DrawerMenuItem.AUTH_STATUS -> MainNavRoute.Auth.route
             DrawerMenuItem.APP_SETTING -> MainNavRoute.Settings.route
             DrawerMenuItem.OSS_LICENSE -> ossLicensePage.path
+        }
+    }
+}
+
+data class SnackbarMessage(
+    val message: String,
+    val actionLabel: String? = null,
+    val withDismissAction: Boolean = false,
+    val duration: SnackbarDuration =
+        if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
+)
+
+sealed class SnackbarAction {
+    abstract val message: SnackbarMessage
+
+    data class NavigationAction(
+        override val message: SnackbarMessage,
+        val action: (NavHostController) -> Unit,
+    ) : SnackbarAction() {
+        operator fun invoke(navController: NavHostController) {
+            action(navController)
+        }
+    }
+
+    data class CustomAction(
+        override val message: SnackbarMessage,
+        val action: () -> Unit,
+    ) : SnackbarAction() {
+        operator fun invoke() {
+            action()
         }
     }
 }
