@@ -14,6 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -27,8 +28,12 @@ class TwitchOauthViewModel @Inject constructor(
     private val accountRepository: TwitchAccountRepository,
     private val launchApp: LaunchAppWithUrlUseCase,
 ) : ViewModel() {
-    val hasTokenState: StateFlow<Boolean> = accountRepository.twitchToken
-        .map { it != null }
+    val hasValidTokenState: StateFlow<Boolean> = combine(
+        accountRepository.twitchToken.map { it != null },
+        accountRepository.isTwitchTokenInvalidated.map { it ?: false },
+    ) { hasToken, tokenInvalidated ->
+        hasToken && !tokenInvalidated
+    }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
     val oauthStatus: StateFlow<TwitchOauthStatus?> = accountRepository.twitchOauthStatus
@@ -59,6 +64,7 @@ class TwitchOauthViewModel @Inject constructor(
         viewModelScope.launch {
             twitchRepository.deleteAllTables()
             accountRepository.clearTwitchToken()
+            accountRepository.clearTwitchTokenInvalidated()
         }
     }
 
@@ -86,6 +92,7 @@ class TwitchOauthParser @Inject constructor(
         }
         coroutineScope.launch {
             accountRepository.putTwitchToken(checkNotNull(token.accessToken))
+            accountRepository.clearTwitchTokenInvalidated()
             accountRepository.clearTwitchOauthState()
             accountRepository.putTwitchOauthStatus(TwitchOauthStatus.SUCCEEDED)
         }
