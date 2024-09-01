@@ -339,7 +339,7 @@ class MainViewModel @Inject constructor(
                         message = "Your Twitch login credential has expired.",
                         actionLabel = "account setting",
                         withDismissAction = false,
-                        duration = SnackbarDuration.Short,
+                        duration = SnackbarDuration.Long,
                     )
                 ) {
                     it.navigate(MainNavRoute.Auth.route)

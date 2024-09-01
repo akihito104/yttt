@@ -16,7 +16,10 @@ internal class TwitchTokenInterceptor @Inject constructor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        if (request.url.host != "api.twitch.tv" || !accountDataSource.hasValidToken()) {
+        if (request.url.host != "api.twitch.tv") {
+            return chain.proceed(request)
+        }
+        if (!accountDataSource.hasValidToken()) {
             return chain.proceed(request)
         }
         val token = accountDataSource.getTwitchToken() ?: return chain.proceed(request)
