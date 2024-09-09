@@ -8,11 +8,13 @@ import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
+import com.freshdigitable.yttt.data.source.TwitchOauthStatus
 import com.freshdigitable.yttt.logD
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -26,12 +28,15 @@ class TwitchOauthViewModel @Inject constructor(
     private val accountRepository: TwitchAccountRepository,
     private val launchApp: LaunchAppWithUrlUseCase,
 ) : ViewModel() {
-    val hasTokenState: StateFlow<Boolean> = accountRepository.twitchToken
-        .map { it != null }
+    val hasValidTokenState: StateFlow<Boolean> = combine(
+        accountRepository.twitchToken.map { it != null },
+        accountRepository.isTwitchTokenInvalidated.map { it ?: false },
+    ) { hasToken, tokenInvalidated ->
+        hasToken && !tokenInvalidated
+    }
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
     val oauthStatus: StateFlow<TwitchOauthStatus?> = accountRepository.twitchOauthStatus
-        .map { if (it != null) TwitchOauthStatus.findByName(it) else null }
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     private suspend fun getAuthorizeUrl(state: String): String =
@@ -42,7 +47,7 @@ class TwitchOauthViewModel @Inject constructor(
             val uuid = UUID.randomUUID().toString()
             val url = getAuthorizeUrl(uuid)
             accountRepository.putTwitchOauthState(uuid)
-            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.REQUESTED.name)
+            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.REQUESTED)
             launchApp(url) {
                 addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
             }
@@ -59,6 +64,7 @@ class TwitchOauthViewModel @Inject constructor(
         viewModelScope.launch {
             twitchRepository.deleteAllTables()
             accountRepository.clearTwitchToken()
+            accountRepository.clearTwitchTokenInvalidated()
         }
     }
 
@@ -86,19 +92,10 @@ class TwitchOauthParser @Inject constructor(
         }
         coroutineScope.launch {
             accountRepository.putTwitchToken(checkNotNull(token.accessToken))
+            accountRepository.clearTwitchTokenInvalidated()
             accountRepository.clearTwitchOauthState()
-            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.SUCCEEDED.name)
+            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.SUCCEEDED)
         }
         return true
-    }
-}
-
-enum class TwitchOauthStatus {
-    REQUESTED, SUCCEEDED,
-    ;
-
-    companion object {
-        fun findByName(status: String): TwitchOauthStatus? =
-            entries.firstOrNull { it.name == status }
     }
 }

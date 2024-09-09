@@ -7,12 +7,26 @@ interface TwitchAccountDataStore {
     fun getTwitchToken(): String?
     suspend fun putTwitchToken(token: String)
     suspend fun clearTwitchToken()
+    val isTwitchTokenInvalidated: Flow<Boolean?>
+    fun isTwitchTokenInvalidated(): Boolean
+    suspend fun invalidateTwitchToken()
+    suspend fun clearTwitchTokenInvalidated()
     val twitchOauthState: Flow<String?>
     suspend fun putTwitchOauthState(value: String)
     suspend fun clearTwitchOauthState()
-    val twitchOauthStatus: Flow<String?>
-    suspend fun putTwitchOauthStatus(value: String)
+    val twitchOauthStatus: Flow<TwitchOauthStatus?>
+    suspend fun putTwitchOauthStatus(value: TwitchOauthStatus)
     suspend fun clearTwitchOauthStatus()
 
     interface Local : TwitchAccountDataStore
+}
+
+enum class TwitchOauthStatus {
+    REQUESTED, SUCCEEDED,
+    ;
+
+    companion object {
+        fun findByName(status: String?): TwitchOauthStatus? =
+            if (status == null) null else entries.firstOrNull { it.name == status }
+    }
 }

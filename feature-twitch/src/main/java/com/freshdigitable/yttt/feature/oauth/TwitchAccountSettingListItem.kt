@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.Twitch
+import com.freshdigitable.yttt.data.source.TwitchOauthStatus
 
 internal object TwitchAccountSettingListItem : AccountSettingListItem {
     override val platform: LivePlatform = Twitch
@@ -24,7 +25,7 @@ internal object TwitchAccountSettingListItem : AccountSettingListItem {
         listItem: @Composable (AccountSettingListItem.ListBody) -> Unit,
         viewModel: TwitchOauthViewModel = hiltViewModel(),
     ) {
-        val hasToken = viewModel.hasTokenState.collectAsState()
+        val hasValidToken = viewModel.hasValidTokenState.collectAsState()
         val oauthStatus = viewModel.oauthStatus.collectAsState()
         if (oauthStatus.value == TwitchOauthStatus.SUCCEEDED) {
             TwitchAuthRedirectionDialog(
@@ -35,8 +36,8 @@ internal object TwitchAccountSettingListItem : AccountSettingListItem {
         listItem(
             AccountSettingListItem.ListBody(
                 title = "Twitch",
-                enabled = { !hasToken.value },
-                buttonText = { if (hasToken.value) "linked" else "auth" },
+                enabled = { !hasValidToken.value },
+                buttonText = { if (hasValidToken.value) "linked" else "auth" },
                 onClick = viewModel::onLogin,
                 onUnlink = viewModel::onClearAccount,
             )

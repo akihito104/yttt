@@ -2,9 +2,11 @@ package com.freshdigitable.yttt.data.source.local
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.freshdigitable.yttt.data.source.TwitchAccountDataStore
+import com.freshdigitable.yttt.data.source.TwitchOauthStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +39,20 @@ internal class TwitchAccountLocalDataSource @Inject constructor(
         dataStore.edit { it.remove(DS_TWITCH_TOKEN) }
     }
 
+    override val isTwitchTokenInvalidated: StateFlow<Boolean?> = dataStore.data
+        .map { it[DS_TWITCH_TOKEN_INVALIDATED] }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, null)
+
+    override fun isTwitchTokenInvalidated(): Boolean = isTwitchTokenInvalidated.value ?: false
+
+    override suspend fun invalidateTwitchToken() {
+        dataStore.edit { it[DS_TWITCH_TOKEN_INVALIDATED] = true }
+    }
+
+    override suspend fun clearTwitchTokenInvalidated() {
+        dataStore.edit { it.remove(DS_TWITCH_TOKEN_INVALIDATED) }
+    }
+
     override val twitchOauthState: Flow<String?> = dataStore.data.map { it[DS_TWITCH_STATE] }
     override suspend fun putTwitchOauthState(value: String) {
         dataStore.edit { it[DS_TWITCH_STATE] = value }
@@ -46,9 +62,12 @@ internal class TwitchAccountLocalDataSource @Inject constructor(
         dataStore.edit { it.remove(DS_TWITCH_STATE) }
     }
 
-    override val twitchOauthStatus: Flow<String?> = dataStore.data.map { it[DS_TWITCH_STATUS] }
-    override suspend fun putTwitchOauthStatus(value: String) {
-        dataStore.edit { it[DS_TWITCH_STATUS] = value }
+    override val twitchOauthStatus: Flow<TwitchOauthStatus?> = dataStore.data
+        .map { it[DS_TWITCH_STATUS] }
+        .map { TwitchOauthStatus.findByName(it) }
+
+    override suspend fun putTwitchOauthStatus(value: TwitchOauthStatus) {
+        dataStore.edit { it[DS_TWITCH_STATUS] = value.name }
     }
 
     override suspend fun clearTwitchOauthStatus() {
@@ -57,6 +76,7 @@ internal class TwitchAccountLocalDataSource @Inject constructor(
 
     companion object {
         private val DS_TWITCH_TOKEN = stringPreferencesKey("twitchToken")
+        private val DS_TWITCH_TOKEN_INVALIDATED = booleanPreferencesKey("twitchTokenInvalidated")
         private val DS_TWITCH_STATE = stringPreferencesKey("twitchOauthState")
         private val DS_TWITCH_STATUS = stringPreferencesKey("twitchOauthStatus")
     }
