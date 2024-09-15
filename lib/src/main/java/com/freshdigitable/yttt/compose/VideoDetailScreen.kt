@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material3.AlertDialog
@@ -28,11 +27,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,12 +54,15 @@ import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
 
-private val linkStyle
+private val baseLinkTextStyle
     @Composable
     get() = SpanStyle(
         color = MaterialTheme.colorScheme.tertiary,
-        textDecoration = TextDecoration.Underline
+        textDecoration = TextDecoration.Underline,
     )
+private val linkStyle
+    @Composable
+    get() = TextLinkStyles(style = baseLinkTextStyle)
 
 @Composable
 fun VideoDetailScreen(
@@ -136,15 +140,11 @@ private fun VideoDetailScreen(
             } else {
                 DescriptionText(
                     fontSize = 14.sp,
-                    annotatedDescription = video.annotatedDescription(linkStyle),
-                    onUrlClicked = {
+                    annotatedDescription = video.annotatedDescription(linkStyle) {
+                        check(it is LinkAnnotation.Clickable)
                         val linkAnnotation = LinkAnnotationRange.createFromTag(it.tag)
-                        if (linkAnnotation is LinkAnnotationRange.EllipsizedUrl ||
-                            linkAnnotation is LinkAnnotationRange.Account
-                        ) {
+                        if (linkAnnotation.needsDialog()) {
                             dialog.value = linkAnnotation
-                        } else {
-                            urlHandler.openUri(linkAnnotation.url)
                         }
                     },
                 )
@@ -187,24 +187,19 @@ private fun VideoDetailScreen(
 private fun DescriptionText(
     fontSize: TextUnit,
     annotatedDescription: AnnotatedString,
-    onUrlClicked: (AnnotatedString.Range<String>) -> Unit,
 ) {
-    ClickableText(
+    Text(
+        text = annotatedDescription,
         style = TextStyle.Default.copy(
             fontSize = fontSize,
             color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current),
         ),
-        text = annotatedDescription,
-        onClick = { pos ->
-            val annotation = annotatedDescription.getStringAnnotations(start = pos, end = pos)
-                .firstOrNull() ?: return@ClickableText
-            onUrlClicked(annotation)
-        },
     )
 }
 
 private fun LiveVideoDetailAnnotated.annotatedDescription(
-    linkStyle: SpanStyle
+    linkStyle: TextLinkStyles,
+    onUrlClicked: (LinkAnnotation) -> Unit,
 ): AnnotatedString {
     var pos = 0
     val items = descriptionAnnotationRangeItems.map {
@@ -219,7 +214,9 @@ private fun LiveVideoDetailAnnotated.annotatedDescription(
             if (pos < a.range.first) {
                 appendRange(description, pos, a.range.first)
             }
-            annotateUrl(a.tag, a.url, a.text, linkStyle)
+            withLink(a.linkAnnotation(linkStyle, onUrlClicked)) {
+                append(a.text)
+            }
             pos = a.range.last + 1
         }
         if (pos < description.length) {
@@ -228,17 +225,22 @@ private fun LiveVideoDetailAnnotated.annotatedDescription(
     }
 }
 
-private fun AnnotatedString.Builder.annotateUrl(
-    tag: String,
-    url: String,
-    text: String = url,
-    spanStyle: SpanStyle,
-) {
-    pushStringAnnotation(tag = tag, annotation = url)
-    withStyle(spanStyle) {
-        append(text)
+private fun LinkAnnotationRange.needsDialog(): Boolean =
+    this is LinkAnnotationRange.EllipsizedUrl || this is LinkAnnotationRange.Account
+
+private fun LinkAnnotationRange.linkAnnotation(
+    linkStyle: TextLinkStyles,
+    onUrlClicked: (LinkAnnotation) -> Unit,
+): LinkAnnotation = when {
+    this.needsDialog() -> {
+        LinkAnnotation.Clickable(
+            tag = tag,
+            styles = linkStyle,
+            linkInteractionListener = onUrlClicked,
+        )
     }
-    pop()
+
+    else -> LinkAnnotation.Url(url = url, styles = linkStyle)
 }
 
 @Composable
@@ -282,8 +284,8 @@ fun AccountDialog(
                             Text(
                                 text = it,
                                 style = TextStyle.Default.copy(
-                                    color = linkStyle.color,
-                                    textDecoration = linkStyle.textDecoration,
+                                    color = baseLinkTextStyle.color,
+                                    textDecoration = baseLinkTextStyle.textDecoration,
                                 ),
                             )
                         },
@@ -344,9 +346,10 @@ fun DescriptionTextPreview() {
             fontSize = 14.sp,
             annotatedDescription = buildAnnotatedString {
                 appendLine("hello.")
-                annotateUrl(tag = "URL", url = "http://example.com/", spanStyle = linkStyle)
+                withLink(LinkAnnotation.Url(url = "http://example.com/", styles = linkStyle)) {
+                    append("URL")
+                }
             },
-            onUrlClicked = {},
         )
     }
 }
