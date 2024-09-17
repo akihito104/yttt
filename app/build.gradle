@@ -32,13 +32,12 @@ android {
         }
     }
     packagingOptions {
-        exclude("dependencies.txt")
+        resources {
+            excludes += ['dependencies.txt']
+        }
     }
     hilt {
         enableAggregatingTask = true
-    }
-    lintOptions {
-        lintConfig = file("$rootDir/lint_config.xml")
     }
 }
 

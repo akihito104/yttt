@@ -30,7 +30,9 @@ android {
         }
     }
     packagingOptions {
-        exclude("dependencies.txt")
+        resources {
+            excludes += ['dependencies.txt']
+        }
     }
     hilt {
         enableAggregatingTask = true
