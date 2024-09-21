@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.os.Bundle
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -13,6 +12,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import com.freshdigitable.yttt.compose.navigation.NavRoute
+import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
 import com.freshdigitable.yttt.lib.R
 
 sealed class LaunchNavRoute(path: String) : NavRoute(path) {
@@ -22,7 +22,12 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
 
     object Splash : LaunchNavRoute("splash") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
+            backStackEntry: NavBackStackEntry
+        ) {
+            topAppBarStateHolder?.update(null)
             LaunchScreen(
                 onTransition = { canLoadList ->
                     val route = if (canLoadList) Main.route else Auth.route
@@ -41,7 +46,12 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
 
     object Auth : LaunchNavRoute("init_auth") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
+            backStackEntry: NavBackStackEntry
+        ) {
+            topAppBarStateHolder?.update(null)
             InitialAccountSettingScreen(
                 onComplete = {
                     navController.navigate(Main.route) {
@@ -57,13 +67,15 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
 
     object Main : LaunchNavRoute("main") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
+            backStackEntry: NavBackStackEntry
+        ) {
+            topAppBarStateHolder?.update(null)
             MainScreen()
         }
     }
-
-    @Composable
-    override fun title(args: Bundle?): String? = null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

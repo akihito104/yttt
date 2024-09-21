@@ -42,6 +42,7 @@ import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.DrawerMenuListItem.Companion.toListItem
 import com.freshdigitable.yttt.compose.navigation.NavActivity
 import com.freshdigitable.yttt.compose.navigation.NavR
+import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.TwitchAccountRepository
@@ -126,10 +127,12 @@ private fun MainScreen(
             )
         },
     ) {
+        val topAppBarStateHolder = remember { TopAppBarStateHolder() }
         Scaffold(
             topBar = {
                 val backStack = navController.currentBackStackEntryAsState()
                 TopAppBarImpl(
+                    stateHolder = topAppBarStateHolder,
                     currentBackStackEntryProvider = { backStack.value },
                     showMenuBadge = showMenuBadge,
                     onMenuIconClicked = {
@@ -148,9 +151,14 @@ private fun MainScreen(
                     navController = navController,
                     startDestination = startDestination,
                 ) {
-                    composableWith(navController = navController, navRoutes = navigation)
+                    composableWith(
+                        navController = navController,
+                        topAppBarStateHolder = topAppBarStateHolder,
+                        navRoutes = navigation
+                    )
                     composableWith(
                         navController,
+                        topAppBarStateHolder = topAppBarStateHolder,
                         LiveVideoSharedTransitionRoute.routes,
                         this@SharedTransitionLayout,
                     )
@@ -162,18 +170,16 @@ private fun MainScreen(
 
 @Composable
 private fun TopAppBarImpl(
+    stateHolder: TopAppBarStateHolder,
     currentBackStackEntryProvider: () -> NavBackStackEntry?,
     showMenuBadge: () -> Boolean,
     onMenuIconClicked: () -> Unit,
     onUpClicked: () -> Unit,
 ) {
-    val backStack = currentBackStackEntryProvider()
-    val navRoute = (MainNavRoute.routes + LiveVideoSharedTransitionRoute.routes)
-        .find { it.route == backStack?.destination?.route }
-    val title = navRoute?.title(backStack?.arguments)
     TopAppBarImpl(
-        title = title,
+        stateHolder = stateHolder,
         icon = {
+            val backStack = currentBackStackEntryProvider()
             val route = backStack?.destination?.route
             if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
                 HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
@@ -211,15 +217,16 @@ fun HamburgerMenuIcon(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopAppBarImpl(
-    title: String?,
+    stateHolder: TopAppBarStateHolder,
     icon: (@Composable () -> Unit)?,
 ) {
     TopAppBar(
         title = {
-            val t = title ?: return@TopAppBar
+            val t = stateHolder.state?.title ?: return@TopAppBar
             Text(t)
         },
         navigationIcon = icon ?: {},
+        actions = stateHolder.state?.action ?: {},
     )
 }
 
@@ -269,8 +276,11 @@ internal enum class DrawerMenuItem(
 @Composable
 private fun TopAppBarImplPreview() {
     AppTheme {
+        val title = stringResource(id = R.string.title_timetable)
         TopAppBarImpl(
-            title = stringResource(id = R.string.title_timetable),
+            stateHolder = TopAppBarStateHolder().apply {
+                update(title = title)
+            },
             icon = {
                 Icon(
                     Icons.Filled.Menu,
@@ -287,6 +297,9 @@ private fun TopAppBarImplPreview() {
 private fun HamburgerMenuIconPreview() {
     AppTheme {
         TopAppBarImpl(
+            stateHolder = TopAppBarStateHolder().apply {
+                update(title = "Title")
+            },
             currentBackStackEntryProvider = { null },
             showMenuBadge = { true },
             onMenuIconClicked = {},

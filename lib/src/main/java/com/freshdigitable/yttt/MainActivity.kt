@@ -29,7 +29,11 @@ class MainActivity : AppCompatActivity() {
             AppTheme {
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = startDestination.route) {
-                    composableWith(navController = navController, navRoutes = LaunchNavRoute.routes)
+                    composableWith(
+                        navController = navController,
+                        topAppBarStateHolder = null,
+                        navRoutes = LaunchNavRoute.routes
+                    )
                 }
             }
         }

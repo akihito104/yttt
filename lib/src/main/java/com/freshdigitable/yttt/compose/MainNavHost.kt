@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.os.Bundle
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -18,6 +17,7 @@ import com.freshdigitable.yttt.compose.navigation.LiveIdPathParam
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.compose.navigation.NavRouteWithSharedTransition
+import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.lib.R
@@ -35,7 +35,12 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
 
     object Subscription : MainNavRoute(path = "subscription") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
+            backStackEntry: NavBackStackEntry
+        ) {
+            topAppBarStateHolder?.update(title = stringResource(id = R.string.title_subscription))
             SubscriptionListScreen(
                 onListItemClicked = {
                     val route = ChannelDetail.parseRoute(it)
@@ -43,9 +48,6 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
                 },
             )
         }
-
-        @Composable
-        override fun title(args: Bundle?): String = stringResource(R.string.title_subscription)
     }
 
     object ChannelDetail : MainNavRoute(path = "channel") {
@@ -59,36 +61,39 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
             navArgParams.parseToId(savedStateHandle) { v, t -> LiveChannel.Id(v, t) }
 
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
+            backStackEntry: NavBackStackEntry
+        ) {
+            topAppBarStateHolder?.update(stringResource(id = R.string.title_channel_detail))
             ChannelDetailScreen()
         }
-
-        @Composable
-        override fun title(args: Bundle?): String = stringResource(R.string.title_channel_detail)
     }
 
     object Settings : MainNavRoute(path = "settings") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
+            backStackEntry: NavBackStackEntry
+        ) {
+            topAppBarStateHolder?.update(stringResource(id = R.string.title_setting))
             AppSettingsScreen()
         }
-
-        @Composable
-        override fun title(args: Bundle?): String = stringResource(R.string.title_setting)
     }
 
     object Auth : MainNavRoute(path = "auth") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
+            backStackEntry: NavBackStackEntry
+        ) {
+            topAppBarStateHolder?.update(title = stringResource(id = R.string.title_account_setting))
             AuthScreen()
         }
-
-        @Composable
-        override fun title(args: Bundle?): String = stringResource(R.string.title_account_setting)
     }
-
-    @Composable
-    override fun title(args: Bundle?): String = stringResource(R.string.title_twitch_authentication)
 }
 
 sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTransition(path) {
@@ -108,10 +113,12 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
         @Composable
         override fun ContentWithSharedTransition(
             navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
             backStackEntry: NavBackStackEntry,
             sharedTransition: SharedTransitionScope,
             animatedContentScope: AnimatedContentScope
         ) {
+            topAppBarStateHolder?.update(title = stringResource(id = R.string.title_timetable))
             with(sharedTransition) {
                 with(animatedContentScope) {
                     TimetableTabScreen(
@@ -141,9 +148,6 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
                 }
             }
         }
-
-        @Composable
-        override fun title(args: Bundle?): String = stringResource(R.string.title_timetable)
     }
 
     object VideoDetail : LiveVideoSharedTransitionRoute(path = "videoDetail") {
@@ -161,10 +165,13 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
         @ExperimentalSharedTransitionApi
         @Composable
         override fun ContentWithSharedTransition(
-            navController: NavHostController, backStackEntry: NavBackStackEntry,
+            navController: NavHostController,
+            topAppBarStateHolder: TopAppBarStateHolder?,
+            backStackEntry: NavBackStackEntry,
             sharedTransition: SharedTransitionScope,
             animatedContentScope: AnimatedContentScope,
         ) {
+            topAppBarStateHolder?.update(title = stringResource(id = R.string.title_stream_detail))
             with(sharedTransition) {
                 VideoDetailScreen(
                     thumbnailModifier = {
@@ -184,8 +191,5 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
                 )
             }
         }
-
-        @Composable
-        override fun title(args: Bundle?): String = stringResource(R.string.title_stream_detail)
     }
 }

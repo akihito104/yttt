@@ -3,11 +3,14 @@ package com.freshdigitable.yttt.compose.navigation
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
@@ -57,10 +60,11 @@ abstract class NavRoute(
     }
 
     @Composable
-    abstract fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry)
-
-    @Composable
-    abstract fun title(args: Bundle?): String?
+    abstract fun Content(
+        navController: NavHostController,
+        topAppBarStateHolder: TopAppBarStateHolder?,
+        backStackEntry: NavBackStackEntry
+    )
 }
 
 abstract class NavActivity(
@@ -77,13 +81,18 @@ abstract class NavRouteWithSharedTransition(
     @Composable
     abstract fun ContentWithSharedTransition(
         navController: NavHostController,
+        topAppBarStateHolder: TopAppBarStateHolder?,
         backStackEntry: NavBackStackEntry,
         sharedTransition: SharedTransitionScope,
         animatedContentScope: AnimatedContentScope,
     )
 
     @Composable
-    override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) =
+    override fun Content(
+        navController: NavHostController,
+        topAppBarStateHolder: TopAppBarStateHolder?,
+        backStackEntry: NavBackStackEntry
+    ) =
         throw NotImplementedError()
 }
 
@@ -93,12 +102,18 @@ fun <T> NavType<T?>.nonNull(): NavType<T> = this as NavType<T>
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun NavGraphBuilder.composableWith(
     navController: NavHostController,
+    topAppBarStateHolder: TopAppBarStateHolder?,
     navRoutes: Collection<NavR>,
     sharedTransition: SharedTransitionScope? = null,
 ) {
     navRoutes.forEach { navRoute ->
         when (navRoute) {
-            is NavRoute -> composableWith(navController, navRoute, sharedTransition)
+            is NavRoute -> composableWith(
+                navController,
+                topAppBarStateHolder,
+                navRoute,
+                sharedTransition
+            )
 
             is NavActivity -> {
                 activity(route = navRoute.path) {
@@ -114,6 +129,7 @@ fun NavGraphBuilder.composableWith(
 @OptIn(ExperimentalSharedTransitionApi::class)
 private fun NavGraphBuilder.composableWith(
     navController: NavHostController,
+    topAppBarStateHolder: TopAppBarStateHolder?,
     navRoute: NavRoute,
     sharedTransition: SharedTransitionScope? = null,
 ) {
@@ -131,11 +147,44 @@ private fun NavGraphBuilder.composableWith(
         deepLinks = navRoute.deepLinks,
         content = {
             if (sharedTransition == null) {
-                navRoute.Content(navController = navController, backStackEntry = it)
+                navRoute.Content(
+                    navController = navController,
+                    topAppBarStateHolder,
+                    backStackEntry = it
+                )
             } else {
                 val nr = navRoute as NavRouteWithSharedTransition
-                nr.ContentWithSharedTransition(navController, it, sharedTransition, this@composable)
+                nr.ContentWithSharedTransition(
+                    navController,
+                    topAppBarStateHolder,
+                    it,
+                    sharedTransition,
+                    this@composable
+                )
             }
         },
     )
+}
+
+interface TopAppBarState {
+    val title: String?
+    val action: @Composable (RowScope.() -> Unit)? get() = null
+}
+
+class TopAppBarStateHolder {
+    var state: TopAppBarState? by mutableStateOf(null)
+        private set
+
+    fun update(title: String?, action: @Composable (RowScope.() -> Unit)? = null) {
+        update(TopAppBarStateImpl(title, action))
+    }
+
+    fun update(state: TopAppBarState) {
+        this.state = state
+    }
+
+    private data class TopAppBarStateImpl(
+        override val title: String?,
+        override val action: @Composable (RowScope.() -> Unit)?,
+    ) : TopAppBarState
 }
