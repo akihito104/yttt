@@ -130,17 +130,21 @@ private fun MainScreen(
         val topAppBarStateHolder = remember { TopAppBarStateHolder() }
         Scaffold(
             topBar = {
-                val backStack = navController.currentBackStackEntryAsState()
                 TopAppBarImpl(
                     stateHolder = topAppBarStateHolder,
-                    currentBackStackEntryProvider = { backStack.value },
-                    showMenuBadge = showMenuBadge,
-                    onMenuIconClicked = {
-                        coroutineScope.launch {
-                            drawerState.open()
-                        }
-                    },
-                    onUpClicked = { navController.navigateUp() },
+                    icon = {
+                        val backStack = navController.currentBackStackEntryAsState()
+                        NavigationIcon(
+                            currentBackStackEntryProvider = { backStack.value },
+                            showMenuBadge = showMenuBadge,
+                            onMenuIconClicked = {
+                                coroutineScope.launch {
+                                    drawerState.open()
+                                }
+                            },
+                            onUpClicked = { navController.navigateUp() },
+                        )
+                    }
                 )
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -169,29 +173,23 @@ private fun MainScreen(
 }
 
 @Composable
-private fun TopAppBarImpl(
-    stateHolder: TopAppBarStateHolder,
+fun NavigationIcon(
     currentBackStackEntryProvider: () -> NavBackStackEntry?,
     showMenuBadge: () -> Boolean,
     onMenuIconClicked: () -> Unit,
     onUpClicked: () -> Unit,
 ) {
-    TopAppBarImpl(
-        stateHolder = stateHolder,
-        icon = {
-            val backStack = currentBackStackEntryProvider()
-            val route = backStack?.destination?.route
-            if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
-                HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
-            } else {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "",
-                    modifier = Modifier.clickable(onClick = onUpClicked),
-                )
-            }
-        },
-    )
+    val backStack = currentBackStackEntryProvider()
+    val route = backStack?.destination?.route
+    if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
+        HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
+    } else {
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = "",
+            modifier = Modifier.clickable(onClick = onUpClicked),
+        )
+    }
 }
 
 @Composable
@@ -300,10 +298,7 @@ private fun HamburgerMenuIconPreview() {
             stateHolder = TopAppBarStateHolder().apply {
                 update(title = "Title")
             },
-            currentBackStackEntryProvider = { null },
-            showMenuBadge = { true },
-            onMenuIconClicked = {},
-            onUpClicked = {},
+            icon = { HamburgerMenuIcon(showMenuBadge = { true }) {} },
         )
     }
 }
