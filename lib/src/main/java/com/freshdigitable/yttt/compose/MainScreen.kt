@@ -42,6 +42,7 @@ import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.DrawerMenuListItem.Companion.toListItem
 import com.freshdigitable.yttt.compose.navigation.NavActivity
 import com.freshdigitable.yttt.compose.navigation.NavR
+import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
@@ -155,16 +156,14 @@ private fun MainScreen(
                     navController = navController,
                     startDestination = startDestination,
                 ) {
-                    composableWith(
-                        navController = navController,
-                        topAppBarStateHolder = topAppBarStateHolder,
-                        navRoutes = navigation
+                    val screenStateHolder = ScreenStateHolder(
+                        navController,
+                        topAppBarStateHolder,
+                        this@SharedTransitionLayout,
                     )
                     composableWith(
-                        navController,
-                        topAppBarStateHolder = topAppBarStateHolder,
-                        LiveVideoSharedTransitionRoute.routes,
-                        this@SharedTransitionLayout,
+                        screenStateHolder,
+                        navRoutes = navigation + LiveVideoSharedTransitionRoute.routes
                     )
                 }
             }

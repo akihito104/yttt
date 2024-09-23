@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.compose
 
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -12,12 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
 import com.freshdigitable.yttt.compose.navigation.LiveIdPathParam
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
-import com.freshdigitable.yttt.compose.navigation.NavRouteWithSharedTransition
-import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
+import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.lib.R
@@ -36,15 +33,15 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object Subscription : MainNavRoute(path = "subscription") {
         @Composable
         override fun Content(
-            navController: NavHostController,
-            topAppBarStateHolder: TopAppBarStateHolder?,
+            screenStateHolder: ScreenStateHolder,
+            animatedContentScope: AnimatedContentScope,
             backStackEntry: NavBackStackEntry
         ) {
-            topAppBarStateHolder?.update(title = stringResource(id = R.string.title_subscription))
+            screenStateHolder.topAppBarStateHolder?.update(title = stringResource(id = R.string.title_subscription))
             SubscriptionListScreen(
                 onListItemClicked = {
                     val route = ChannelDetail.parseRoute(it)
-                    navController.navigate(route)
+                    screenStateHolder.navController.navigate(route)
                 },
             )
         }
@@ -62,11 +59,11 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
 
         @Composable
         override fun Content(
-            navController: NavHostController,
-            topAppBarStateHolder: TopAppBarStateHolder?,
+            screenStateHolder: ScreenStateHolder,
+            animatedContentScope: AnimatedContentScope,
             backStackEntry: NavBackStackEntry
         ) {
-            topAppBarStateHolder?.update(stringResource(id = R.string.title_channel_detail))
+            screenStateHolder.topAppBarStateHolder?.update(stringResource(id = R.string.title_channel_detail))
             ChannelDetailScreen()
         }
     }
@@ -74,11 +71,11 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object Settings : MainNavRoute(path = "settings") {
         @Composable
         override fun Content(
-            navController: NavHostController,
-            topAppBarStateHolder: TopAppBarStateHolder?,
+            screenStateHolder: ScreenStateHolder,
+            animatedContentScope: AnimatedContentScope,
             backStackEntry: NavBackStackEntry
         ) {
-            topAppBarStateHolder?.update(stringResource(id = R.string.title_setting))
+            screenStateHolder.topAppBarStateHolder?.update(stringResource(id = R.string.title_setting))
             AppSettingsScreen()
         }
     }
@@ -86,17 +83,17 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
     object Auth : MainNavRoute(path = "auth") {
         @Composable
         override fun Content(
-            navController: NavHostController,
-            topAppBarStateHolder: TopAppBarStateHolder?,
+            screenStateHolder: ScreenStateHolder,
+            animatedContentScope: AnimatedContentScope,
             backStackEntry: NavBackStackEntry
         ) {
-            topAppBarStateHolder?.update(title = stringResource(id = R.string.title_account_setting))
+            screenStateHolder.topAppBarStateHolder?.update(title = stringResource(id = R.string.title_account_setting))
             AuthScreen()
         }
     }
 }
 
-sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTransition(path) {
+sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
     companion object {
         val routes: Collection<NavRoute>
             get() = setOf(
@@ -111,41 +108,38 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
     object TimetableTab : LiveVideoSharedTransitionRoute(path = "ttt") {
         @OptIn(ExperimentalSharedTransitionApi::class)
         @Composable
-        override fun ContentWithSharedTransition(
-            navController: NavHostController,
-            topAppBarStateHolder: TopAppBarStateHolder?,
-            backStackEntry: NavBackStackEntry,
-            sharedTransition: SharedTransitionScope,
-            animatedContentScope: AnimatedContentScope
+        override fun Content(
+            screenStateHolder: ScreenStateHolder,
+            animatedContentScope: AnimatedContentScope,
+            backStackEntry: NavBackStackEntry
         ) {
-            topAppBarStateHolder?.update(title = stringResource(id = R.string.title_timetable))
-            with(sharedTransition) {
-                with(animatedContentScope) {
-                    TimetableTabScreen(
-                        onListItemClicked = {
-                            val route = VideoDetail.parseRoute(it)
-                            navController.navigate(route)
-                        },
-                        tabModifier = Modifier
-                            .renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
-                            .animateEnterExit(
-                                enter = fadeIn() + slideInVertically { -it },
-                                exit = fadeOut() + slideOutVertically { -it },
-                            ),
-                        thumbnailModifier = {
-                            Modifier.Companion.sharedElement(
-                                rememberSharedContentState(key = it.thumbnailTransitionKey),
-                                animatedContentScope,
-                            )
-                        },
-                        titleModifier = {
-                            Modifier.Companion.sharedElement(
-                                rememberSharedContentState(key = it.titleTransitionKey),
-                                animatedContentScope,
-                            )
-                        }
-                    )
-                }
+            screenStateHolder.topAppBarStateHolder?.update(title = stringResource(id = R.string.title_timetable))
+            screenStateHolder.animatedSharedTransitionScope(animatedContentScope) {
+                val navController = screenStateHolder.navController
+                TimetableTabScreen(
+                    onListItemClicked = {
+                        val route = VideoDetail.parseRoute(it)
+                        navController.navigate(route)
+                    },
+                    tabModifier = Modifier
+                        .renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
+                        .animateEnterExit(
+                            enter = fadeIn() + slideInVertically { -it },
+                            exit = fadeOut() + slideOutVertically { -it },
+                        ),
+                    thumbnailModifier = {
+                        Modifier.Companion.sharedElement(
+                            rememberSharedContentState(key = it.thumbnailTransitionKey),
+                            this,
+                        )
+                    },
+                    titleModifier = {
+                        Modifier.Companion.sharedElement(
+                            rememberSharedContentState(key = it.titleTransitionKey),
+                            this,
+                        )
+                    }
+                )
             }
         }
     }
@@ -164,27 +158,25 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRouteWithSharedTr
 
         @ExperimentalSharedTransitionApi
         @Composable
-        override fun ContentWithSharedTransition(
-            navController: NavHostController,
-            topAppBarStateHolder: TopAppBarStateHolder?,
-            backStackEntry: NavBackStackEntry,
-            sharedTransition: SharedTransitionScope,
+        override fun Content(
+            screenStateHolder: ScreenStateHolder,
             animatedContentScope: AnimatedContentScope,
+            backStackEntry: NavBackStackEntry
         ) {
-            topAppBarStateHolder?.update(title = stringResource(id = R.string.title_stream_detail))
-            with(sharedTransition) {
+            screenStateHolder.topAppBarStateHolder?.update(title = stringResource(id = R.string.title_stream_detail))
+            screenStateHolder.animatedSharedTransitionScope(animatedContentScope) {
                 VideoDetailScreen(
                     thumbnailModifier = {
                         Modifier.Companion.sharedElement(
                             rememberSharedContentState(key = it.thumbnailTransitionKey),
-                            animatedContentScope,
+                            this,
                         )
                     },
                     titleModifier = {
                         Modifier.Companion
                             .sharedElement(
                                 rememberSharedContentState(key = it.titleTransitionKey),
-                                animatedContentScope,
+                                this,
                             )
                             .skipToLookaheadSize()
                     },

@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.LaunchNavRoute
+import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.feature.oauth.TwitchOauthParser
 import dagger.hilt.android.AndroidEntryPoint
@@ -30,9 +31,8 @@ class MainActivity : AppCompatActivity() {
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = startDestination.route) {
                     composableWith(
-                        navController = navController,
-                        topAppBarStateHolder = null,
-                        navRoutes = LaunchNavRoute.routes
+                        screenStateHolder = ScreenStateHolder(navController),
+                        navRoutes = LaunchNavRoute.routes,
                     )
                 }
             }
