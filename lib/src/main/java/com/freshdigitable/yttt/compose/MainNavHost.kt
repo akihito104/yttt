@@ -163,7 +163,6 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
             animatedContentScope: AnimatedContentScope,
             backStackEntry: NavBackStackEntry
         ) {
-            screenStateHolder.topAppBarStateHolder?.update(title = stringResource(id = R.string.title_stream_detail))
             screenStateHolder.animatedSharedTransitionScope(animatedContentScope) {
                 VideoDetailScreen(
                     thumbnailModifier = {
@@ -180,6 +179,7 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
                             )
                             .skipToLookaheadSize()
                     },
+                    appBarStateHolder = requireNotNull(screenStateHolder.topAppBarStateHolder)
                 )
             }
         }
