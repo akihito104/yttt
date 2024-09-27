@@ -6,18 +6,35 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavBackStackEntry
 import com.freshdigitable.yttt.compose.navigation.LiveIdPathParam
 import com.freshdigitable.yttt.compose.navigation.NavArg
 import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
+import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import com.freshdigitable.yttt.lib.R
+import kotlinx.coroutines.launch
 
 sealed class MainNavRoute(path: String) : NavRoute(path) {
     companion object {
@@ -156,6 +173,40 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
             return liveIdPathParam.parseToId(savedStateHandle) { v, t -> LiveVideo.Id(v, t) }
         }
 
+        @Composable
+        private fun TopAppBar(
+            viewModel: VideoDetailViewModel,
+            appBarStateHolder: TopAppBarStateHolder,
+        ) {
+            appBarStateHolder.update(
+                title = stringResource(id = R.string.title_stream_detail),
+                action = {
+                    var menuExpanded by remember { mutableStateOf(false) }
+                    IconButton(onClick = { menuExpanded = true }) {
+                        Icon(imageVector = Icons.Default.MoreVert, contentDescription = null)
+                    }
+                    val items = viewModel.contextMenuItems.collectAsState()
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
+                        val coroutineScope = rememberCoroutineScope()
+                        items.value.forEach {
+                            DropdownMenuItem(
+                                text = { Text(text = it.text) },
+                                onClick = {
+                                    coroutineScope.launch {
+                                        viewModel.consumeMenuItem(it)
+                                    }
+                                    menuExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            )
+        }
+
         @ExperimentalSharedTransitionApi
         @Composable
         override fun Content(
@@ -163,8 +214,12 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
             animatedContentScope: AnimatedContentScope,
             backStackEntry: NavBackStackEntry
         ) {
+            val viewModel = hiltViewModel<VideoDetailViewModel>()
+            val appBarStateHolder = requireNotNull(screenStateHolder.topAppBarStateHolder)
+            TopAppBar(viewModel = viewModel, appBarStateHolder = appBarStateHolder)
             screenStateHolder.animatedSharedTransitionScope(animatedContentScope) {
                 VideoDetailScreen(
+                    viewModel = viewModel,
                     thumbnailModifier = {
                         Modifier.Companion.sharedElement(
                             rememberSharedContentState(key = it.thumbnailTransitionKey),
@@ -179,7 +234,6 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
                             )
                             .skipToLookaheadSize()
                     },
-                    appBarStateHolder = requireNotNull(screenStateHolder.topAppBarStateHolder)
                 )
             }
         }
