@@ -100,4 +100,10 @@ class TimetableContextMenuDelegate @Inject constructor(
     fun tearDownMenu() {
         _selectedLiveVideo.value = null
     }
+
+    suspend fun findMenuItems(videoId: LiveVideo.Id): List<TimetableMenuItem> {
+        val useCase = checkNotNull(findLiveVideoMap[videoId.type.java])
+        val video = useCase(videoId) ?: return emptyList()
+        return menuSelector.findMenuItems(video)
+    }
 }

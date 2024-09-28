@@ -3,11 +3,15 @@ package com.freshdigitable.yttt.compose.navigation
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
 import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
@@ -57,10 +61,11 @@ abstract class NavRoute(
     }
 
     @Composable
-    abstract fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry)
-
-    @Composable
-    abstract fun title(args: Bundle?): String?
+    abstract fun Content(
+        screenStateHolder: ScreenStateHolder,
+        animatedContentScope: AnimatedContentScope,
+        backStackEntry: NavBackStackEntry,
+    )
 }
 
 abstract class NavActivity(
@@ -70,35 +75,16 @@ abstract class NavActivity(
     val data: Uri? = null,
 ) : NavR
 
-abstract class NavRouteWithSharedTransition(
-    override val path: String,
-) : NavRoute(path) {
-    @OptIn(ExperimentalSharedTransitionApi::class)
-    @Composable
-    abstract fun ContentWithSharedTransition(
-        navController: NavHostController,
-        backStackEntry: NavBackStackEntry,
-        sharedTransition: SharedTransitionScope,
-        animatedContentScope: AnimatedContentScope,
-    )
-
-    @Composable
-    override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) =
-        throw NotImplementedError()
-}
-
 @Suppress("UNCHECKED_CAST")
 fun <T> NavType<T?>.nonNull(): NavType<T> = this as NavType<T>
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 fun NavGraphBuilder.composableWith(
-    navController: NavHostController,
+    screenStateHolder: ScreenStateHolder,
     navRoutes: Collection<NavR>,
-    sharedTransition: SharedTransitionScope? = null,
 ) {
     navRoutes.forEach { navRoute ->
         when (navRoute) {
-            is NavRoute -> composableWith(navController, navRoute, sharedTransition)
+            is NavRoute -> composableWith(screenStateHolder, navRoute)
 
             is NavActivity -> {
                 activity(route = navRoute.path) {
@@ -111,11 +97,9 @@ fun NavGraphBuilder.composableWith(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 private fun NavGraphBuilder.composableWith(
-    navController: NavHostController,
+    screenStateHolder: ScreenStateHolder,
     navRoute: NavRoute,
-    sharedTransition: SharedTransitionScope? = null,
 ) {
     composable(
         navRoute.route,
@@ -130,12 +114,53 @@ private fun NavGraphBuilder.composableWith(
         } ?: emptyList(),
         deepLinks = navRoute.deepLinks,
         content = {
-            if (sharedTransition == null) {
-                navRoute.Content(navController = navController, backStackEntry = it)
-            } else {
-                val nr = navRoute as NavRouteWithSharedTransition
-                nr.ContentWithSharedTransition(navController, it, sharedTransition, this@composable)
-            }
+            navRoute.Content(
+                screenStateHolder = screenStateHolder,
+                backStackEntry = it,
+                animatedContentScope = this,
+            )
         },
     )
+}
+
+interface TopAppBarState {
+    val title: String?
+    val action: @Composable (RowScope.() -> Unit)? get() = null
+}
+
+class TopAppBarStateHolder {
+    var state: TopAppBarState? by mutableStateOf(null)
+        private set
+
+    fun update(title: String?, action: @Composable (RowScope.() -> Unit)? = null) {
+        update(TopAppBarStateImpl(title, action))
+    }
+
+    fun update(state: TopAppBarState) {
+        this.state = state
+    }
+
+    private data class TopAppBarStateImpl(
+        override val title: String?,
+        override val action: @Composable (RowScope.() -> Unit)?,
+    ) : TopAppBarState
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+class ScreenStateHolder(
+    val navController: NavHostController,
+    val topAppBarStateHolder: TopAppBarStateHolder? = null,
+    val sharedTransition: SharedTransitionScope? = null,
+) {
+    inline fun animatedSharedTransitionScope(
+        animatedContent: AnimatedContentScope,
+        content: AnimatedSharedTransitionScope.() -> Unit,
+    ) {
+        AnimatedSharedTransitionScope(requireNotNull(sharedTransition), animatedContent).content()
+    }
+
+    class AnimatedSharedTransitionScope(
+        private val sharedTransition: SharedTransitionScope,
+        private val animatedContent: AnimatedContentScope
+    ) : SharedTransitionScope by sharedTransition, AnimatedVisibilityScope by animatedContent
 }

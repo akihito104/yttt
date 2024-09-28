@@ -42,6 +42,8 @@ import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.DrawerMenuListItem.Companion.toListItem
 import com.freshdigitable.yttt.compose.navigation.NavActivity
 import com.freshdigitable.yttt.compose.navigation.NavR
+import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
+import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.TwitchAccountRepository
@@ -126,18 +128,24 @@ private fun MainScreen(
             )
         },
     ) {
+        val topAppBarStateHolder = remember { TopAppBarStateHolder() }
         Scaffold(
             topBar = {
-                val backStack = navController.currentBackStackEntryAsState()
                 TopAppBarImpl(
-                    currentBackStackEntryProvider = { backStack.value },
-                    showMenuBadge = showMenuBadge,
-                    onMenuIconClicked = {
-                        coroutineScope.launch {
-                            drawerState.open()
-                        }
-                    },
-                    onUpClicked = { navController.navigateUp() },
+                    stateHolder = topAppBarStateHolder,
+                    icon = {
+                        val backStack = navController.currentBackStackEntryAsState()
+                        NavigationIcon(
+                            currentBackStackEntryProvider = { backStack.value },
+                            showMenuBadge = showMenuBadge,
+                            onMenuIconClicked = {
+                                coroutineScope.launch {
+                                    drawerState.open()
+                                }
+                            },
+                            onUpClicked = { navController.navigateUp() },
+                        )
+                    }
                 )
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -148,11 +156,14 @@ private fun MainScreen(
                     navController = navController,
                     startDestination = startDestination,
                 ) {
-                    composableWith(navController = navController, navRoutes = navigation)
-                    composableWith(
+                    val screenStateHolder = ScreenStateHolder(
                         navController,
-                        LiveVideoSharedTransitionRoute.routes,
+                        topAppBarStateHolder,
                         this@SharedTransitionLayout,
+                    )
+                    composableWith(
+                        screenStateHolder,
+                        navRoutes = navigation + LiveVideoSharedTransitionRoute.routes
                     )
                 }
             }
@@ -161,31 +172,23 @@ private fun MainScreen(
 }
 
 @Composable
-private fun TopAppBarImpl(
+fun NavigationIcon(
     currentBackStackEntryProvider: () -> NavBackStackEntry?,
     showMenuBadge: () -> Boolean,
     onMenuIconClicked: () -> Unit,
     onUpClicked: () -> Unit,
 ) {
     val backStack = currentBackStackEntryProvider()
-    val navRoute = (MainNavRoute.routes + LiveVideoSharedTransitionRoute.routes)
-        .find { it.route == backStack?.destination?.route }
-    val title = navRoute?.title(backStack?.arguments)
-    TopAppBarImpl(
-        title = title,
-        icon = {
-            val route = backStack?.destination?.route
-            if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
-                HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
-            } else {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "",
-                    modifier = Modifier.clickable(onClick = onUpClicked),
-                )
-            }
-        },
-    )
+    val route = backStack?.destination?.route
+    if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
+        HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
+    } else {
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = "",
+            modifier = Modifier.clickable(onClick = onUpClicked),
+        )
+    }
 }
 
 @Composable
@@ -211,15 +214,16 @@ fun HamburgerMenuIcon(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TopAppBarImpl(
-    title: String?,
+    stateHolder: TopAppBarStateHolder,
     icon: (@Composable () -> Unit)?,
 ) {
     TopAppBar(
         title = {
-            val t = title ?: return@TopAppBar
+            val t = stateHolder.state?.title ?: return@TopAppBar
             Text(t)
         },
         navigationIcon = icon ?: {},
+        actions = stateHolder.state?.action ?: {},
     )
 }
 
@@ -269,8 +273,11 @@ internal enum class DrawerMenuItem(
 @Composable
 private fun TopAppBarImplPreview() {
     AppTheme {
+        val title = stringResource(id = R.string.title_timetable)
         TopAppBarImpl(
-            title = stringResource(id = R.string.title_timetable),
+            stateHolder = TopAppBarStateHolder().apply {
+                update(title = title)
+            },
             icon = {
                 Icon(
                     Icons.Filled.Menu,
@@ -287,10 +294,10 @@ private fun TopAppBarImplPreview() {
 private fun HamburgerMenuIconPreview() {
     AppTheme {
         TopAppBarImpl(
-            currentBackStackEntryProvider = { null },
-            showMenuBadge = { true },
-            onMenuIconClicked = {},
-            onUpClicked = {},
+            stateHolder = TopAppBarStateHolder().apply {
+                update(title = "Title")
+            },
+            icon = { HamburgerMenuIcon(showMenuBadge = { true }) {} },
         )
     }
 }

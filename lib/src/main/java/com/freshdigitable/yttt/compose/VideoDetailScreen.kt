@@ -149,10 +149,10 @@ private fun VideoDetailScreen(
                     },
                 )
             }
-            Text(
-                text = video.toString(),
-                fontSize = 14.sp,
-            )
+//            Text(
+//                text = video.toString(),
+//                fontSize = 14.sp,
+//            )
         }
     }
     when (val d = dialog.value) {

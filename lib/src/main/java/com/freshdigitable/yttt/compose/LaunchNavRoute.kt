@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.compose
 
-import android.os.Bundle
+import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -11,8 +11,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavBackStackEntry
-import androidx.navigation.NavHostController
 import com.freshdigitable.yttt.compose.navigation.NavRoute
+import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.lib.R
 
 sealed class LaunchNavRoute(path: String) : NavRoute(path) {
@@ -22,7 +22,13 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
 
     object Splash : LaunchNavRoute("splash") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            screenStateHolder: ScreenStateHolder,
+            animatedContentScope: AnimatedContentScope,
+            backStackEntry: NavBackStackEntry
+        ) {
+            screenStateHolder.topAppBarStateHolder?.update(null)
+            val navController = screenStateHolder.navController
             LaunchScreen(
                 onTransition = { canLoadList ->
                     val route = if (canLoadList) Main.route else Auth.route
@@ -41,10 +47,15 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
 
     object Auth : LaunchNavRoute("init_auth") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            screenStateHolder: ScreenStateHolder,
+            animatedContentScope: AnimatedContentScope,
+            backStackEntry: NavBackStackEntry
+        ) {
+            screenStateHolder.topAppBarStateHolder?.update(null)
             InitialAccountSettingScreen(
                 onComplete = {
-                    navController.navigate(Main.route) {
+                    screenStateHolder.navController.navigate(Main.route) {
                         popUpTo(route) {
                             inclusive = true
                         }
@@ -57,13 +68,15 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
 
     object Main : LaunchNavRoute("main") {
         @Composable
-        override fun Content(navController: NavHostController, backStackEntry: NavBackStackEntry) {
+        override fun Content(
+            screenStateHolder: ScreenStateHolder,
+            animatedContentScope: AnimatedContentScope,
+            backStackEntry: NavBackStackEntry
+        ) {
+            screenStateHolder.topAppBarStateHolder?.update(null)
             MainScreen()
         }
     }
-
-    @Composable
-    override fun title(args: Bundle?): String? = null
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
