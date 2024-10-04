@@ -15,10 +15,8 @@ fun SubscriptionListScreen(
     viewModel: SubscriptionListViewModel = hiltViewModel(),
     onListItemClicked: (LiveChannel.Id) -> Unit,
 ) {
-    val tabs = viewModel.tabData.collectAsState(initial = viewModel.initialTab)
-    val lists = viewModel.sources.entries.associate { (p, s) ->
-        p to s.collectAsState(initial = emptyList())
-    }
+    val tabs = viewModel.tabData.collectAsState()
+    val lists = viewModel.sources.entries.associate { (p, s) -> p to s.collectAsState() }
     HorizontalPagerWithTabScreen(
         tabDataProvider = { tabs.value }
     ) { tab ->
