@@ -183,11 +183,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
-        return dao.findChannelDetail(ids)
+        return dao.findChannelDetail(ids, current = dateTimeProvider.now())
     }
 
     override suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>) {
-        dao.addChannelDetails(channelDetail)
+        dao.addChannelDetails(channelDetail, dateTimeProvider.now() + Duration.ofDays(1))
     }
 
     private val channelSections = mutableMapOf<YouTubeChannel.Id, List<YouTubeChannelSection>>()
