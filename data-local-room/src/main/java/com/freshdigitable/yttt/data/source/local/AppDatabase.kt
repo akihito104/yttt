@@ -27,6 +27,7 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserIdConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelAdditionExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelAdditionTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogIdConverter
@@ -49,6 +50,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     entities = [
         YouTubeChannelTable::class,
         YouTubeChannelAdditionTable::class,
+        YouTubeChannelAdditionExpireTable::class,
         YouTubeChannelLogTable::class,
         YouTubeSubscriptionTable::class,
         YouTubeVideoTable::class,
@@ -73,7 +75,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         YouTubePlaylistItemSummaryDb::class,
         TwitchStreamDbView::class,
     ],
-    version = 10,
+    version = 11,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -84,6 +86,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 7, to = 8),
         AutoMigration(from = 8, to = 9),
         AutoMigration(from = 9, to = 10, spec = AppDatabase.MigrateRemoveVideoVisible::class),
+        AutoMigration(from = 10, to = 11),
     ]
 )
 @TypeConverters(

@@ -97,6 +97,34 @@ internal data class YouTubeChannelAdditionTable(
     }
 }
 
+@Entity(
+    tableName = "channel_addition_expire",
+    foreignKeys = [
+        ForeignKey(
+            entity = YouTubeChannelTable::class,
+            parentColumns = ["id"],
+            childColumns = ["channel_id"],
+        ),
+    ],
+    indices = [Index("channel_id")],
+)
+internal data class YouTubeChannelAdditionExpireTable(
+    @PrimaryKey
+    @ColumnInfo(name = "channel_id")
+    val channelId: YouTubeChannel.Id,
+    @ColumnInfo(name = "expired_at", defaultValue = "null")
+    val expiredAt: Instant? = null,
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addChannelAdditionExpire(entities: Collection<YouTubeChannelAdditionExpireTable>)
+
+        @Query("DELETE FROM channel_addition_expire")
+        override suspend fun deleteTable()
+    }
+}
+
 internal data class YouTubeChannelDetailDb(
     @ColumnInfo(name = "title")
     override val title: String,
@@ -110,8 +138,15 @@ internal data class YouTubeChannelDetailDb(
 
     @androidx.room.Dao
     internal interface Dao {
-        @Query("SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id WHERE c.id IN (:id)")
-        suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDb>
+        @Query(
+            "SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id " +
+                "INNER JOIN (SELECT * FROM channel_addition_expire WHERE :current < expired_at) AS e ON c.id = e.channel_id " +
+                "WHERE c.id IN (:id)"
+        )
+        suspend fun findChannelDetail(
+            id: Collection<YouTubeChannel.Id>,
+            current: Instant,
+        ): List<YouTubeChannelDetailDb>
     }
 }
 
@@ -180,22 +215,25 @@ internal interface YouTubeChannelDaoProviders {
     val youTubeChannelAdditionDao: YouTubeChannelAdditionTable.Dao
     val youTubeChannelDetailDbDao: YouTubeChannelDetailDb.Dao
     val youTubeChannelLogDao: YouTubeChannelLogTable.Dao
+    val youTubeChannelAdditionExpireDao: YouTubeChannelAdditionExpireTable.Dao
 }
 
 internal interface YouTubeChannelDao : YouTubeChannelTable.Dao, YouTubeChannelAdditionTable.Dao,
-    YouTubeChannelLogTable.Dao, YouTubeChannelDetailDb.Dao
+    YouTubeChannelLogTable.Dao, YouTubeChannelDetailDb.Dao, YouTubeChannelAdditionExpireTable.Dao
 
 internal class YouTubeChannelDaoImpl @Inject constructor(
     private val db: YouTubeChannelDaoProviders,
 ) : YouTubeChannelDao, YouTubeChannelTable.Dao by db.youTubeChannelDao,
     YouTubeChannelAdditionTable.Dao by db.youTubeChannelAdditionDao,
     YouTubeChannelLogTable.Dao by db.youTubeChannelLogDao,
-    YouTubeChannelDetailDb.Dao by db.youTubeChannelDetailDbDao {
+    YouTubeChannelDetailDb.Dao by db.youTubeChannelDetailDbDao,
+    YouTubeChannelAdditionExpireTable.Dao by db.youTubeChannelAdditionExpireDao {
     override suspend fun deleteTable() {
         listOf(
             db.youTubeChannelDao,
             db.youTubeChannelAdditionDao,
-            db.youTubeChannelLogDao
+            db.youTubeChannelLogDao,
+            db.youTubeChannelAdditionExpireDao,
         ).forEach { it.deleteTable() }
     }
 }

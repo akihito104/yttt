@@ -68,16 +68,19 @@ internal class YouTubeDao @Inject constructor(
     }
 
     suspend fun addChannelDetails(
-        channelDetail: Collection<YouTubeChannelDetail>
+        channelDetail: Collection<YouTubeChannelDetail>,
+        expiredAt: Instant,
     ) = db.withTransaction {
         val channels = channelDetail.map { it.toDbEntity() }
         val additions = channelDetail.map { it.toAddition() }
         val playlists = additions.mapNotNull { it.uploadedPlayList }
             .distinct()
             .map { YouTubePlaylistTable(it) }
+        val expired = additions.map { YouTubeChannelAdditionExpireTable(it.id, expiredAt) }
         addChannels(channels)
         addPlaylists(playlists)
         addChannelAddition(additions)
+        addChannelAdditionExpire(expired)
     }
 
     suspend fun addFreeChatItems(
