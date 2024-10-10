@@ -17,7 +17,8 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
-interface LiveVideoDetailAnnotated : LiveVideoDetail {
+interface AnnotatableString {
+    val annotatable: String
     val descriptionAnnotationRangeItems: List<LinkAnnotationRange>
 
     companion object {
@@ -28,10 +29,10 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
         private val WEB_URL_REGEX = Regex("""http(s)?://[-\w.]+(:(\d+))?(/[^\s$PARENTHESIS]*)?""")
         private val YOUTUBE_URL_REGEX =
             Regex("""(?<!http(s)?://(www.)?)(www.)?youtube.com(/[^\s$PARENTHESIS]*)?""")
-        val LiveVideoDetail.descriptionUrlAnnotation: List<LinkAnnotationRange>
-            get() = (WEB_URL_REGEX.findAll(description).map {
+        val AnnotatableString.descriptionUrlAnnotation: List<LinkAnnotationRange>
+            get() = (WEB_URL_REGEX.findAll(annotatable).map {
                 LinkAnnotationRange.Url(range = it.range, text = it.value)
-            } + YOUTUBE_URL_REGEX.findAll(description).map {
+            } + YOUTUBE_URL_REGEX.findAll(annotatable).map {
                 LinkAnnotationRange.Url(
                     range = it.range,
                     text = it.value,
@@ -42,15 +43,15 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
         // Pattern.UNICODE_CHARACTER_CLASS is not supported
 //            Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
             Regex("""([#＃])[^\s　$PARENTHESIS#$'",.;:|\\]+""")
-        val LiveVideoDetail.descriptionHashTagAnnotation: List<LinkAnnotationRange>
-            get() = REGEX_HASHTAG.findAll(description).map {
+        val AnnotatableString.descriptionHashTagAnnotation: List<LinkAnnotationRange>
+            get() = REGEX_HASHTAG.findAll(annotatable).map {
                 LinkAnnotationRange.Hashtag(range = it.range, text = it.value)
             }.toList()
         private val REGEX_ACCOUNT = Regex("""@([\w_.-]{3,30})""")
-        fun LiveVideoDetail.descriptionAccountAnnotation(
+        fun AnnotatableString.descriptionAccountAnnotation(
             urlCreator: (String) -> List<String>,
         ): List<LinkAnnotationRange> {
-            return REGEX_ACCOUNT.findAll(description).map {
+            return REGEX_ACCOUNT.findAll(annotatable).map {
                 LinkAnnotationRange.Account(
                     range = it.range,
                     text = it.value,
@@ -63,8 +64,8 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
 
 data class LiveVideoDetailAnnotatedEntity(
     private val detail: LiveVideoDetail,
-    override val descriptionAnnotationRangeItems: List<LinkAnnotationRange>,
-) : LiveVideoDetailAnnotated, LiveVideoDetail by detail
+    val annotatableDescription: AnnotatableString,
+) : LiveVideoDetail by detail
 
 sealed interface LinkAnnotationRange {
     val range: IntRange

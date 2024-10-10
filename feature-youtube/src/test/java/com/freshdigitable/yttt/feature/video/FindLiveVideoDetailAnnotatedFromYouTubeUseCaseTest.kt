@@ -137,9 +137,12 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
             // verify
             assertNotNull(actual)
             checkNotNull(actual)
-            assertEquals(param.expected.size, actual.descriptionAnnotationRangeItems.size)
+            assertEquals(
+                param.expected.size,
+                actual.annotatableDescription.descriptionAnnotationRangeItems.size,
+            )
             param.expected.forEachIndexed { i, e ->
-                val a = actual.descriptionAnnotationRangeItems[i]
+                val a = actual.annotatableDescription.descriptionAnnotationRangeItems[i]
                 assertEquals(e.range, a.range)
                 assertEquals(e.text, a.text)
                 assertEquals(e.url, a.url)

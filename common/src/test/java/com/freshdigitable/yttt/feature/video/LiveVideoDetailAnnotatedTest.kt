@@ -1,11 +1,11 @@
 package com.freshdigitable.yttt.feature.video
 
+import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.AnnotatableString.Companion.descriptionAccountAnnotation
+import com.freshdigitable.yttt.data.model.AnnotatableString.Companion.descriptionHashTagAnnotation
+import com.freshdigitable.yttt.data.model.AnnotatableString.Companion.descriptionUrlAnnotation
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.ellipsize
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionAccountAnnotation
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -268,8 +268,8 @@ class LiveVideoDetailAnnotatedTest {
         @Test
         fun test() {
             // setup
-            val detail = mockk<LiveVideoDetail>().apply {
-                every { description } returns param.description
+            val detail = mockk<AnnotatableString>().apply {
+                every { annotatable } returns param.description
             }
             // exercise
             val actual = param.sut(detail)
@@ -287,7 +287,7 @@ class LiveVideoDetailAnnotatedTest {
             private val name: String? = null,
             val description: String,
             val expected: List<Expected>,
-            val sut: (LiveVideoDetail) -> List<LinkAnnotationRange>,
+            val sut: (AnnotatableString) -> List<LinkAnnotationRange>,
         ) {
             companion object {
                 fun url(name: String, description: String, expected: List<Expected>): TestParam =

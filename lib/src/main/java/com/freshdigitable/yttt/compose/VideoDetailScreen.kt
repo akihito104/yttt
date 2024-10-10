@@ -43,11 +43,13 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.AnnotatableString.Companion.descriptionUrlAnnotation
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.ellipsize
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
@@ -81,7 +83,7 @@ fun VideoDetailScreen(
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 private fun VideoDetailScreen(
-    videoProvider: () -> LiveVideoDetailAnnotated?,
+    videoProvider: () -> LiveVideoDetailAnnotatedEntity?,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
 ) {
@@ -113,7 +115,7 @@ private fun VideoDetailScreen(
         }
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier.padding(8.dp),
         ) {
             Text(
                 text = video.title,
@@ -132,27 +134,17 @@ private fun VideoDetailScreen(
                 title = video.channel.title,
                 platformColor = Color(video.channel.platform.color)
             )
-            if (video.descriptionAnnotationRangeItems.isEmpty()) {
-                Text(
-                    text = video.description,
-                    fontSize = 14.sp,
-                )
-            } else {
-                DescriptionText(
-                    fontSize = 14.sp,
-                    annotatedDescription = video.annotatedDescription(linkStyle) {
-                        check(it is LinkAnnotation.Clickable)
-                        val linkAnnotation = LinkAnnotationRange.createFromTag(it.tag)
-                        if (linkAnnotation.needsDialog()) {
-                            dialog.value = linkAnnotation
-                        }
-                    },
-                )
+            AnnotatableText(
+                annotatableString = video.annotatableDescription,
+                fontSize = 14.sp,
+                linkStyle = linkStyle,
+            ) {
+                check(it is LinkAnnotation.Clickable)
+                val linkAnnotation = LinkAnnotationRange.createFromTag(it.tag)
+                if (linkAnnotation.needsDialog()) {
+                    dialog.value = linkAnnotation
+                }
             }
-//            Text(
-//                text = video.toString(),
-//                fontSize = 14.sp,
-//            )
         }
     }
     when (val d = dialog.value) {
@@ -184,24 +176,32 @@ private fun VideoDetailScreen(
 }
 
 @Composable
-private fun DescriptionText(
+fun AnnotatableText(
     fontSize: TextUnit,
-    annotatedDescription: AnnotatedString,
+    annotatableString: AnnotatableString,
+    linkStyle: TextLinkStyles,
+    onUrlClicked: (LinkAnnotation) -> Unit,
 ) {
-    Text(
-        text = annotatedDescription,
-        style = TextStyle.Default.copy(
+    if (annotatableString.descriptionAnnotationRangeItems.isEmpty()) {
+        Text(
+            text = annotatableString.annotatable,
             fontSize = fontSize,
-            color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current),
-        ),
-    )
+        )
+    } else {
+        Text(
+            text = annotatableString.annotate(linkStyle, onUrlClicked),
+            style = TextStyle.Default.copy(
+                fontSize = fontSize,
+                color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current),
+            ),
+        )
+    }
 }
 
-private fun LiveVideoDetailAnnotated.annotatedDescription(
+private fun AnnotatableString.annotate(
     linkStyle: TextLinkStyles,
     onUrlClicked: (LinkAnnotation) -> Unit,
 ): AnnotatedString {
-    var pos = 0
     val items = descriptionAnnotationRangeItems.map {
         if (it is LinkAnnotationRange.Url && it.text.length > 40) {
             it.ellipsize(totalLength = 40, ellipsis = "...")
@@ -209,18 +209,19 @@ private fun LiveVideoDetailAnnotated.annotatedDescription(
             it
         }
     }.sortedBy { it.range.first }
+    var pos = 0
     return buildAnnotatedString {
         items.forEach { a ->
             if (pos < a.range.first) {
-                appendRange(description, pos, a.range.first)
+                appendRange(annotatable, pos, a.range.first)
             }
             withLink(a.linkAnnotation(linkStyle, onUrlClicked)) {
                 append(a.text)
             }
             pos = a.range.last + 1
         }
-        if (pos < description.length) {
-            appendRange(description, pos, description.length)
+        if (pos < annotatable.length) {
+            appendRange(annotatable, pos, annotatable.length)
         }
     }
 }
@@ -323,34 +324,22 @@ private val LiveVideo.statsText: String
 @LightModePreview
 @Composable
 fun VideoDetailComposePreview() {
+    val detail = object : LiveVideoDetail,
+        LiveVideo by LiveVideoPreviewParamProvider.liveVideo() {
+        override val description: String = "description\nhttps://example.com"
+        override val viewerCount: BigInteger? = BigInteger.valueOf(100)
+    }
     AppTheme {
         VideoDetailScreen(videoProvider = {
-            object : LiveVideoDetailAnnotated,
-                LiveVideo by LiveVideoPreviewParamProvider.liveVideo() {
-                override val description: String = "description"
-                override val viewerCount: BigInteger? = BigInteger.valueOf(100)
-                override val descriptionAnnotationRangeItems: List<LinkAnnotationRange> =
-                    emptyList()
-
-                override fun toString(): String = "debug json text"
-            }
-        })
-    }
-}
-
-@LightDarkModePreview
-@Composable
-fun DescriptionTextPreview() {
-    AppTheme {
-        DescriptionText(
-            fontSize = 14.sp,
-            annotatedDescription = buildAnnotatedString {
-                appendLine("hello.")
-                withLink(LinkAnnotation.Url(url = "http://example.com/", styles = linkStyle)) {
-                    append("URL")
+            LiveVideoDetailAnnotatedEntity(
+                detail = detail,
+                annotatableDescription = object : AnnotatableString {
+                    override val annotatable: String = detail.description
+                    override val descriptionAnnotationRangeItems: List<LinkAnnotationRange> =
+                        descriptionUrlAnnotation
                 }
-            },
-        )
+            )
+        })
     }
 }
 
