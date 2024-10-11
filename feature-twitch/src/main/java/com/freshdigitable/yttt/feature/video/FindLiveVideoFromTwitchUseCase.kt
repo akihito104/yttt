@@ -39,5 +39,5 @@ internal class FindLiveVideoDetailAnnotatedFromTwitchUseCase @Inject constructor
 }
 
 internal data class TwitchAnnotatedString(override val annotatable: String) : AnnotatableString {
-    override val descriptionAnnotationRangeItems: List<LinkAnnotationRange> = emptyList()
+    override val annotationRangeItems: List<LinkAnnotationRange> = emptyList()
 }

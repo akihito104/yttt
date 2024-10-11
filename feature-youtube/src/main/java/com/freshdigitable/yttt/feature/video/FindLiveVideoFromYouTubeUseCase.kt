@@ -2,10 +2,6 @@ package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.AnnotatableString.Companion.descriptionAccountAnnotation
-import com.freshdigitable.yttt.data.model.AnnotatableString.Companion.descriptionHashTagAnnotation
-import com.freshdigitable.yttt.data.model.AnnotatableString.Companion.descriptionUrlAnnotation
-import com.freshdigitable.yttt.data.model.LinkAnnotationRange
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
@@ -32,29 +28,12 @@ internal class FindLiveVideoDetailAnnotatedFromYouTubeUseCase @Inject constructo
         check(v is LiveVideoDetail)
         return LiveVideoDetailAnnotatedEntity(
             detail = v,
-            annotatableDescription = YouTubeAnnotatableString(v.description),
-        )
-    }
-}
-
-internal data class YouTubeAnnotatableString(
-    override val annotatable: String,
-) : AnnotatableString {
-    override val descriptionAnnotationRangeItems: List<LinkAnnotationRange>
-        get() {
-            val urlAnnotation = descriptionUrlAnnotation
-            val hashtagAnnotation = descriptionHashTagAnnotation.filter { a ->
-                urlAnnotation.map { it.range }.all { !it.contains(a.range.first) }
-            }
-            val accountAnnotation = descriptionAccountAnnotation {
+            annotatableDescription = AnnotatableString.create(v.description) {
                 listOf(
                     "https://youtube.com/$it",
                     "https://twitter.com/${it.substring(1)}",
                 )
-            }.filter { a ->
-                urlAnnotation.map { it.range }.all { !it.contains(a.range.first) }
-            }
-            return (urlAnnotation + hashtagAnnotation + accountAnnotation)
-                .sortedBy { it.range.first }
-        }
+            },
+        )
+    }
 }

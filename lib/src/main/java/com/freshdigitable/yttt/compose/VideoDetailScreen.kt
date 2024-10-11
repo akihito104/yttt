@@ -44,7 +44,6 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.AnnotatableString.Companion.descriptionUrlAnnotation
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.ellipsize
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -182,7 +181,7 @@ fun AnnotatableText(
     linkStyle: TextLinkStyles,
     onUrlClicked: (LinkAnnotation) -> Unit,
 ) {
-    if (annotatableString.descriptionAnnotationRangeItems.isEmpty()) {
+    if (annotatableString.annotationRangeItems.isEmpty()) {
         Text(
             text = annotatableString.annotatable,
             fontSize = fontSize,
@@ -202,7 +201,7 @@ private fun AnnotatableString.annotate(
     linkStyle: TextLinkStyles,
     onUrlClicked: (LinkAnnotation) -> Unit,
 ): AnnotatedString {
-    val items = descriptionAnnotationRangeItems.map {
+    val items = annotationRangeItems.map {
         if (it is LinkAnnotationRange.Url && it.text.length > 40) {
             it.ellipsize(totalLength = 40, ellipsis = "...")
         } else {
@@ -333,11 +332,7 @@ fun VideoDetailComposePreview() {
         VideoDetailScreen(videoProvider = {
             LiveVideoDetailAnnotatedEntity(
                 detail = detail,
-                annotatableDescription = object : AnnotatableString {
-                    override val annotatable: String = detail.description
-                    override val descriptionAnnotationRangeItems: List<LinkAnnotationRange> =
-                        descriptionUrlAnnotation
-                }
+                annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
             )
         })
     }
