@@ -91,11 +91,6 @@ interface AnnotatableString {
     ) : AnnotatableString
 }
 
-data class LiveVideoDetailAnnotatedEntity(
-    private val detail: LiveVideoDetail,
-    val annotatableDescription: AnnotatableString,
-) : LiveVideoDetail by detail
-
 sealed interface LinkAnnotationRange {
     val range: IntRange
     val url: String
