@@ -57,3 +57,8 @@ data class LiveChannelDetailEntity(
     override val description: String?,
     override val uploadedPlayList: YouTubePlaylist.Id?,
 ) : LiveChannelDetail
+
+data class AnnotatedLiveChannelDetail(
+    private val detail: LiveChannelDetail,
+    val annotatedDescription: AnnotatableString,
+) : LiveChannelDetail by detail

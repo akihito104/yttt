@@ -1,8 +1,9 @@
 package com.freshdigitable.yttt.feature.channel
 
 import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTubeChannel
@@ -11,6 +12,7 @@ import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
 import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toLiveVideoThumbnail
+import com.freshdigitable.yttt.feature.video.createForYouTube
 import com.freshdigitable.yttt.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -40,9 +42,16 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         ChannelPage.ACTIVITIES,
         ChannelPage.DEBUG_CHANNEL,
     )
-    override val channelDetail: Flow<LiveChannelDetail?> = flow {
-        val c = repository.fetchChannelList(setOf(id.mapTo())).firstOrNull()
-        emit(c?.toLiveChannelDetail())
+    override val channelDetail: Flow<AnnotatedLiveChannelDetail?> = flow {
+        val list = repository.fetchChannelList(setOf(id.mapTo())).firstOrNull()
+        val res = list?.let { c ->
+            val d = c.toLiveChannelDetail()
+            AnnotatedLiveChannelDetail(
+                d,
+                AnnotatableString.createForYouTube(d.description ?: ""),
+            )
+        }
+        emit(res)
     }
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = channelDetail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()

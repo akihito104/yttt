@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.compose
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
@@ -33,8 +32,9 @@ import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.elli
 @Composable
 fun AnnotatableText(
     fontSize: TextUnit,
+    linkStyle: TextLinkStyles = linkStyles,
     annotatableString: AnnotatableString,
-    toLink: @Composable (LinkAnnotationRange) -> LinkAnnotation,
+    dialog: LinkAnnotationDialogState,
 ) {
     if (annotatableString.annotationRangeItems.isEmpty()) {
         Text(
@@ -43,18 +43,40 @@ fun AnnotatableText(
         )
     } else {
         Text(
-            text = annotatableString.annotate(toLink),
+            text = annotatableString.annotate(rangeToLink(linkStyle, dialog)),
             style = TextStyle.Default.copy(
                 fontSize = fontSize,
-                color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current),
+                color = LocalContentColor.current.copy(alpha = LocalContentColor.current.alpha),
             ),
         )
     }
 }
 
+private fun rangeToLink(
+    linkStyle: TextLinkStyles,
+    dialog: LinkAnnotationDialogState,
+): (LinkAnnotationRange) -> LinkAnnotation = { r ->
+    when {
+        r.needsDialog() -> {
+            LinkAnnotation.Clickable(
+                tag = r.tag,
+                styles = linkStyle,
+                linkInteractionListener = {
+                    dialog.showDialog(LinkAnnotationRange.createFromTag(r.tag))
+                }
+            )
+        }
+
+        else -> LinkAnnotation.Url(url = r.url, styles = linkStyle)
+    }
+}
+
+private fun LinkAnnotationRange.needsDialog(): Boolean =
+    this is LinkAnnotationRange.EllipsizedUrl || this is LinkAnnotationRange.Account
+
 @Composable
 private fun AnnotatableString.annotate(
-    toLink: @Composable (LinkAnnotationRange) -> LinkAnnotation,
+    toLink: (LinkAnnotationRange) -> LinkAnnotation,
 ): AnnotatedString {
     val items = annotationRangeItems.map {
         if (it is LinkAnnotationRange.Url && it.text.length > 40) {
@@ -86,7 +108,7 @@ private val baseLinkTextStyle
         color = MaterialTheme.colorScheme.tertiary,
         textDecoration = TextDecoration.Underline,
     )
-val linkStyle
+val linkStyles
     @Composable
     get() = TextLinkStyles(style = baseLinkTextStyle)
 
@@ -158,7 +180,7 @@ private fun EllipsizedUrlConfirmDialog(
 }
 
 @Composable
-fun AccountDialog(
+private fun AccountDialog(
     account: String,
     urls: List<String>,
     onUrlClicked: (String) -> Unit,

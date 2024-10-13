@@ -71,6 +71,9 @@ interface AnnotatableString {
             annotatable: String,
             urlCreator: (String) -> List<String>,
         ): AnnotatableString {
+            if (annotatable.isEmpty()) {
+                return empty()
+            }
             val urlAnnotation = urlAnnotationRange(annotatable)
             val hashtagAnnotation = hashTagAnnotationRange(annotatable).filter { a ->
                 urlAnnotation.all { !it.contains(a) }
@@ -83,12 +86,19 @@ interface AnnotatableString {
                 (urlAnnotation + hashtagAnnotation + accountAnnotation).sortedBy { it.range.first },
             )
         }
+
+        fun empty(): AnnotatableString = EmptyAnnotatableString
     }
 
     private data class AnnotatableStringImpl(
         override val annotatable: String,
         override val annotationRangeItems: List<LinkAnnotationRange>
     ) : AnnotatableString
+
+    private object EmptyAnnotatableString : AnnotatableString {
+        override val annotatable: String = ""
+        override val annotationRangeItems: List<LinkAnnotationRange> = emptyList()
+    }
 }
 
 sealed interface LinkAnnotationRange {

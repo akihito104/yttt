@@ -16,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -25,7 +24,6 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.LinkAnnotationRange
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
@@ -105,28 +103,12 @@ private fun VideoDetailScreen(
             AnnotatableText(
                 annotatableString = video.annotatableDescription,
                 fontSize = 14.sp,
-            ) { r ->
-                when {
-                    r.needsDialog() -> {
-                        LinkAnnotation.Clickable(
-                            tag = r.tag,
-                            styles = linkStyle,
-                            linkInteractionListener = {
-                                dialog.showDialog(LinkAnnotationRange.createFromTag(r.tag))
-                            }
-                        )
-                    }
-
-                    else -> LinkAnnotation.Url(url = r.url, styles = linkStyle)
-                }
-            }
+                dialog = dialog,
+            )
         }
     }
     LinkAnnotationDialog(state = dialog)
 }
-
-private fun LinkAnnotationRange.needsDialog(): Boolean =
-    this is LinkAnnotationRange.EllipsizedUrl || this is LinkAnnotationRange.Account
 
 private val LiveVideo.statsText: String
     get() {

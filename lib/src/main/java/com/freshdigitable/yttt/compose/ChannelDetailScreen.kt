@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +23,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +36,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetail
@@ -66,13 +67,26 @@ import java.util.Locale
 fun ChannelDetailScreen(
     viewModel: ChannelViewModel = hiltViewModel(),
 ) {
-    val detail = viewModel.channelDetail.collectAsState(initial = null)
+    val detail = viewModel.channelDetail.collectAsState()
+    val dialog = remember { LinkAnnotationDialogState() }
     ChannelDetailScreen(
         pages = viewModel.tabs,
         channelDetail = { detail.value }) { page ->
         when (page) {
-            ChannelPage.ABOUT -> PlainTextPage {
-                detail.value?.description ?: ""
+            ChannelPage.ABOUT -> {
+                val desc = detail.value?.annotatedDescription ?: AnnotatableString.empty()
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(8.dp)
+                ) {
+                    AnnotatableText(
+                        fontSize = 14.sp,
+                        annotatableString = desc,
+                        dialog = dialog,
+                    )
+                }
             }
 
             ChannelPage.DEBUG_CHANNEL -> PlainTextPage {
@@ -107,6 +121,7 @@ fun ChannelDetailScreen(
             }
         }
     }
+    LinkAnnotationDialog(state = dialog)
 }
 
 @Composable
@@ -175,7 +190,6 @@ private fun ChannelDetailHeader(
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun ChannelDetailPager(
     pages: List<ChannelPage>,
     pageContent: @Composable (ChannelPage) -> Unit,

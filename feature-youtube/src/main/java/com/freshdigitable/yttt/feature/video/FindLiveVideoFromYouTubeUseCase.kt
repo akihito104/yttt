@@ -28,12 +28,15 @@ internal class FindLiveVideoDetailAnnotatedFromYouTubeUseCase @Inject constructo
         check(v is LiveVideoDetail)
         return LiveVideoDetailAnnotatedEntity(
             detail = v,
-            annotatableDescription = AnnotatableString.create(v.description) {
-                listOf(
-                    "https://youtube.com/$it",
-                    "https://twitter.com/${it.substring(1)}",
-                )
-            },
+            annotatableDescription = AnnotatableString.createForYouTube(v.description),
         )
     }
 }
+
+internal fun AnnotatableString.Companion.createForYouTube(description: String): AnnotatableString =
+    create(description) {
+        listOf(
+            "https://youtube.com/$it",
+            "https://twitter.com/${it.substring(1)}",
+        )
+    }

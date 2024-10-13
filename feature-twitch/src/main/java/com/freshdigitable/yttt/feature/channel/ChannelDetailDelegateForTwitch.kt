@@ -1,14 +1,16 @@
 package com.freshdigitable.yttt.feature.channel
 
 import com.freshdigitable.yttt.data.TwitchLiveRepository
+import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
+import com.freshdigitable.yttt.feature.video.createForTwitch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -33,9 +35,16 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         ChannelPage.UPLOADED,
         ChannelPage.DEBUG_CHANNEL,
     )
-    override val channelDetail: Flow<LiveChannelDetail?> = flow {
-        val u = repository.findUsersById(setOf(id.mapTo()))
-        emit(u.map { it.toLiveChannelDetail() }.firstOrNull())
+    override val channelDetail: Flow<AnnotatedLiveChannelDetail?> = flow {
+        val users = repository.findUsersById(setOf(id.mapTo())).firstOrNull()
+        val detail = users?.let { u ->
+            val d = u.toLiveChannelDetail()
+            AnnotatedLiveChannelDetail(
+                detail = d,
+                annotatedDescription = AnnotatableString.createForTwitch(d.description)
+            )
+        }
+        emit(detail)
     }
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flow {
         val res = repository.fetchVideosByUserId(id.mapTo()).map {

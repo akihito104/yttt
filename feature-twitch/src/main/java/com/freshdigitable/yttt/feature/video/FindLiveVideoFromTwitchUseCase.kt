@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.LinkAnnotationRange
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
@@ -34,10 +33,11 @@ internal class FindLiveVideoDetailAnnotatedFromTwitchUseCase @Inject constructor
     override suspend fun invoke(id: LiveVideo.Id): LiveVideoDetailAnnotatedEntity? {
         val v = findLiveVideoUseCase(id) ?: return null
         check(v is LiveVideoDetail)
-        return LiveVideoDetailAnnotatedEntity(v, TwitchAnnotatedString(v.description))
+        return LiveVideoDetailAnnotatedEntity(v, AnnotatableString.createForTwitch(v.description))
     }
 }
 
-internal data class TwitchAnnotatedString(override val annotatable: String) : AnnotatableString {
-    override val annotationRangeItems: List<LinkAnnotationRange> = emptyList()
-}
+internal fun AnnotatableString.Companion.createForTwitch(annotatable: String?): AnnotatableString =
+    create(annotatable ?: "") {
+        emptyList()
+    }
