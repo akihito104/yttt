@@ -189,6 +189,16 @@ class AnnotatedStringTest {
                         TestParam.Expected.account(0 + 8, "@account_01")
                     ),
                 ),
+                TestParam(
+                    name = "removable youtube url duplicated range",
+                    description = """https://gaming.youtube.com/channel/user-channel-id001""".trimMargin(),
+                    expected = listOf(
+                        TestParam.Expected.url(
+                            0,
+                            "https://gaming.youtube.com/channel/user-channel-id001",
+                        ),
+                    ),
+                )
             )
         }
 

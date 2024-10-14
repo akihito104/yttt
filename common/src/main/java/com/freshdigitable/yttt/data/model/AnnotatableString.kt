@@ -31,15 +31,19 @@ interface AnnotatableString {
             Regex("""(?<!http(s)?://(www.)?)(www.)?youtube.com(/[^\s$PARENTHESIS]*)?""")
 
         private fun urlAnnotationRange(annotatable: String): List<LinkAnnotationRange> {
-            return (WEB_URL_REGEX.findAll(annotatable).map {
+            val url = WEB_URL_REGEX.findAll(annotatable).map {
                 LinkAnnotationRange.Url(range = it.range, text = it.value)
-            } + YOUTUBE_URL_REGEX.findAll(annotatable).map {
-                LinkAnnotationRange.Url(
-                    range = it.range,
-                    text = it.value,
-                    url = "https://${it.value}",
-                )
-            }).toList().sortedBy { it.range.first }
+            }
+            val youtubeUrl = YOUTUBE_URL_REGEX.findAll(annotatable)
+                .filter { r -> url.all { !it.range.contains(r.range.first) } }
+                .map {
+                    LinkAnnotationRange.Url(
+                        range = it.range,
+                        text = it.value,
+                        url = "https://${it.value}",
+                    )
+                }
+            return (url + youtubeUrl).toList().sortedBy { it.range.first }
         }
 
         private val REGEX_HASHTAG =
