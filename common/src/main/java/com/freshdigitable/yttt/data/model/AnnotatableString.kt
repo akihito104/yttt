@@ -45,7 +45,7 @@ interface AnnotatableString {
         private val REGEX_HASHTAG =
         // Pattern.UNICODE_CHARACTER_CLASS is not supported
 //            Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
-            Regex("""([#＃])[^\s　$PARENTHESIS#$'",.;:|\\]+""")
+            Regex("""([#＃])[^\s　$PARENTHESIS#$'",.;:|\\￤]+""")
 
         private fun hashTagAnnotationRange(annotatable: String): List<LinkAnnotationRange> {
             return REGEX_HASHTAG.findAll(annotatable).map {

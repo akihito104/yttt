@@ -181,6 +181,14 @@ class AnnotatedStringTest {
                         TestParam.Expected.account(23 + 11, "@account02"),
                     ),
                 ),
+                TestParam(
+                    name = "hashtag and multibyte separator",
+                    description = """#ハッシュタグ￤@account_01""".trimMargin(),
+                    expected = listOf(
+                        TestParam.Expected.hashtag(0, "#ハッシュタグ"),
+                        TestParam.Expected.account(0 + 8, "@account_01")
+                    ),
+                ),
             )
         }
 
