@@ -31,6 +31,7 @@ import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.elli
 
 @Composable
 fun AnnotatableText(
+    modifier: Modifier = Modifier,
     fontSize: TextUnit,
     linkStyle: TextLinkStyles = linkStyles,
     annotatableString: AnnotatableString,
@@ -38,11 +39,13 @@ fun AnnotatableText(
 ) {
     if (annotatableString.annotationRangeItems.isEmpty()) {
         Text(
+            modifier = modifier,
             text = annotatableString.annotatable,
             fontSize = fontSize,
         )
     } else {
         Text(
+            modifier = modifier,
             text = annotatableString.annotate(rangeToLink(linkStyle, dialog)),
             style = TextStyle.Default.copy(
                 fontSize = fontSize,

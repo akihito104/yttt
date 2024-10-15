@@ -62,4 +62,5 @@ interface LiveVideoDetail : LiveVideo {
 data class LiveVideoDetailAnnotatedEntity(
     private val detail: LiveVideoDetail,
     val annotatableDescription: AnnotatableString,
+    val annotatableTitle: AnnotatableString,
 ) : LiveVideoDetail by detail

@@ -29,6 +29,7 @@ internal class FindLiveVideoDetailAnnotatedFromYouTubeUseCase @Inject constructo
         return LiveVideoDetailAnnotatedEntity(
             detail = v,
             annotatableDescription = AnnotatableString.createForYouTube(v.description),
+            annotatableTitle = AnnotatableString.createForYouTube(v.title),
         )
     }
 }

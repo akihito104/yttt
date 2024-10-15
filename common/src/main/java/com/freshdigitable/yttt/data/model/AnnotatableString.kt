@@ -22,7 +22,8 @@ interface AnnotatableString {
     val annotationRangeItems: List<LinkAnnotationRange>
 
     companion object {
-        private const val PARENTHESIS = "()<>{}\\[\\]（）【】「」『』"
+        private const val PARENTHESIS = "()<>{}\\[\\]（）【】「」『』〖〗"
+        private const val SEPARATOR = """,.;:|/\￤┊!！?？"""
 
         // https://stackoverflow.com/questions/36586166/android-patterns-web-url-broken
 //        private val WEB_URL_REGEX = Patterns.WEB_URL.toRegex()
@@ -49,10 +50,12 @@ interface AnnotatableString {
         private val REGEX_HASHTAG =
         // Pattern.UNICODE_CHARACTER_CLASS is not supported
 //            Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
-            Regex("""([#＃])[^\s　$PARENTHESIS#$'",.;:|\\￤]+""")
+            Regex("""([#＃])[^\s　$PARENTHESIS#$'"$SEPARATOR]+""")
 
         private fun hashTagAnnotationRange(annotatable: String): List<LinkAnnotationRange> {
-            return REGEX_HASHTAG.findAll(annotatable).map {
+            return REGEX_HASHTAG.findAll(annotatable).filter { a ->
+                !a.value.toCharArray(startIndex = 1).all { it.isDigit() }
+            }.map {
                 LinkAnnotationRange.Hashtag(range = it.range, text = it.value)
             }.toList()
         }
@@ -73,7 +76,10 @@ interface AnnotatableString {
 
         fun create(
             annotatable: String,
-            urlCreator: (String) -> List<String>,
+            /**
+             * at-mark-started string (such as @account01) is passed.
+             */
+            accountUrlCreator: (String) -> List<String>,
         ): AnnotatableString {
             if (annotatable.isEmpty()) {
                 return empty()
@@ -82,9 +88,10 @@ interface AnnotatableString {
             val hashtagAnnotation = hashTagAnnotationRange(annotatable).filter { a ->
                 urlAnnotation.all { !it.contains(a) }
             }
-            val accountAnnotation = accountAnnotationRange(annotatable, urlCreator).filter { a ->
-                urlAnnotation.all { !it.contains(a) }
-            }
+            val accountAnnotation =
+                accountAnnotationRange(annotatable, accountUrlCreator).filter { a ->
+                    urlAnnotation.all { !it.contains(a) }
+                }
             return AnnotatableStringImpl(
                 annotatable,
                 (urlAnnotation + hashtagAnnotation + accountAnnotation).sortedBy { it.range.first },

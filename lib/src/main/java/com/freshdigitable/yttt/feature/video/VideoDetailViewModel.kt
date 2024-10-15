@@ -23,7 +23,7 @@ class VideoDetailViewModel @Inject constructor(
     private val contextMenuDelegate: TimetableContextMenuDelegate,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    private val videoId = LiveVideoSharedTransitionRoute.VideoDetail.getId(savedStateHandle)
+    val videoId = LiveVideoSharedTransitionRoute.VideoDetail.getId(savedStateHandle)
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
     fun fetchViewDetail(): LiveData<LiveVideoDetailAnnotatedEntity?> {
         return liveData(viewModelScope.coroutineContext) {

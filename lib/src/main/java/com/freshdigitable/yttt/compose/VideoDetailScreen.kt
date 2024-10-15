@@ -36,8 +36,8 @@ import java.math.BigInteger
 @Composable
 fun VideoDetailScreen(
     viewModel: VideoDetailViewModel = hiltViewModel(),
-    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
-    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    thumbnailModifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
 ) {
     val item = viewModel.fetchViewDetail().observeAsState()
     VideoDetailScreen(
@@ -51,8 +51,8 @@ fun VideoDetailScreen(
 @Composable
 private fun VideoDetailScreen(
     videoProvider: () -> LiveVideoDetailAnnotatedEntity?,
-    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
-    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    thumbnailModifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
 ) {
     val dialog = remember { LinkAnnotationDialogState() }
     Column(
@@ -68,7 +68,7 @@ private fun VideoDetailScreen(
             contentDescription = "",
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
-                .then(thumbnailModifier(video.id))
+                .then(thumbnailModifier)
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .padding(bottom = 8.dp)
@@ -83,10 +83,11 @@ private fun VideoDetailScreen(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(8.dp),
         ) {
-            Text(
-                text = video.title,
+            AnnotatableText(
+                annotatableString = video.annotatableTitle,
                 fontSize = 18.sp,
-                modifier = titleModifier(video.id),
+                modifier = titleModifier,
+                dialog = dialog,
             )
             val statsText = video.statsText
             if (statsText.isNotEmpty()) {
@@ -140,6 +141,7 @@ fun VideoDetailComposePreview() {
             LiveVideoDetailAnnotatedEntity(
                 detail = detail,
                 annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
+                annotatableTitle = AnnotatableString.empty()
             )
         })
     }

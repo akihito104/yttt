@@ -129,6 +129,7 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
                 useCase.apply uc@{
                     coRegister { this@uc.invoke(any()) } returns mockk<LiveVideoDetail>().apply {
                         every { description } returns param.description
+                        every { title } returns ""
                     }
                 }
             }

@@ -183,10 +183,15 @@ class AnnotatedStringTest {
                 ),
                 TestParam(
                     name = "hashtag and multibyte separator",
-                    description = """#ハッシュタグ￤@account_01""".trimMargin(),
+                    description = """#ハッシュタグ￤@account_01
+                        |〖#歌枠/#karaoke〗
+                        |#hashtag┊description""".trimMargin(),
                     expected = listOf(
                         TestParam.Expected.hashtag(0, "#ハッシュタグ"),
-                        TestParam.Expected.account(0 + 8, "@account_01")
+                        TestParam.Expected.account(0 + 8, "@account_01"),
+                        TestParam.Expected.hashtag(20 + 1, "#歌枠"),
+                        TestParam.Expected.hashtag(20 + 1 + 4, "#karaoke"),
+                        TestParam.Expected.hashtag(35, "#hashtag"),
                     ),
                 ),
                 TestParam(
@@ -198,7 +203,13 @@ class AnnotatedStringTest {
                             "https://gaming.youtube.com/channel/user-channel-id001",
                         ),
                     ),
-                )
+                ),
+                TestParam(
+                    name = "hashtag as number",
+                    description = """〖#1〗title
+                        |(＃2) subtitle""".trimMargin(),
+                    expected = emptyList(),
+                ),
             )
         }
 

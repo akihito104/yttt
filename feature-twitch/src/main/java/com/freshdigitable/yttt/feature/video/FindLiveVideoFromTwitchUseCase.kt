@@ -33,11 +33,15 @@ internal class FindLiveVideoDetailAnnotatedFromTwitchUseCase @Inject constructor
     override suspend fun invoke(id: LiveVideo.Id): LiveVideoDetailAnnotatedEntity? {
         val v = findLiveVideoUseCase(id) ?: return null
         check(v is LiveVideoDetail)
-        return LiveVideoDetailAnnotatedEntity(v, AnnotatableString.createForTwitch(v.description))
+        return LiveVideoDetailAnnotatedEntity(
+            v,
+            annotatableDescription = AnnotatableString.createForTwitch(v.description),
+            annotatableTitle = AnnotatableString.createForTwitch(v.title),
+        )
     }
 }
 
 internal fun AnnotatableString.Companion.createForTwitch(annotatable: String?): AnnotatableString =
     create(annotatable ?: "") {
-        emptyList()
+        listOf("https://twitch.tv/${it.substring(1)}")
     }
