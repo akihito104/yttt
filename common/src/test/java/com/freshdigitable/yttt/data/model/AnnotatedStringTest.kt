@@ -1,125 +1,49 @@
-package com.freshdigitable.yttt.feature.video
+package com.freshdigitable.yttt.data.model
 
-import com.freshdigitable.yttt.data.model.LinkAnnotationRange
-import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.ellipsize
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionAccountAnnotation
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionHashTagAnnotation
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated.Companion.descriptionUrlAnnotation
-import io.mockk.every
-import io.mockk.mockk
-import org.junit.Assert.assertEquals
+import org.junit.Assert
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
-import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Enclosed::class)
-class LiveVideoDetailAnnotatedTest {
-    class Fundamental {
-        @Test
-        fun serializableUrl() {
-            val sut = LinkAnnotationRange.Url(range = 0..10, text = "https://example.com/")
-            val actual = LinkAnnotationRange.createFromTag(sut.tag)
-            assertEquals(sut, actual)
-        }
-
-        @Test
-        fun serializableAccount() {
-            val sut = LinkAnnotationRange.Account(
-                range = 0..10,
-                text = "@account01",
-                urlCandidate = listOf("https://example.com/@account01"),
-            )
-            val actual = LinkAnnotationRange.createFromTag(sut.tag)
-            assertEquals(sut, actual)
-        }
-    }
-
-    @RunWith(Parameterized::class)
-    class EllipsizeText(private val param: TestParam) {
-        companion object {
-            @JvmStatic
-            @Parameters
-            fun params(): List<TestParam> = listOf(
-                TestParam(
-                    text = "https://example.com/",
-                    expected = "https://example.com/",
-                ),
-                TestParam(
-                    text = "https://example.com/very/long/but/ellips",
-                    expected = "https://example.com/very/long/but/ellips",
-                ),
-                TestParam(
-                    text = "https://example.com/very/long/so/ellipize",
-                    expected = "https://example.com/very/long/so/elli...",
-                ),
-                TestParam(
-                    text = "https://example.com/very/long/so/ellipized/this",
-                    ellipsis = "…",
-                    expected = "https://example.com/very/long/so/ellipi…",
-                ),
-            )
-        }
-
-        @Test
-        fun test() {
-            // setup
-            val sut = LinkAnnotationRange.Url(
-                text = param.text,
-                range = 0 until param.text.length, // do not care
-            )
-            // exercise
-            val actual = sut.ellipsize(param.totalLength, param.ellipsis).text
-            // verify
-            assertEquals(param.expected, actual)
-        }
-
-        data class TestParam(
-            val text: String,
-            val totalLength: Int = 40,
-            val ellipsis: String = "...",
-            val expected: String,
-        )
-    }
-
+class AnnotatedStringTest {
     @RunWith(Parameterized::class)
     class AnnotationParameterizedTest(
         private val param: TestParam,
     ) {
         companion object {
             @JvmStatic
-            @Parameters(name = "{0}")
+            @Parameterized.Parameters(name = "{0}")
             fun params(): List<TestParam> = listOf(
-                TestParam.url(
+                TestParam(
                     name = "empty description",
                     description = "",
                     expected = emptyList(),
                 ),
-                TestParam.url(
+                TestParam(
                     name = "has trailing slash",
                     description = "https://example.com/",
-                    TestParam.Expected.url(0, "https://example.com/"),
+                    expected = listOf(TestParam.Expected.url(0, "https://example.com/")),
                 ),
-                TestParam.url(
+                TestParam(
                     name = "no trailing slash",
                     description = "https://example.com",
-                    TestParam.Expected.url(0, "https://example.com"),
+                    expected = listOf(TestParam.Expected.url(0, "https://example.com")),
                 ),
-                TestParam.url(
+                TestParam(
                     name = "has caption",
                     description = "link - https://example.com/",
-                    TestParam.Expected.url(7, "https://example.com/"),
+                    expected = listOf(TestParam.Expected.url(7, "https://example.com/")),
                 ),
-                TestParam.url(
+                TestParam(
                     name = "multibyte and line feed",
                     description = """こんにちは✨
                     |link - https://example.com
                     |""".trimMargin(),
-                    TestParam.Expected.url(7 + 7, "https://example.com"),
+                    expected = listOf(TestParam.Expected.url(7 + 7, "https://example.com")),
                 ),
-                TestParam.url(
+                TestParam(
                     name = "1 line contains 2 urls",
                     description = """18:00 https://example.com/@account1 https://example.com/@account2
                     |19:00 https://example.com/@account3 https://example.com/@account4
@@ -131,7 +55,7 @@ class LiveVideoDetailAnnotatedTest {
                         TestParam.Expected.url(66 + 36, "https://example.com/@account4"),
                     ),
                 ),
-                TestParam.url(
+                TestParam(
                     name = "trailing unexpected parentheses",
                     description = """illust.: account00 (https://example.com/account00)
                         |mix: account01 【https://example.com/account01】
@@ -141,7 +65,7 @@ class LiveVideoDetailAnnotatedTest {
                         TestParam.Expected.url(51 + 16, "https://example.com/account01"),
                     )
                 ),
-                TestParam.url(
+                TestParam(
                     name = "no schema (well-known url: youtube.com)",
                     description = """goods - https://example.com/goods
                     |membership - www.youtube.com/@akihito104/join""".trimMargin(),
@@ -154,7 +78,7 @@ class LiveVideoDetailAnnotatedTest {
                         ),
                     ),
                 ),
-                TestParam.url(
+                TestParam(
                     name = "has schema (well-known url: youtube.com)",
                     description = """goods - https://example.com/goods
                     |membership - https://www.youtube.com/@akihito104/join""".trimMargin(),
@@ -166,7 +90,7 @@ class LiveVideoDetailAnnotatedTest {
                         ),
                     ),
                 ),
-                TestParam.url(
+                TestParam(
                     name = "item order with no schema (well-known url: youtube.com)",
                     description = """goods - https://example.com/goods
                     |membership - www.youtube.com/@akihito104/join
@@ -185,24 +109,19 @@ class LiveVideoDetailAnnotatedTest {
                         ),
                     ),
                 ),
-                TestParam.hashtag(
-                    name = "empty description",
-                    description = "",
-                    expected = emptyList(),
-                ),
-                TestParam.hashtag(
+                TestParam(
                     name = "no line feed",
                     description = "fun art: #hashtag",
-                    TestParam.Expected.hashtag(9, "#hashtag"),
+                    expected = listOf(TestParam.Expected.hashtag(9, "#hashtag")),
                 ),
-                TestParam.hashtag(
+                TestParam(
                     name = "has line feed",
                     description = """|
                     |fun art: #hashtag
                     |""".trimMargin(),
-                    TestParam.Expected.hashtag(10, "#hashtag"),
+                    expected = listOf(TestParam.Expected.hashtag(10, "#hashtag")),
                 ),
-                TestParam.hashtag(
+                TestParam(
                     name = "multiple hashtags",
                     description = """#hashtag1
                     |#hashtag2 #hashtag3
@@ -213,7 +132,7 @@ class LiveVideoDetailAnnotatedTest {
                         TestParam.Expected.hashtag(10 + 10, "#hashtag3"),
                     ),
                 ),
-                TestParam.hashtag(
+                TestParam(
                     name = "multibyte (ja)",
                     description = """配信タグ: #ハッシュタグ
                     |ファンアート: ＃全角ハッシュタグ　＃全角ハッシュタグR18
@@ -226,12 +145,12 @@ class LiveVideoDetailAnnotatedTest {
                         TestParam.Expected.hashtag(14 + 31 + 7, "#全角ハッシュタグコラボ"),
                     ),
                 ),
-                TestParam.account(
+                TestParam(
                     name = "simple",
                     description = "@account01",
-                    expected = TestParam.Expected.account(0, "@account01"),
+                    expected = listOf(TestParam.Expected.account(0, "@account01")),
                 ),
-                TestParam.account(
+                TestParam(
                     name = "multiple at line",
                     description = """@account01
                         |@account02 @account03
@@ -242,17 +161,17 @@ class LiveVideoDetailAnnotatedTest {
                         TestParam.Expected.account(11 + 11, "@account03"),
                     ),
                 ),
-                TestParam.account(
+                TestParam(
                     name = "account in url", // should remove in post process
                     description = """@account01
                         |https://www.youtube.com/@account02/join
                     """.trimMargin(),
                     expected = listOf(
                         TestParam.Expected.account(0, "@account01"),
-                        TestParam.Expected.account(11 + 24, "@account02"),
+                        TestParam.Expected.url(0 + 11, "https://www.youtube.com/@account02/join"),
                     ),
                 ),
-                TestParam.account(
+                TestParam(
                     name = "account with parenthesis",
                     description = """account01 (@account01)
                         |account02 【@account02】
@@ -262,24 +181,52 @@ class LiveVideoDetailAnnotatedTest {
                         TestParam.Expected.account(23 + 11, "@account02"),
                     ),
                 ),
+                TestParam(
+                    name = "hashtag and multibyte separator",
+                    description = """#ハッシュタグ￤@account_01
+                        |〖#歌枠/#karaoke〗
+                        |#hashtag┊description""".trimMargin(),
+                    expected = listOf(
+                        TestParam.Expected.hashtag(0, "#ハッシュタグ"),
+                        TestParam.Expected.account(0 + 8, "@account_01"),
+                        TestParam.Expected.hashtag(20 + 1, "#歌枠"),
+                        TestParam.Expected.hashtag(20 + 1 + 4, "#karaoke"),
+                        TestParam.Expected.hashtag(35, "#hashtag"),
+                    ),
+                ),
+                TestParam(
+                    name = "removable youtube url duplicated range",
+                    description = """https://gaming.youtube.com/channel/user-channel-id001""".trimMargin(),
+                    expected = listOf(
+                        TestParam.Expected.url(
+                            0,
+                            "https://gaming.youtube.com/channel/user-channel-id001",
+                        ),
+                    ),
+                ),
+                TestParam(
+                    name = "hashtag as number",
+                    description = """〖#1〗title
+                        |(＃2) subtitle""".trimMargin(),
+                    expected = emptyList(),
+                ),
             )
         }
 
         @Test
         fun test() {
             // setup
-            val detail = mockk<LiveVideoDetail>().apply {
-                every { description } returns param.description
-            }
             // exercise
-            val actual = param.sut(detail)
+            val actual = AnnotatableString.create(param.description) {
+                listOf("https://example.com/$it")
+            }
             // assertion
-            assertEquals(param.expected.size, actual.size)
+            Assert.assertEquals(param.expected.size, actual.annotationRangeItems.size)
             param.expected.forEachIndexed { i, e ->
-                val a = actual[i]
-                assertEquals(e.range, a.range)
-                assertEquals(e.text, a.text)
-                assertEquals(e.url, a.url)
+                val a = actual.annotationRangeItems[i]
+                Assert.assertEquals(e.range, a.range)
+                Assert.assertEquals(e.text, a.text)
+                Assert.assertEquals(e.url, a.url)
             }
         }
 
@@ -287,40 +234,7 @@ class LiveVideoDetailAnnotatedTest {
             private val name: String? = null,
             val description: String,
             val expected: List<Expected>,
-            val sut: (LiveVideoDetail) -> List<LinkAnnotationRange>,
         ) {
-            companion object {
-                fun url(name: String, description: String, expected: List<Expected>): TestParam =
-                    TestParam("url:$name", description, expected) { it.descriptionUrlAnnotation }
-
-                fun url(name: String, description: String, expected: Expected): TestParam =
-                    url(name, description, listOf(expected))
-
-                fun hashtag(
-                    name: String,
-                    description: String,
-                    expected: List<Expected>
-                ): TestParam = TestParam("hashtag:$name", description, expected) {
-                    it.descriptionHashTagAnnotation
-                }
-
-                fun hashtag(name: String, description: String, expected: Expected): TestParam =
-                    hashtag(name, description, listOf(expected))
-
-                fun account(
-                    name: String,
-                    description: String,
-                    expected: List<Expected>,
-                ): TestParam = TestParam(
-                    "account:$name",
-                    description,
-                    expected
-                ) { sut -> sut.descriptionAccountAnnotation { listOf("https://example.com/$it") } }
-
-                fun account(name: String, description: String, expected: Expected): TestParam =
-                    account(name, description, listOf(expected))
-            }
-
             data class Expected(
                 private val startPosition: Int,
                 val text: String,

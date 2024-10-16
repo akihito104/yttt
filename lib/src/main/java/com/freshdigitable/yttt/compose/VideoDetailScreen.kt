@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
@@ -9,32 +8,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.LinkAnnotation
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.TextLinkStyles
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.withLink
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -42,33 +23,21 @@ import com.bumptech.glide.Glide
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
-import com.freshdigitable.yttt.compose.preview.LightModePreview
-import com.freshdigitable.yttt.data.model.LinkAnnotationRange
-import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.ellipsize
+import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotated
+import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
 
-private val baseLinkTextStyle
-    @Composable
-    get() = SpanStyle(
-        color = MaterialTheme.colorScheme.tertiary,
-        textDecoration = TextDecoration.Underline,
-    )
-private val linkStyle
-    @Composable
-    get() = TextLinkStyles(style = baseLinkTextStyle)
-
 @Composable
 fun VideoDetailScreen(
     viewModel: VideoDetailViewModel = hiltViewModel(),
-    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
-    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    thumbnailModifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
 ) {
     val item = viewModel.fetchViewDetail().observeAsState()
     VideoDetailScreen(
@@ -81,12 +50,11 @@ fun VideoDetailScreen(
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 private fun VideoDetailScreen(
-    videoProvider: () -> LiveVideoDetailAnnotated?,
-    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
-    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
+    videoProvider: () -> LiveVideoDetailAnnotatedEntity?,
+    thumbnailModifier: Modifier = Modifier,
+    titleModifier: Modifier = Modifier,
 ) {
-    val dialog = remember { mutableStateOf<LinkAnnotationRange?>(null) }
-    val urlHandler = LocalUriHandler.current
+    val dialog = remember { LinkAnnotationDialogState() }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -100,7 +68,7 @@ private fun VideoDetailScreen(
             contentDescription = "",
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
-                .then(thumbnailModifier(video.id))
+                .then(thumbnailModifier)
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .padding(bottom = 8.dp)
@@ -113,12 +81,13 @@ private fun VideoDetailScreen(
         }
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier.padding(8.dp),
         ) {
-            Text(
-                text = video.title,
+            AnnotatableText(
+                annotatableString = video.annotatableTitle,
                 fontSize = 18.sp,
-                modifier = titleModifier(video.id),
+                modifier = titleModifier,
+                dialog = dialog,
             )
             val statsText = video.statsText
             if (statsText.isNotEmpty()) {
@@ -132,175 +101,14 @@ private fun VideoDetailScreen(
                 title = video.channel.title,
                 platformColor = Color(video.channel.platform.color)
             )
-            if (video.descriptionAnnotationRangeItems.isEmpty()) {
-                Text(
-                    text = video.description,
-                    fontSize = 14.sp,
-                )
-            } else {
-                DescriptionText(
-                    fontSize = 14.sp,
-                    annotatedDescription = video.annotatedDescription(linkStyle) {
-                        check(it is LinkAnnotation.Clickable)
-                        val linkAnnotation = LinkAnnotationRange.createFromTag(it.tag)
-                        if (linkAnnotation.needsDialog()) {
-                            dialog.value = linkAnnotation
-                        }
-                    },
-                )
-            }
-//            Text(
-//                text = video.toString(),
-//                fontSize = 14.sp,
-//            )
+            AnnotatableText(
+                annotatableString = video.annotatableDescription,
+                fontSize = 14.sp,
+                dialog = dialog,
+            )
         }
     }
-    when (val d = dialog.value) {
-        is LinkAnnotationRange.EllipsizedUrl -> EllipsizedUrlConfirmDialog(
-            text = d.url,
-            onConfirmClicked = {
-                urlHandler.openUri(d.url)
-                dialog.value = null
-            },
-            onDismissClicked = { dialog.value = null },
-        )
-
-        is LinkAnnotationRange.Account -> AccountDialog(
-            account = d.text,
-            urls = d.urlCandidate,
-            onUrlClicked = {
-                urlHandler.openUri(it)
-                dialog.value = null
-            },
-            onDismissRequest = { dialog.value = null },
-        )
-
-        null -> {
-            // NOP
-        }
-
-        else -> throw IllegalStateException("not supported type: $d")
-    }
-}
-
-@Composable
-private fun DescriptionText(
-    fontSize: TextUnit,
-    annotatedDescription: AnnotatedString,
-) {
-    Text(
-        text = annotatedDescription,
-        style = TextStyle.Default.copy(
-            fontSize = fontSize,
-            color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current),
-        ),
-    )
-}
-
-private fun LiveVideoDetailAnnotated.annotatedDescription(
-    linkStyle: TextLinkStyles,
-    onUrlClicked: (LinkAnnotation) -> Unit,
-): AnnotatedString {
-    var pos = 0
-    val items = descriptionAnnotationRangeItems.map {
-        if (it is LinkAnnotationRange.Url && it.text.length > 40) {
-            it.ellipsize(totalLength = 40, ellipsis = "...")
-        } else {
-            it
-        }
-    }.sortedBy { it.range.first }
-    return buildAnnotatedString {
-        items.forEach { a ->
-            if (pos < a.range.first) {
-                appendRange(description, pos, a.range.first)
-            }
-            withLink(a.linkAnnotation(linkStyle, onUrlClicked)) {
-                append(a.text)
-            }
-            pos = a.range.last + 1
-        }
-        if (pos < description.length) {
-            appendRange(description, pos, description.length)
-        }
-    }
-}
-
-private fun LinkAnnotationRange.needsDialog(): Boolean =
-    this is LinkAnnotationRange.EllipsizedUrl || this is LinkAnnotationRange.Account
-
-private fun LinkAnnotationRange.linkAnnotation(
-    linkStyle: TextLinkStyles,
-    onUrlClicked: (LinkAnnotation) -> Unit,
-): LinkAnnotation = when {
-    this.needsDialog() -> {
-        LinkAnnotation.Clickable(
-            tag = tag,
-            styles = linkStyle,
-            linkInteractionListener = onUrlClicked,
-        )
-    }
-
-    else -> LinkAnnotation.Url(url = url, styles = linkStyle)
-}
-
-@Composable
-private fun EllipsizedUrlConfirmDialog(
-    text: String,
-    onConfirmClicked: () -> Unit,
-    onDismissClicked: () -> Unit,
-    onDismissRequest: () -> Unit = onDismissClicked,
-) {
-    AlertDialog(
-        text = { Text(text = text) },
-        confirmButton = {
-            Button(onClick = onConfirmClicked) {
-                Text(text = "go to website")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissClicked) {
-                Text(text = "dismiss")
-            }
-        },
-        onDismissRequest = onDismissRequest,
-    )
-}
-
-@Composable
-fun AccountDialog(
-    account: String,
-    urls: List<String>,
-    onUrlClicked: (String) -> Unit,
-    onDismissRequest: () -> Unit,
-    onConfirmClicked: () -> Unit = onDismissRequest,
-) {
-    AlertDialog(
-        title = { Text(text = "Choose URL for $account") },
-        text = {
-            Column {
-                urls.forEach {
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text = it,
-                                style = TextStyle.Default.copy(
-                                    color = baseLinkTextStyle.color,
-                                    textDecoration = baseLinkTextStyle.textDecoration,
-                                ),
-                            )
-                        },
-                        modifier = Modifier.clickable { onUrlClicked(it) }
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirmClicked) {
-                Text(text = "dismiss")
-            }
-        },
-        onDismissRequest = onDismissRequest,
-    )
+    LinkAnnotationDialog(state = dialog)
 }
 
 private val LiveVideo.statsText: String
@@ -320,61 +128,21 @@ private val LiveVideo.statsText: String
         return listOfNotNull(time, count).joinToString("・")
     }
 
-@LightModePreview
+@LightDarkModePreview
 @Composable
 fun VideoDetailComposePreview() {
+    val detail = object : LiveVideoDetail,
+        LiveVideo by LiveVideoPreviewParamProvider.liveVideo() {
+        override val description: String = "description\nhttps://example.com"
+        override val viewerCount: BigInteger? = BigInteger.valueOf(100)
+    }
     AppTheme {
         VideoDetailScreen(videoProvider = {
-            object : LiveVideoDetailAnnotated,
-                LiveVideo by LiveVideoPreviewParamProvider.liveVideo() {
-                override val description: String = "description"
-                override val viewerCount: BigInteger? = BigInteger.valueOf(100)
-                override val descriptionAnnotationRangeItems: List<LinkAnnotationRange> =
-                    emptyList()
-
-                override fun toString(): String = "debug json text"
-            }
+            LiveVideoDetailAnnotatedEntity(
+                detail = detail,
+                annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
+                annotatableTitle = AnnotatableString.empty()
+            )
         })
-    }
-}
-
-@LightDarkModePreview
-@Composable
-fun DescriptionTextPreview() {
-    AppTheme {
-        DescriptionText(
-            fontSize = 14.sp,
-            annotatedDescription = buildAnnotatedString {
-                appendLine("hello.")
-                withLink(LinkAnnotation.Url(url = "http://example.com/", styles = linkStyle)) {
-                    append("URL")
-                }
-            },
-        )
-    }
-}
-
-@LightDarkModePreview
-@Composable
-private fun EllipsizedUrlConfirmDialogPreview() {
-    AppTheme {
-        EllipsizedUrlConfirmDialog(
-            text = "https://www.example.com/veryverylongurl",
-            onConfirmClicked = { },
-            onDismissClicked = { },
-        )
-    }
-}
-
-@LightDarkModePreview
-@Composable
-private fun AccountDialogPreview() {
-    AppTheme {
-        AccountDialog(
-            account = "@account01",
-            urls = listOf("https://example.com/1/@account01", "https://example.com/2/@account01"),
-            onUrlClicked = {},
-            onDismissRequest = {},
-        )
     }
 }

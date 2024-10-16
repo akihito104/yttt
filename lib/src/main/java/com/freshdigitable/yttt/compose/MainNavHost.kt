@@ -217,23 +217,20 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
             val viewModel = hiltViewModel<VideoDetailViewModel>()
             val appBarStateHolder = requireNotNull(screenStateHolder.topAppBarStateHolder)
             TopAppBar(viewModel = viewModel, appBarStateHolder = appBarStateHolder)
+            val id = viewModel.videoId
             screenStateHolder.animatedSharedTransitionScope(animatedContentScope) {
                 VideoDetailScreen(
                     viewModel = viewModel,
-                    thumbnailModifier = {
-                        Modifier.Companion.sharedElement(
-                            rememberSharedContentState(key = it.thumbnailTransitionKey),
+                    thumbnailModifier = Modifier.Companion.sharedElement(
+                        rememberSharedContentState(key = id.thumbnailTransitionKey),
+                        this,
+                    ),
+                    titleModifier = Modifier.Companion
+                        .sharedElement(
+                            rememberSharedContentState(key = id.titleTransitionKey),
                             this,
                         )
-                    },
-                    titleModifier = {
-                        Modifier.Companion
-                            .sharedElement(
-                                rememberSharedContentState(key = it.titleTransitionKey),
-                                this,
-                            )
-                            .skipToLookaheadSize()
-                    },
+                        .skipToLookaheadSize(),
                 )
             }
         }

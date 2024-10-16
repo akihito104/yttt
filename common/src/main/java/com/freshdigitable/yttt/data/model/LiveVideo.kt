@@ -58,3 +58,9 @@ interface LiveVideoDetail : LiveVideo {
     val description: String
     val viewerCount: BigInteger?
 }
+
+data class LiveVideoDetailAnnotatedEntity(
+    private val detail: LiveVideoDetail,
+    val annotatableDescription: AnnotatableString,
+    val annotatableTitle: AnnotatableString,
+) : LiveVideoDetail by detail

@@ -17,40 +17,55 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
-interface LiveVideoDetailAnnotated : LiveVideoDetail {
-    val descriptionAnnotationRangeItems: List<LinkAnnotationRange>
+interface AnnotatableString {
+    val annotatable: String
+    val annotationRangeItems: List<LinkAnnotationRange>
 
     companion object {
-        private const val PARENTHESIS = "()<>{}\\[\\]（）【】「」『』"
+        private const val PARENTHESIS = "()<>{}\\[\\]（）【】「」『』〖〗"
+        private const val SEPARATOR = """,.;:|/\￤┊!！?？"""
 
         // https://stackoverflow.com/questions/36586166/android-patterns-web-url-broken
 //        private val WEB_URL_REGEX = Patterns.WEB_URL.toRegex()
         private val WEB_URL_REGEX = Regex("""http(s)?://[-\w.]+(:(\d+))?(/[^\s$PARENTHESIS]*)?""")
         private val YOUTUBE_URL_REGEX =
             Regex("""(?<!http(s)?://(www.)?)(www.)?youtube.com(/[^\s$PARENTHESIS]*)?""")
-        val LiveVideoDetail.descriptionUrlAnnotation: List<LinkAnnotationRange>
-            get() = (WEB_URL_REGEX.findAll(description).map {
+
+        private fun urlAnnotationRange(annotatable: String): List<LinkAnnotationRange> {
+            val url = WEB_URL_REGEX.findAll(annotatable).map {
                 LinkAnnotationRange.Url(range = it.range, text = it.value)
-            } + YOUTUBE_URL_REGEX.findAll(description).map {
-                LinkAnnotationRange.Url(
-                    range = it.range,
-                    text = it.value,
-                    url = "https://${it.value}",
-                )
-            }).toList().sortedBy { it.range.first }
+            }
+            val youtubeUrl = YOUTUBE_URL_REGEX.findAll(annotatable)
+                .filter { r -> url.all { !it.range.contains(r.range.first) } }
+                .map {
+                    LinkAnnotationRange.Url(
+                        range = it.range,
+                        text = it.value,
+                        url = "https://${it.value}",
+                    )
+                }
+            return (url + youtubeUrl).toList().sortedBy { it.range.first }
+        }
+
         private val REGEX_HASHTAG =
         // Pattern.UNICODE_CHARACTER_CLASS is not supported
 //            Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
-            Regex("""([#＃])[^\s　$PARENTHESIS#$'",.;:|\\]+""")
-        val LiveVideoDetail.descriptionHashTagAnnotation: List<LinkAnnotationRange>
-            get() = REGEX_HASHTAG.findAll(description).map {
+            Regex("""([#＃])[^\s　$PARENTHESIS#$'"$SEPARATOR]+""")
+
+        private fun hashTagAnnotationRange(annotatable: String): List<LinkAnnotationRange> {
+            return REGEX_HASHTAG.findAll(annotatable).filter { a ->
+                !a.value.toCharArray(startIndex = 1).all { it.isDigit() }
+            }.map {
                 LinkAnnotationRange.Hashtag(range = it.range, text = it.value)
             }.toList()
+        }
+
         private val REGEX_ACCOUNT = Regex("""@([\w_.-]{3,30})""")
-        fun LiveVideoDetail.descriptionAccountAnnotation(
+        private fun accountAnnotationRange(
+            annotatable: String,
             urlCreator: (String) -> List<String>,
         ): List<LinkAnnotationRange> {
-            return REGEX_ACCOUNT.findAll(description).map {
+            return REGEX_ACCOUNT.findAll(annotatable).map {
                 LinkAnnotationRange.Account(
                     range = it.range,
                     text = it.value,
@@ -58,13 +73,44 @@ interface LiveVideoDetailAnnotated : LiveVideoDetail {
                 )
             }.toList()
         }
+
+        fun create(
+            annotatable: String,
+            /**
+             * at-mark-started string (such as @account01) is passed.
+             */
+            accountUrlCreator: (String) -> List<String>,
+        ): AnnotatableString {
+            if (annotatable.isEmpty()) {
+                return empty()
+            }
+            val urlAnnotation = urlAnnotationRange(annotatable)
+            val hashtagAnnotation = hashTagAnnotationRange(annotatable).filter { a ->
+                urlAnnotation.all { !it.contains(a) }
+            }
+            val accountAnnotation =
+                accountAnnotationRange(annotatable, accountUrlCreator).filter { a ->
+                    urlAnnotation.all { !it.contains(a) }
+                }
+            return AnnotatableStringImpl(
+                annotatable,
+                (urlAnnotation + hashtagAnnotation + accountAnnotation).sortedBy { it.range.first },
+            )
+        }
+
+        fun empty(): AnnotatableString = EmptyAnnotatableString
+    }
+
+    private data class AnnotatableStringImpl(
+        override val annotatable: String,
+        override val annotationRangeItems: List<LinkAnnotationRange>
+    ) : AnnotatableString
+
+    private object EmptyAnnotatableString : AnnotatableString {
+        override val annotatable: String = ""
+        override val annotationRangeItems: List<LinkAnnotationRange> = emptyList()
     }
 }
-
-data class LiveVideoDetailAnnotatedEntity(
-    private val detail: LiveVideoDetail,
-    override val descriptionAnnotationRangeItems: List<LinkAnnotationRange>,
-) : LiveVideoDetailAnnotated, LiveVideoDetail by detail
 
 sealed interface LinkAnnotationRange {
     val range: IntRange
@@ -72,6 +118,8 @@ sealed interface LinkAnnotationRange {
     val text: String
     val tag: String
         get() = json.encodeToString(serializer, this)
+
+    fun contains(other: LinkAnnotationRange): Boolean = range.contains(other.range.first)
 
     @Serializable
     data class Url(
