@@ -15,11 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.bumptech.glide.Glide
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
@@ -62,7 +60,6 @@ private fun VideoDetailScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         val video = videoProvider() ?: return
-        val context = LocalContext.current
         GlideImage(
             model = video.thumbnailUrl,
             contentDescription = "",
@@ -71,14 +68,8 @@ private fun VideoDetailScreen(
                 .then(thumbnailModifier)
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .padding(bottom = 8.dp)
-        ) {
-            it.thumbnail(
-                Glide.with(context)
-                    .load(video.thumbnailUrl)
-                    .signature(video.glideSignature)
-            )
-        }
+                .padding(bottom = 8.dp),
+        )
         Column(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(8.dp),
