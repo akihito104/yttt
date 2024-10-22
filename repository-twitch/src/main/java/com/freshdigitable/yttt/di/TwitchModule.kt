@@ -25,8 +25,9 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.lang.reflect.Type
@@ -54,16 +55,6 @@ internal object TwitchModule {
             serialize = { it?.value },
         )
         .create()
-
-    @Provides
-    fun provideOkHttpClient(tokenInterceptor: TwitchTokenInterceptor): OkHttpClient {
-        return OkHttpClient.Builder()
-            .addInterceptor(tokenInterceptor)
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
-            .build()
-    }
 
     @Provides
     @Singleton
@@ -157,5 +148,9 @@ internal object TwitchModule {
     interface Bind {
         @Binds
         fun bindTwitchDataSourceRemote(dataSource: TwitchLiveRemoteDataSource): TwitchLiveDataSource.Remote
+
+        @Binds
+        @IntoSet
+        fun bindOkHttpInterceptor(interceptor: TwitchTokenInterceptor): Interceptor
     }
 }

@@ -60,7 +60,6 @@ dependencies {
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
-    implementation(libs.okhttp3.integration)
     implementation(libs.retrofit)
     kapt(libs.retrofit.responseTypeKeeper)
     implementation(libs.converter.gson)
