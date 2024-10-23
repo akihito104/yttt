@@ -31,8 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.load.Key
-import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -43,7 +41,6 @@ import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
-import java.security.MessageDigest
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -156,9 +153,7 @@ private fun RowScope.ThumbnailView(
                 .then(thumbnailModifier)
                 .align(Top),
             contentScale = ContentScale.FillWidth,
-        ) {
-            it.downsample(DownsampleStrategy.FIT_CENTER).signature(video.glideSignature)
-        }
+        )
     } else {
         Image(
             imageVector = Icons.Default.PlayArrow,
@@ -189,14 +184,6 @@ fun LiveVideoHeaderView(label: String) {
 private val thumbnailModifier: Modifier = Modifier
     .fillMaxWidth(fraction = 0.55f)
     .aspectRatio(16f / 9f)
-
-internal val LiveVideo.glideSignature: Key get() = ThumbnailKey("${id.type}_${id.value}")
-
-private data class ThumbnailKey(val id: String) : Key {
-    override fun updateDiskCacheKey(messageDigest: MessageDigest) {
-        messageDigest.update(id.toByteArray(Key.CHARSET))
-    }
-}
 
 @LightDarkModePreview
 @Composable

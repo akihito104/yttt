@@ -282,6 +282,7 @@ fun VideoListItem(
                 GlideImage(
                     model = thumbnailUrl,
                     contentDescription = "",
+                    contentScale = ContentScale.FillWidth,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -339,6 +340,7 @@ fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifie
         GlideImage(
             model = item.thumbnailUrl,
             contentDescription = "",
+            contentScale = ContentScale.FillWidth,
             modifier = Modifier.aspectRatio(16 / 9f),
         )
         Text(
@@ -357,6 +359,7 @@ fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier
         GlideImage(
             model = item.thumbnailUrl,
             contentDescription = "",
+            contentScale = ContentScale.FillWidth,
             modifier = Modifier.aspectRatio(16 / 9f),
         )
         Text(

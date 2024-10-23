@@ -25,17 +25,20 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoSet
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.lang.reflect.Type
 import java.time.Instant
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 internal object TwitchModule {
     @Provides
+    @Singleton
     fun provideGson(): Gson = GsonBuilder()
         .registerTypeAdapter<Instant, String>(
             deserialize = { it?.let { s -> Instant.parse(s) } },
@@ -54,16 +57,7 @@ internal object TwitchModule {
         .create()
 
     @Provides
-    fun provideOkHttpClient(tokenInterceptor: TwitchTokenInterceptor): OkHttpClient {
-        return OkHttpClient.Builder()
-            .addInterceptor(tokenInterceptor)
-            .addInterceptor(HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            })
-            .build()
-    }
-
-    @Provides
+    @Singleton
     fun provideTwitchApiRetrofit(gson: Gson, okhttp: OkHttpClient): Retrofit {
         return Retrofit.Builder()
             .baseUrl("https://api.twitch.tv/")
@@ -73,10 +67,12 @@ internal object TwitchModule {
     }
 
     @Provides
+    @Singleton
     fun provideTwitchHelixService(retrofit: Retrofit): TwitchHelixService =
         retrofit.create(TwitchHelixService::class.java)
 
     @Provides
+    @Singleton
     fun provideTwitchOauthService(): TwitchOauthService {
         val retrofit = Retrofit.Builder()
             .baseUrl("https://id.twitch.tv/")
@@ -152,5 +148,9 @@ internal object TwitchModule {
     interface Bind {
         @Binds
         fun bindTwitchDataSourceRemote(dataSource: TwitchLiveRemoteDataSource): TwitchLiveDataSource.Remote
+
+        @Binds
+        @IntoSet
+        fun bindOkHttpInterceptor(interceptor: TwitchTokenInterceptor): Interceptor
     }
 }

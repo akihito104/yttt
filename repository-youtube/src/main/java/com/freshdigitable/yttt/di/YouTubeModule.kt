@@ -17,23 +17,27 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 internal object YouTubeModule {
     @Provides
+    @Singleton
     fun provideCredential(@ApplicationContext context: Context): GoogleAccountCredential {
         return GoogleAccountCredential.usingOAuth2(context, listOf(YouTubeScopes.YOUTUBE_READONLY))
             .setBackOff(ExponentialBackOff())
     }
 
     @Provides
+    @Singleton
     fun provideHttpRequestInitializer(
         credential: GoogleAccountCredential,
         dataStore: YouTubeAccountDataStore.Local,
     ): HttpRequestInitializer = HttpRequestInitializerImpl(credential, dataStore)
 
     @Provides
+    @Singleton
     fun provideNewChooseAccountIntentProvider(
         credential: GoogleAccountCredential,
     ): NewChooseAccountIntentProvider = object : NewChooseAccountIntentProvider {
