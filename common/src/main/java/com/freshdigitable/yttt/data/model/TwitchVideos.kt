@@ -14,7 +14,7 @@ interface TwitchVideo<T : TwitchVideo.TwitchVideoId> {
     interface TwitchVideoId : TwitchId
     data class Id(override val value: String) : TwitchVideoId
 
-    fun getThumbnailUrl(width: Int = 1920, height: Int = 1080): String =
+    fun getThumbnailUrl(width: Int = 640, height: Int = 360): String =
         thumbnailUrlBase.replace("{width}x{height}", "${width}x${height}")
 }
 

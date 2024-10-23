@@ -203,7 +203,7 @@ private fun Subscription.toLiveSubscription(order: Int): YouTubeSubscription =
         subscribeSince = Instant.ofEpochMilli(snippet.publishedAt.value),
         channel = YouTubeChannelEntity(
             id = YouTubeChannel.Id(snippet.resourceId.channelId),
-            iconUrl = snippet.thumbnails.url,
+            iconUrl = snippet.thumbnails.iconUrl,
             title = snippet.title,
         ),
         order = order,
@@ -237,15 +237,27 @@ private fun Video.toLiveVideo(): YouTubeVideo = object : YouTubeVideo by YouTube
 }
 
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
+
+/**
+ * maxres: 720p, standard: 640x480, high: 480x360, medium: 240x180, default: 120x90.
+ *
+ * if original thumbnail size is `maxres` (16:9), sizes below `standard` (4:3) will have black bands at top and bottom.
+ */
 private val ThumbnailDetails.url: String
     get() = (/*maxres ?:*/ standard ?: high ?: medium ?: default)?.url ?: ""
+
+/**
+ * high: 800px, medium: 240px, default: 88px
+ */
+private val ThumbnailDetails.iconUrl: String
+    get() = (medium ?: high ?: default)?.url ?: ""
 
 private data class YouTubeChannelImpl(
     private val channel: Channel,
 ) : YouTubeChannelDetail, YouTubeChannel by YouTubeChannelEntity(
     id = YouTubeChannel.Id(channel.id),
     title = channel.snippet.title,
-    iconUrl = channel.snippet.thumbnails.url,
+    iconUrl = channel.snippet.thumbnails.iconUrl,
 ) {
     override val bannerUrl: String?
         get() = channel.brandingSettings?.image?.bannerExternalUrl
