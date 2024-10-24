@@ -4,14 +4,21 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
@@ -27,15 +34,25 @@ fun ThumbnailLoadableView(
     url: String,
     contentDescription: String? = "",
     contentScale: ContentScale = ContentScale.FillWidth,
+    altImage: Painter = rememberVectorPainter(image = Icons.Default.PlayArrow),
 ) {
-    GlideImage(
-        model = url,
-        contentDescription = contentDescription,
-        contentScale = contentScale,
-        modifier = Modifier
-            .then(modifier)
-            .aspectRatio(16f / 9f),
-    )
+    val m = Modifier
+        .then(modifier)
+        .aspectRatio(16f / 9f)
+    if (url.isEmpty()) {
+        Image(
+            painter = altImage,
+            contentDescription = contentDescription,
+            modifier = m,
+        )
+    } else {
+        GlideImage(
+            model = url,
+            contentDescription = contentDescription,
+            contentScale = contentScale,
+            modifier = m,
+        )
+    }
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)
@@ -45,14 +62,24 @@ fun IconLoadableView(
     url: String,
     contentDescription: String? = "",
     size: Dp,
+    altImage: Painter = rememberVectorPainter(image = Icons.Default.AccountCircle),
 ) {
-    GlideImage(
-        model = url,
-        contentDescription = contentDescription,
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape),
-    )
+    if (url.isEmpty()) {
+        Icon(
+            painter = altImage,
+            contentDescription = contentDescription,
+            modifier = modifier
+                .size(size)
+        )
+    } else {
+        GlideImage(
+            model = url,
+            contentDescription = contentDescription,
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape),
+        )
+    }
 }
 
 @OptIn(ExperimentalGlideComposeApi::class)

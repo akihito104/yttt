@@ -1,20 +1,17 @@
 package com.freshdigitable.yttt.compose
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -141,22 +138,12 @@ private fun RowScope.ThumbnailView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
 ) {
-    if (video.thumbnailUrl.isNotEmpty()) {
-        ThumbnailLoadableView(
-            url = video.thumbnailUrl,
-            modifier = modifier
-                .then(Modifier.fillMaxWidth(fraction = 0.55f))
-                .align(Top),
-        )
-    } else {
-        Image(
-            imageVector = Icons.Default.PlayArrow,
-            contentDescription = "",
-            modifier = modifier
-                .then(thumbnailModifier)
-                .align(Top),
-        )
-    }
+    ThumbnailLoadableView(
+        url = video.thumbnailUrl,
+        modifier = modifier
+            .then(Modifier.fillMaxWidth(fraction = 0.55f))
+            .align(Top),
+    )
 }
 
 @Composable
@@ -174,10 +161,6 @@ fun LiveVideoHeaderView(label: String) {
         }
     }
 }
-
-private val thumbnailModifier: Modifier = Modifier
-    .fillMaxWidth(fraction = 0.55f)
-    .aspectRatio(16f / 9f)
 
 @LightDarkModePreview
 @Composable
