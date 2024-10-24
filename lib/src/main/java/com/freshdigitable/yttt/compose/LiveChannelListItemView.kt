@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material3.Icon
@@ -17,14 +16,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.YouTube
 
@@ -85,7 +81,6 @@ fun LiveChannelContentView(
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun LiveChannelIcon(
     modifier: Modifier = Modifier,
@@ -102,12 +97,9 @@ fun LiveChannelIcon(
                     .size(iconSize)
             )
         } else {
-            GlideImage(
-                model = iconUrl,
-                contentDescription = "",
-                modifier = modifier
-                    .size(iconSize)
-                    .clip(CircleShape),
+            IconLoadableView(
+                url = iconUrl,
+                size = iconSize,
             )
         }
         if (platformColor != null) {

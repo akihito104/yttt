@@ -24,13 +24,10 @@ import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -139,20 +136,17 @@ private fun LiveVideoListItemView(
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 private fun RowScope.ThumbnailView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
 ) {
     if (video.thumbnailUrl.isNotEmpty()) {
-        GlideImage(
-            model = video.thumbnailUrl,
-            contentDescription = "",
+        ThumbnailLoadableView(
+            url = video.thumbnailUrl,
             modifier = modifier
-                .then(thumbnailModifier)
+                .then(Modifier.fillMaxWidth(fraction = 0.55f))
                 .align(Top),
-            contentScale = ContentScale.FillWidth,
         )
     } else {
         Image(

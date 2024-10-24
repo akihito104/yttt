@@ -1,0 +1,114 @@
+package com.freshdigitable.yttt.compose
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Matrix
+import android.graphics.Paint
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
+import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
+import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
+import java.security.MessageDigest
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun ThumbnailLoadableView(
+    modifier: Modifier = Modifier,
+    url: String,
+    contentDescription: String? = "",
+    contentScale: ContentScale = ContentScale.FillWidth,
+) {
+    GlideImage(
+        model = url,
+        contentDescription = contentDescription,
+        contentScale = contentScale,
+        modifier = Modifier
+            .then(modifier)
+            .aspectRatio(16f / 9f),
+    )
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun IconLoadableView(
+    modifier: Modifier = Modifier,
+    url: String,
+    contentDescription: String? = "",
+    size: Dp,
+) {
+    GlideImage(
+        model = url,
+        contentDescription = contentDescription,
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape),
+    )
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun ChannelArtLoadableView(
+    url: String,
+    contentDescription: String? = "",
+) {
+    GlideImage(
+        model = url,
+        contentDescription = contentDescription,
+        alignment = Alignment.TopCenter,
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(32f / 9f),
+        requestBuilderTransform = {
+            it.transform(CustomCrop(width = 1253, height = 338))
+        },
+    )
+}
+
+internal class CustomCrop(
+    private val width: Int,
+    private val height: Int
+) : BitmapTransformation() {
+    override fun transform(
+        pool: BitmapPool,
+        toTransform: Bitmap,
+        outWidth: Int,
+        outHeight: Int
+    ): Bitmap {
+        val scaled = toTransform.width / 2048.0f
+        val w = (width * scaled).toInt()
+        val h = (height * scaled).toInt()
+        val dx = (w - toTransform.width) * 0.5f
+        val dy = (h - toTransform.height) * 0.5f
+        val matrix = Matrix().apply {
+            postTranslate(dx, dy)
+        }
+        val bitmap = pool.get(w, h, toTransform.config).apply {
+            setHasAlpha(toTransform.hasAlpha())
+        }
+        val canvas = Canvas(bitmap)
+        canvas.drawBitmap(toTransform, matrix, Paint(Paint.DITHER_FLAG or Paint.FILTER_BITMAP_FLAG))
+        canvas.setBitmap(null)
+        return bitmap
+    }
+
+    override fun equals(other: Any?): Boolean = other is CustomCrop
+
+    override fun hashCode(): Int = ID.hashCode()
+
+    override fun updateDiskCacheKey(messageDigest: MessageDigest) = messageDigest.update(ID_BYTES)
+
+    companion object {
+        private val ID = checkNotNull(CustomCrop::class.java.canonicalName)
+        private val ID_BYTES = ID.toByteArray(CHARSET)
+    }
+}

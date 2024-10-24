@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.compose
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -14,12 +13,9 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -45,7 +41,6 @@ fun VideoDetailScreen(
     )
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 private fun VideoDetailScreen(
     videoProvider: () -> LiveVideoDetailAnnotatedEntity?,
@@ -60,14 +55,11 @@ private fun VideoDetailScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         val video = videoProvider() ?: return
-        GlideImage(
-            model = video.thumbnailUrl,
-            contentDescription = "",
-            contentScale = ContentScale.FillWidth,
+        ThumbnailLoadableView(
+            url = video.thumbnailUrl,
             modifier = Modifier
                 .then(thumbnailModifier)
                 .fillMaxWidth()
-                .aspectRatio(16f / 9f)
                 .padding(bottom = 8.dp),
         )
         Column(
