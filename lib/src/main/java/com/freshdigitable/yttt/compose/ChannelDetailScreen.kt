@@ -33,8 +33,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
@@ -55,7 +53,6 @@ import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.channel.ChannelDetailChannelSection
 import com.freshdigitable.yttt.feature.channel.ChannelPage
 import com.freshdigitable.yttt.feature.channel.ChannelViewModel
-import com.freshdigitable.yttt.feature.channel.CustomCrop
 import kotlinx.coroutines.launch
 import java.math.BigInteger
 import java.text.DecimalFormat
@@ -137,7 +134,6 @@ private fun ChannelDetailScreen(
 }
 
 @Composable
-@OptIn(ExperimentalGlideComposeApi::class)
 private fun ChannelDetailHeader(
     channelDetailProvider: () -> LiveChannelDetail?,
 ) {
@@ -153,18 +149,9 @@ private fun ChannelDetailHeader(
         "Published:${channelDetail.publishedAt.toLocalFormattedText(dateFormatter)}",
     ).joinToString("・")
     Column {
-        if (channelDetail.bannerUrl?.isNotEmpty() == true) {
-            GlideImage(
-                model = channelDetail.bannerUrl,
-                contentDescription = "",
-                alignment = Alignment.TopCenter,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(32f / 9f),
-                requestBuilderTransform = {
-                    it.transform(CustomCrop(width = 1253, height = 338))
-                },
-            )
+        val bannerUrl = channelDetail.bannerUrl
+        if (bannerUrl?.isNotEmpty() == true) {
+            ChannelArtLoadableView(url = bannerUrl)
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -257,7 +244,6 @@ fun <T> PlainListPage(
     )
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun VideoListItem(
     thumbnailUrl: String,
@@ -279,10 +265,8 @@ fun VideoListItem(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                GlideImage(
-                    model = thumbnailUrl,
-                    contentDescription = "",
-                    contentScale = ContentScale.FillWidth,
+                ThumbnailLoadableView(
+                    url = thumbnailUrl,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -333,16 +317,10 @@ private fun ChannelSectionContent(cs: ChannelDetailChannelSection) {
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        GlideImage(
-            model = item.thumbnailUrl,
-            contentDescription = "",
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.aspectRatio(16 / 9f),
-        )
+        ThumbnailLoadableView(url = item.thumbnailUrl)
         Text(
             text = item.title,
             maxLines = 2,
@@ -352,16 +330,10 @@ fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifie
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        GlideImage(
-            model = item.thumbnailUrl,
-            contentDescription = "",
-            contentScale = ContentScale.FillWidth,
-            modifier = Modifier.aspectRatio(16 / 9f),
-        )
+        ThumbnailLoadableView(url = item.thumbnailUrl)
         Text(
             text = item.title,
             maxLines = 2,

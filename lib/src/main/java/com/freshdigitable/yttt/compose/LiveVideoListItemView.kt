@@ -1,20 +1,17 @@
 package com.freshdigitable.yttt.compose
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,13 +21,10 @@ import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -139,30 +133,17 @@ private fun LiveVideoListItemView(
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 private fun RowScope.ThumbnailView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
 ) {
-    if (video.thumbnailUrl.isNotEmpty()) {
-        GlideImage(
-            model = video.thumbnailUrl,
-            contentDescription = "",
-            modifier = modifier
-                .then(thumbnailModifier)
-                .align(Top),
-            contentScale = ContentScale.FillWidth,
-        )
-    } else {
-        Image(
-            imageVector = Icons.Default.PlayArrow,
-            contentDescription = "",
-            modifier = modifier
-                .then(thumbnailModifier)
-                .align(Top),
-        )
-    }
+    ThumbnailLoadableView(
+        url = video.thumbnailUrl,
+        modifier = modifier
+            .then(Modifier.fillMaxWidth(fraction = 0.55f))
+            .align(Top),
+    )
 }
 
 @Composable
@@ -180,10 +161,6 @@ fun LiveVideoHeaderView(label: String) {
         }
     }
 }
-
-private val thumbnailModifier: Modifier = Modifier
-    .fillMaxWidth(fraction = 0.55f)
-    .aspectRatio(16f / 9f)
 
 @LightDarkModePreview
 @Composable
