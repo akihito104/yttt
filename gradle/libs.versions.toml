@@ -1,6 +1,7 @@
 [versions]
 androidGradlePlugin = "8.5.2"
 kotlin = "1.9.22"
+ksp = "1.9.22-1.0.17"
 kotlinxCoroutinesCore = "1.8.0-RC"
 kotlinxSerializationJson = "1.6.3"
 licensee = "1.8.0"
@@ -96,5 +97,7 @@ android-application = { id = "com.android.application", version.ref = "androidGr
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt-android" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+android-room = { id = "androidx.room", version.ref= "room-ktx"}
 licensee = { id = "app.cash.licensee", version.ref = "licensee" }
 oss-license-plugin = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "oss-license-plugin" }
