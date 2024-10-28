@@ -14,17 +14,6 @@ android {
     defaultConfig {
         minSdk = 26
 
-        javaCompileOptions {
-            annotationProcessorOptions {
-                arguments.putAll(
-                    mapOf(
-                        "room.schemaLocation" to "$projectDir/schemas".toString(),
-                        "room.incremental" to "true",
-                    )
-                )
-            }
-        }
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
