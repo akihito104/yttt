@@ -1,13 +1,12 @@
-@Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
-    namespace = "com.freshdigitable.yttt.feature.timetable.youtube"
+    namespace = "com.freshdigitable.yttt.lib"
     compileSdk = 34
 
     defaultConfig {
@@ -29,9 +28,17 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
+    }
+    packaging {
+        resources {
+            excludes.addAll(listOf("dependencies.txt"))
+        }
+    }
+    hilt {
+        enableAggregatingTask = true
     }
 }
 
@@ -42,29 +49,48 @@ kotlin {
 dependencies {
     implementation(project(":common"))
     implementation(project(":common-ui"))
+    implementation(project(":feature-twitch"))
     implementation(project(":repository-youtube"))
+    implementation(project(":repository-twitch"))
     implementation(project(":repository-appuser"))
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
-    implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.compose.runtime.livedata)
-    implementation(libs.accompanist.permissions)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+    androidTestImplementation(composeBom)
+    implementation(libs.glide.compose)
+    implementation(libs.androidx.compose.animation)
+
+    // Choose one of the following:
+    // Material Design
+    implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.material3)
+
+    // Android Studio Preview support
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.appcompat)
-    implementation(libs.play.services.base)
-    implementation(libs.play.services.auth)
+    implementation(libs.androidx.activity.ktx)
+    implementation(libs.androidx.lifecycle.livedata.ktx)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.glide)
+    ksp(libs.glide.compiler)
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
+    implementation(libs.okhttp3.integration)
+    implementation(libs.okhttp.logging.interceptor)
 
     testImplementation(libs.junit)
-    testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
