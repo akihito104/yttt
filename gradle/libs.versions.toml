@@ -35,7 +35,7 @@ glide = "5.0.0-rc01"
 glide-compose = "1.0.0-beta01"
 okhttp = "4.11.0"
 retrofit = "2.11.0"
-kermit = "2.0.2"
+kermit = "2.0.4"
 leakcanaryAndroid = "2.14"
 
 junit = "4.13.2"
