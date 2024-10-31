@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -26,6 +27,7 @@ internal class TimetableTabViewModel @Inject constructor(
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     private val contextMenuDelegate: TimetableContextMenuDelegate,
     private val dateTimeProvider: DateTimeProvider,
+    private val appPerformance: AppPerformance,
     timetablePageDelegate: TimetablePageDelegate,
 ) : ViewModel(), TimetablePageDelegate by timetablePageDelegate {
     private val _isLoading = MutableLiveData(false)
@@ -40,8 +42,11 @@ internal class TimetableTabViewModel @Inject constructor(
         viewModelScope.launch {
             if (_isLoading.value == false) {
                 _isLoading.postValue(true)
+                val trace = appPerformance.newTrace("loadList")
+                trace.start()
 //                fetchStreamTasks.map { async { it() } }.awaitAll()
                 fetchStreamTasks.forEach { it() }
+                trace.stop()
                 _isLoading.postValue(false)
             }
         }
