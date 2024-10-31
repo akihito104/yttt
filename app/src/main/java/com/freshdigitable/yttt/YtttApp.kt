@@ -24,6 +24,14 @@ class YtttApp : Application(), Configuration.Provider {
             .setWorkerFactory(workerFactory)
             .build()
     }
+
+    @Inject
+    lateinit var appLoggerSetup: Set<@JvmSuppressWildcards AppLogger.Setup>
+
+    override fun onCreate() {
+        super.onCreate()
+        appLoggerSetup.forEach { it() }
+    }
 }
 
 object OssLicenseNav : NavActivity(
