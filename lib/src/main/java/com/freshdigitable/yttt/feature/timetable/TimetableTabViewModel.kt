@@ -27,7 +27,6 @@ internal class TimetableTabViewModel @Inject constructor(
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     private val contextMenuDelegate: TimetableContextMenuDelegate,
     private val dateTimeProvider: DateTimeProvider,
-    private val appPerformance: AppPerformance,
     timetablePageDelegate: TimetablePageDelegate,
 ) : ViewModel(), TimetablePageDelegate by timetablePageDelegate {
     private val _isLoading = MutableLiveData(false)
@@ -42,7 +41,7 @@ internal class TimetableTabViewModel @Inject constructor(
         viewModelScope.launch {
             if (_isLoading.value == false) {
                 _isLoading.postValue(true)
-                val trace = appPerformance.newTrace("loadList")
+                val trace = AppPerformance.newTrace("loadList")
                 trace.start()
 //                fetchStreamTasks.map { async { it() } }.awaitAll()
                 fetchStreamTasks.forEach { it() }
