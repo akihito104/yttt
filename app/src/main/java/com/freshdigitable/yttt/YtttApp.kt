@@ -26,7 +26,7 @@ class YtttApp : Application(), Configuration.Provider {
     }
 
     @Inject
-    lateinit var appLoggerSetup: Set<@JvmSuppressWildcards AppLogger.Setup>
+    lateinit var appLoggerSetup: Set<@JvmSuppressWildcards AppLoggerSetup>
 
     @Inject
     lateinit var appPerformanceSetup: Set<@JvmSuppressWildcards AppPerformanceSetup>
