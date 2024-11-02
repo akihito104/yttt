@@ -47,3 +47,5 @@ object AppLogger {
         Logger.i(tag, throwable, message = message)
     }
 }
+
+typealias AppLoggerSetup = () -> Unit
