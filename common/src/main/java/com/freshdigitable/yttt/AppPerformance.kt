@@ -36,6 +36,9 @@ abstract class AppPerformance(factory: List<AppTrace.Factory>) : AppTrace.Factor
             trace.forEach { it.stop() }
         }
 
+        override fun putMetric(name: String, value: Long) {
+            trace.forEach { it.putMetric(name, value) }
+        }
     }
 }
 
@@ -45,6 +48,7 @@ interface AppTrace {
     val name: String
     fun start()
     fun stop()
+    fun putMetric(name: String, value: Long)
 
     companion object : Factory {
         override fun newTrace(name: String): AppTrace = AppTraceImpl(name)
@@ -52,6 +56,7 @@ interface AppTrace {
 
     private class AppTraceImpl(override val name: String) : AppTrace {
         private var time = 0L
+        private val metrics = mutableMapOf<String, Long>()
         override fun start() {
             Logger.i(name) { "start: " }
             time = System.currentTimeMillis()
@@ -59,7 +64,11 @@ interface AppTrace {
 
         override fun stop() {
             val elapsed = System.currentTimeMillis() - time
-            Logger.i(name) { "end: $elapsed [ms]" }
+            Logger.i(name) { "end: $elapsed [ms]\n$metrics" }
+        }
+
+        override fun putMetric(name: String, value: Long) {
+            metrics[name] = value
         }
     }
 
