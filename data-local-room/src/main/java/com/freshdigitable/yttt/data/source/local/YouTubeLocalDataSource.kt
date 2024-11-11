@@ -84,8 +84,17 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun setPlaylistItemsByPlaylistId(
         id: YouTubePlaylist.Id,
-        items: Collection<YouTubePlaylistItem>,
+        items: Collection<YouTubePlaylistItem>?,
     ) {
+        if (items == null) {
+            dao.setPlaylistItems(
+                id = id,
+                items = emptyList(),
+                lastModified = dateTimeProvider.now(),
+                maxAge = YouTubePlaylistTable.getMaxAgeUpperLimit(false),
+            )
+            return
+        }
         if (items.isEmpty()) {
             dao.setPlaylistItems(
                 id = id,
@@ -106,7 +115,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
         val maxAge = if (isNotModified) {
             val boarder = dateTimeProvider.now().minus(YouTubePlaylistTable.RECENTLY_BOARDER)
-            val isPublishedRecently = items.any { boarder.isAfter(it.publishedAt) }
+            val isPublishedRecently = items.any { boarder < it.publishedAt }
             val maxAgeMax = YouTubePlaylistTable.getMaxAgeUpperLimit(isPublishedRecently)
             cache.maxAge.multipliedBy(2).coerceAtMost(maxAgeMax)
         } else {

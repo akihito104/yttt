@@ -1,5 +1,7 @@
 package com.freshdigitable.yttt.feature.timetable
 
+import com.freshdigitable.yttt.AppPerformance
+import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
@@ -24,16 +26,23 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private val settingRepository: SettingRepository,
     private val dateTimeProvider: DateTimeProvider,
 ) : FetchStreamUseCase {
+    private var trace: AppTrace? = null
+
     override suspend operator fun invoke() {
         if (!accountRepository.hasAccount()) {
             return
         }
         logI { "start" }
+        val t = AppPerformance.newTrace("loadList_yt")
+        trace = t
+        t.start()
         updateStreams()
         fetchNewStreams()
         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
         liveRepository.cleanUp()
         facade.updateAsFreeChat()
+        t.stop()
+        trace = null
         logI { "end" }
     }
 
@@ -42,10 +51,10 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .map { it.id }.toSet()
         val currentVideo = facade.fetchVideoList(first).map { it.id }.toSet()
-        logI { "updateStreams: currentVideo> ${currentVideo.size}" }
+        trace?.putMetric("update_current", currentVideo.size.toLong())
         val removed = first.subtract(currentVideo)
         liveRepository.removeVideo(removed)
-        logI { "updateStreams: removed> ${removed.size}" }
+        trace?.putMetric("update_remove", removed.size.toLong())
     }
 
     private suspend fun fetchNewStreams() {
@@ -53,12 +62,13 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val current = dateTimeProvider.now()
         val needsUpdate =
             subs.filter { it.uploadedPlaylistId != null && it.needsUpdatePlaylist(current) }
-        logI { "fetchNewStreams: subs.size> ${subs.size}" }
+        trace?.putMetric("subs", subs.size.toLong())
         val task = coroutineScope {
             needsUpdate.map { async { fetchVideoByPlaylistIdTask(it, current) } }
         }
+        trace?.putMetric("update_task", task.size.toLong())
         val ids = task.awaitAll().flatten().toSet()
-        logI { "fetchNewStreams: videoId.size> ${ids.size}" }
+        trace?.putMetric("new_stream", ids.size.toLong())
         facade.fetchVideoList(ids)
     }
 

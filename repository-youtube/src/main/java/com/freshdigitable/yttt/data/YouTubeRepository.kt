@@ -91,6 +91,10 @@ class YouTubeRepository @Inject constructor(
 
     private suspend fun updatePlaylistItemCache(id: YouTubePlaylist.Id, maxResult: Long) {
         val items = remoteSource.fetchPlaylistItems(id, maxResult = maxResult)
+        if (items == null) {
+            localSource.setPlaylistItemsByPlaylistId(id, null)
+            return
+        }
         val uploadedAtAnotherChannel = items
             .filter { it.channel.id != it.videoOwnerChannelId }
             .mapNotNull { it.videoOwnerChannelId }

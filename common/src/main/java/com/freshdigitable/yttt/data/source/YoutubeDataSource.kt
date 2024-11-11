@@ -40,7 +40,7 @@ interface YoutubeDataSource {
         suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>?
         suspend fun setPlaylistItemsByPlaylistId(
             id: YouTubePlaylist.Id,
-            items: Collection<YouTubePlaylistItem>,
+            items: Collection<YouTubePlaylistItem>?,
         )
 
         suspend fun fetchPlaylistItemSummary(
@@ -61,7 +61,7 @@ interface YoutubeDataSource {
             id: YouTubePlaylist.Id,
             maxResult: Long = 20,
             pageToken: String? = null,
-        ): List<YouTubePlaylistItem>
+        ): List<YouTubePlaylistItem>?
 
         suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist>
     }
