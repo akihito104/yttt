@@ -37,7 +37,11 @@ interface TwitchLiveDataSource {
         )
 
         suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>)
-        suspend fun setFollowedStreamSchedule(schedule: Collection<TwitchChannelSchedule>)
+        suspend fun setFollowedStreamSchedule(
+            userId: TwitchUser.Id,
+            schedule: Collection<TwitchChannelSchedule>,
+        )
+
         suspend fun deleteAllTables()
     }
 

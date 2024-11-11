@@ -69,6 +69,14 @@ internal class TwitchDao @Inject constructor(
         addChannelScheduleExpireEntity(expire)
     }
 
+    suspend fun updateChannelScheduleExpireEntity(userId: TwitchUser.Id, expiredAt: Instant) =
+        db.withTransaction {
+            val vacations = listOf(TwitchChannelVacationScheduleTable(userId, null))
+            addChannelVacationSchedules(vacations)
+            val entity = listOf(TwitchChannelScheduleExpireTable(userId, expiredAt))
+            addChannelScheduleExpireEntity(entity)
+        }
+
     suspend fun findStreamSchedule(
         id: TwitchChannelSchedule.Stream.Id
     ): TwitchVideo<TwitchChannelSchedule.Stream.Id>? = db.withTransaction {
