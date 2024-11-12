@@ -17,7 +17,7 @@ import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.time.Duration
@@ -30,11 +30,12 @@ internal class YouTubeLocalDataSource @Inject constructor(
     private val database: AppDatabase,
     private val dao: YouTubeDao,
     private val dateTimeProvider: DateTimeProvider,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : YoutubeDataSource.Local {
     override val videos: Flow<List<YouTubeVideo>> = dao.watchAllUnfinishedVideos()
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             dao.findAllSubscriptions()
         }
 
@@ -42,7 +43,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.findAllSubscriptionSummary()
 
     override suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>) =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             dao.addSubscriptions(subscriptions)
         }
 
@@ -141,7 +142,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.addFreeChatItems(ids, false, dateTimeProvider.now() + EXPIRATION_DEFAULT)
     }
 
-    override suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(Dispatchers.IO) {
+    override suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(ioDispatcher) {
         val current = dateTimeProvider.now()
         val defaultExpiredAt = current + EXPIRATION_DEFAULT
         dao.addVideoIsArchivedEntities(video.map {
@@ -182,10 +183,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit =
-        withContext(Dispatchers.IO) {
-            fetchByIds(ids) { removeVideos(it) }
-        }
+    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = withContext(ioDispatcher) {
+        fetchByIds(ids) { removeVideos(it) }
+    }
 
     override suspend fun findAllUnfinishedVideos(): List<YouTubeVideo> {
         return dao.findAllUnfinishedVideoList()

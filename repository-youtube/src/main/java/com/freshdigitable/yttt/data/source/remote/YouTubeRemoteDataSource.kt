@@ -31,7 +31,7 @@ import com.google.api.services.youtube.model.PlaylistItem
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -45,6 +45,7 @@ import javax.inject.Singleton
 @Singleton
 internal class YouTubeRemoteDataSource @Inject constructor(
     httpRequestInitializer: HttpRequestInitializer,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : YoutubeDataSource.Remote {
     private val youtube = YouTube.Builder(
         NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
@@ -162,7 +163,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         ids: Set<IdBase>,
         getItems: T.() -> List<E>,
         requestParams: YouTube.(Set<IdBase>) -> AbstractGoogleClientRequest<T>,
-    ): List<E> = withContext(Dispatchers.IO) {
+    ): List<E> = withContext(ioDispatcher) {
         if (ids.isEmpty()) {
             return@withContext emptyList()
         }
@@ -178,7 +179,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
     }
 
     private suspend fun <T> fetch(requestParams: YouTube.() -> AbstractGoogleClientRequest<T>): T =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val params = requestParams(youtube)
             coroutineScope { async { params.execute() } }.await()
         }
