@@ -24,6 +24,8 @@ interface YouTubeVideo {
 
     companion object {
         val YouTubeVideo.url: String get() = "https://youtube.com/watch?v=${id.value}"
+        val YouTubeVideo.isArchived: Boolean
+            get() = !isLiveStream() || actualEndDateTime != null // FIXME needs broadcastContent
     }
 }
 

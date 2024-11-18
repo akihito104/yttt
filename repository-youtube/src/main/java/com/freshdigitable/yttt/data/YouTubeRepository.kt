@@ -13,7 +13,13 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.reduce
+import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.Period
 import javax.inject.Inject
@@ -24,27 +30,39 @@ class YouTubeRepository @Inject constructor(
     private val remoteSource: YoutubeDataSource.Remote,
     private val localSource: YoutubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
+    coroutineScope: CoroutineScope,
 ) : YoutubeDataSource {
-    val videos: Flow<List<YouTubeVideo>> = localSource.videos
+    val videos: StateFlow<List<YouTubeVideo>> =
+        localSource.videos.stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> {
         val res = remoteSource.fetchAllSubscribe(maxResult)
         val current = localSource.fetchAllSubscribe()
-        val deleted = res.map { it.id }.toSet() - current.map { it.id }.toSet()
+        val deleted = current.map { it.id }.toSet() - res.map { it.id }.toSet()
         localSource.removeSubscribes(deleted)
         localSource.addSubscribes(res)
         return res
     }
 
-    suspend fun fetchAllSubscribeSummary(): List<YouTubeSubscriptionSummary> {
-        fetchAllSubscribe(50)
-        val summary = localSource.fetchAllSubscriptionSummary()
-        val needsChannelDetail = summary.filter { it.uploadedPlaylistId == null }.toSet()
-        if (needsChannelDetail.isEmpty()) {
-            return summary
+    suspend fun fetchPagedSubscriptionSummary(): Flow<List<YouTubeSubscriptionSummary>> {
+        val cache = localSource.fetchAllSubscribe()
+        return flow {
+            val subs = remoteSource.fetchAllSubscribePaged().reduce { _, value ->
+                localSource.addSubscribes(value)
+                val summary = localSource.findSubscriptionSummaries(value.map { it.id })
+                val needsChannelDetail = summary.filter { it.uploadedPlaylistId == null }
+                if (needsChannelDetail.isEmpty()) {
+                    emit(summary)
+                } else {
+                    fetchChannelList(needsChannelDetail.map { it.channelId }.toSet())
+                    emit(localSource.findSubscriptionSummaries(value.map { it.id }))
+                }
+                value
+            }
+            val deleted = cache.map { it.id } - subs.map { it.id }.toSet()
+            localSource.removeSubscribes(deleted.toSet())
+            localSource.addSubscribes(subs)
         }
-        fetchChannelList(needsChannelDetail.map { it.channelId }.toSet())
-        return localSource.fetchAllSubscriptionSummary()
     }
 
     override suspend fun fetchLiveChannelLogs(
@@ -74,7 +92,10 @@ class YouTubeRepository @Inject constructor(
         }
         val res = remoteSource.fetchVideoList(neededId)
         localSource.addVideo(res)
-        return localSource.fetchVideoList(ids)
+        val v = localSource.fetchVideoList(neededId)
+        return cache + v + res.associateBy { it.id }.toMutableMap().apply {
+            v.forEach { this.remove(it.id) }
+        }.values
     }
 
     suspend fun fetchPlaylistItems(
@@ -121,9 +142,7 @@ class YouTubeRepository @Inject constructor(
         localSource.cleanUp()
     }
 
-    suspend fun findAllUnfinishedVideos(): List<YouTubeVideo> {
-        return localSource.findAllUnfinishedVideos()
-    }
+    fun findAllUnfinishedVideos(): List<YouTubeVideo> = videos.value
 
     suspend fun removeVideo(removed: Set<YouTubeVideo.Id>) {
         if (removed.isEmpty()) {

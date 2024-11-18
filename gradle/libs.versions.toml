@@ -2,7 +2,7 @@
 androidGradlePlugin = "8.5.2"
 kotlin = "1.9.25"
 ksp = "1.9.25-1.0.20"
-kotlinxCoroutinesCore = "1.8.1"
+kotlinxCoroutinesCore = "1.9.0"
 kotlinxSerializationJson = "1.6.3"
 licensee = "1.8.0"
 oss-license-plugin = "0.10.6"
@@ -79,6 +79,7 @@ hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hil
 junit = { module = "junit:junit", version.ref = "junit" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanaryAndroid" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }

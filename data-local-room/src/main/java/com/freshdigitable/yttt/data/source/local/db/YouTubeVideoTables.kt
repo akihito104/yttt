@@ -125,16 +125,8 @@ internal data class YouTubeVideoDb(
             current: Instant,
         ): List<YouTubeVideoDb>
 
-        @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
-        suspend fun findAllUnfinishedVideoList(): List<YouTubeVideoDb>
-
-        @Query(SQL_FIND_ALL_UNFINISHED_VIDEOS)
+        @Query("$SQL_VIDEOS WHERE $CONDITION_UNFINISHED_VIDEOS")
         fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
-
-        companion object {
-            private const val SQL_FIND_ALL_UNFINISHED_VIDEOS =
-                "$SQL_VIDEOS WHERE $CONDITION_UNFINISHED_VIDEOS"
-        }
     }
 }
 

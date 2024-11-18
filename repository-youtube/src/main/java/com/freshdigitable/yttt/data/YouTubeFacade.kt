@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -10,7 +11,8 @@ class YouTubeFacade @Inject constructor(
 ) {
     suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> {
         val videos = repository.fetchVideoList(ids)
-        val unchecked = videos.filter { it.isFreeChat == null }
+        val unchecked = videos.filter { !it.isArchived }
+            .filter { it.isFreeChat == null }
             .associateWith { isFreeChat(it) }
         val add = unchecked.entries.filter { (_, f) -> f }.map { it.key.id }.toSet()
         val remove = unchecked.map { it.key.id }.toSet() - add
@@ -20,7 +22,10 @@ class YouTubeFacade @Inject constructor(
         if (remove.isNotEmpty()) {
             repository.removeFreeChatItems(remove)
         }
-        return repository.fetchVideoList(ids)
+        val updated = repository.fetchVideoList(add + remove)
+        return videos.associateBy { it.id }.toMutableMap().apply {
+            updated.forEach { this[it.id] = it }
+        }.values.toList()
     }
 
     private fun isFreeChat(video: YouTubeVideo): Boolean {

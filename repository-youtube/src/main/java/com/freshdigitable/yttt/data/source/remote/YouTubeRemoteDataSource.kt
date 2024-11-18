@@ -34,7 +34,8 @@ import com.google.api.services.youtube.model.Video
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.math.BigInteger
@@ -50,6 +51,26 @@ internal class YouTubeRemoteDataSource @Inject constructor(
     private val youtube = YouTube.Builder(
         NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
     ).build()
+
+    override suspend fun fetchAllSubscribePaged(pageSize: Int): Flow<List<YouTubeSubscription>> =
+        flow {
+            var t: String? = null
+            val subs = mutableListOf<YouTubeSubscription>()
+            do {
+                val res = fetch {
+                    subscriptions()
+                        .list(listOf(PART_SNIPPET))
+                        .setMine(true)
+                        .setMaxResults(pageSize.toLong())
+                        .setPageToken(t)
+                }
+                val offset = subs.size
+                val s = res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
+                subs.addAll(s)
+                emit(subs)
+                t = res.nextPageToken
+            } while (t != null)
+        }
 
     override suspend fun fetchAllSubscribe(
         maxResult: Long,
@@ -159,10 +180,10 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         return res
     }
 
-    private suspend fun <T, E> fetchList(
+    private suspend inline fun <T, E> fetchList(
         ids: Set<IdBase>,
-        getItems: T.() -> List<E>,
-        requestParams: YouTube.(Set<IdBase>) -> AbstractGoogleClientRequest<T>,
+        crossinline getItems: T.() -> List<E>,
+        crossinline requestParams: YouTube.(Set<IdBase>) -> AbstractGoogleClientRequest<T>,
     ): List<E> = withContext(ioDispatcher) {
         if (ids.isEmpty()) {
             return@withContext emptyList()
@@ -171,18 +192,16 @@ internal class YouTubeRemoteDataSource @Inject constructor(
             return@withContext fetch { requestParams(ids) }.getItems()
         }
         ids.chunked(VIDEO_MAX_FETCH_SIZE)
-            .map { chunked ->
-                coroutineScope { async { fetch { requestParams(chunked.toSet()) }.getItems() } }
-            }
+            .map { async { fetch { requestParams(it.toSet()) }.getItems() } }
             .awaitAll()
             .flatten()
     }
 
-    private suspend fun <T> fetch(requestParams: YouTube.() -> AbstractGoogleClientRequest<T>): T =
-        withContext(ioDispatcher) {
-            val params = requestParams(youtube)
-            coroutineScope { async { params.execute() } }.await()
-        }
+    private suspend inline fun <T> fetch(
+        crossinline requestParams: YouTube.() -> AbstractGoogleClientRequest<T>,
+    ): T = withContext(ioDispatcher) {
+        requestParams(youtube).execute()
+    }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) =
         throw UnsupportedOperationException()
