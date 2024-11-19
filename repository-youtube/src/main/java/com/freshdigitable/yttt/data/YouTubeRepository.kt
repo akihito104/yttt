@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.reduce
+import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.Period
@@ -47,21 +47,32 @@ class YouTubeRepository @Inject constructor(
     suspend fun fetchPagedSubscriptionSummary(): Flow<List<YouTubeSubscriptionSummary>> {
         val cache = localSource.fetchAllSubscribe()
         return flow {
-            val subs = remoteSource.fetchAllSubscribePaged().reduce { _, value ->
-                localSource.addSubscribes(value)
-                val summary = localSource.findSubscriptionSummaries(value.map { it.id })
-                val needsChannelDetail = summary.filter { it.uploadedPlaylistId == null }
-                if (needsChannelDetail.isEmpty()) {
-                    emit(summary)
-                } else {
-                    fetchChannelList(needsChannelDetail.map { it.channelId }.toSet())
-                    emit(localSource.findSubscriptionSummaries(value.map { it.id }))
+            val res = mutableListOf<YouTubeSubscriptionSummary>()
+            val subs = remoteSource.fetchAllSubscribePaged()
+                .fold(emptyList<YouTubeSubscription>()) { acc, value ->
+                    val page = value - acc.toSet()
+                    localSource.addSubscribes(page)
+                    val summary = localSource.findSubscriptionSummaries(page.map { it.id })
+                    val needsChannelDetail = summary.filter { it.uploadedPlaylistId == null }
+                    if (needsChannelDetail.isEmpty()) {
+                        emit(res + summary)
+                        res.addAll(summary)
+                    } else {
+                        fetchChannelList(needsChannelDetail.map { it.channelId }.toSet())
+                        val updated = needsChannelDetail.map { it.subscriptionId }.toSet()
+                        val s = summary.associateBy { it.subscriptionId }.toMutableMap().apply {
+                            localSource.findSubscriptionSummaries(updated).forEach {
+                                this[it.subscriptionId] = it
+                            }
+                        }.values
+                        check((page.map { it.id } - s.map { it.subscriptionId }.toSet()).isEmpty())
+                        emit(res + s)
+                        res.addAll(s)
+                    }
+                    value
                 }
-                value
-            }
             val deleted = cache.map { it.id } - subs.map { it.id }.toSet()
             localSource.removeSubscribes(deleted.toSet())
-            localSource.addSubscribes(subs)
         }
     }
 
@@ -119,9 +130,8 @@ class YouTubeRepository @Inject constructor(
         val uploadedAtAnotherChannel = items
             .filter { it.channel.id != it.videoOwnerChannelId }
             .mapNotNull { it.videoOwnerChannelId }
-            .toSet()
         if (uploadedAtAnotherChannel.isNotEmpty()) {
-            fetchChannelList(uploadedAtAnotherChannel)
+            fetchChannelList(uploadedAtAnotherChannel.toSet())
         }
         localSource.setPlaylistItemsByPlaylistId(id, items)
     }

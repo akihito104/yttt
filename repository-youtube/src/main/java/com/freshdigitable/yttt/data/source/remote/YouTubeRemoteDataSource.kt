@@ -66,8 +66,8 @@ internal class YouTubeRemoteDataSource @Inject constructor(
                 }
                 val offset = subs.size
                 val s = res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
+                emit(subs + s)
                 subs.addAll(s)
-                emit(subs)
                 t = res.nextPageToken
             } while (t != null)
         }
