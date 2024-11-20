@@ -103,7 +103,10 @@ class YouTubeRepository @Inject constructor(
         }
         val res = remoteSource.fetchVideoList(neededId)
         localSource.addVideo(res)
-        val v = localSource.fetchVideoList(neededId)
+        val updated = res.map { it.id }.toSet()
+        val removed = neededId - updated
+        removeVideo(removed)
+        val v = localSource.fetchVideoList(updated)
         return cache + v + res.associateBy { it.id }.toMutableMap().apply {
             v.forEach { this.remove(it.id) }
         }.values
