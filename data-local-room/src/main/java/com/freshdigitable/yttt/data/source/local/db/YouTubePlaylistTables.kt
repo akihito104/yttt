@@ -127,8 +127,10 @@ internal class YouTubePlaylistItemTable(
 }
 
 @DatabaseView(
-    "SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived FROM playlist_item AS i " +
-        "LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id",
+    "SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived, e.expired_at AS video_expired_at " +
+        "FROM playlist_item AS i " +
+        "LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id " +
+        "LEFT OUTER JOIN video_expire AS e ON i.video_id = e.video_id",
     viewName = "yt_playlist_item_summary",
 )
 internal class YouTubePlaylistItemSummaryDb(
@@ -140,6 +142,8 @@ internal class YouTubePlaylistItemSummaryDb(
     override val videoId: YouTubeVideo.Id,
     @ColumnInfo("is_archived")
     override val isArchived: Boolean?,
+    @ColumnInfo("video_expired_at")
+    override val videoExpiredAt: Instant?,
 ) : YouTubePlaylistItemSummary {
     @androidx.room.Dao
     internal interface Dao {

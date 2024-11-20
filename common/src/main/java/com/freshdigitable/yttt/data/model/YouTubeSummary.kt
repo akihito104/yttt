@@ -23,4 +23,5 @@ interface YouTubePlaylistItemSummary {
     val playlistItemId: YouTubePlaylistItem.Id
     val videoId: YouTubeVideo.Id
     val isArchived: Boolean?
+    val videoExpiredAt: Instant?
 }
