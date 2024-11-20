@@ -1,6 +1,8 @@
 package com.freshdigitable.yttt
 
 import co.touchlab.kermit.Logger
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 abstract class AppPerformance(factory: List<AppTrace.Factory>) : AppTrace.Factory {
     @Volatile
@@ -39,6 +41,10 @@ abstract class AppPerformance(factory: List<AppTrace.Factory>) : AppTrace.Factor
         override fun putMetric(name: String, value: Long) {
             trace.forEach { it.putMetric(name, value) }
         }
+
+        override fun incrementMetric(name: String, value: Long) {
+            trace.forEach { it.incrementMetric(name, value) }
+        }
     }
 }
 
@@ -49,6 +55,7 @@ interface AppTrace {
     fun start()
     fun stop()
     fun putMetric(name: String, value: Long)
+    fun incrementMetric(name: String, value: Long)
 
     companion object : Factory {
         override fun newTrace(name: String): AppTrace = AppTraceImpl(name)
@@ -56,7 +63,8 @@ interface AppTrace {
 
     private class AppTraceImpl(override val name: String) : AppTrace {
         private var time = 0L
-        private val metrics = mutableMapOf<String, Long>()
+        private val metrics = ConcurrentHashMap<String, Long>()
+        private val counter = ConcurrentHashMap<String, AtomicLong>()
         override fun start() {
             Logger.i(name) { "start: " }
             time = System.currentTimeMillis()
@@ -64,11 +72,19 @@ interface AppTrace {
 
         override fun stop() {
             val elapsed = System.currentTimeMillis() - time
-            Logger.i(name) { "end: $elapsed [ms]\n$metrics" }
+            val res = (metrics + counter.map { it.key to it.value.get() }).toSortedMap()
+            Logger.i(name) { "end: $elapsed [ms]\n$res" }
+            metrics.clear()
+            counter.clear()
         }
 
         override fun putMetric(name: String, value: Long) {
             metrics[name] = value
+        }
+
+        override fun incrementMetric(name: String, value: Long) {
+            val c = counter[name] ?: AtomicLong(0).also { counter[name] = it }
+            c.addAndGet(value)
         }
     }
 
