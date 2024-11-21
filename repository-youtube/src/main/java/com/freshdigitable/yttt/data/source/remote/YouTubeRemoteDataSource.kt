@@ -13,7 +13,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionEntity
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
@@ -241,23 +240,31 @@ private fun Activity.toChannelLog(): YouTubeChannelLog = YouTubeChannelLogEntity
     thumbnailUrl = snippet.thumbnails.url,
 )
 
-private fun Video.toLiveVideo(): YouTubeVideo = object : YouTubeVideo by YouTubeVideoEntity(
-    id = YouTubeVideo.Id(id),
-    channel = YouTubeChannelEntity(
-        id = YouTubeChannel.Id(snippet.channelId),
-        title = snippet.channelTitle,
+private fun Video.toLiveVideo(): YouTubeVideo = YouTubeVideoRemote(this)
+
+private class YouTubeVideoRemote(
+    private val video: Video,
+) : YouTubeVideo {
+    override val id: YouTubeVideo.Id = YouTubeVideo.Id(video.id)
+    override val channel: YouTubeChannel = YouTubeChannelEntity(
+        id = YouTubeChannel.Id(video.snippet.channelId),
+        title = video.snippet.channelTitle,
         iconUrl = "",
-    ),
-    title = snippet.title,
-    scheduledStartDateTime = liveStreamingDetails?.scheduledStartTime?.toInstant(),
-    scheduledEndDateTime = liveStreamingDetails?.scheduledEndTime?.toInstant(),
-    actualStartDateTime = liveStreamingDetails?.actualStartTime?.toInstant(),
-    actualEndDateTime = liveStreamingDetails?.actualEndTime?.toInstant(),
-    thumbnailUrl = this.snippet.thumbnails.url,
-    description = snippet.description,
-    viewerCount = liveStreamingDetails?.concurrentViewers,
-) {
-    override fun toString(): String = this@toLiveVideo.toPrettyString()
+    )
+    override val title: String = video.snippet.title
+    override val scheduledStartDateTime: Instant? =
+        video.liveStreamingDetails?.scheduledStartTime?.toInstant()
+    override val scheduledEndDateTime: Instant? =
+        video.liveStreamingDetails?.scheduledEndTime?.toInstant()
+    override val actualStartDateTime: Instant? =
+        video.liveStreamingDetails?.actualStartTime?.toInstant()
+    override val actualEndDateTime: Instant? =
+        video.liveStreamingDetails?.actualEndTime?.toInstant()
+    override val thumbnailUrl: String = video.snippet.thumbnails.url
+    override val description: String = video.snippet.description
+    override val viewerCount: BigInteger? = video.liveStreamingDetails?.concurrentViewers
+    override fun needsUpdate(current: Instant): Boolean = false
+    override fun toString(): String = video.toPrettyString()
 }
 
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)

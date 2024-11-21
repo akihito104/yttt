@@ -12,7 +12,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable.Dao.Companion.CONDITION_UNFINISHED_VIDEOS
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable.Dao.Companion.SQL_VIDEOS
 import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
 import java.time.Instant
@@ -77,10 +76,6 @@ internal class YouTubeVideoTable(
             internal const val CONDITION_UNFINISHED_VIDEOS =
                 "(schedule_start_datetime NOTNULL OR actual_start_datetime NOTNULL) " +
                     "AND actual_end_datetime ISNULL"
-            internal const val SQL_VIDEOS =
-                "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat FROM video AS v " +
-                    "INNER JOIN channel AS c ON v.channel_id = c.id " +
-                    "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id"
         }
     }
 }
@@ -92,6 +87,8 @@ internal data class YouTubeVideoDb(
     override val channel: YouTubeChannelTable,
     @ColumnInfo("is_free_chat")
     override val isFreeChat: Boolean?,
+    @ColumnInfo("expired_at")
+    private val expiredAt: Instant?,
 ) : YouTubeVideo {
     override val id: YouTubeVideo.Id
         get() = video.id
@@ -112,10 +109,13 @@ internal data class YouTubeVideoDb(
     override val viewerCount: BigInteger?
         get() = video.viewerCount
 
+    override fun needsUpdate(current: Instant): Boolean = (expiredAt ?: Instant.EPOCH) <= current
+
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat FROM (SELECT * FROM video WHERE id IN (:ids)) AS v " +
+            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat, e.expired_at " +
+                "FROM (SELECT * FROM video WHERE id IN (:ids)) AS v " +
                 "INNER JOIN (SELECT * FROM video_expire WHERE :current < expired_at) AS e ON e.video_id = v.id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id"
@@ -125,7 +125,14 @@ internal data class YouTubeVideoDb(
             current: Instant,
         ): List<YouTubeVideoDb>
 
-        @Query("$SQL_VIDEOS WHERE $CONDITION_UNFINISHED_VIDEOS")
+        @Query(
+            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat, e.expired_at " +
+                "FROM video AS v " +
+                "INNER JOIN video_expire AS e ON e.video_id = v.id " +
+                "INNER JOIN channel AS c ON c.id = v.channel_id " +
+                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
+                "WHERE $CONDITION_UNFINISHED_VIDEOS"
+        )
         fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
     }
 }

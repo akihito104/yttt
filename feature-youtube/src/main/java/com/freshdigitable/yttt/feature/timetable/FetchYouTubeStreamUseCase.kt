@@ -24,10 +24,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.chunked
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.flow.flatMapConcat
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -63,8 +63,10 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     }
 
     private suspend fun updateStreams() {
+        val current = dateTimeProvider.now()
         val first = liveRepository.findAllUnfinishedVideos()
             .filter { it.isNowOnAir() || it.isUpcoming() }
+            .filter { it.needsUpdate(current) }
             .map { it.id }.toSet()
         trace?.putMetric("update_current", first.size.toLong())
         val removed = facade.fetchVideoList(first)
@@ -78,7 +80,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val videoUpdateTaskChannel = Channel<List<YouTubeVideo.Id>>(Channel.BUFFERED)
         val videoUpdateTask = coroutineScope.launch {
             videoUpdateTaskChannel.consumeAsFlow()
-                .flatMapConcat { flowOf(*it.toTypedArray()) }
+                .flatMapConcat { it.asFlow() }
                 .chunked(50).collect {
                     facade.fetchVideoList(it.toSet())
                     trace?.incrementMetric("new_stream", it.size.toLong())
