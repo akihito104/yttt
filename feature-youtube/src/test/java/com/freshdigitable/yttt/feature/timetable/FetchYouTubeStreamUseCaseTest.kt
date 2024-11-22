@@ -41,9 +41,6 @@ class FetchYouTubeStreamUseCaseTest {
     lateinit var liveRepository: YouTubeRepository
 
     @MockK
-    lateinit var facade: YouTubeFacade
-
-    @MockK
     lateinit var accountRepository: YouTubeAccountRepository
 
     @MockK
@@ -67,7 +64,7 @@ class FetchYouTubeStreamUseCaseTest {
     private val sut: FetchYouTubeStreamUseCase by lazy {
         FetchYouTubeStreamUseCase(
             liveRepository,
-            facade,
+            YouTubeFacade(liveRepository),
             accountRepository,
             settingRepository,
             dateTimeProvider,
@@ -79,16 +76,11 @@ class FetchYouTubeStreamUseCaseTest {
     fun testInvokeWithEmptyItems() = runTest {
         // setup
         responseRule.apply {
-            addMocks(liveRepository, facade, accountRepository, settingRepository, dateTimeProvider)
+            addMocks(liveRepository, accountRepository, settingRepository, dateTimeProvider)
             liveRepository.apply {
                 coRegister { findAllUnfinishedVideos() } returns emptyList()
-                coRegister { removeVideo(any()) } just runs
                 coRegister { fetchPagedSubscriptionSummary() } returns emptyFlow()
                 coRegister { cleanUp() } just runs
-            }
-            facade.apply {
-                coRegister { fetchVideoList(any()) } returns emptyList()
-                coRegister { updateAsFreeChat() } just runs
             }
             accountRepository.apply {
                 register { hasAccount() } returns true
@@ -117,7 +109,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun testInvokeNopWhenNoAccount() = runBlocking {
         // setup
         responseRule.apply {
-            addMocks(liveRepository, facade, accountRepository, settingRepository, dateTimeProvider)
+            addMocks(liveRepository, accountRepository, settingRepository, dateTimeProvider)
             register { accountRepository.hasAccount() } returns false
         }
 

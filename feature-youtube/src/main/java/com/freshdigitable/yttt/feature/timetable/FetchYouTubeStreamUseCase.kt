@@ -24,9 +24,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.chunked
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.joinAll
@@ -44,6 +46,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 ) : FetchStreamUseCase {
     private var trace: AppTrace? = null
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override suspend operator fun invoke() {
         if (!accountRepository.hasAccount()) {
             return
@@ -52,8 +55,30 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val t = AppPerformance.newTrace("loadList_yt")
         trace = t
         t.start()
-        updateStreams()
-        fetchNewStreams()
+
+        val videoUpdateTaskChannel = Channel<List<YouTubeVideo.Id>>(Channel.BUFFERED)
+        val videoUpdateTask = coroutineScope.launch {
+            val idCache = mutableSetOf<YouTubeVideo.Id>()
+            videoUpdateTaskChannel.consumeAsFlow()
+                .flatMapConcat { it.asFlow() }
+                .filter { id -> !idCache.contains(id).also { idCache.add(id) } }
+                .chunked(50).collect { ids ->
+                    val v = liveRepository.fetchVideoList(ids.toSet())
+                    val removed = v.filter { it.isArchived }.map { it.id }.toSet()
+                    if (removed.isNotEmpty()) {
+                        liveRepository.removeVideo(removed)
+                        t.incrementMetric("update_remove", removed.size.toLong())
+                    }
+                    t.incrementMetric("new_stream", ids.size.toLong())
+                }
+        }
+        listOf(
+            coroutineScope.async { updateStreams(videoUpdateTaskChannel) },
+            coroutineScope.async { fetchNewStreams(videoUpdateTaskChannel) },
+        ).awaitAll()
+        videoUpdateTaskChannel.close()
+        videoUpdateTask.join()
+
         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
         liveRepository.cleanUp()
         facade.updateAsFreeChat()
@@ -62,30 +87,17 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         logI { "end" }
     }
 
-    private suspend fun updateStreams() {
+    private suspend fun updateStreams(videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>) {
         val current = dateTimeProvider.now()
         val first = liveRepository.findAllUnfinishedVideos()
             .filter { it.isNowOnAir() || it.isUpcoming() }
             .filter { it.needsUpdate(current) }
-            .map { it.id }.toSet()
+            .map { it.id }
+        videoUpdateTaskChannel.send(first)
         trace?.putMetric("update_current", first.size.toLong())
-        val removed = facade.fetchVideoList(first)
-            .filter { it.isArchived }.map { it.id }.toSet()
-        liveRepository.removeVideo(removed)
-        trace?.putMetric("update_remove", removed.size.toLong())
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private suspend fun fetchNewStreams() {
-        val videoUpdateTaskChannel = Channel<List<YouTubeVideo.Id>>(Channel.BUFFERED)
-        val videoUpdateTask = coroutineScope.launch {
-            videoUpdateTaskChannel.consumeAsFlow()
-                .flatMapConcat { it.asFlow() }
-                .chunked(50).collect {
-                    facade.fetchVideoList(it.toSet())
-                    trace?.incrementMetric("new_stream", it.size.toLong())
-                }
-        }
+    private suspend fun fetchNewStreams(videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>) {
         val playlistUpdateTaskCache = liveRepository.fetchPagedSubscriptionSummary()
             .fold(PlaylistUpdateTaskCache()) { acc, value ->
                 val v = value.associateBy { it.subscriptionId }
@@ -117,8 +129,6 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 acc.apply { addTasks(tasks, job) }
             }
         playlistUpdateTaskCache.join()
-        videoUpdateTaskChannel.close()
-        videoUpdateTask.join()
         trace?.putMetric("update_task", playlistUpdateTaskCache.tasks.size.toLong())
         trace?.putMetric("subs", playlistUpdateTaskCache.summaries.size.toLong())
     }
