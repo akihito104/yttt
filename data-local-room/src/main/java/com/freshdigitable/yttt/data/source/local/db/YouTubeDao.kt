@@ -120,7 +120,7 @@ internal class YouTubeDao @Inject constructor(
 }
 
 private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTubeSubscriptionTable(
-    id = id, subscribeSince = subscribeSince, channelId = channel.id,
+    id = id, subscribeSince = subscribeSince, channelId = channel.id, order = order,
 )
 
 private fun YouTubeChannelLog.toDbEntity(): YouTubeChannelLogTable = YouTubeChannelLogTable(

@@ -89,9 +89,10 @@ internal data class YouTubeSubscriptionSummaryDb(
                 "LEFT OUTER JOIN ( " +
                 " SELECT c.id, c.uploaded_playlist_id, p.max_age, p.last_modified FROM channel_addition AS c " +
                 " INNER JOIN playlist AS p ON c.uploaded_playlist_id = p.id " +
-                ") AS c ON s.channel_id = c.id"
+                ") AS c ON s.channel_id = c.id " +
+                "WHERE subscription_id IN (:ids)"
         )
-        suspend fun findAllSubscriptionSummary(): List<YouTubeSubscriptionSummaryDb>
+        fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummaryDb>
     }
 }
 

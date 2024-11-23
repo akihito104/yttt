@@ -34,13 +34,13 @@ interface YoutubeDataSource {
         val videos: Flow<List<YouTubeVideo>>
         suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>)
         suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>)
-        suspend fun fetchAllSubscriptionSummary(): List<YouTubeSubscriptionSummary>
+        suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
         suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>)
         suspend fun addVideo(video: Collection<YouTubeVideo>)
         suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>?
         suspend fun setPlaylistItemsByPlaylistId(
             id: YouTubePlaylist.Id,
-            items: Collection<YouTubePlaylistItem>,
+            items: Collection<YouTubePlaylistItem>?,
         )
 
         suspend fun fetchPlaylistItemSummary(
@@ -49,7 +49,6 @@ interface YoutubeDataSource {
         ): List<YouTubePlaylistItemSummary>
 
         suspend fun cleanUp()
-        suspend fun findAllUnfinishedVideos(): List<YouTubeVideo>
         suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
         suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>)
         suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>)
@@ -57,11 +56,13 @@ interface YoutubeDataSource {
     }
 
     interface Remote : YoutubeDataSource {
+        suspend fun fetchAllSubscribePaged(pageSize: Int = 50): Flow<List<YouTubeSubscription>>
+
         suspend fun fetchPlaylistItems(
             id: YouTubePlaylist.Id,
             maxResult: Long = 20,
             pageToken: String? = null,
-        ): List<YouTubePlaylistItem>
+        ): List<YouTubePlaylistItem>?
 
         suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist>
     }

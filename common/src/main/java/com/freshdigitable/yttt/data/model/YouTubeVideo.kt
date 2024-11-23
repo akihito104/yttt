@@ -15,6 +15,7 @@ interface YouTubeVideo {
     val isFreeChat: Boolean? get() = null
     val description: String
     val viewerCount: BigInteger?
+    fun needsUpdate(current: Instant): Boolean
 
     fun isLiveStream(): Boolean = scheduledStartDateTime != null
     fun isNowOnAir(): Boolean = actualStartDateTime != null && actualEndDateTime == null
@@ -24,18 +25,7 @@ interface YouTubeVideo {
 
     companion object {
         val YouTubeVideo.url: String get() = "https://youtube.com/watch?v=${id.value}"
+        val YouTubeVideo.isArchived: Boolean
+            get() = !isLiveStream() || actualEndDateTime != null // FIXME needs broadcastContent
     }
 }
-
-data class YouTubeVideoEntity(
-    override val id: YouTubeVideo.Id,
-    override val channel: YouTubeChannel,
-    override val title: String,
-    override val scheduledStartDateTime: Instant?,
-    override val scheduledEndDateTime: Instant? = null,
-    override val actualStartDateTime: Instant? = null,
-    override val actualEndDateTime: Instant? = null,
-    override val thumbnailUrl: String,
-    override val description: String,
-    override val viewerCount: BigInteger?,
-) : YouTubeVideo

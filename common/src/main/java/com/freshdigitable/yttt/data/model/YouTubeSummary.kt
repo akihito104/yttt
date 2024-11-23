@@ -13,7 +13,7 @@ interface YouTubeSubscriptionSummary {
     companion object {
         fun YouTubeSubscriptionSummary.needsUpdatePlaylist(current: Instant): Boolean {
             val e = playlistExpiredAt ?: return true
-            return e.isBefore(current)
+            return e < current
         }
     }
 }
@@ -23,4 +23,5 @@ interface YouTubePlaylistItemSummary {
     val playlistItemId: YouTubePlaylistItem.Id
     val videoId: YouTubeVideo.Id
     val isArchived: Boolean?
+    val videoExpiredAt: Instant?
 }

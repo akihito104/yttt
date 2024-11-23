@@ -78,7 +78,7 @@ class TwitchLiveRepository @Inject constructor(
             return cache
         }
         val res = remoteDataSource.fetchFollowedStreamSchedule(id, maxCount)
-        localDataSource.setFollowedStreamSchedule(res)
+        localDataSource.setFollowedStreamSchedule(id, res)
         return res
     }
 

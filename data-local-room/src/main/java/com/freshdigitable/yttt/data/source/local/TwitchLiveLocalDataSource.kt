@@ -88,11 +88,16 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         return dao.findChannelSchedule(id, current = dateTimeProvider.now())
     }
 
-    override suspend fun setFollowedStreamSchedule(schedule: Collection<TwitchChannelSchedule>) {
-        dao.replaceChannelSchedules(
-            schedule,
-            expiredAt = dateTimeProvider.now() + MAX_AGE_CHANNEL_SCHEDULE,
-        )
+    override suspend fun setFollowedStreamSchedule(
+        userId: TwitchUser.Id,
+        schedule: Collection<TwitchChannelSchedule>,
+    ) {
+        val expiredAt = dateTimeProvider.now() + MAX_AGE_CHANNEL_SCHEDULE
+        if (schedule.isEmpty()) {
+            dao.updateChannelScheduleExpireEntity(userId, expiredAt)
+        } else {
+            dao.replaceChannelSchedules(schedule, expiredAt = expiredAt)
+        }
     }
 
     override suspend fun fetchStreamDetail(

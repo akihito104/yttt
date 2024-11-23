@@ -13,7 +13,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionEntity
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
@@ -31,9 +30,12 @@ import com.google.api.services.youtube.model.PlaylistItem
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.math.BigInteger
 import java.time.Instant
@@ -43,11 +45,31 @@ import javax.inject.Singleton
 @Singleton
 internal class YouTubeRemoteDataSource @Inject constructor(
     httpRequestInitializer: HttpRequestInitializer,
-    private val coroutineScope: CoroutineScope,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : YoutubeDataSource.Remote {
     private val youtube = YouTube.Builder(
         NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
     ).build()
+
+    override suspend fun fetchAllSubscribePaged(pageSize: Int): Flow<List<YouTubeSubscription>> =
+        flow {
+            var t: String? = null
+            val subs = mutableListOf<YouTubeSubscription>()
+            do {
+                val res = fetch {
+                    subscriptions()
+                        .list(listOf(PART_SNIPPET))
+                        .setMine(true)
+                        .setMaxResults(pageSize.toLong())
+                        .setPageToken(t)
+                }
+                val offset = subs.size
+                val s = res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
+                emit(subs + s)
+                subs.addAll(s)
+                t = res.nextPageToken
+            } while (t != null)
+        }
 
     override suspend fun fetchAllSubscribe(
         maxResult: Long,
@@ -115,7 +137,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         pageToken: String?,
-    ): List<YouTubePlaylistItem> {
+    ): List<YouTubePlaylistItem>? {
         return try {
             fetch {
                 playlistItems()
@@ -126,7 +148,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
             }.items.map { it.toLivePlaylistItem() }
         } catch (e: Exception) {
             if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
-                emptyList()
+                null
             } else {
                 throw IOException(e)
             }
@@ -157,26 +179,27 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         return res
     }
 
-    private suspend fun <T, E> fetchList(
+    private suspend inline fun <T, E> fetchList(
         ids: Set<IdBase>,
-        getItems: T.() -> List<E>,
-        requestParams: YouTube.(Set<IdBase>) -> AbstractGoogleClientRequest<T>,
-    ): List<E> {
+        crossinline getItems: T.() -> List<E>,
+        crossinline requestParams: YouTube.(Set<IdBase>) -> AbstractGoogleClientRequest<T>,
+    ): List<E> = withContext(ioDispatcher) {
         if (ids.isEmpty()) {
-            return emptyList()
+            return@withContext emptyList()
         }
         if (ids.size <= VIDEO_MAX_FETCH_SIZE) {
-            return fetch { requestParams(ids) }.getItems()
+            return@withContext fetch { requestParams(ids) }.getItems()
         }
-        return ids.chunked(VIDEO_MAX_FETCH_SIZE)
-            .map { chunked -> coroutineScope.async { fetch { requestParams(chunked.toSet()) }.getItems() } }
+        ids.chunked(VIDEO_MAX_FETCH_SIZE)
+            .map { async { fetch { requestParams(it.toSet()) }.getItems() } }
             .awaitAll()
             .flatten()
     }
 
-    private suspend fun <T> fetch(requestParams: YouTube.() -> AbstractGoogleClientRequest<T>): T {
-        val params = requestParams(youtube)
-        return coroutineScope.async { params.execute() }.await()
+    private suspend inline fun <T> fetch(
+        crossinline requestParams: YouTube.() -> AbstractGoogleClientRequest<T>,
+    ): T = withContext(ioDispatcher) {
+        requestParams(youtube).execute()
     }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) =
@@ -217,23 +240,31 @@ private fun Activity.toChannelLog(): YouTubeChannelLog = YouTubeChannelLogEntity
     thumbnailUrl = snippet.thumbnails.url,
 )
 
-private fun Video.toLiveVideo(): YouTubeVideo = object : YouTubeVideo by YouTubeVideoEntity(
-    id = YouTubeVideo.Id(id),
-    channel = YouTubeChannelEntity(
-        id = YouTubeChannel.Id(snippet.channelId),
-        title = snippet.channelTitle,
+private fun Video.toLiveVideo(): YouTubeVideo = YouTubeVideoRemote(this)
+
+private class YouTubeVideoRemote(
+    private val video: Video,
+) : YouTubeVideo {
+    override val id: YouTubeVideo.Id = YouTubeVideo.Id(video.id)
+    override val channel: YouTubeChannel = YouTubeChannelEntity(
+        id = YouTubeChannel.Id(video.snippet.channelId),
+        title = video.snippet.channelTitle,
         iconUrl = "",
-    ),
-    title = snippet.title,
-    scheduledStartDateTime = liveStreamingDetails?.scheduledStartTime?.toInstant(),
-    scheduledEndDateTime = liveStreamingDetails?.scheduledEndTime?.toInstant(),
-    actualStartDateTime = liveStreamingDetails?.actualStartTime?.toInstant(),
-    actualEndDateTime = liveStreamingDetails?.actualEndTime?.toInstant(),
-    thumbnailUrl = this.snippet.thumbnails.url,
-    description = snippet.description,
-    viewerCount = liveStreamingDetails?.concurrentViewers,
-) {
-    override fun toString(): String = this@toLiveVideo.toPrettyString()
+    )
+    override val title: String = video.snippet.title
+    override val scheduledStartDateTime: Instant? =
+        video.liveStreamingDetails?.scheduledStartTime?.toInstant()
+    override val scheduledEndDateTime: Instant? =
+        video.liveStreamingDetails?.scheduledEndTime?.toInstant()
+    override val actualStartDateTime: Instant? =
+        video.liveStreamingDetails?.actualStartTime?.toInstant()
+    override val actualEndDateTime: Instant? =
+        video.liveStreamingDetails?.actualEndTime?.toInstant()
+    override val thumbnailUrl: String = video.snippet.thumbnails.url
+    override val description: String = video.snippet.description
+    override val viewerCount: BigInteger? = video.liveStreamingDetails?.concurrentViewers
+    override fun needsUpdate(current: Instant): Boolean = false
+    override fun toString(): String = video.toPrettyString()
 }
 
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)

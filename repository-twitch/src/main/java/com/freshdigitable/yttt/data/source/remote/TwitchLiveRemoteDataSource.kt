@@ -10,7 +10,7 @@ import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import retrofit2.Call
@@ -21,8 +21,9 @@ import javax.inject.Singleton
 internal class TwitchLiveRemoteDataSource @Inject constructor(
     private val oauth: TwitchOauthService,
     private val helix: TwitchHelixService,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : TwitchLiveDataSource.Remote {
-    override suspend fun getAuthorizeUrl(state: String): String = withContext(Dispatchers.IO) {
+    override suspend fun getAuthorizeUrl(state: String): String = withContext(ioDispatcher) {
         val response = oauth.authorizeImplicitly(
             clientId = BuildConfig.TWITCH_CLIENT_ID,
             redirectUri = BuildConfig.TWITCH_REDIRECT_URI,
@@ -33,7 +34,7 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
     }
 
     private suspend fun <T> fetch(task: suspend TwitchHelixService.() -> T): T =
-        withContext(Dispatchers.IO) { helix.task() }
+        withContext(ioDispatcher) { helix.task() }
 
     private suspend fun <E, P : Pageable<E>> fetchAll(
         maxCount: Int? = null,
