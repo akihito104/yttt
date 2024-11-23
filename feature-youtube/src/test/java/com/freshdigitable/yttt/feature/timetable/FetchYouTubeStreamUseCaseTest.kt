@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import io.mockk.called
 import io.mockk.coVerify
 import io.mockk.impl.annotations.MockK
@@ -17,7 +18,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
@@ -50,6 +53,7 @@ class FetchYouTubeStreamUseCaseTest {
     lateinit var dateTimeProvider: DateTimeProvider
 
     private val c = newSingleThreadContext("io thread")
+    private val coroutineScope = CoroutineScope(c)
 
     @Before
     fun setup() {
@@ -68,7 +72,7 @@ class FetchYouTubeStreamUseCaseTest {
             accountRepository,
             settingRepository,
             dateTimeProvider,
-            CoroutineScope(c),
+            coroutineScope,
         )
     }
 
@@ -78,7 +82,10 @@ class FetchYouTubeStreamUseCaseTest {
         responseRule.apply {
             addMocks(liveRepository, accountRepository, settingRepository, dateTimeProvider)
             liveRepository.apply {
-                coRegister { findAllUnfinishedVideos() } returns emptyList()
+                coRegister { videos } answers {
+                    emptyFlow<List<YouTubeVideo>>()
+                        .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
+                }
                 coRegister { fetchPagedSubscriptionSummary() } returns emptyFlow()
                 coRegister { cleanUp() } just runs
             }

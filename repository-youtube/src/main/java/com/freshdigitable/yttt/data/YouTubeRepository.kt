@@ -32,8 +32,8 @@ class YouTubeRepository @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
     coroutineScope: CoroutineScope,
 ) : YoutubeDataSource {
-    val videos: StateFlow<List<YouTubeVideo>> =
-        localSource.videos.stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
+    val videos: StateFlow<List<YouTubeVideo>> = localSource.videos
+        .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> {
         val res = remoteSource.fetchAllSubscribe(maxResult)
@@ -154,8 +154,6 @@ class YouTubeRepository @Inject constructor(
     suspend fun cleanUp() {
         localSource.cleanUp()
     }
-
-    fun findAllUnfinishedVideos(): List<YouTubeVideo> = videos.value
 
     suspend fun removeVideo(removed: Set<YouTubeVideo.Id>) {
         if (removed.isEmpty()) {

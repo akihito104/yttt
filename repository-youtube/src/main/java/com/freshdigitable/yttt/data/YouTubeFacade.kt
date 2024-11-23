@@ -25,7 +25,7 @@ class YouTubeFacade @Inject constructor(
     }
 
     suspend fun updateAsFreeChat(
-        unchecked: Collection<YouTubeVideo> = repository.findAllUnfinishedVideos()
+        unchecked: Collection<YouTubeVideo> = repository.videos.value
             .filter { it.isFreeChat == null },
     ) {
         val freeChat = unchecked.filter(::isFreeChat).map { it.id }.toSet()
