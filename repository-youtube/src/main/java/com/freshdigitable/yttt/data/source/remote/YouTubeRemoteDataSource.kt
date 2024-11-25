@@ -30,6 +30,7 @@ import com.google.api.services.youtube.model.PlaylistItem
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
+import com.google.api.services.youtube.model.VideoLiveStreamingDetails
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -114,7 +115,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
                 .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
                 .setId(chunked.map { it.value })
                 .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-        }.map { it.toLiveVideo() }
+        }.map { YouTubeVideoRemote(it) }
 
     override suspend fun fetchChannelList(
         ids: Set<YouTubeChannel.Id>,
@@ -240,31 +241,42 @@ private fun Activity.toChannelLog(): YouTubeChannelLog = YouTubeChannelLogEntity
     thumbnailUrl = snippet.thumbnails.url,
 )
 
-private fun Video.toLiveVideo(): YouTubeVideo = YouTubeVideoRemote(this)
-
 private class YouTubeVideoRemote(
     private val video: Video,
 ) : YouTubeVideo {
+    private val liveStreamingDetails: VideoLiveStreamingDetails? get() = video.liveStreamingDetails
+    private val snippet get() = requireNotNull(video.snippet) { "json: $video" }
     override val id: YouTubeVideo.Id = YouTubeVideo.Id(video.id)
     override val channel: YouTubeChannel = YouTubeChannelEntity(
-        id = YouTubeChannel.Id(video.snippet.channelId),
-        title = video.snippet.channelTitle,
+        id = YouTubeChannel.Id(snippet.channelId),
+        title = snippet.channelTitle,
         iconUrl = "",
     )
-    override val title: String = video.snippet.title
+    override val title: String get() = snippet.title
     override val scheduledStartDateTime: Instant? =
-        video.liveStreamingDetails?.scheduledStartTime?.toInstant()
+        liveStreamingDetails?.scheduledStartTime?.toInstant()
     override val scheduledEndDateTime: Instant? =
-        video.liveStreamingDetails?.scheduledEndTime?.toInstant()
-    override val actualStartDateTime: Instant? =
-        video.liveStreamingDetails?.actualStartTime?.toInstant()
-    override val actualEndDateTime: Instant? =
-        video.liveStreamingDetails?.actualEndTime?.toInstant()
-    override val thumbnailUrl: String = video.snippet.thumbnails.url
-    override val description: String = video.snippet.description
-    override val viewerCount: BigInteger? = video.liveStreamingDetails?.concurrentViewers
+        liveStreamingDetails?.scheduledEndTime?.toInstant()
+    override val actualStartDateTime: Instant? = liveStreamingDetails?.actualStartTime?.toInstant()
+    override val actualEndDateTime: Instant? = liveStreamingDetails?.actualEndTime?.toInstant()
+    override val thumbnailUrl: String get() = snippet.thumbnails.url
+    override val description: String get() = snippet.description
+    override val viewerCount: BigInteger? get() = liveStreamingDetails?.concurrentViewers
+    override val liveBroadcastContent: YouTubeVideo.BroadcastType =
+        findBy(snippet.liveBroadcastContent)
+
     override fun needsUpdate(current: Instant): Boolean = false
-    override fun toString(): String = video.toPrettyString()
+    override fun toString(): String = video.toString()
+
+    companion object {
+        private fun findBy(name: String?): YouTubeVideo.BroadcastType = when (name) {
+            "live" -> YouTubeVideo.BroadcastType.LIVE
+            "upcoming" -> YouTubeVideo.BroadcastType.UPCOMING
+            "none" -> YouTubeVideo.BroadcastType.NONE
+            null -> YouTubeVideo.BroadcastType.NONE
+            else -> throw NotImplementedError("unknown liveBroadcastContent: $name")
+        }
+    }
 }
 
 private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)

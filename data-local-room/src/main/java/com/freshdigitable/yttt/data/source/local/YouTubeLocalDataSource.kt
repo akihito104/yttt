@@ -158,7 +158,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val expiring = unfinished.associateWith {
             when {
                 it.isFreeChat == true || v[it.id]?.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
-                it.isUpcoming() -> defaultExpiredAt.coerceAtMost(checkNotNull(it.scheduledStartDateTime))
+                it.isUpcoming() ->
+                    defaultExpiredAt.coerceAtMost(it.scheduledStartDateTime ?: defaultExpiredAt)
+
                 it.isNowOnAir() -> current + EXPIRATION_ON_AIR
                 it.isArchived -> EXPIRATION_MAX // for fail safe
                 else -> defaultExpiredAt

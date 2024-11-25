@@ -50,6 +50,8 @@ internal class YouTubeVideoTable(
     val description: String = "",
     @ColumnInfo(name = "viewer_count", defaultValue = "null")
     val viewerCount: BigInteger? = null,
+    @ColumnInfo(name = "broadcast_content", defaultValue = "null")
+    val broadcastContent: YouTubeVideo.BroadcastType? = null,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -108,6 +110,8 @@ internal data class YouTubeVideoDb(
         get() = video.description
     override val viewerCount: BigInteger?
         get() = video.viewerCount
+    override val liveBroadcastContent: YouTubeVideo.BroadcastType?
+        get() = video.broadcastContent
 
     override fun needsUpdate(current: Instant): Boolean = (expiredAt ?: Instant.EPOCH) <= current
 

@@ -142,6 +142,7 @@ private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
     thumbnailUrl = thumbnailUrl,
     description = description,
     viewerCount = viewerCount,
+    broadcastContent = liveBroadcastContent,
 )
 
 private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
