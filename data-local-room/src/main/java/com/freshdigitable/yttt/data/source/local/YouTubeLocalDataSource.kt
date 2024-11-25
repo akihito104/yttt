@@ -121,7 +121,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
             val boarder = dateTimeProvider.now().minus(YouTubePlaylistTable.RECENTLY_BOARDER)
             val isPublishedRecently = items.any { boarder < it.publishedAt }
             val maxAgeMax = YouTubePlaylistTable.getMaxAgeUpperLimit(isPublishedRecently)
-            cache.maxAge.multipliedBy(2).coerceAtMost(maxAgeMax)
+            cache.maxAge.multipliedBy(2).coerceIn(YouTubePlaylistTable.MAX_AGE_DEFAULT..maxAgeMax)
         } else {
             YouTubePlaylistTable.MAX_AGE_DEFAULT
         }
