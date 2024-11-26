@@ -59,8 +59,8 @@ internal class TimetablePageDelegateImpl @Inject constructor(
     private val upcomingItems: Flow<Map<String, List<LiveVideo>>> =
         combine(sourceTable[TimetablePage.Upcoming]!!, extraHourOfDay) { v, t ->
             v.groupBy {
-                (checkNotNull(it.scheduledStartDateTime) - t)
-                    .toLocalDateTime()
+                val scheduledStart = checkNotNull(it.scheduledStartDateTime) { it }
+                (scheduledStart - t).toLocalDateTime()
                     .truncatedTo(ChronoUnit.DAYS)
                     .format(dateWeekdayFormatter)
             }

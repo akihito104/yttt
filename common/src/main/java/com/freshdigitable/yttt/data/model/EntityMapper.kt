@@ -77,7 +77,6 @@ fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo = LiveVideoEntit
     id = id.mapTo(),
     channel = user.toLiveChannel(),
     title = title,
-    scheduledStartDateTime = startedAt,
     actualStartDateTime = startedAt,
     thumbnailUrl = getThumbnailUrl(),
     url = url,
@@ -104,6 +103,8 @@ fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
     actualEndDateTime = actualEndDateTime,
     url = url,
     isFreeChat = isFreeChat,
+    isNowOnAir = isNowOnAir(),
+    isUpcoming = isUpcoming(),
 )
 
 private data class LiveVideoDetailImpl(

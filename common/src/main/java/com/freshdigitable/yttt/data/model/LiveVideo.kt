@@ -28,9 +28,8 @@ interface LiveVideo : LiveVideoThumbnail {
     val isFreeChat: Boolean? get() = null
     val url: String
 
-    fun isLiveStream(): Boolean = scheduledStartDateTime != null
     fun isNowOnAir(): Boolean = actualStartDateTime != null && actualEndDateTime == null
-    fun isUpcoming(): Boolean = isLiveStream() && actualStartDateTime == null
+    fun isUpcoming(): Boolean = scheduledStartDateTime != null && actualStartDateTime == null
 
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
@@ -45,14 +44,19 @@ data class LiveVideoEntity(
     override val id: LiveVideo.Id,
     override val channel: LiveChannel,
     override val title: String,
-    override val scheduledStartDateTime: Instant?,
+    override val scheduledStartDateTime: Instant? = null,
     override val scheduledEndDateTime: Instant? = null,
     override val actualStartDateTime: Instant? = null,
     override val actualEndDateTime: Instant? = null,
     override val thumbnailUrl: String,
     override val url: String,
     override val isFreeChat: Boolean? = null,
-) : LiveVideo
+    private val isNowOnAir: Boolean? = null,
+    private val isUpcoming: Boolean? = null,
+) : LiveVideo {
+    override fun isNowOnAir(): Boolean = isNowOnAir ?: super.isNowOnAir()
+    override fun isUpcoming(): Boolean = isUpcoming ?: super.isUpcoming()
+}
 
 interface LiveVideoDetail : LiveVideo {
     val description: String

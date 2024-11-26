@@ -59,3 +59,29 @@ internal class BigIntegerConverter : Converter<Long, BigInteger>(
     serialize = { it.toLong() },
     createObject = { BigInteger.valueOf(it) }
 )
+
+internal class YouTubeVideoBroadcastType : Converter<String?, YouTubeVideo.BroadcastType?>(
+    serialize = YouTubeVideoBroadcastType::serialize,
+    createObject = YouTubeVideoBroadcastType::createObject,
+) {
+    companion object {
+        private val TABLE = mapOf(
+            YouTubeVideo.BroadcastType.LIVE to "live",
+            YouTubeVideo.BroadcastType.UPCOMING to "upcoming",
+            YouTubeVideo.BroadcastType.NONE to "none",
+        )
+
+        private fun serialize(value: YouTubeVideo.BroadcastType?): String? = if (value == null) {
+            null
+        } else {
+            TABLE[value] ?: throw NotImplementedError("unknown type: $value")
+        }
+
+        private fun createObject(value: String?): YouTubeVideo.BroadcastType? = if (value == null) {
+            null
+        } else {
+            TABLE.entries.firstOrNull { it.value == value }?.key
+                ?: throw NotImplementedError("unknown type: $value")
+        }
+    }
+}

@@ -19,7 +19,9 @@ internal class FetchYouTubeUpcomingItemSourceUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
     override fun invoke(): Flow<List<LiveVideo>> = repository.videos.map { v ->
-        v.filter { it.isUpcoming() && it.isFreeChat != true }.map { it.toLiveVideo() }
+        v.filter { it.isUpcoming() && it.isFreeChat != true }
+            .filter { it.scheduledStartDateTime != null }
+            .map { it.toLiveVideo() }
     }
 }
 

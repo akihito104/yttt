@@ -38,6 +38,7 @@ import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 @Composable
@@ -112,8 +113,7 @@ private fun LiveVideoListItemView(
                     lineHeight = (14 * 1.25).sp,
                 )
                 Text(
-                    text = video.scheduledStartDateTime?.toLocalFormattedText(dateTimeFormatter)
-                        ?: "",
+                    text = video.datetime(dateTimeFormatter),
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -131,6 +131,12 @@ private fun LiveVideoListItemView(
                 .padding(top = 4.dp)
         )
     }
+}
+
+private fun LiveVideo.datetime(format: DateTimeFormatter): String = when {
+    isNowOnAir() -> requireNotNull(actualStartDateTime).toLocalFormattedText(format)
+    isUpcoming() -> requireNotNull(scheduledStartDateTime).toLocalFormattedText(format)
+    else -> ""
 }
 
 @Composable

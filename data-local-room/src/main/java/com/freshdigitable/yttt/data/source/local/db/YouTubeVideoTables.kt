@@ -11,7 +11,6 @@ import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable.Dao.Companion.CONDITION_UNFINISHED_VIDEOS
 import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
 import java.time.Instant
@@ -50,6 +49,8 @@ internal class YouTubeVideoTable(
     val description: String = "",
     @ColumnInfo(name = "viewer_count", defaultValue = "null")
     val viewerCount: BigInteger? = null,
+    @ColumnInfo(name = "broadcast_content", defaultValue = "null")
+    val broadcastContent: YouTubeVideo.BroadcastType? = null,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -66,17 +67,11 @@ internal class YouTubeVideoTable(
         @Query("DELETE FROM video WHERE id IN (:videoIds)")
         suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
 
-        @Query("SELECT id FROM video WHERE NOT ($CONDITION_UNFINISHED_VIDEOS)")
+        @Query("SELECT id FROM video WHERE broadcast_content = 'none'")
         suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
 
         @Query("DELETE FROM video")
         override suspend fun deleteTable()
-
-        companion object {
-            internal const val CONDITION_UNFINISHED_VIDEOS =
-                "(schedule_start_datetime NOTNULL OR actual_start_datetime NOTNULL) " +
-                    "AND actual_end_datetime ISNULL"
-        }
     }
 }
 
@@ -108,6 +103,8 @@ internal data class YouTubeVideoDb(
         get() = video.description
     override val viewerCount: BigInteger?
         get() = video.viewerCount
+    override val liveBroadcastContent: YouTubeVideo.BroadcastType?
+        get() = video.broadcastContent
 
     override fun needsUpdate(current: Instant): Boolean = (expiredAt ?: Instant.EPOCH) <= current
 
@@ -128,10 +125,10 @@ internal data class YouTubeVideoDb(
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat, e.expired_at " +
                 "FROM video AS v " +
-                "INNER JOIN video_expire AS e ON e.video_id = v.id " +
+                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
-                "WHERE $CONDITION_UNFINISHED_VIDEOS"
+                "WHERE broadcast_content IS NOT 'none'"
         )
         fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
     }

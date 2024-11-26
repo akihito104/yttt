@@ -121,7 +121,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
             val boarder = dateTimeProvider.now().minus(YouTubePlaylistTable.RECENTLY_BOARDER)
             val isPublishedRecently = items.any { boarder < it.publishedAt }
             val maxAgeMax = YouTubePlaylistTable.getMaxAgeUpperLimit(isPublishedRecently)
-            cache.maxAge.multipliedBy(2).coerceAtMost(maxAgeMax)
+            cache.maxAge.multipliedBy(2).coerceIn(YouTubePlaylistTable.MAX_AGE_DEFAULT..maxAgeMax)
         } else {
             YouTubePlaylistTable.MAX_AGE_DEFAULT
         }
@@ -158,7 +158,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val expiring = unfinished.associateWith {
             when {
                 it.isFreeChat == true || v[it.id]?.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
-                it.isUpcoming() -> defaultExpiredAt.coerceAtMost(checkNotNull(it.scheduledStartDateTime))
+                it.isUpcoming() ->
+                    defaultExpiredAt.coerceAtMost(it.scheduledStartDateTime ?: defaultExpiredAt)
+
                 it.isNowOnAir() -> current + EXPIRATION_ON_AIR
                 it.isArchived -> EXPIRATION_MAX // for fail safe
                 else -> defaultExpiredAt
