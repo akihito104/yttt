@@ -1,5 +1,6 @@
 [versions]
 androidGradlePlugin = "8.5.2"
+assertjCore = "3.26.3"
 kotlin = "1.9.25"
 ksp = "1.9.25-1.0.20"
 kotlinxCoroutinesCore = "1.9.0"
@@ -68,6 +69,7 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room-ktx
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room-ktx" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room-ktx" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work-runtime-ktx" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertjCore" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 glide-compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
