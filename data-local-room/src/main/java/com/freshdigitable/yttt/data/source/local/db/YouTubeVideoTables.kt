@@ -113,9 +113,10 @@ internal data class YouTubeVideoDb(
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat, e.expired_at " +
                 "FROM (SELECT * FROM video WHERE id IN (:ids)) AS v " +
-                "INNER JOIN (SELECT * FROM video_expire WHERE :current < expired_at) AS e ON e.video_id = v.id " +
+                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
-                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id"
+                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
+                "WHERE expired_at ISNULL OR :current < expired_at"
         )
         suspend fun findVideosById(
             ids: Collection<YouTubeVideo.Id>,
