@@ -12,9 +12,8 @@ internal class DatabaseTestRule : TestWatcher() {
     private lateinit var database: AppDatabase
     private lateinit var dao: YouTubeDao
 
-    inline fun runWithDao(
-        crossinline body: suspend AppDatabase.(YouTubeDao) -> Unit
-    ) = runBlocking { database.body(dao) }
+    fun runWithDao(body: suspend AppDatabase.(YouTubeDao) -> Unit) =
+        runBlocking { database.body(dao) }
 
     override fun starting(description: Description?) {
         val context = ApplicationProvider.getApplicationContext<Context>()
