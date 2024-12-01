@@ -20,6 +20,7 @@ lifecycle-livedata-ktx = "2.8.6"
 navigation-compose = "2.8.3"
 hilt-android = "2.52"
 hilt-work = "1.2.0"
+turbine = "1.2.0"
 work-runtime-ktx = "2.9.1"
 datastore-preferences = "1.1.1"
 room-ktx = "2.6.1"
@@ -83,6 +84,7 @@ kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanaryAndroid" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 okhttp3-integration = { module = "com.github.bumptech.glide:okhttp3-integration", version.ref = "glide" }
