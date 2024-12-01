@@ -4,7 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.runTest
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
@@ -12,8 +13,8 @@ internal class DatabaseTestRule : TestWatcher() {
     private lateinit var database: AppDatabase
     private lateinit var dao: YouTubeDao
 
-    fun runWithDao(body: suspend AppDatabase.(YouTubeDao) -> Unit) =
-        runBlocking { database.body(dao) }
+    fun runWithDao(body: suspend CoroutineScope.(YouTubeDao) -> Unit) =
+        runTest { body(dao) }
 
     override fun starting(description: Description?) {
         val context = ApplicationProvider.getApplicationContext<Context>()
