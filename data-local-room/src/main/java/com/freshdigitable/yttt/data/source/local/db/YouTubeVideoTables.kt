@@ -73,6 +73,8 @@ internal class YouTubeVideoTable(
         @Query("DELETE FROM video")
         override suspend fun deleteTable()
     }
+
+    override fun toString(): String = id.toString()
 }
 
 internal data class YouTubeVideoDb(
