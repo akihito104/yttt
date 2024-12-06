@@ -15,6 +15,7 @@ import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 
 @RunWith(Enclosed::class)
@@ -115,85 +116,120 @@ class YouTubeLocalDataSourceTest {
             }
     }
 
-    class SimpleFind {
+    class SimpleFindVideo {
         @get:Rule
         internal val rule = DatabaseTestRule()
         private val live = YouTubeVideoEntity.liveStreaming()
         private val unscheduled = YouTubeVideoEntity.unscheduledUpcoming()
         private val upcoming = YouTubeVideoEntity.upcomingStream()
+        private val upcomingSoon = YouTubeVideoEntity.upcomingStream(
+            id = "upcoming_soon",
+            scheduledStartDateTime = Instant.ofEpochSecond(1500),
+        )
+        private val freeChat = YouTubeVideoEntity.freeChat()
         private val video = listOf(
-            live, upcoming, unscheduled,
+            live, upcomingSoon, upcoming, unscheduled, freeChat,
             YouTubeVideoEntity.uploadedVideo(),
             YouTubeVideoEntity.archivedStream(),
         )
+        private val base = Instant.ofEpochSecond(1000)
+        private val datetimeProvider = DateTimeProviderFake(base)
 
         @Before
-        fun setup() = rule.runWithLocalSource(DateTimeProviderFake()) { dao, sut ->
+        fun setup() = rule.runWithLocalSource(datetimeProvider) { dao, sut ->
             val channels = video.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
             dao.addChannels(channels)
             sut.addVideo(video)
         }
 
         @Test
-        fun fetchVideo_returns3items() =
-            rule.runWithLocalSource(DateTimeProviderFake(Instant.ofEpochMilli(99))) { _, sut ->
-                // exercise
-                val actual = sut.fetchVideoList(video.map { it.id }.toSet())
-                // verify
-                assertThat(actual).hasSize(3)
-                assertThat(actual.map { it.id })
-                    .containsExactlyInAnyOrder(live.id, upcoming.id, unscheduled.id)
+        fun fetchVideo_returnsLiveAndUpcomingItem() =
+            rule.runWithLocalSource(datetimeProvider) { _, sut ->
+                // setup
+                listOf(Duration.ZERO, Duration.ofSeconds(60).minusMillis(1)).forEach { datetime ->
+                    datetimeProvider.setValue(base + datetime)
+                    // exercise
+                    val actual = sut.fetchVideoList(video.map { it.id }.toSet())
+                    // verify
+                    actual.containsVideoIdInAnyOrder(
+                        live, upcomingSoon, upcoming, unscheduled, freeChat,
+                    )
+                }
             }
 
         @Test
-        fun fetchVideo_upcomingExpiresAt100ms() {
-            rule.runWithLocalSource(DateTimeProviderFake(Instant.ofEpochMilli(100))) { _, sut ->
-                // exercise
-                val actual = sut.fetchVideoList(video.map { it.id }.toSet())
-                // verify
-                assertThat(actual).hasSize(2)
-                assertThat(actual.map { it.id }).containsExactlyInAnyOrder(live.id, unscheduled.id)
+        fun fetchVideo_liveExpiresAfter1min() =
+            rule.runWithLocalSource(datetimeProvider) { _, sut ->
+                // setup
+                listOf(
+                    Duration.ofSeconds(60),
+                    Duration.ofSeconds(500).minusMillis(1),
+                ).forEach { datetime ->
+                    datetimeProvider.setValue(base + datetime)
+                    // exercise
+                    val actual = sut.fetchVideoList(video.map { it.id }.toSet())
+                    // verify
+                    actual.containsVideoIdInAnyOrder(upcomingSoon, upcoming, unscheduled, freeChat)
+                }
             }
-            rule.runWithLocalSource(DateTimeProviderFake(Instant.ofEpochMilli(60 * 1000 - 1))) { _, sut ->
-                // exercise
-                val actual = sut.fetchVideoList(video.map { it.id }.toSet())
-                // verify
-                assertThat(actual).hasSize(2)
-                assertThat(actual.map { it.id }).containsExactlyInAnyOrder(live.id, unscheduled.id)
-            }
-        }
 
         @Test
-        fun fetchVideo_liveExpiresAt1min() {
-            rule.runWithLocalSource(DateTimeProviderFake(Instant.ofEpochSecond(60))) { _, sut ->
-                // exercise
-                val actual = sut.fetchVideoList(video.map { it.id }.toSet())
-                // verify
-                assertThat(actual).hasSize(1)
-                assertThat(actual.map { it.id }).containsExactlyInAnyOrder(unscheduled.id)
+        fun fetchVideo_upcomingSoonExpiresAfter500sec() =
+            rule.runWithLocalSource(datetimeProvider) { _, sut ->
+                // setup
+                listOf(
+                    Duration.ofSeconds(500),
+                    Duration.ofSeconds(10 * 60).minusMillis(1),
+                ).forEach { datetime ->
+                    datetimeProvider.setValue(base + datetime)
+                    // exercise
+                    val actual = sut.fetchVideoList(video.map { it.id }.toSet())
+                    // verify
+                    actual.containsVideoIdInAnyOrder(upcoming, unscheduled, freeChat)
+                }
             }
-            rule.runWithLocalSource(DateTimeProviderFake(Instant.ofEpochMilli(10 * 60 * 1000 - 1))) { _, sut ->
-                // exercise
-                val actual = sut.fetchVideoList(video.map { it.id }.toSet())
-                // verify
-                assertThat(actual).hasSize(1)
-                assertThat(actual.map { it.id }).containsExactlyInAnyOrder(unscheduled.id)
-            }
-        }
 
         @Test
-        fun fetchVideo_unscheduledExpiresAt10min() =
-            rule.runWithLocalSource(DateTimeProviderFake(Instant.ofEpochSecond(10 * 60))) { _, sut ->
+        fun fetchVideo_upcomingExpiresAfter10min() =
+            rule.runWithLocalSource(datetimeProvider) { _, sut ->
+                // setup
+                listOf(
+                    Duration.ofMinutes(10),
+                    Duration.ofDays(1).minusMillis(1),
+                ).forEach { datetime ->
+                    datetimeProvider.setValue(base + datetime)
+                    // exercise
+                    val actual = sut.fetchVideoList(video.map { it.id }.toSet())
+                    // verify
+                    actual.containsVideoIdInAnyOrder(freeChat)
+                }
+            }
+
+        @Test
+        fun fetchVideo_freeChatExpiresAfter1day() =
+            rule.runWithLocalSource(datetimeProvider) { _, sut ->
+                // setup
+                datetimeProvider.setValue(base + Duration.ofDays(1))
                 // exercise
                 val actual = sut.fetchVideoList(video.map { it.id }.toSet())
                 // verify
                 assertThat(actual).isEmpty()
             }
+
+        private fun List<YouTubeVideo>.containsVideoIdInAnyOrder(vararg expected: YouTubeVideo) {
+            assertThat(this).hasSize(expected.size)
+            assertThat(this.map { it.id }).containsExactlyInAnyOrderElementsOf(expected.map { it.id })
+        }
     }
 }
 
-private class DateTimeProviderFake(private val value: Instant = Instant.EPOCH) : DateTimeProvider {
-    override fun now(): Instant = value
+private class DateTimeProviderFake(value: Instant = Instant.EPOCH) : DateTimeProvider {
+    private var _value = value
+    fun setValue(value: Instant) {
+        _value = value
+    }
+
+    override fun now(): Instant = _value
 }
 
 private data class YouTubeVideoEntity(
@@ -207,7 +243,8 @@ private data class YouTubeVideoEntity(
     override val actualEndDateTime: Instant? = null,
     override val description: String = "",
     override val viewerCount: BigInteger? = null,
-    override val liveBroadcastContent: YouTubeVideo.BroadcastType?
+    override val liveBroadcastContent: YouTubeVideo.BroadcastType?,
+    override val isFreeChat: Boolean? = null,
 ) : YouTubeVideo {
     override fun needsUpdate(current: Instant): Boolean = false
 
@@ -220,7 +257,7 @@ private data class YouTubeVideoEntity(
         fun archivedStream(
             id: String = "archived_stream",
             scheduledStartDateTime: Instant = Instant.ofEpochMilli(20),
-            actualStartDateTime: Instant = Instant.ofEpochMilli(20),
+            actualStartDateTime: Instant = scheduledStartDateTime,
             actualEndDateTime: Instant = Instant.ofEpochSecond(10 * 60),
         ): YouTubeVideoEntity = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
@@ -232,8 +269,8 @@ private data class YouTubeVideoEntity(
 
         fun liveStreaming(
             id: String = "live_streaming",
-            scheduledStartDateTime: Instant = Instant.ofEpochMilli(50),
-            actualStartDateTime: Instant = Instant.ofEpochMilli(50),
+            scheduledStartDateTime: Instant = Instant.ofEpochSecond(1000),
+            actualStartDateTime: Instant = scheduledStartDateTime,
         ): YouTubeVideoEntity = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             scheduledStartDateTime = scheduledStartDateTime,
@@ -243,7 +280,7 @@ private data class YouTubeVideoEntity(
 
         fun upcomingStream(
             id: String = "upcoming_stream",
-            scheduledStartDateTime: Instant = Instant.ofEpochMilli(100),
+            scheduledStartDateTime: Instant = Instant.ofEpochSecond(5000),
         ): YouTubeVideoEntity = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             scheduledStartDateTime = scheduledStartDateTime,
@@ -255,6 +292,17 @@ private data class YouTubeVideoEntity(
                 id = YouTubeVideo.Id(id),
                 liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
             )
+
+        fun freeChat(
+            id: String = "free_chat",
+            scheduledStartDateTime: Instant = Instant.EPOCH + Duration.ofDays(30),
+        ): YouTubeVideoEntity = YouTubeVideoEntity(
+            id = YouTubeVideo.Id(id),
+            title = "free chat",
+            scheduledStartDateTime = scheduledStartDateTime,
+            liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
+            isFreeChat = true,
+        )
     }
 }
 
