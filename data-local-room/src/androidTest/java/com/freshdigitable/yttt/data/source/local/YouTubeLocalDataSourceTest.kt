@@ -221,12 +221,217 @@ class YouTubeLocalDataSourceTest {
             assertThat(this.map { it.id }).containsExactlyInAnyOrderElementsOf(expected.map { it.id })
         }
     }
+
+    class SimpleFindPlaylistItems {
+        @get:Rule
+        internal val rule = DatabaseTestRule()
+        private val baseTime = Instant.EPOCH
+        private val dateTimeProvider = DateTimeProviderFake(baseTime)
+
+        private val simple = YouTubePlaylist.Id("simple")
+        private val privatePlaylist = YouTubePlaylist.Id("private")
+        private val empty = YouTubePlaylist.Id("empty")
+        private val items = mapOf(
+            simple to listOf(
+                YouTubePlaylistItemEntity(
+                    id = YouTubePlaylistItem.Id("playlist"),
+                    playlistId = simple,
+                    videoId = YouTubeVideo.Id("video"),
+                ),
+            ),
+            privatePlaylist to null,
+            empty to emptyList()
+        )
+        private val channel = items.values.mapNotNull { it }.flatten()
+            .map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
+
+        @Before
+        fun setup() = rule.runWithLocalSource(dateTimeProvider) { dao, sut ->
+            dao.addChannels(channel)
+            items.forEach { (playlistId, items) ->
+                sut.setPlaylistItemsByPlaylistId(playlistId, items)
+            }
+        }
+
+        @Test
+        fun fetchPlaylistItems_simple_has1item() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                listOf(Duration.ZERO, Duration.ofMinutes(10).minusMillis(1)).forEach {
+                    // setup
+                    dateTimeProvider.setValue(baseTime + it)
+                    // exercise
+                    val actual = sut.fetchPlaylistItems(simple)
+                    // verify
+                    assertThat(actual).hasSize(1)
+                }
+            }
+
+        @Test
+        fun fetchPlaylistItems_simpleExpiresAfter10min_returnsNull() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                dateTimeProvider.setValue(baseTime + Duration.ofMinutes(10))
+                // exercise
+                val actual = sut.fetchPlaylistItems(simple)
+                // verify
+                assertThat(actual).isNull()
+            }
+
+        @Test
+        fun fetchPlaylistItems_simple_addSameItemBefore10min_returns1item() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                sut.setPlaylistItemsByPlaylistId(simple, checkNotNull(items[simple]))
+                dateTimeProvider.advance(Duration.ofMinutes(20).minusMillis(1))
+                // exercise
+                val actual = sut.fetchPlaylistItems(simple)
+                // verify
+                assertThat(actual).hasSize(1)
+            }
+
+        @Test
+        fun fetchPlaylistItems_simple_addSameItemBefore10min_expiresAfter20minReturnsNull() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                sut.setPlaylistItemsByPlaylistId(simple, checkNotNull(items[simple]))
+                dateTimeProvider.advance(Duration.ofMinutes(20))
+                // exercise
+                val actual = sut.fetchPlaylistItems(simple)
+                // verify
+                assertThat(actual).isNull()
+            }
+
+        @Test
+        fun fetchPlaylistItems_simple_addNewItemsBefore10min_returns2item() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                sut.setPlaylistItemsByPlaylistId(
+                    simple, listOf(
+                        YouTubePlaylistItemEntity(
+                            id = YouTubePlaylistItem.Id("item2"),
+                            playlistId = simple,
+                            videoId = YouTubeVideo.Id("video_item2"),
+                        )
+                    ) + checkNotNull(items[simple])
+                )
+                dateTimeProvider.advance(Duration.ofMinutes(10).minusMillis(1))
+                // exercise
+                val actual = sut.fetchPlaylistItems(simple)
+                // verify
+                assertThat(actual).hasSize(2)
+            }
+
+        @Test
+        fun fetchPlaylistItems_simple_addNewItemsBefore10min_expiresAfter10minReturnsNull() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                sut.setPlaylistItemsByPlaylistId(
+                    simple, listOf(
+                        YouTubePlaylistItemEntity(
+                            id = YouTubePlaylistItem.Id("item2"),
+                            playlistId = simple,
+                            videoId = YouTubeVideo.Id("video_item2"),
+                        )
+                    ) + checkNotNull(items[simple])
+                )
+                dateTimeProvider.advance(Duration.ofMinutes(10))
+                // exercise
+                val actual = sut.fetchPlaylistItems(simple)
+                // verify
+                assertThat(actual).isNull()
+            }
+
+        @Test
+        fun fetchPlaylistItems_private_returnsEmpty() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                listOf(Duration.ZERO, Duration.ofDays(1).minusMillis(1)).forEach {
+                    // setup
+                    dateTimeProvider.setValue(baseTime + it)
+                    // exercise
+                    val actual = sut.fetchPlaylistItems(privatePlaylist)
+                    // verify
+                    assertThat(actual).isEmpty()
+                }
+            }
+
+        @Test
+        fun fetchPlaylistItems_privateExpiresAfter1day_returnsNull() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                dateTimeProvider.setValue(baseTime + Duration.ofDays(1))
+                // exercise
+                val actual = sut.fetchPlaylistItems(privatePlaylist)
+                // verify
+                assertThat(actual).isNull()
+            }
+
+        @Test
+        fun fetchPlaylistItems_empty_returnsEmpty() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                listOf(Duration.ZERO, Duration.ofDays(1).minusMillis(1)).forEach {
+                    // setup
+                    dateTimeProvider.setValue(baseTime + it)
+                    // exercise
+                    val actual = sut.fetchPlaylistItems(empty)
+                    // verify
+                    assertThat(actual).isEmpty()
+                }
+            }
+
+        @Test
+        fun fetchPlaylistItems_emptyExpiresAfter1day_returnsNull() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                dateTimeProvider.setValue(baseTime + Duration.ofDays(1))
+                // exercise
+                val actual = sut.fetchPlaylistItems(empty)
+                // verify
+                assertThat(actual).isNull()
+            }
+
+        @Test
+        fun fetchPlaylistItemSummary_simple_returnsItems() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                dateTimeProvider.setValue(baseTime + Duration.ofMinutes(10))
+                // exercise
+                val actual = sut.fetchPlaylistItemSummary(simple, 10)
+                // verify
+                assertThat(actual).hasSize(1)
+            }
+
+        @Test
+        fun fetchPlaylistItemSummary_private_returnsEmpty() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                dateTimeProvider.setValue(baseTime + Duration.ofDays(1))
+                // exercise
+                val actual = sut.fetchPlaylistItemSummary(privatePlaylist, 10)
+                // verify
+                assertThat(actual).isEmpty()
+            }
+
+        @Test
+        fun fetchPlaylistItemSummary_empty_returnsEmpty() =
+            rule.runWithLocalSource(dateTimeProvider) { _, sut ->
+                // setup
+                dateTimeProvider.setValue(baseTime + Duration.ofDays(1))
+                // exercise
+                val actual = sut.fetchPlaylistItemSummary(empty, 10)
+                // verify
+                assertThat(actual).isEmpty()
+            }
+    }
 }
 
 private class DateTimeProviderFake(value: Instant = Instant.EPOCH) : DateTimeProvider {
     private var _value = value
     fun setValue(value: Instant) {
         _value = value
+    }
+
+    fun advance(value: Duration) {
+        _value += value
     }
 
     override fun now(): Instant = _value
