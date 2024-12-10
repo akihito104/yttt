@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.db.DatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -216,6 +217,9 @@ class YouTubeLocalDataSourceTest {
                 assertThat(actual).isEmpty()
             }
 
+    }
+
+    private companion object {
         private fun List<YouTubeVideo>.containsVideoIdInAnyOrder(vararg expected: YouTubeVideo) {
             assertThat(this).hasSize(expected.size)
             assertThat(this.map { it.id }).containsExactlyInAnyOrderElementsOf(expected.map { it.id })
@@ -421,6 +425,62 @@ class YouTubeLocalDataSourceTest {
                 // verify
                 assertThat(actual).isEmpty()
             }
+    }
+
+    class CleanUp {
+        @get:Rule
+        internal val rule = DatabaseTestRule()
+
+        @Test
+        fun cleanUp() = rule.runWithLocalSource(DateTimeProviderFake()) { dao, sut ->
+            // setup
+            val playlistId = YouTubePlaylist.Id("playlist")
+            val upcoming = YouTubeVideoEntity.upcomingStream()
+            val live = YouTubeVideoEntity.liveStreaming()
+            val archivedInPlaylist = YouTubeVideoEntity.archivedStream()
+            val videosInPlaylist = listOf(upcoming, live, archivedInPlaylist)
+            sut.setPlaylistItemsByPlaylistId(
+                playlistId,
+                videosInPlaylist.map {
+                    YouTubePlaylistItemEntity(
+                        id = YouTubePlaylistItem.Id(it.id.value),
+                        playlistId = playlistId,
+                        videoId = it.id,
+                    )
+                },
+            )
+            val unusedArchive = YouTubeVideoEntity.archivedStream(id = "unused_archive")
+            val freeChat = YouTubeVideoEntity.freeChat()
+            val videos = videosInPlaylist + listOf(unusedArchive, freeChat)
+            val channels = videos.map { it.channel as YouTubeChannelTable }
+                .distinctBy { it.id }.toList()
+            dao.addChannels(channels)
+            sut.addVideo(videos)
+            sut.addFreeChatItems(setOf(freeChat.id))
+            // exercise
+            sut.cleanUp()
+            // verify
+            assertThat(dao.findAllArchivedVideos()).isEmpty()
+            assertThat(dao.findUnusedVideoIds()).isEmpty()
+            val actual = dao.findVideosById(videos.map { it.id }, Instant.EPOCH)
+            actual.containsVideoIdInAnyOrder(upcoming, live, freeChat)
+            assertThat(rule.queryVideoIsArchived().map { it.videoId })
+                .containsExactlyInAnyOrder(upcoming.id, live.id, freeChat.id, archivedInPlaylist.id)
+        }
+
+        private fun DatabaseTestRule.queryVideoIsArchived(): List<YouTubeVideoIsArchivedTable> {
+            return query("select * from yt_video_is_archived") {
+                val videoIdIndex = it.getColumnIndex("video_id")
+                val isArchivedIndex = it.getColumnIndex("is_archived")
+                val res = ArrayList<YouTubeVideoIsArchivedTable>(it.count)
+                while (it.moveToNext()) {
+                    val id = it.getString(videoIdIndex)
+                    val isArchived = it.getInt(isArchivedIndex) == 1
+                    res.add(YouTubeVideoIsArchivedTable(YouTubeVideo.Id(id), isArchived))
+                }
+                res
+            }
+        }
     }
 }
 

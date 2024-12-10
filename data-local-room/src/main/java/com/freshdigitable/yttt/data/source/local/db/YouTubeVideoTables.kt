@@ -218,6 +218,12 @@ internal class YouTubeVideoIsArchivedTable(
         @Query("DELETE FROM yt_video_is_archived WHERE video_id IN (:ids)")
         suspend fun removeVideoIsArchivedEntities(ids: Collection<YouTubeVideo.Id>)
 
+        @Query(
+            "DELETE FROM yt_video_is_archived WHERE video_id NOT IN " +
+                "(SELECT video_id FROM playlist_item UNION SELECT video_id FROM free_chat)"
+        )
+        suspend fun removeUnusedEntities()
+
         @Query("DELETE FROM yt_video_is_archived")
         override suspend fun deleteTable()
     }

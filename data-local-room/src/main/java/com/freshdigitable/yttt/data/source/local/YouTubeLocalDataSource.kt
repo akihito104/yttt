@@ -187,6 +187,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
             }
             removeVideo(archivedIds)
         }
+        database.youTubeVideoIsArchivedDao.removeUnusedEntities()
     }
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = withContext(ioDispatcher) {

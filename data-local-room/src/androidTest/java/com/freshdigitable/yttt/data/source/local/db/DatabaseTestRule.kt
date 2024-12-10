@@ -1,7 +1,9 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import android.content.Context
+import android.database.Cursor
 import androidx.room.Room
+import androidx.room.util.useCursor
 import androidx.test.core.app.ApplicationProvider
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.source.local.AppDatabase
@@ -24,6 +26,8 @@ internal class DatabaseTestRule : TestWatcher() {
         datetimeProvider: DateTimeProvider,
         body: suspend CoroutineScope.(YouTubeDao, YouTubeLocalDataSource) -> Unit,
     ) = runTest { body(dao, localSource(datetimeProvider, StandardTestDispatcher(testScheduler))) }
+
+    fun <E> query(stmt: String, res: (Cursor) -> E): E = database.query(stmt, null).useCursor(res)
 
     override fun starting(description: Description?) {
         val context = ApplicationProvider.getApplicationContext<Context>()
