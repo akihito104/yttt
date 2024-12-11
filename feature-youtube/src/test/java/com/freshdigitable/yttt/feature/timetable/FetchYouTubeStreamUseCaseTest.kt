@@ -15,24 +15,15 @@ import io.mockk.just
 import io.mockk.runs
 import io.mockk.verify
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import java.time.Instant
 
-@OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
 class FetchYouTubeStreamUseCaseTest {
     private val responseRule = MockkResponseRule()
 
@@ -52,29 +43,15 @@ class FetchYouTubeStreamUseCaseTest {
     @MockK
     lateinit var dateTimeProvider: DateTimeProvider
 
-    private val c = newSingleThreadContext("io thread")
-    private val coroutineScope = CoroutineScope(c)
-
-    @Before
-    fun setup() {
-        Dispatchers.setMain(c)
-    }
-
-    fun tearDown() {
-        Dispatchers.resetMain()
-        c.close()
-    }
-
-    private val sut: FetchYouTubeStreamUseCase by lazy {
-        FetchYouTubeStreamUseCase(
+    private val CoroutineScope.sut: FetchYouTubeStreamUseCase
+        get() = FetchYouTubeStreamUseCase(
             liveRepository,
             YouTubeFacade(liveRepository),
             accountRepository,
             settingRepository,
             dateTimeProvider,
-            coroutineScope,
+            this,
         )
-    }
 
     @Test
     fun testInvokeWithEmptyItems() = runTest {
@@ -84,7 +61,7 @@ class FetchYouTubeStreamUseCaseTest {
             liveRepository.apply {
                 coRegister { videos } answers {
                     emptyFlow<List<YouTubeVideo>>()
-                        .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
+                        .stateIn(this@runTest, SharingStarted.Eagerly, emptyList())
                 }
                 coRegister { fetchPagedSubscriptionSummary() } returns emptyFlow()
                 coRegister { cleanUp() } just runs
@@ -113,7 +90,7 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun testInvokeNopWhenNoAccount() = runBlocking {
+    fun testInvokeNopWhenNoAccount() = runTest {
         // setup
         responseRule.apply {
             addMocks(liveRepository, accountRepository, settingRepository, dateTimeProvider)

@@ -73,6 +73,8 @@ internal class YouTubeVideoTable(
         @Query("DELETE FROM video")
         override suspend fun deleteTable()
     }
+
+    override fun toString(): String = id.toString()
 }
 
 internal data class YouTubeVideoDb(
@@ -113,9 +115,10 @@ internal data class YouTubeVideoDb(
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat, e.expired_at " +
                 "FROM (SELECT * FROM video WHERE id IN (:ids)) AS v " +
-                "INNER JOIN (SELECT * FROM video_expire WHERE :current < expired_at) AS e ON e.video_id = v.id " +
+                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
-                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id"
+                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
+                "WHERE expired_at ISNULL OR :current < expired_at"
         )
         suspend fun findVideosById(
             ids: Collection<YouTubeVideo.Id>,
@@ -214,6 +217,12 @@ internal class YouTubeVideoIsArchivedTable(
 
         @Query("DELETE FROM yt_video_is_archived WHERE video_id IN (:ids)")
         suspend fun removeVideoIsArchivedEntities(ids: Collection<YouTubeVideo.Id>)
+
+        @Query(
+            "DELETE FROM yt_video_is_archived WHERE video_id NOT IN " +
+                "(SELECT video_id FROM playlist_item UNION SELECT video_id FROM free_chat)"
+        )
+        suspend fun removeUnusedEntities()
 
         @Query("DELETE FROM yt_video_is_archived")
         override suspend fun deleteTable()
