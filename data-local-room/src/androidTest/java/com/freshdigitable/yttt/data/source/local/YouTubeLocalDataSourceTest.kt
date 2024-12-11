@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.liveFinished
 import com.freshdigitable.yttt.data.source.local.db.DatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
@@ -44,28 +45,28 @@ class YouTubeLocalDataSourceTest {
         fun addVideo_addedLiveAndUpcomingItems() =
             rule.runWithLocalSource(dateTimeProvider) { dao, sut ->
                 // setup
-                val target = listOf(
+                val unfinished = listOf(
                     YouTubeVideoEntity.liveStreaming(),
                     YouTubeVideoEntity.upcomingStream(),
                     YouTubeVideoEntity.unscheduledUpcoming(),
                 )
-                val video = target + listOf(
+                val inactive = listOf(
                     YouTubeVideoEntity.uploadedVideo(),
                     YouTubeVideoEntity.archivedStream(),
                 )
+                val video = unfinished + inactive
                 val channels = video.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
                 dao.addChannels(channels)
                 // exercise
                 sut.addVideo(video)
                 // verify
                 val found = dao.findVideosById(video.map { it.id }, Instant.ofEpochMilli(10))
-                assertThat(found).hasSize(3)
-                assertThat(found.map { it.id }).containsExactlyInAnyOrderElementsOf(target.map { it.id })
+                found.containsVideoIdInAnyOrderElementsOf(video)
                 dao.watchAllUnfinishedVideos().test {
-                    assertThat(awaitItem()).hasSize(3)
+                    awaitItem().containsVideoIdInAnyOrderElementsOf(unfinished)
                 }
-                assertThat(dao.findAllArchivedVideos()).isEmpty()
-                assertThat(dao.findUnusedVideoIds()).hasSize(3)
+                assertThat(dao.findAllArchivedVideos()).containsExactlyInAnyOrderElementsOf(inactive.map { it.id })
+                assertThat(dao.findUnusedVideoIds()).containsExactlyInAnyOrderElementsOf(video.map { it.id })
             }
 
         @Test
@@ -128,11 +129,11 @@ class YouTubeLocalDataSourceTest {
             scheduledStartDateTime = Instant.ofEpochSecond(1500),
         )
         private val freeChat = YouTubeVideoEntity.freeChat()
-        private val video = listOf(
-            live, upcomingSoon, upcoming, unscheduled, freeChat,
+        private val archived = listOf(
             YouTubeVideoEntity.uploadedVideo(),
             YouTubeVideoEntity.archivedStream(),
         )
+        private val video = listOf(live, upcomingSoon, upcoming, unscheduled, freeChat) + archived
         private val base = Instant.ofEpochSecond(1000)
         private val datetimeProvider = DateTimeProviderFake(base)
 
@@ -152,9 +153,7 @@ class YouTubeLocalDataSourceTest {
                     // exercise
                     val actual = sut.fetchVideoList(video.map { it.id }.toSet())
                     // verify
-                    actual.containsVideoIdInAnyOrder(
-                        live, upcomingSoon, upcoming, unscheduled, freeChat,
-                    )
+                    actual.containsVideoIdInAnyOrderElementsOf(video)
                 }
             }
 
@@ -170,7 +169,9 @@ class YouTubeLocalDataSourceTest {
                     // exercise
                     val actual = sut.fetchVideoList(video.map { it.id }.toSet())
                     // verify
-                    actual.containsVideoIdInAnyOrder(upcomingSoon, upcoming, unscheduled, freeChat)
+                    actual.containsVideoIdInAnyOrder(
+                        upcomingSoon, upcoming, unscheduled, freeChat, *archived.toTypedArray(),
+                    )
                 }
             }
 
@@ -186,7 +187,9 @@ class YouTubeLocalDataSourceTest {
                     // exercise
                     val actual = sut.fetchVideoList(video.map { it.id }.toSet())
                     // verify
-                    actual.containsVideoIdInAnyOrder(upcoming, unscheduled, freeChat)
+                    actual.containsVideoIdInAnyOrder(
+                        upcoming, unscheduled, freeChat, *archived.toTypedArray(),
+                    )
                 }
             }
 
@@ -202,7 +205,7 @@ class YouTubeLocalDataSourceTest {
                     // exercise
                     val actual = sut.fetchVideoList(video.map { it.id }.toSet())
                     // verify
-                    actual.containsVideoIdInAnyOrder(freeChat)
+                    actual.containsVideoIdInAnyOrder(freeChat, *archived.toTypedArray())
                 }
             }
 
@@ -214,12 +217,16 @@ class YouTubeLocalDataSourceTest {
                 // exercise
                 val actual = sut.fetchVideoList(video.map { it.id }.toSet())
                 // verify
-                assertThat(actual).isEmpty()
+                actual.containsVideoIdInAnyOrderElementsOf(archived)
             }
 
     }
 
     private companion object {
+        private fun List<YouTubeVideo>.containsVideoIdInAnyOrderElementsOf(expected: Collection<YouTubeVideo>) {
+            containsVideoIdInAnyOrder(*expected.toTypedArray())
+        }
+
         private fun List<YouTubeVideo>.containsVideoIdInAnyOrder(vararg expected: YouTubeVideo) {
             assertThat(this).hasSize(expected.size)
             assertThat(this.map { it.id }).containsExactlyInAnyOrderElementsOf(expected.map { it.id })
@@ -430,43 +437,69 @@ class YouTubeLocalDataSourceTest {
     class CleanUp {
         @get:Rule
         internal val rule = DatabaseTestRule()
+        private val datetimeProvider = DateTimeProviderFake()
+        private val upcoming = YouTubeVideoEntity.upcomingStream()
+        private val live = YouTubeVideoEntity.liveStreaming()
+        private val archivedInPlaylist = YouTubeVideoEntity.archivedStream()
+        private val videosInPlaylist = listOf(upcoming, live, archivedInPlaylist)
+        private val freeChat = YouTubeVideoEntity.freeChat()
+        private val unusedArchive = YouTubeVideoEntity.archivedStream(id = "unused_archive")
+        private val videos = videosInPlaylist + listOf(unusedArchive, freeChat)
 
-        @Test
-        fun cleanUp() = rule.runWithLocalSource(DateTimeProviderFake()) { dao, sut ->
-            // setup
+        @Before
+        fun setup() = rule.runWithLocalSource(datetimeProvider) { dao, sut ->
             val playlistId = YouTubePlaylist.Id("playlist")
-            val upcoming = YouTubeVideoEntity.upcomingStream()
-            val live = YouTubeVideoEntity.liveStreaming()
-            val archivedInPlaylist = YouTubeVideoEntity.archivedStream()
-            val videosInPlaylist = listOf(upcoming, live, archivedInPlaylist)
-            sut.setPlaylistItemsByPlaylistId(
-                playlistId,
-                videosInPlaylist.map {
-                    YouTubePlaylistItemEntity(
-                        id = YouTubePlaylistItem.Id(it.id.value),
-                        playlistId = playlistId,
-                        videoId = it.id,
-                    )
-                },
-            )
-            val unusedArchive = YouTubeVideoEntity.archivedStream(id = "unused_archive")
-            val freeChat = YouTubeVideoEntity.freeChat()
-            val videos = videosInPlaylist + listOf(unusedArchive, freeChat)
+            val items = videosInPlaylist.map {
+                YouTubePlaylistItemEntity(
+                    id = YouTubePlaylistItem.Id(it.id.value),
+                    playlistId = playlistId,
+                    videoId = it.id,
+                )
+            }
+            sut.setPlaylistItemsByPlaylistId(playlistId, items)
             val channels = videos.map { it.channel as YouTubeChannelTable }
                 .distinctBy { it.id }.toList()
             dao.addChannels(channels)
             sut.addVideo(videos)
             sut.addFreeChatItems(setOf(freeChat.id))
-            // exercise
-            sut.cleanUp()
-            // verify
-            assertThat(dao.findAllArchivedVideos()).isEmpty()
-            assertThat(dao.findUnusedVideoIds()).isEmpty()
-            val actual = dao.findVideosById(videos.map { it.id }, Instant.EPOCH)
-            actual.containsVideoIdInAnyOrder(upcoming, live, freeChat)
-            assertThat(rule.queryVideoIsArchived().map { it.videoId })
-                .containsExactlyInAnyOrder(upcoming.id, live.id, freeChat.id, archivedInPlaylist.id)
         }
+
+        @Test
+        fun cleanUp_remainsUnfinishedVideos() =
+            rule.runWithLocalSource(datetimeProvider) { dao, sut ->
+                // exercise
+                sut.cleanUp()
+                // verify
+                assertThat(dao.findAllArchivedVideos()).isEmpty()
+                assertThat(dao.findUnusedVideoIds()).isEmpty()
+                val actual = dao.findVideosById(videos.map { it.id }, Instant.EPOCH)
+                actual.containsVideoIdInAnyOrder(upcoming, live, freeChat)
+                assertThat(rule.queryVideoIsArchived().map { it.videoId })
+                    .containsExactlyInAnyOrder(
+                        upcoming.id, live.id, freeChat.id, archivedInPlaylist.id
+                    )
+            }
+
+        @Test
+        fun cleanUp_liveIsUpdatedAsArchived_remainsUpcomingAndFreeChat() =
+            rule.runWithLocalSource(datetimeProvider) { dao, sut ->
+                // setup
+                val duration = Duration.ofHours(1)
+                datetimeProvider.advance(duration)
+                val finishedLive = live.liveFinished(duration)
+                sut.addVideo(listOf(finishedLive))
+                // exercise
+                sut.cleanUp()
+                // verify
+                assertThat(dao.findAllArchivedVideos()).isEmpty()
+                assertThat(dao.findUnusedVideoIds()).isEmpty()
+                val actual = dao.findVideosById(videos.map { it.id }, Instant.EPOCH)
+                actual.containsVideoIdInAnyOrder(upcoming, freeChat)
+                assertThat(rule.queryVideoIsArchived().map { it.videoId })
+                    .containsExactlyInAnyOrder(
+                        upcoming.id, live.id, freeChat.id, archivedInPlaylist.id
+                    )
+            }
 
         private fun DatabaseTestRule.queryVideoIsArchived(): List<YouTubeVideoIsArchivedTable> {
             return query("select * from yt_video_is_archived") {
@@ -542,6 +575,16 @@ private data class YouTubeVideoEntity(
             actualStartDateTime = actualStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE,
         )
+
+        fun YouTubeVideo.liveFinished(duration: Duration = Duration.ofHours(1)): YouTubeVideoEntity {
+            check(liveBroadcastContent == YouTubeVideo.BroadcastType.LIVE)
+            return archivedStream(
+                id = id.value,
+                scheduledStartDateTime = requireNotNull(scheduledStartDateTime),
+                actualStartDateTime = requireNotNull(actualStartDateTime),
+                actualEndDateTime = requireNotNull(actualStartDateTime) + duration,
+            )
+        }
 
         fun upcomingStream(
             id: String = "upcoming_stream",

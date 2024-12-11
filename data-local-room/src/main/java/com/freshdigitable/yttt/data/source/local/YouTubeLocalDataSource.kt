@@ -146,23 +146,30 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.addFreeChatItems(ids, false, dateTimeProvider.now() + EXPIRATION_DEFAULT)
     }
 
+    // TODO: omit findFreeChatItems()
+    // In the current implementation, this function is implicitly assumed to receive a `video` items from a remote source,
+    // so the value of `isFreeChat` is obtained from a local source. Since it would be more natural and easier to understand
+    // if the value of `isFreeChat` could be obtained directly from the `video` items, we plan to omit the access to the local
+    // source here.
     override suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(ioDispatcher) {
+        val upcoming =
+            video.filter { it.liveBroadcastContent == YouTubeVideo.BroadcastType.UPCOMING }
+                .map { it.id }
+        val v = dao.findFreeChatItems(upcoming).associateBy { it.videoId }
+
+        val isArchived = video.map { YouTubeVideoIsArchivedTable(it.id, it.isArchived) }
+        dao.addVideoIsArchivedEntities(isArchived)
+
         val current = dateTimeProvider.now()
         val defaultExpiredAt = current + EXPIRATION_DEFAULT
-        dao.addVideoIsArchivedEntities(video.map {
-            YouTubeVideoIsArchivedTable(it.id, it.isArchived)
-        })
-        val archived = video.filter { it.isArchived }.toSet()
-        val unfinished = video - archived
-        val v = dao.findFreeChatItems(unfinished.map { it.id }).associateBy { it.videoId }
-        val expiring = unfinished.associateWith {
+        val expiring = video.associateWith {
             when {
                 it.isFreeChat == true || v[it.id]?.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
                 it.isUpcoming() ->
                     defaultExpiredAt.coerceAtMost(it.scheduledStartDateTime ?: defaultExpiredAt)
 
                 it.isNowOnAir() -> current + EXPIRATION_ON_AIR
-                it.isArchived -> EXPIRATION_MAX // for fail safe
+                it.isArchived -> EXPIRATION_MAX
                 else -> defaultExpiredAt
             }
         }
@@ -175,19 +182,20 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     private suspend fun removeNotExistVideos() {
-        val removingId = dao.findUnusedVideoIds().toSet()
-        removeVideo(removingId)
-        dao.removeVideoIsArchivedEntities(removingId)
+        database.withTransaction {
+            val removingId = dao.findUnusedVideoIds().toSet()
+            removeVideo(removingId)
+            dao.removeVideoIsArchivedEntities(removingId)
+            database.youTubeVideoIsArchivedDao.removeUnusedEntities()
+        }
         database.withTransaction {
             val archivedIds = dao.findAllArchivedVideos().toSet()
             fetchByIds(archivedIds) { ids ->
-                addVideoIsArchivedEntities(ids.map {
-                    YouTubeVideoIsArchivedTable(it, true)
-                })
+                val items = ids.map { YouTubeVideoIsArchivedTable(it, true) }
+                addVideoIsArchivedEntities(items)
             }
             removeVideo(archivedIds)
         }
-        database.youTubeVideoIsArchivedDao.removeUnusedEntities()
     }
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = withContext(ioDispatcher) {
