@@ -71,7 +71,7 @@ jobs:
       - name: run connected tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 26
+          api-level: 33
           script: ./gradlew :data-local-room:connectedDebugAT
 
       - name: upload tests reports
