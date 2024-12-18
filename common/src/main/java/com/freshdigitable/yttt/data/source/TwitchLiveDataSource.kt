@@ -28,7 +28,7 @@ interface TwitchLiveDataSource {
         itemCount: Int = 20,
     ): List<TwitchVideoDetail>
 
-    interface Local : TwitchLiveDataSource {
+    interface Local : TwitchLiveDataSource, ImageDataSource {
         suspend fun addUsers(users: Collection<TwitchUserDetail>)
         suspend fun setMe(me: TwitchUserDetail)
         suspend fun replaceAllFollowings(

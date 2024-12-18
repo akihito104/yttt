@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +20,8 @@ import javax.inject.Singleton
 internal class TwitchLiveLocalDataSource @Inject constructor(
     private val dao: TwitchDao,
     private val dateTimeProvider: DateTimeProvider,
-) : TwitchLiveDataSource.Local {
+    imageDataSource: ImageDataSource,
+) : TwitchLiveDataSource.Local, ImageDataSource by imageDataSource {
     override val onAir: Flow<List<TwitchStream>> = dao.watchStream()
     override val upcoming: Flow<List<TwitchChannelSchedule>> = dao.watchChannelSchedule()
 
@@ -57,6 +59,10 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
 
     override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) {
         val me = fetchMe() ?: return
+        val cache = dao.findAllStreams().associateBy { it.id }
+        val deletedId = cache.keys - followedStreams.map { it.id }.toSet()
+        val img = deletedId.mapNotNull { cache[it]?.getThumbnailUrl() }
+        removeImageByUrl(img)
         dao.replaceAllStreams(
             me.id,
             followedStreams,
