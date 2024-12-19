@@ -30,7 +30,7 @@ interface YoutubeDataSource {
     suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail>
     suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection>
 
-    interface Local : YoutubeDataSource {
+    interface Local : YoutubeDataSource, ImageDataSource {
         val videos: Flow<List<YouTubeVideo>>
         suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>)
         suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>)

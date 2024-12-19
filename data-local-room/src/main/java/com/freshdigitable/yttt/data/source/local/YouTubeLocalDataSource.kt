@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
+import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
@@ -30,9 +31,10 @@ import javax.inject.Singleton
 internal class YouTubeLocalDataSource @Inject constructor(
     private val database: AppDatabase,
     private val dao: YouTubeDao,
+    imageDataSource: ImageDataSource,
     private val dateTimeProvider: DateTimeProvider,
     private val ioDispatcher: CoroutineDispatcher,
-) : YoutubeDataSource.Local {
+) : YoutubeDataSource.Local, ImageDataSource by imageDataSource {
     override val videos: Flow<List<YouTubeVideo>> = dao.watchAllUnfinishedVideos()
     override suspend fun findSubscriptionSummaries(
         ids: Collection<YouTubeSubscription.Id>,
@@ -199,7 +201,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = withContext(ioDispatcher) {
+        val thumbs = dao.findThumbnailUrlByIds(ids)
         fetchByIds(ids) { removeVideos(it) }
+        removeImageByUrl(thumbs)
     }
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail> {

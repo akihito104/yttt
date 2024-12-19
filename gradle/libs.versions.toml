@@ -73,7 +73,7 @@ androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertjCore" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "retrofit" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
-glide-compiler = { module = "com.github.bumptech.glide:compiler", version.ref = "glide" }
+glide-compiler = { module = "com.github.bumptech.glide:ksp", version.ref = "glide" }
 glide-compose = { module = "com.github.bumptech.glide:compose", version.ref = "glide-compose" }
 google-api-client-android = { module = "com.google.api-client:google-api-client-android", version.ref = "google-api-client-android" }
 google-api-services-youtube = { module = "com.google.apis:google-api-services-youtube", version.ref = "google-api-services-youtube" }

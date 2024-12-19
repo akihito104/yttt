@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.util.useCursor
 import androidx.test.core.app.ApplicationProvider
 import com.freshdigitable.yttt.data.model.DateTimeProvider
+import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
 import kotlinx.coroutines.CoroutineDispatcher
@@ -49,7 +50,16 @@ internal class DatabaseTestRule : TestWatcher() {
         private fun DatabaseTestRule.localSource(
             datetimeProvider: DateTimeProvider,
             ioDispatcher: CoroutineDispatcher,
-        ): YouTubeLocalDataSource =
-            YouTubeLocalDataSource(database, dao, datetimeProvider, ioDispatcher)
+        ): YouTubeLocalDataSource = YouTubeLocalDataSource(
+            database,
+            dao,
+            NopImageDataSource,
+            datetimeProvider,
+            ioDispatcher,
+        )
     }
+}
+
+private object NopImageDataSource : ImageDataSource {
+    override fun removeImageByUrl(url: Collection<String>) {}
 }
