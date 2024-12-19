@@ -62,12 +62,12 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         val cache = dao.findAllStreams().associateBy { it.id }
         val deletedId = cache.keys - followedStreams.map { it.id }.toSet()
         val img = deletedId.mapNotNull { cache[it]?.getThumbnailUrl() }
-        removeImageByUrl(img)
         dao.replaceAllStreams(
             me.id,
             followedStreams,
             expiredAt = dateTimeProvider.now() + MAX_AGE_STREAM,
         )
+        removeImageByUrl(img)
     }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {

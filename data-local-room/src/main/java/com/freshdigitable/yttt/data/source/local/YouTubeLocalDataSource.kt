@@ -202,8 +202,8 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = withContext(ioDispatcher) {
         val thumbs = dao.findThumbnailUrlByIds(ids)
-        removeImageByUrl(thumbs)
         fetchByIds(ids) { removeVideos(it) }
+        removeImageByUrl(thumbs)
     }
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
