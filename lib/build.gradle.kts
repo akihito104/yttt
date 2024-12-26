@@ -53,6 +53,7 @@ dependencies {
     implementation(project(":repository-youtube"))
     implementation(project(":repository-twitch"))
     implementation(project(":repository-appuser"))
+    implementation(project(":image-loadable-coil"))
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)
@@ -60,7 +61,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     androidTestImplementation(composeBom)
-    implementation(libs.glide.compose)
     implementation(libs.androidx.compose.animation)
 
     // Choose one of the following:
@@ -83,11 +83,8 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    implementation(libs.glide)
-    ksp(libs.glide.compiler)
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
-    implementation(libs.okhttp3.integration)
     implementation(libs.okhttp.logging.interceptor)
 
     testImplementation(libs.junit)
