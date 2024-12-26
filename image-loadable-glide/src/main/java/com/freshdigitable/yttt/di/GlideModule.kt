@@ -7,7 +7,7 @@ import com.bumptech.glide.Registry
 import com.bumptech.glide.annotation.Excludes
 import com.bumptech.glide.annotation.GlideModule
 import com.bumptech.glide.integration.okhttp3.OkHttpLibraryGlideModule
-import com.bumptech.glide.integration.okhttp3.OkHttpUrlLoader
+import com.bumptech.glide.integration.okhttp3.OkHttpUrlLoader.Factory
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.model.GlideUrl
 import com.bumptech.glide.module.AppGlideModule
@@ -34,7 +34,7 @@ class GlideModule : AppGlideModule() {
         registry.replace(
             GlideUrl::class.java,
             InputStream::class.java,
-            OkHttpUrlLoader.Factory(entryPoint.defaultOkHttpClient),
+            Factory(entryPoint.defaultOkHttpClient),
         )
     }
 

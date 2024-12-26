@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt.compose
+package com.freshdigitable.yttt.compose.image.glide
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -25,11 +25,47 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
+import com.freshdigitable.yttt.compose.ImageLoadableView
+import com.freshdigitable.yttt.compose.ImageLoaderViewSetup
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
 import java.security.MessageDigest
+import javax.inject.Singleton
+
+internal object ImageLoadableGlideView : ImageLoadableView.Delegate {
+    @Composable
+    override fun Icon(
+        modifier: Modifier,
+        url: String,
+        contentDescription: String?,
+        size: Dp,
+        altImage: Painter,
+    ) {
+        IconLoadableView(modifier, url, contentDescription, size, altImage)
+    }
+
+    @Composable
+    override fun Thumbnail(
+        modifier: Modifier,
+        url: String,
+        contentDescription: String?,
+        contentScale: ContentScale,
+        altImage: Painter,
+    ) {
+        ThumbnailLoadableView(modifier, url, contentDescription, contentScale, altImage)
+    }
+
+    @Composable
+    override fun ChannelArt(url: String, contentDescription: String?) {
+        ChannelArtLoadableView(url = url, contentDescription)
+    }
+}
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun ThumbnailLoadableView(
+private fun ThumbnailLoadableView(
     modifier: Modifier = Modifier,
     url: String,
     contentDescription: String? = "",
@@ -57,7 +93,7 @@ fun ThumbnailLoadableView(
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun IconLoadableView(
+private fun IconLoadableView(
     modifier: Modifier = Modifier,
     url: String,
     contentDescription: String? = "",
@@ -84,7 +120,7 @@ fun IconLoadableView(
 
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun ChannelArtLoadableView(
+private fun ChannelArtLoadableView(
     url: String,
     contentDescription: String? = "",
 ) {
@@ -101,7 +137,7 @@ fun ChannelArtLoadableView(
     )
 }
 
-internal class CustomCrop(
+private class CustomCrop(
     private val width: Int,
     private val height: Int
 ) : BitmapTransformation() {
@@ -137,5 +173,17 @@ internal class CustomCrop(
     companion object {
         private val ID = checkNotNull(CustomCrop::class.java.canonicalName)
         private val ID_BYTES = ID.toByteArray(CHARSET)
+    }
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface ImageLoaderGlideViewProvider {
+    companion object {
+        @Provides
+        @Singleton
+        fun provideSetup(): ImageLoaderViewSetup = {
+            ImageLoadableView.delegate = ImageLoadableGlideView
+        }
     }
 }

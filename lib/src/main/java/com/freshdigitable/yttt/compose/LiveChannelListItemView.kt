@@ -86,7 +86,7 @@ fun LiveChannelIcon(
     iconSize: Dp,
 ) {
     Box {
-        IconLoadableView(
+        ImageLoadableView.Icon(
             modifier = modifier,
             url = iconUrl,
             size = iconSize,
