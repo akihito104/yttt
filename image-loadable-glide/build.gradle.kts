@@ -41,6 +41,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":common"))
     implementation(project(":common-ui"))
 
     implementation(libs.androidx.compose.material3)

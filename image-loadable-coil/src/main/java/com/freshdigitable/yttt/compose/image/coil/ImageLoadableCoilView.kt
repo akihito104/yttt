@@ -5,36 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import coil3.ImageLoader
-import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
-import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.ImageRequest
-import coil3.request.crossfade
 import coil3.request.transformations
 import coil3.transform.Transformation
 import com.freshdigitable.yttt.compose.ImageLoadableView
-import com.freshdigitable.yttt.compose.ImageLoaderViewSetup
-import okhttp3.Cache
-import okhttp3.OkHttpClient
-
-internal fun setup(okHttpClient: OkHttpClient, cache: Cache): ImageLoaderViewSetup {
-    val client = okHttpClient.newBuilder()
-        .cache(cache)
-        .build()
-    return {
-        ImageLoadableView.delegate = ImageLoadableCoilView
-        SingletonImageLoader.setSafe { context ->
-            ImageLoader.Builder(context)
-                .diskCache { null }
-                .components {
-                    add(OkHttpNetworkFetcherFactory(callFactory = { client }))
-                }
-                .crossfade(true)
-                .build()
-        }
-    }
-}
 
 internal object ImageLoadableCoilView : ImageLoadableView.Delegate {
     @Composable

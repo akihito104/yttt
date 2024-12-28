@@ -41,6 +41,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":common"))
     implementation(project(":common-ui"))
 
     val composeBom = platform(libs.androidx.compose.bom)
