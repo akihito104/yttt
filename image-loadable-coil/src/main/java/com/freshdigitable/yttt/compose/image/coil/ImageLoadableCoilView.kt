@@ -15,18 +15,24 @@ import coil3.request.transformations
 import coil3.transform.Transformation
 import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.compose.ImageLoaderViewSetup
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 
-internal fun setup(okHttpClient: OkHttpClient): ImageLoaderViewSetup = {
-    ImageLoadableView.delegate = ImageLoadableCoilView
-    SingletonImageLoader.setSafe { context ->
-        ImageLoader.Builder(context)
-            .diskCache { null }
-            .components {
-                add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient }))
-            }
-            .crossfade(true)
-            .build()
+internal fun setup(okHttpClient: OkHttpClient, cache: Cache): ImageLoaderViewSetup {
+    val client = okHttpClient.newBuilder()
+        .cache(cache)
+        .build()
+    return {
+        ImageLoadableView.delegate = ImageLoadableCoilView
+        SingletonImageLoader.setSafe { context ->
+            ImageLoader.Builder(context)
+                .diskCache { null }
+                .components {
+                    add(OkHttpNetworkFetcherFactory(callFactory = { client }))
+                }
+                .crossfade(true)
+                .build()
+        }
     }
 }
 

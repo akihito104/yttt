@@ -6,6 +6,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
@@ -15,6 +16,7 @@ internal interface ImageLoadableCoilViewProvider {
     companion object {
         @Provides
         @Singleton
-        fun provideSetup(okHttpClient: OkHttpClient): ImageLoaderViewSetup = setup(okHttpClient)
+        fun provideSetup(okHttpClient: OkHttpClient, cache: Cache): ImageLoaderViewSetup =
+            setup(okHttpClient, cache)
     }
 }

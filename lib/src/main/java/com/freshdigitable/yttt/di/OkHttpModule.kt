@@ -8,7 +8,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.Cache
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
@@ -30,16 +29,10 @@ internal object OkHttpModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(
-        interceptors: Set<@JvmSuppressWildcards Interceptor>,
-        cache: Cache,
-    ): OkHttpClient = OkHttpClient.Builder().apply {
-        interceptors.forEach { addInterceptor(it) }
-    }
+    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         })
-        .cache(cache)
         .build()
 }
 

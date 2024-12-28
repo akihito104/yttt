@@ -16,6 +16,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Cache
 import okhttp3.OkHttpClient
 import java.io.InputStream
 
@@ -26,15 +27,19 @@ class GlideModule : AppGlideModule() {
     @InstallIn(SingletonComponent::class)
     interface AppGlideEntryPoint {
         val defaultOkHttpClient: OkHttpClient
+        val cache: Cache
     }
 
     override fun registerComponents(context: Context, glide: Glide, registry: Registry) {
         val entryPoint =
             EntryPointAccessors.fromApplication(context, AppGlideEntryPoint::class.java)
+        val okHttpClient = entryPoint.defaultOkHttpClient.newBuilder()
+            .cache(cache = entryPoint.cache)
+            .build()
         registry.replace(
             GlideUrl::class.java,
             InputStream::class.java,
-            Factory(entryPoint.defaultOkHttpClient),
+            Factory(okHttpClient),
         )
     }
 
