@@ -6,12 +6,10 @@ import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import retrofit2.Call
 import javax.inject.Inject
@@ -86,9 +84,4 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
         val resp = fetch { getVideoByUserId(userId = id.value, itemsPerPage = itemCount).execute() }
         return resp.body()?.data?.toList() ?: emptyList()
     }
-
-    override val onAir: Flow<List<TwitchStream>> get() = throw AssertionError()
-    override val upcoming: Flow<List<TwitchChannelSchedule>> get() = throw AssertionError()
-    override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchVideo<TwitchVideo.TwitchVideoId> =
-        throw AssertionError()
 }

@@ -17,6 +17,7 @@ interface TwitchLiveDataSource {
     suspend fun fetchMe(): TwitchUserDetail?
     suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster>
     suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): List<TwitchStream>
+    suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>)
     suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int = 10,
@@ -36,7 +37,6 @@ interface TwitchLiveDataSource {
             followings: Collection<TwitchBroadcaster>,
         )
 
-        suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>)
         suspend fun setFollowedStreamSchedule(
             userId: TwitchUser.Id,
             schedule: Collection<TwitchChannelSchedule>,
@@ -45,5 +45,13 @@ interface TwitchLiveDataSource {
         suspend fun deleteAllTables()
     }
 
-    interface Remote : TwitchLiveDataSource
+    interface Remote : TwitchLiveDataSource {
+        override val onAir: Flow<List<TwitchStream>> get() = throw NotImplementedError()
+        override val upcoming: Flow<List<TwitchChannelSchedule>> get() = throw NotImplementedError()
+        override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchVideo<TwitchVideo.TwitchVideoId> =
+            throw NotImplementedError()
+
+        override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) =
+            throw NotImplementedError()
+    }
 }
