@@ -1,8 +1,9 @@
 package com.freshdigitable.yttt.di
 
 import android.app.Application
+import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.compose.ImageLoaderViewSetup
-import com.freshdigitable.yttt.compose.image.glide.setup
+import com.freshdigitable.yttt.compose.image.glide.ImageLoadableGlideView
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.logD
 import dagger.Module
@@ -30,7 +31,11 @@ internal interface ImageLoaderGlideViewProvider {
 
         @Provides
         @Singleton
-        fun provideSetup(): ImageLoaderViewSetup = setup
+        fun provideSetup(): ImageLoaderViewSetup = {}
+
+        @Provides
+        @Singleton
+        fun provideImageLoadableViewDelegate(): ImageLoadableView.Delegate = ImageLoadableGlideView
     }
 }
 

@@ -19,108 +19,119 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.core.graphics.applyCanvas
 import androidx.core.graphics.createBitmap
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 
-abstract class ImageLoadableView {
-    @Volatile
-    private var _delegate: Delegate? = null
-    var delegate: Delegate?
-        get() = _delegate
-        set(value) {
-            synchronized(this) {
-                _delegate = value
-            }
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+internal interface ImageLoadableViewDelegateEntryPoint {
+    val delegate: ImageLoadableView.Delegate
+}
+
+private lateinit var delegateEntryPoint: ImageLoadableViewDelegateEntryPoint
+
+@Composable
+private fun requireImageLoadableViewDelegate(): ImageLoadableView.Delegate {
+    if (!::delegateEntryPoint.isInitialized) {
+        delegateEntryPoint =
+            EntryPointAccessors.fromApplication<ImageLoadableViewDelegateEntryPoint>(LocalContext.current)
+    }
+    return delegateEntryPoint.delegate
+}
+
+object ImageLoadableView {
+    @Composable
+    fun Thumbnail(
+        modifier: Modifier = Modifier,
+        url: String,
+        contentDescription: String? = "",
+        contentScale: ContentScale = ContentScale.FillWidth,
+        altImage: Painter = rememberVectorPainter(image = Icons.Default.PlayArrow),
+    ) {
+        val m = Modifier
+            .then(modifier)
+            .aspectRatio(16f / 9f)
+        if (url.isEmpty()) {
+            Image(
+                painter = altImage,
+                contentDescription = contentDescription,
+                modifier = m,
+            )
+        } else {
+            val delegate = requireImageLoadableViewDelegate()
+            delegate.Thumbnail(m, url, contentDescription, contentScale)
         }
+    }
 
-    companion object : ImageLoadableView() {
-        @Composable
-        fun Thumbnail(
-            modifier: Modifier = Modifier,
-            url: String,
-            contentDescription: String? = "",
-            contentScale: ContentScale = ContentScale.FillWidth,
-            altImage: Painter = rememberVectorPainter(image = Icons.Default.PlayArrow),
-        ) {
-            val m = Modifier
-                .then(modifier)
-                .aspectRatio(16f / 9f)
-            if (url.isEmpty()) {
-                Image(
-                    painter = altImage,
-                    contentDescription = contentDescription,
-                    modifier = m,
-                )
-            } else {
-                val d = requireNotNull(delegate)
-                d.Thumbnail(m, url, contentDescription, contentScale)
-            }
-        }
-
-        @Composable
-        fun UserIcon(
-            modifier: Modifier = Modifier,
-            url: String,
-            contentDescription: String? = "",
-            size: Dp,
-            altImage: Painter = rememberVectorPainter(image = Icons.Default.AccountCircle),
-        ) {
-            if (url.isEmpty()) {
-                Icon(
-                    painter = altImage,
-                    contentDescription = contentDescription,
-                    modifier = modifier
-                        .size(size),
-                )
-            } else {
-                val f = requireNotNull(delegate)
-                f.UserIcon(
-                    modifier = Modifier
-                        .then(modifier)
-                        .size(size)
-                        .clip(CircleShape),
-                    url = url,
-                    contentDescription = contentDescription,
-                )
-            }
-        }
-
-        @Composable
-        fun ChannelArt(
-            url: String,
-            contentDescription: String? = "",
-        ) {
-            val d = requireNotNull(delegate)
-            d.ChannelArt(
+    @Composable
+    fun UserIcon(
+        modifier: Modifier = Modifier,
+        url: String,
+        contentDescription: String? = "",
+        size: Dp,
+        altImage: Painter = rememberVectorPainter(image = Icons.Default.AccountCircle),
+    ) {
+        if (url.isEmpty()) {
+            Icon(
+                painter = altImage,
+                contentDescription = contentDescription,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(32f / 9f),
+                    .then(modifier)
+                    .size(size),
+            )
+        } else {
+            val delegate = requireImageLoadableViewDelegate()
+            delegate.UserIcon(
+                modifier = Modifier
+                    .then(modifier)
+                    .size(size)
+                    .clip(CircleShape),
                 url = url,
                 contentDescription = contentDescription,
             )
         }
+    }
 
-        private val CHANNEL_ART_SAFE_AREA = Size(1235f, 338f)
-        fun channelArtCustomCrop(
-            input: Bitmap,
-            bitmapProvider: ((Size) -> Bitmap)? = null,
-        ): Bitmap {
-            val scale = input.width / 2048f
-            val scaledSize = CHANNEL_ART_SAFE_AREA * scale
-            val matrix = Matrix().apply {
-                val dx = (scaledSize.width - input.width) / 2f
-                val dy = (scaledSize.height - input.height) / 2f
-                postTranslate(dx, dy)
-            }
-            val provider = bitmapProvider ?: { s ->
-                createBitmap(s.width.toInt(), s.height.toInt(), input.config)
-            }
-            return provider(scaledSize).apply {
-                setHasAlpha(input.hasAlpha())
-            }.applyCanvas {
-                drawBitmap(input, matrix, Paint(Paint.DITHER_FLAG or Paint.FILTER_BITMAP_FLAG))
-            }
+    @Composable
+    fun ChannelArt(
+        url: String,
+        contentDescription: String? = "",
+    ) {
+        val delegate = requireImageLoadableViewDelegate()
+        delegate.ChannelArt(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(32f / 9f),
+            url = url,
+            contentDescription = contentDescription,
+        )
+    }
+
+    private val CHANNEL_ART_SAFE_AREA = Size(1235f, 338f)
+    fun channelArtCustomCrop(
+        input: Bitmap,
+        bitmapProvider: ((Size) -> Bitmap)? = null,
+    ): Bitmap {
+        val scale = input.width / 2048f
+        val scaledSize = CHANNEL_ART_SAFE_AREA * scale
+        val matrix = Matrix().apply {
+            val dx = (scaledSize.width - input.width) / 2f
+            val dy = (scaledSize.height - input.height) / 2f
+            postTranslate(dx, dy)
+        }
+        val provider = bitmapProvider ?: { s ->
+            createBitmap(s.width.toInt(), s.height.toInt(), input.config)
+        }
+        return provider(scaledSize).apply {
+            setHasAlpha(input.hasAlpha())
+        }.applyCanvas {
+            drawBitmap(input, matrix, Paint(Paint.DITHER_FLAG or Paint.FILTER_BITMAP_FLAG))
         }
     }
 

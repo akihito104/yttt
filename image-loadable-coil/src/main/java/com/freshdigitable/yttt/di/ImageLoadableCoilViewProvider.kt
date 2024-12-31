@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.compose.ImageLoaderViewSetup
 import com.freshdigitable.yttt.compose.image.coil.ImageLoadableCoilView
 import com.freshdigitable.yttt.data.source.ImageDataSource
+import com.freshdigitable.yttt.logD
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -67,8 +68,11 @@ internal interface ImageLoadableCoilViewProvider {
                     .crossfade(true)
                     .build()
             }
-            ImageLoadableView.delegate = ImageLoadableCoilView
         }
+
+        @Provides
+        @Singleton
+        fun provideImageLoadableViewDelegate(): ImageLoadableView.Delegate = ImageLoadableCoilView
     }
 
     @Binds

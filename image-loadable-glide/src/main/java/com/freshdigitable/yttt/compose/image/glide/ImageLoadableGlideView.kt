@@ -10,7 +10,6 @@ import com.bumptech.glide.integration.compose.GlideImage
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
 import com.freshdigitable.yttt.compose.ImageLoadableView
-import com.freshdigitable.yttt.compose.ImageLoaderViewSetup
 import java.security.MessageDigest
 
 internal object ImageLoadableGlideView : ImageLoadableView.Delegate {
@@ -79,8 +78,4 @@ private class CustomCrop : BitmapTransformation() {
         private val ID = checkNotNull(CustomCrop::class.java.canonicalName)
         private val ID_BYTES = ID.toByteArray(CHARSET)
     }
-}
-
-internal val setup: ImageLoaderViewSetup = {
-    ImageLoadableView.delegate = ImageLoadableGlideView
 }
