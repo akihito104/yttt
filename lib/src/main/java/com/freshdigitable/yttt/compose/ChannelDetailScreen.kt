@@ -151,7 +151,7 @@ private fun ChannelDetailHeader(
     Column {
         val bannerUrl = channelDetail.bannerUrl
         if (bannerUrl?.isNotEmpty() == true) {
-            ChannelArtLoadableView(url = bannerUrl)
+            ImageLoadableView.ChannelArt(url = bannerUrl)
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -265,7 +265,7 @@ fun VideoListItem(
                     modifier = Modifier.fillMaxSize(),
                 )
             } else {
-                ThumbnailLoadableView(
+                ImageLoadableView.Thumbnail(
                     url = thumbnailUrl,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -320,7 +320,7 @@ private fun ChannelSectionContent(cs: ChannelDetailChannelSection) {
 @Composable
 fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        ThumbnailLoadableView(url = item.thumbnailUrl)
+        ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
         Text(
             text = item.title,
             maxLines = 2,
@@ -333,7 +333,7 @@ fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifie
 @Composable
 fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        ThumbnailLoadableView(url = item.thumbnailUrl)
+        ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
         Text(
             text = item.title,
             maxLines = 2,

@@ -47,6 +47,7 @@ kotlin {
 dependencies {
     implementation(project(":lib"))
     implementation(project(":common"))
+    implementation(project(":common-ui"))
     implementation(project(":feature-youtube"))
     implementation(project(":feature-twitch"))
 

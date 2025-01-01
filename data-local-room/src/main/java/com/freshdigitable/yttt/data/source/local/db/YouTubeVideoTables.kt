@@ -64,6 +64,9 @@ internal class YouTubeVideoTable(
         )
         suspend fun findUnusedVideoIds(): List<YouTubeVideo.Id>
 
+        @Query("SELECT thumbnail FROM video WHERE id IN (:ids)")
+        suspend fun findThumbnailUrlByIds(ids: Collection<YouTubeVideo.Id>): List<String>
+
         @Query("DELETE FROM video WHERE id IN (:videoIds)")
         suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
 

@@ -144,7 +144,7 @@ private fun RowScope.ThumbnailView(
     video: LiveVideo,
     modifier: Modifier = Modifier,
 ) {
-    ThumbnailLoadableView(
+    ImageLoadableView.Thumbnail(
         url = video.thumbnailUrl,
         modifier = modifier
             .then(Modifier.fillMaxWidth(fraction = 0.55f))

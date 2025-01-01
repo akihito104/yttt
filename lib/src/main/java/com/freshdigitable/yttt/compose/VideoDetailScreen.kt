@@ -55,7 +55,7 @@ private fun VideoDetailScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         val video = videoProvider() ?: return
-        ThumbnailLoadableView(
+        ImageLoadableView.Thumbnail(
             url = video.thumbnailUrl,
             modifier = Modifier
                 .then(thumbnailModifier)

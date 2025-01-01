@@ -25,8 +25,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dagger.multibindings.IntoSet
-import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -58,11 +56,18 @@ internal object TwitchModule {
 
     @Provides
     @Singleton
-    fun provideTwitchApiRetrofit(gson: Gson, okhttp: OkHttpClient): Retrofit {
+    fun provideTwitchApiRetrofit(
+        gson: Gson,
+        okhttp: OkHttpClient,
+        interceptor: TwitchTokenInterceptor,
+    ): Retrofit {
+        val client = okhttp.newBuilder()
+            .addInterceptor(interceptor)
+            .build()
         return Retrofit.Builder()
             .baseUrl("https://api.twitch.tv/")
             .addConverterFactory(GsonConverterFactory.create(gson))
-            .client(okhttp)
+            .client(client)
             .build()
     }
 
@@ -148,9 +153,5 @@ internal object TwitchModule {
     interface Bind {
         @Binds
         fun bindTwitchDataSourceRemote(dataSource: TwitchLiveRemoteDataSource): TwitchLiveDataSource.Remote
-
-        @Binds
-        @IntoSet
-        fun bindOkHttpInterceptor(interceptor: TwitchTokenInterceptor): Interceptor
     }
 }

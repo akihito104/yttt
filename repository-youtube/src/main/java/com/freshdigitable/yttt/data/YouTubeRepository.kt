@@ -102,6 +102,16 @@ class YouTubeRepository @Inject constructor(
             return cache
         }
         val res = remoteSource.fetchVideoList(neededId)
+
+        val old = videos.value.associateBy { it.id }
+        val url = res.filter {
+            val o = old[it.id] ?: return@filter false
+            o.title != it.title || (o.isUpcoming() && it.isNowOnAir())
+        }.map { it.thumbnailUrl }
+        if (url.isNotEmpty()) {
+            localSource.removeImageByUrl(url)
+        }
+
         localSource.addVideo(res)
         val updated = res.map { it.id }.toSet()
         val removed = neededId - updated

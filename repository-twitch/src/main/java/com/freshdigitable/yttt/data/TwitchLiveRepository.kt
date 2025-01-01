@@ -7,8 +7,13 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,8 +21,10 @@ import javax.inject.Singleton
 class TwitchLiveRepository @Inject constructor(
     private val remoteDataSource: TwitchLiveDataSource.Remote,
     private val localDataSource: TwitchLiveDataSource.Local,
-) : TwitchLiveDataSource {
-    override val onAir: Flow<List<TwitchStream>> = localDataSource.onAir
+    coroutineScope: CoroutineScope,
+) : TwitchLiveDataSource, ImageDataSource by localDataSource {
+    override val onAir: StateFlow<List<TwitchStream>> = localDataSource.onAir
+        .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
     override val upcoming: Flow<List<TwitchChannelSchedule>> = localDataSource.upcoming
 
     override suspend fun getAuthorizeUrl(state: String): String =
@@ -65,8 +72,11 @@ class TwitchLiveRepository @Inject constructor(
             return cache
         }
         val res = remoteDataSource.fetchFollowedStreams(id)
-        localDataSource.addFollowedStreams(res)
         return res
+    }
+
+    override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) {
+        localDataSource.addFollowedStreams(followedStreams)
     }
 
     override suspend fun fetchFollowedStreamSchedule(
