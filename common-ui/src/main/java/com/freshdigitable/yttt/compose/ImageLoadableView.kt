@@ -53,6 +53,7 @@ object ImageLoadableView {
         contentDescription: String? = "",
         contentScale: ContentScale = ContentScale.FillWidth,
         altImage: Painter = rememberVectorPainter(image = Icons.Default.PlayArrow),
+        delegate: Delegate = requireImageLoadableViewDelegate(),
     ) {
         val m = Modifier
             .then(modifier)
@@ -64,7 +65,6 @@ object ImageLoadableView {
                 modifier = m,
             )
         } else {
-            val delegate = requireImageLoadableViewDelegate()
             delegate.Thumbnail(m, url, contentDescription, contentScale)
         }
     }
@@ -76,6 +76,7 @@ object ImageLoadableView {
         contentDescription: String? = "",
         size: Dp,
         altImage: Painter = rememberVectorPainter(image = Icons.Default.AccountCircle),
+        delegate: Delegate = requireImageLoadableViewDelegate(),
     ) {
         if (url.isEmpty()) {
             Icon(
@@ -86,7 +87,6 @@ object ImageLoadableView {
                     .size(size),
             )
         } else {
-            val delegate = requireImageLoadableViewDelegate()
             delegate.UserIcon(
                 modifier = Modifier
                     .then(modifier)
@@ -102,8 +102,8 @@ object ImageLoadableView {
     fun ChannelArt(
         url: String,
         contentDescription: String? = "",
+        delegate: Delegate = requireImageLoadableViewDelegate(),
     ) {
-        val delegate = requireImageLoadableViewDelegate()
         delegate.ChannelArt(
             modifier = Modifier
                 .fillMaxWidth()
