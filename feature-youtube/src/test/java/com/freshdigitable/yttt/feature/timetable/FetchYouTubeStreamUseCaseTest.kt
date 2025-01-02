@@ -6,7 +6,7 @@ import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import io.mockk.called
 import io.mockk.coVerify
 import io.mockk.impl.annotations.MockK
@@ -60,7 +60,7 @@ class FetchYouTubeStreamUseCaseTest {
             addMocks(liveRepository, accountRepository, settingRepository, dateTimeProvider)
             liveRepository.apply {
                 coRegister { videos } answers {
-                    emptyFlow<List<YouTubeVideo>>()
+                    emptyFlow<List<YouTubeVideoExtended>>()
                         .stateIn(this@runTest, SharingStarted.Eagerly, emptyList())
                 }
                 coRegister { fetchPagedSubscriptionSummary() } returns emptyFlow()

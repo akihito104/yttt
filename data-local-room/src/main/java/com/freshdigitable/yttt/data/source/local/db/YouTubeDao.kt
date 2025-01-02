@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import java.time.Duration
@@ -54,10 +55,12 @@ internal class YouTubeDao @Inject constructor(
         addChannelLogEntities(logs.map { it.toDbEntity() })
     }
 
-    suspend fun addVideos(videos: Map<YouTubeVideo, Instant>) = db.withTransaction {
+    suspend fun addVideos(videos: Map<YouTubeVideoExtended, Instant>) = db.withTransaction {
         val v = videos.keys.map { it.toDbEntity() }
+        val freeChat = videos.keys.map { FreeChatTable(it.id, it.isFreeChat) }
         val expiring = videos.entries.map { (v, e) -> YouTubeVideoExpireTable(v.id, e) }
         addVideoEntities(v)
+        addFreeChatItemEntities(freeChat)
         addLiveVideoExpire(expiring)
     }
 

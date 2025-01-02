@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.feature.channel
 
+import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
@@ -24,6 +25,7 @@ import java.io.IOException
 
 internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
+    private val facade: YouTubeFacade,
     @Assisted id: LiveChannel.Id,
 ) : ChannelDetailDelegate {
     @AssistedFactory
@@ -113,7 +115,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
 
     override val activities: Flow<List<LiveVideo>> = flow {
         val logs = repository.fetchLiveChannelLogs(id.mapTo(), maxResult = 20)
-        val videos = repository.fetchVideoList(logs.map { it.videoId }.toSet())
+        val videos = facade.fetchVideoList(logs.map { it.videoId }.toSet())
             .map { v -> v to logs.find { v.id == it.videoId } }
             .sortedBy { it.second?.dateTime }
             .map { it.first }

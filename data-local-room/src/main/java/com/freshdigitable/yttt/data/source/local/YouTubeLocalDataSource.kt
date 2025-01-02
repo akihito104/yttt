@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
@@ -35,7 +36,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
     private val ioDispatcher: CoroutineDispatcher,
 ) : YoutubeDataSource.Local, ImageDataSource by imageDataSource {
-    override val videos: Flow<List<YouTubeVideo>> = dao.watchAllUnfinishedVideos()
+    override val videos: Flow<List<YouTubeVideoExtended>> = dao.watchAllUnfinishedVideos()
     override suspend fun findSubscriptionSummaries(
         ids: Collection<YouTubeSubscription.Id>,
     ): List<YouTubeSubscriptionSummary> = withContext(ioDispatcher) {
@@ -135,7 +136,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         )
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> {
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {
         val current = dateTimeProvider.now()
         return fetchByIds(ids) { findVideosById(it, current = current) }.flatten()
     }
@@ -148,17 +149,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.addFreeChatItems(ids, false, dateTimeProvider.now() + EXPIRATION_DEFAULT)
     }
 
-    // TODO: omit findFreeChatItems()
-    // In the current implementation, this function is implicitly assumed to receive a `video` items from a remote source,
-    // so the value of `isFreeChat` is obtained from a local source. Since it would be more natural and easier to understand
-    // if the value of `isFreeChat` could be obtained directly from the `video` items, we plan to omit the access to the local
-    // source here.
-    override suspend fun addVideo(video: Collection<YouTubeVideo>) = withContext(ioDispatcher) {
-        val upcoming =
-            video.filter { it.liveBroadcastContent == YouTubeVideo.BroadcastType.UPCOMING }
-                .map { it.id }
-        val v = dao.findFreeChatItems(upcoming).associateBy { it.videoId }
-
+    override suspend fun addVideo(
+        video: Collection<YouTubeVideoExtended>,
+    ) = withContext(ioDispatcher) {
         val isArchived = video.map { YouTubeVideoIsArchivedTable(it.id, it.isArchived) }
         dao.addVideoIsArchivedEntities(isArchived)
 
@@ -166,7 +159,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val defaultExpiredAt = current + EXPIRATION_DEFAULT
         val expiring = video.associateWith {
             when {
-                it.isFreeChat == true || v[it.id]?.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
+                it.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
                 it.isUpcoming() ->
                     defaultExpiredAt.coerceAtMost(it.scheduledStartDateTime ?: defaultExpiredAt)
 

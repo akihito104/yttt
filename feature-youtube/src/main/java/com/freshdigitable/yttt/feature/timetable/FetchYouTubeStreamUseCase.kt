@@ -66,19 +66,29 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 .flatMapConcat { it.asFlow() }
                 .filter { id -> !idCache.contains(id).also { idCache.add(id) } }
                 .chunked(50).collect { ids ->
-                    val v = liveRepository.fetchVideoList(ids.toSet())
+                    val v = facade.fetchVideoList(ids.toSet())
                     val removed = v.filter { it.isArchived }.map { it.id }.toSet()
                     if (removed.isNotEmpty()) {
                         liveRepository.removeVideo(removed)
                         t.incrementMetric("update_remove", removed.size.toLong())
                     }
+
+                    val old = liveRepository.videos.value.associateBy { it.id }
+                    val url = v.filter {
+                        val o = old[it.id] ?: return@filter false
+                        o.title != it.title || (o.isUpcoming() && it.isNowOnAir())
+                    }.map { it.thumbnailUrl }
+                    if (url.isNotEmpty()) {
+                        liveRepository.removeImageByUrl(url)
+                    }
+
+                    liveRepository.addVideo(v)
                     t.incrementMetric("new_stream", ids.size.toLong())
                 }
         }
 
         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
         liveRepository.cleanUp()
-        facade.updateAsFreeChat()
         t.stop()
         trace = null
         logI { "end" }

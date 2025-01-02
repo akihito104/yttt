@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
@@ -25,18 +26,18 @@ interface YoutubeDataSource {
         ids: Set<YouTubeVideo.Id>,
     ): List<YouTubeVideo>
 
+    suspend fun addVideo(video: Collection<YouTubeVideoExtended>)
     suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail>
     suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection>
 
     interface Local : YoutubeDataSource, ImageDataSource {
-        val videos: Flow<List<YouTubeVideo>>
+        val videos: Flow<List<YouTubeVideoExtended>>
         suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>)
         suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>)
         suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
         suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>)
-        suspend fun addVideo(video: Collection<YouTubeVideo>)
         suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>?
         suspend fun setPlaylistItemsByPlaylistId(
             id: YouTubePlaylist.Id,
@@ -65,5 +66,14 @@ interface YoutubeDataSource {
         ): List<YouTubePlaylistItem>?
 
         suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist>
+
+        override suspend fun addVideo(video: Collection<YouTubeVideoExtended>) =
+            throw UnsupportedOperationException()
+
+        override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) =
+            throw UnsupportedOperationException()
+
+        override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) =
+            throw UnsupportedOperationException()
     }
 }
