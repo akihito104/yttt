@@ -20,6 +20,7 @@ class YouTubeFacade @Inject constructor(
 
     suspend fun addFreeChatFromWorker(id: YouTubeVideo.Id) {
         val v = repository.fetchVideoList(setOf(id))
-        repository.addVideo(v.map { it.extendAsFreeChat() })
+        val extended = v.map { it.extendAsFreeChat() }
+        repository.addVideo(extended)
     }
 }

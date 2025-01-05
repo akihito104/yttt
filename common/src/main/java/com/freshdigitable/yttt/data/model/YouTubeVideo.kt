@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isFreeChatTitle
 import java.math.BigInteger
 import java.time.Instant
 
@@ -29,7 +30,7 @@ interface YouTubeVideo {
         val YouTubeVideo.url: String get() = "https://youtube.com/watch?v=${id.value}"
         val YouTubeVideo.isArchived: Boolean
             get() = liveBroadcastContent != null && (!isLiveStream() || actualEndDateTime != null)
-        private val YouTubeVideo.isFreeChatTitle: Boolean
+        internal val YouTubeVideo.isFreeChatTitle: Boolean
             get() = regex.any { title.contains(it) }
         private val regex = listOf(
             "free chat".toRegex(RegexOption.IGNORE_CASE),
@@ -39,31 +40,30 @@ interface YouTubeVideo {
             "の予定".toRegex(),
         )
 
-        fun YouTubeVideo.extend(old: YouTubeVideoExtended?): YouTubeVideoExtended {
-            return when (this) {
-                is YouTubeVideoExtended -> this
-                else -> {
-                    val isFreeChat = if (old?.title == title) {
-                        isUpcoming() && old.isFreeChat ?: isFreeChatTitle
-                    } else {
-                        isUpcoming() && isFreeChatTitle
-                    }
-                    YouTubeVideoExtendedImpl(this, isFreeChat)
-                }
-            }
+        fun YouTubeVideo.extend(old: YouTubeVideoExtended?): YouTubeVideoExtended = when (this) {
+            is YouTubeVideoExtended -> this
+            else -> YouTubeVideoExtendedImpl(old = old, video = this, null)
         }
 
         fun YouTubeVideo.extendAsFreeChat(): YouTubeVideoExtended =
-            YouTubeVideoExtendedImpl(this, true)
-    }
-
-    interface IsFreeChat {
-        val isFreeChat: Boolean?
+            YouTubeVideoExtendedImpl(old = null, video = this, true)
     }
 }
 
-interface YouTubeVideoExtended : YouTubeVideo, YouTubeVideo.IsFreeChat
+interface YouTubeVideoExtended : YouTubeVideo {
+    val isFreeChat: Boolean?
+}
+
 private class YouTubeVideoExtendedImpl(
+    private val old: YouTubeVideoExtended?,
     private val video: YouTubeVideo,
-    override val isFreeChat: Boolean,
-) : YouTubeVideoExtended, YouTubeVideo by video
+    private val _isFreeChat: Boolean?,
+) : YouTubeVideoExtended, YouTubeVideo by video {
+    override val isFreeChat: Boolean
+        get() = _isFreeChat
+            ?: if (old?.title == title) {
+                isUpcoming() && old.isFreeChat ?: isFreeChatTitle
+            } else {
+                isUpcoming() && isFreeChatTitle
+            }
+}
