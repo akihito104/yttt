@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.MockkResponseRule
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
-import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -46,7 +45,6 @@ class FetchYouTubeStreamUseCaseTest {
     private val CoroutineScope.sut: FetchYouTubeStreamUseCase
         get() = FetchYouTubeStreamUseCase(
             liveRepository,
-            YouTubeFacade(liveRepository),
             accountRepository,
             settingRepository,
             dateTimeProvider,

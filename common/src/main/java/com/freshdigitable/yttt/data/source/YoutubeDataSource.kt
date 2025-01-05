@@ -22,10 +22,7 @@ interface YoutubeDataSource {
         maxResult: Long? = null,
     ): List<YouTubeChannelLog>
 
-    suspend fun fetchVideoList(
-        ids: Set<YouTubeVideo.Id>,
-    ): List<YouTubeVideo>
-
+    suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo>
     suspend fun addVideo(video: Collection<YouTubeVideoExtended>)
     suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
@@ -50,6 +47,7 @@ interface YoutubeDataSource {
         ): List<YouTubePlaylistItemSummary>
 
         suspend fun cleanUp()
+        override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended>
         suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
         suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>)
         suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>)

@@ -476,9 +476,7 @@ class YouTubeLocalDataSourceTest {
                 val actual = dao.findVideosById(videos.map { it.id }, Instant.EPOCH)
                 actual.containsVideoIdInAnyOrder(upcoming, live, freeChat, endlessLive)
                 assertThat(rule.queryVideoIsArchived().map { it.videoId })
-                    .containsExactlyInAnyOrder(
-                        upcoming.id, live.id, freeChat.id, archivedInPlaylist.id, endlessLive.id,
-                    )
+                    .containsExactlyInAnyOrder(archivedInPlaylist.id)
             }
 
         @Test
@@ -497,9 +495,7 @@ class YouTubeLocalDataSourceTest {
                 val actual = dao.findVideosById(videos.map { it.id }, Instant.EPOCH)
                 actual.containsVideoIdInAnyOrder(upcoming, freeChat, endlessLive)
                 assertThat(rule.queryVideoIsArchived().map { it.videoId })
-                    .containsExactlyInAnyOrder(
-                        upcoming.id, live.id, freeChat.id, archivedInPlaylist.id, endlessLive.id,
-                    )
+                    .containsExactlyInAnyOrder(live.id, archivedInPlaylist.id)
             }
 
         private fun DatabaseTestRule.queryVideoIsArchived(): List<YouTubeVideoIsArchivedTable> {

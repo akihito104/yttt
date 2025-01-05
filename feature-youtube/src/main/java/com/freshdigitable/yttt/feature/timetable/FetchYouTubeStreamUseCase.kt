@@ -4,7 +4,6 @@ import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
-import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
@@ -39,7 +38,6 @@ import javax.inject.Inject
 
 internal class FetchYouTubeStreamUseCase @Inject constructor(
     private val liveRepository: YouTubeRepository,
-    private val facade: YouTubeFacade,
     private val accountRepository: YouTubeAccountRepository,
     private val settingRepository: SettingRepository,
     private val dateTimeProvider: DateTimeProvider,
@@ -66,11 +64,14 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 .flatMapConcat { it.asFlow() }
                 .filter { id -> !idCache.contains(id).also { idCache.add(id) } }
                 .chunked(50).collect { ids ->
-                    val v = facade.fetchVideoList(ids.toSet())
-                    val removed = v.filter { it.isArchived }.map { it.id }.toSet()
-                    if (removed.isNotEmpty()) {
-                        liveRepository.removeVideo(removed)
-                        t.incrementMetric("update_remove", removed.size.toLong())
+                    val v = liveRepository.fetchVideoList(ids.toSet())
+
+                    val archived = v.filter { it.isArchived }.map { it.id }.toSet()
+                    val removed = ids - v.map { it.id }.toSet()
+                    val removing = archived + removed
+                    if (removing.isNotEmpty()) {
+                        liveRepository.removeVideo(removing)
+                        t.incrementMetric("update_remove", removing.size.toLong())
                     }
 
                     val old = liveRepository.videos.value.associateBy { it.id }
@@ -82,7 +83,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                         liveRepository.removeImageByUrl(url)
                     }
 
-                    liveRepository.addVideo(v)
+                    liveRepository.addVideo(v.filter { !it.isArchived })
                     t.incrementMetric("new_stream", ids.size.toLong())
                 }
         }

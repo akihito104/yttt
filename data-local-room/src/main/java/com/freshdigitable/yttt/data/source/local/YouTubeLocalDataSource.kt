@@ -152,9 +152,6 @@ internal class YouTubeLocalDataSource @Inject constructor(
     override suspend fun addVideo(
         video: Collection<YouTubeVideoExtended>,
     ) = withContext(ioDispatcher) {
-        val isArchived = video.map { YouTubeVideoIsArchivedTable(it.id, it.isArchived) }
-        dao.addVideoIsArchivedEntities(isArchived)
-
         val current = dateTimeProvider.now()
         val defaultExpiredAt = current + EXPIRATION_DEFAULT
         val expiring = video.associateWith {
@@ -185,15 +182,15 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
         database.withTransaction {
             val archivedIds = dao.findAllArchivedVideos().toSet()
-            fetchByIds(archivedIds) { ids ->
-                val items = ids.map { YouTubeVideoIsArchivedTable(it, true) }
-                addVideoIsArchivedEntities(items)
-            }
             removeVideo(archivedIds)
         }
     }
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = withContext(ioDispatcher) {
+        fetchByIds(ids) { i ->
+            val items = i.map { YouTubeVideoIsArchivedTable(it, true) }
+            addVideoIsArchivedEntities(items)
+        }
         val thumbs = dao.findThumbnailUrlByIds(ids)
         fetchByIds(ids) { removeVideos(it) }
         removeImageByUrl(thumbs)

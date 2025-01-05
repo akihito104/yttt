@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -93,7 +94,7 @@ class YouTubeRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> {
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {
         if (ids.isEmpty()) {
             return emptyList()
         }
@@ -102,7 +103,10 @@ class YouTubeRepository @Inject constructor(
         if (neededId.isEmpty()) {
             return cache
         }
+        val map = videos.value.associateBy { it.id }
+        val v = ids.associateWith { map[it] }
         val res = remoteSource.fetchVideoList(neededId)
+            .map { it.extend(v[it.id]) }
         return cache + res
     }
 
