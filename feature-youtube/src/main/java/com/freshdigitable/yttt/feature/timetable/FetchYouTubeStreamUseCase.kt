@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isThumbnailUpdatable
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.logE
 import com.freshdigitable.yttt.logI
@@ -74,11 +75,8 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                         t.incrementMetric("update_remove", removing.size.toLong())
                     }
 
-                    val old = liveRepository.videos.value.associateBy { it.id }
-                    val url = v.filter {
-                        val o = old[it.id] ?: return@filter false
-                        o.title != it.title || (o.isUpcoming() && it.isNowOnAir())
-                    }.map { it.thumbnailUrl }
+                    val url = v.filter { it.isThumbnailUpdatable }
+                        .map { it.thumbnailUrl }
                     if (url.isNotEmpty()) {
                         liveRepository.removeImageByUrl(url)
                     }

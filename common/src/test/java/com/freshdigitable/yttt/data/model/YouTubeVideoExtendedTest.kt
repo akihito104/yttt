@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isThumbnailUpdatable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
@@ -9,8 +10,8 @@ import java.math.BigInteger
 import java.time.Instant
 
 @RunWith(Enclosed::class)
-class YouTubeVideoTest {
-    class ExtendCreatorChangeFromUpcoming {
+class YouTubeVideoExtendedTest {
+    class ChangeFromUpcomingForIsFreeChat {
         private val old = YouTubeVideoImpl(
             id = YouTubeVideo.Id("video"),
             title = "video",
@@ -22,7 +23,7 @@ class YouTubeVideoTest {
         }
 
         @Test
-        fun init_returnsFalse() {
+        fun init_freeChatIsFalse() {
             // setup
             val current = old
             // exercise
@@ -65,7 +66,7 @@ class YouTubeVideoTest {
         }
 
         @Test
-        fun changedTitleTo_returnsTrue() {
+        fun changedTitle_freeChatIsFalse() {
             // setup
             val current = old.copy(title = "changed title")
             // exercise
@@ -75,7 +76,7 @@ class YouTubeVideoTest {
         }
 
         @Test
-        fun changedToExtended_returnsTheExtended() {
+        fun extendedObjectIsNotExtendedAnyMore() {
             // setup
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(title = "changed title") {
@@ -89,7 +90,96 @@ class YouTubeVideoTest {
         }
     }
 
-    class ExtendCreatorChangeFromFreeChat {
+    class ChangeFromUpcomingForIsThumbnailUpdatable {
+        private val old = YouTubeVideoImpl(
+            id = YouTubeVideo.Id("video"),
+            title = "video",
+            scheduledStartDateTime = Instant.ofEpochSecond(1000),
+            liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
+        )
+        private val oldEx = object : YouTubeVideoExtended, YouTubeVideo by old {
+            override val isFreeChat: Boolean = false
+        }
+
+        @Test
+        fun init_thumbnailIsNotUpdatable() {
+            // setup
+            val current = old
+            // exercise
+            val actual = current.extend(null)
+            // verify
+            assertThat(actual.isThumbnailUpdatable).isFalse()
+        }
+
+        @Test
+        fun notUpdated_returnsFalse() {
+            // setup
+            val current = old.copy()
+            // exercise
+            val actual = current.extend(oldEx)
+            // verify
+            assertThat(actual.isThumbnailUpdatable).isFalse()
+        }
+
+        @Test
+        fun liveIsArchived_returnsFalse() {
+            // setup
+            val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
+            // exercise
+            val actual = current.extend(oldEx)
+            // verify
+            assertThat(actual.isThumbnailUpdatable).isFalse()
+        }
+
+        @Test
+        fun titleIsChangedAndArchived_returnsFalse() {
+            // setup
+            val current = old.copy(
+                liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
+                title = "changed title",
+            )
+            // exercise
+            val actual = current.extend(oldEx)
+            // verify
+            assertThat(actual.isThumbnailUpdatable).isFalse()
+        }
+
+        @Test
+        fun liveIsStarted_returnsTrue() {
+            // setup
+            val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE)
+            // exercise
+            val actual = current.extend(oldEx)
+            // verify
+            assertThat(actual.isThumbnailUpdatable).isTrue()
+        }
+
+        @Test
+        fun titleIsChanged_returnsTrue() {
+            // setup
+            val current = old.copy(title = "changed title")
+            // exercise
+            val actual = current.extend(oldEx)
+            // verify
+            assertThat(actual.isThumbnailUpdatable).isTrue()
+        }
+
+        @Test
+        fun objectIsNotCreatedByExtendCreator_returnsFalse() {
+            // setup
+            val current = object : YouTubeVideoExtended,
+                YouTubeVideo by old.copy(title = "changed title") {
+                override val isFreeChat: Boolean = true
+            }
+            // exercise
+            val actual = current.extend(oldEx)
+            // verify
+            assertThat(actual).isSameAs(actual)
+            assertThat(actual.isThumbnailUpdatable).isFalse()
+        }
+    }
+
+    class ChangeFromFreeChat {
         private val old = YouTubeVideoImpl(
             id = YouTubeVideo.Id("video"),
             title = "free chat",

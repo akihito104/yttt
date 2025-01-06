@@ -52,11 +52,23 @@ interface YouTubeVideo {
 
 interface YouTubeVideoExtended : YouTubeVideo {
     val isFreeChat: Boolean?
+
+    companion object {
+        val YouTubeVideoExtended.isThumbnailUpdatable: Boolean
+            get() {
+                return if (this !is YouTubeVideoExtendedImpl) {
+                    false
+                } else {
+                    val o = old ?: return false
+                    isLiveStream() && (o.title != title || (o.isUpcoming() && isNowOnAir()))
+                }
+            }
+    }
 }
 
 private class YouTubeVideoExtendedImpl(
-    private val old: YouTubeVideoExtended?,
-    private val video: YouTubeVideo,
+    val old: YouTubeVideoExtended?,
+    video: YouTubeVideo,
     private val _isFreeChat: Boolean?,
 ) : YouTubeVideoExtended, YouTubeVideo by video {
     override val isFreeChat: Boolean
