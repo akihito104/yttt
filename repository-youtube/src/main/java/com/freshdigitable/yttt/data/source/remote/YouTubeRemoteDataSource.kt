@@ -203,12 +203,6 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         requestParams(youtube).execute()
     }
 
-    override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) =
-        throw UnsupportedOperationException()
-
-    override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) =
-        throw UnsupportedOperationException()
-
     companion object {
         @Suppress("unused")
         private val TAG = YouTubeRemoteDataSource::class.simpleName

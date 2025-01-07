@@ -92,7 +92,7 @@ fun TwitchStreamSchedule.toLiveVideo(user: TwitchUserDetail): LiveVideo = LiveVi
     url = url,
 )
 
-fun YouTubeVideo.toLiveVideo(): LiveVideo = LiveVideoEntity(
+fun YouTubeVideoExtended.toLiveVideo(): LiveVideo = LiveVideoEntity(
     id = id.mapTo(),
     title = title,
     channel = channel.toLiveChannel(),
@@ -131,7 +131,7 @@ fun TwitchStreamSchedule.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDet
         description = "",
     )
 
-fun YouTubeVideo.toLiveVideoDetail(): LiveVideoDetail = LiveVideoDetailImpl(
+fun YouTubeVideoExtended.toLiveVideoDetail(): LiveVideoDetail = LiveVideoDetailImpl(
     video = this.toLiveVideo(),
     description = description,
     viewerCount = viewerCount,

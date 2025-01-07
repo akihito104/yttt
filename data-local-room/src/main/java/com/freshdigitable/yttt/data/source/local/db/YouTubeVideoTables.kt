@@ -10,6 +10,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
@@ -58,9 +59,9 @@ internal class YouTubeVideoTable(
         suspend fun addVideoEntities(videos: Collection<YouTubeVideoTable>)
 
         @Query(
-            "SELECT id FROM video AS v WHERE NOT EXISTS" +
-                " (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
-                " UNION SELECT video_id FROM free_chat AS f WHERE v.id = f.video_id)"
+            "SELECT id FROM (SELECT id FROM video WHERE broadcast_content IS 'none') AS v " +
+                "WHERE NOT EXISTS (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
+                " UNION SELECT video_id FROM (SELECT video_id FROM free_chat WHERE is_free_chat IS 1) AS f WHERE v.id = f.video_id)"
         )
         suspend fun findUnusedVideoIds(): List<YouTubeVideo.Id>
 
@@ -89,7 +90,7 @@ internal data class YouTubeVideoDb(
     override val isFreeChat: Boolean?,
     @ColumnInfo("expired_at")
     private val expiredAt: Instant?,
-) : YouTubeVideo {
+) : YouTubeVideoExtended {
     override val id: YouTubeVideo.Id
         get() = video.id
     override val title: String

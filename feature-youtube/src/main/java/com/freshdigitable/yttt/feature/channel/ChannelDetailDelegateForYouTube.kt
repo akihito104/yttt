@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.feature.channel
 
+import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
@@ -24,6 +25,7 @@ import java.io.IOException
 
 internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
+    private val facade: YouTubeFacade,
     @Assisted id: LiveChannel.Id,
 ) : ChannelDetailDelegate {
     @AssistedFactory

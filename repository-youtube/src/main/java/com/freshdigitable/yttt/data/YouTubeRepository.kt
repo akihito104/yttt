@@ -12,6 +12,8 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -32,7 +34,7 @@ class YouTubeRepository @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
     coroutineScope: CoroutineScope,
 ) : YoutubeDataSource {
-    val videos: StateFlow<List<YouTubeVideo>> = localSource.videos
+    val videos: StateFlow<List<YouTubeVideoExtended>> = localSource.videos
         .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> {
@@ -92,7 +94,7 @@ class YouTubeRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> {
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {
         if (ids.isEmpty()) {
             return emptyList()
         }
@@ -101,25 +103,19 @@ class YouTubeRepository @Inject constructor(
         if (neededId.isEmpty()) {
             return cache
         }
+        val map = videos.value.associateBy { it.id }
+        val v = ids.associateWith { map[it] }
         val res = remoteSource.fetchVideoList(neededId)
+            .map { it.extend(v[it.id]) }
+        return cache + res
+    }
 
-        val old = videos.value.associateBy { it.id }
-        val url = res.filter {
-            val o = old[it.id] ?: return@filter false
-            o.title != it.title || (o.isUpcoming() && it.isNowOnAir())
-        }.map { it.thumbnailUrl }
-        if (url.isNotEmpty()) {
-            localSource.removeImageByUrl(url)
-        }
+    override suspend fun addVideo(video: Collection<YouTubeVideoExtended>) {
+        localSource.addVideo(video)
+    }
 
-        localSource.addVideo(res)
-        val updated = res.map { it.id }.toSet()
-        val removed = neededId - updated
-        removeVideo(removed)
-        val v = localSource.fetchVideoList(updated)
-        return cache + v + res.associateBy { it.id }.toMutableMap().apply {
-            v.forEach { this.remove(it.id) }
-        }.values
+    fun removeImageByUrl(url: Collection<String>) {
+        localSource.removeImageByUrl(url)
     }
 
     suspend fun fetchPlaylistItems(
