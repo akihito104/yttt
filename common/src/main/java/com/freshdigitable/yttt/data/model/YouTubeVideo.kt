@@ -1,7 +1,14 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isFreeChatTitle
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isUnscheduledLive
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable.Companion.NOT_UPDATABLE
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable.Companion.UPDATABLE_DURATION_DEFAULT
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable.Companion.UPDATABLE_DURATION_FREE_CHAT
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable.Companion.UPDATABLE_DURATION_ON_AIR
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 
 interface YouTubeVideo {
@@ -39,6 +46,9 @@ interface YouTubeVideo {
             "schedule".toRegex(RegexOption.IGNORE_CASE),
             "の予定".toRegex(),
         )
+
+        fun YouTubeVideo.isUnscheduledLive(): Boolean =
+            isUpcoming() && scheduledStartDateTime == null
 
         fun YouTubeVideo.extend(old: YouTubeVideoExtended?): YouTubeVideoExtended = when (this) {
             is YouTubeVideoExtended -> this
@@ -78,4 +88,55 @@ private class YouTubeVideoExtendedImpl(
             } else {
                 isUpcoming() && isFreeChatTitle
             }
+}
+
+fun YouTubeVideoExtended.updatable(fetchedAt: Instant): YouTubeVideoExtendedUpdatable =
+    when (this) {
+        is YouTubeVideoExtendedUpdatable -> this
+        else -> YouTubeVideoExtendedUpdatableImpl(this, fetchedAt)
+    }
+
+interface YouTubeVideoExtendedUpdatable : YouTubeVideoExtended {
+    val updatableAt: Instant
+
+    companion object {
+        /**
+         * archived video is not needed to update (`Long.MAX_VALUE`, because of DB limitation :( )
+         */
+        internal val NOT_UPDATABLE: Instant = Instant.ofEpochMilli(Long.MAX_VALUE)
+
+        /**
+         * update duration for default (20 min.)
+         */
+        internal val UPDATABLE_DURATION_DEFAULT = Duration.ofMinutes(20)
+
+        /**
+         * update duration for free chat (1 day)
+         */
+        internal val UPDATABLE_DURATION_FREE_CHAT = Duration.ofDays(1)
+
+        /**
+         * update duration for on air stream (5 min.)
+         */
+        internal val UPDATABLE_DURATION_ON_AIR = Duration.ofMinutes(5)
+    }
+}
+
+private class YouTubeVideoExtendedUpdatableImpl(
+    video: YouTubeVideoExtended,
+    private val fetchedAt: Instant,
+) : YouTubeVideoExtendedUpdatable, YouTubeVideoExtended by video {
+    override val updatableAt: Instant
+        get() {
+            val defaultValue = fetchedAt + UPDATABLE_DURATION_DEFAULT
+            val expiring = when {
+                isFreeChat == true -> fetchedAt + UPDATABLE_DURATION_FREE_CHAT
+                isUnscheduledLive() -> defaultValue
+                isUpcoming() -> defaultValue.coerceAtMost(checkNotNull(scheduledStartDateTime))
+                isNowOnAir() -> fetchedAt + UPDATABLE_DURATION_ON_AIR
+                isArchived -> NOT_UPDATABLE
+                else -> defaultValue
+            }
+            return expiring
+        }
 }

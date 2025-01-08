@@ -18,9 +18,7 @@ class YouTubeVideoExtendedTest {
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = object : YouTubeVideoExtended, YouTubeVideo by old {
-            override val isFreeChat: Boolean = false
-        }
+        private val oldEx = old.extended(false)
 
         @Test
         fun init_freeChatIsFalse() {
@@ -97,9 +95,7 @@ class YouTubeVideoExtendedTest {
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = object : YouTubeVideoExtended, YouTubeVideo by old {
-            override val isFreeChat: Boolean = false
-        }
+        private val oldEx = old.extended(false)
 
         @Test
         fun init_thumbnailIsNotUpdatable() {
@@ -186,9 +182,7 @@ class YouTubeVideoExtendedTest {
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = object : YouTubeVideoExtended, YouTubeVideo by old {
-            override val isFreeChat: Boolean = true
-        }
+        private val oldEx = old.extended(true)
 
         @Test
         fun init_returnsTrue() {
@@ -268,7 +262,7 @@ class YouTubeVideoExtendedTest {
     }
 }
 
-private data class YouTubeVideoImpl(
+internal data class YouTubeVideoImpl(
     override val id: YouTubeVideo.Id,
     override val title: String,
     override val channel: YouTubeChannel = YouTubeChannelEntity(
@@ -289,3 +283,8 @@ private data class YouTubeVideoImpl(
         throw NotImplementedError()
     }
 }
+
+internal fun YouTubeVideoImpl.extended(isFreeChat: Boolean): YouTubeVideoExtended =
+    object : YouTubeVideoExtended, YouTubeVideo by this {
+        override val isFreeChat: Boolean = isFreeChat
+    }
