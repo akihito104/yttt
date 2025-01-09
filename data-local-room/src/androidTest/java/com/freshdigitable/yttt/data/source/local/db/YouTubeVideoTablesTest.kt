@@ -21,7 +21,7 @@ class YouTubeVideoTablesTest {
         fun findApis_returnEmpty() = dbRule.runWithDao { dao ->
             assertThat(dao.findAllArchivedVideos()).isEmpty()
             assertThat(dao.findUnusedVideoIds()).isEmpty()
-            assertThat(dao.findVideosById(listOf(YouTubeVideo.Id("test")), Instant.EPOCH)).isEmpty()
+            assertThat(dao.findVideosById(listOf(YouTubeVideo.Id("test")))).isEmpty()
             assertThat(dao.findFreeChatItems(listOf(YouTubeVideo.Id("test")))).isEmpty()
         }
 
@@ -63,7 +63,8 @@ class YouTubeVideoTablesTest {
             // setup
             val target = simple
             // exercise
-            val actual = dao.findVideosById(listOf(target), Instant.ofEpochMilli(99))
+            val actual = dao.findVideosById(listOf(target))
+                .filter { !it.isUpdatable(Instant.ofEpochMilli(99)) }
             // verify
             assertThat(actual).hasSize(1)
             assertThat(actual.first().id).isEqualTo(target)
@@ -74,7 +75,8 @@ class YouTubeVideoTablesTest {
             // setup
             val target = simple
             // exercise
-            val actual = dao.findVideosById(listOf(target), Instant.ofEpochMilli(100))
+            val actual = dao.findVideosById(listOf(target))
+                .filter { !it.isUpdatable(Instant.ofEpochMilli(100)) }
             // verify
             assertThat(actual).hasSize(0)
         }
@@ -84,7 +86,8 @@ class YouTubeVideoTablesTest {
             // setup
             val target = freechat
             // exercise
-            val actual = dao.findVideosById(listOf(target), Instant.ofEpochMilli(99))
+            val actual = dao.findVideosById(listOf(target))
+                .filter { !it.isUpdatable(Instant.ofEpochMilli(99)) }
             // verify
             assertThat(actual).hasSize(1)
             assertThat(actual.first().id).isEqualTo(target)
@@ -92,24 +95,25 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun findVideosById_hasNoExpireEntity_found1Item() = dbRule.runWithDao { dao ->
+        fun findVideosById_hasNoExpireEntity_isNotFound() = dbRule.runWithDao { dao ->
             // setup
             val target = hasNoExpire
             // exercise
-            val actual = dao.findVideosById(listOf(target), Instant.ofEpochMilli(100))
+            val actual = dao.findVideosById(listOf(target))
+                .filter { !it.isUpdatable(Instant.ofEpochMilli(100)) }
             // verify
-            assertThat(actual).hasSize(1)
-            assertThat(actual.first().id).isEqualTo(target)
+            assertThat(actual).isEmpty()
         }
 
         @Test
-        fun findVideosById_found2Items() = dbRule.runWithDao { dao ->
+        fun findVideosById_found1Item() = dbRule.runWithDao { dao ->
             // setup
             val target = listOf(simple, hasNoExpire)
             // exercise
-            val actual = dao.findVideosById(target, Instant.ofEpochMilli(99))
+            val actual = dao.findVideosById(target)
+                .filter { !it.isUpdatable(Instant.ofEpochMilli(99)) }
             // verify
-            assertThat(actual.map { it.id }).containsExactlyInAnyOrderElementsOf(target)
+            assertThat(actual.map { it.id }).containsExactlyInAnyOrder(simple)
         }
 
         @Test

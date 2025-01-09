@@ -278,11 +278,7 @@ internal data class YouTubeVideoImpl(
     override val description: String = "",
     override val viewerCount: BigInteger? = null,
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?
-) : YouTubeVideo {
-    override fun needsUpdate(current: Instant): Boolean {
-        throw NotImplementedError()
-    }
-}
+) : YouTubeVideo
 
 internal fun YouTubeVideoImpl.extended(isFreeChat: Boolean): YouTubeVideoExtended =
     object : YouTubeVideoExtended, YouTubeVideo by this {

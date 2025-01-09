@@ -10,7 +10,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
@@ -90,7 +90,7 @@ internal data class YouTubeVideoDb(
     override val isFreeChat: Boolean?,
     @ColumnInfo("expired_at")
     private val expiredAt: Instant?,
-) : YouTubeVideoExtended {
+) : YouTubeVideoExtendedUpdatable {
     override val id: YouTubeVideo.Id
         get() = video.id
     override val title: String
@@ -111,8 +111,10 @@ internal data class YouTubeVideoDb(
         get() = video.viewerCount
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?
         get() = video.broadcastContent
+    override val updatableAt: Instant
+        get() = expiredAt ?: Instant.EPOCH
 
-    override fun needsUpdate(current: Instant): Boolean = (expiredAt ?: Instant.EPOCH) <= current
+    override fun isUpdatable(current: Instant): Boolean = updatableAt <= current
 
     @androidx.room.Dao
     internal interface Dao {
@@ -121,13 +123,9 @@ internal data class YouTubeVideoDb(
                 "FROM (SELECT * FROM video WHERE id IN (:ids)) AS v " +
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
-                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
-                "WHERE expired_at ISNULL OR :current < expired_at"
+                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id"
         )
-        suspend fun findVideosById(
-            ids: Collection<YouTubeVideo.Id>,
-            current: Instant,
-        ): List<YouTubeVideoDb>
+        suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideoDb>
 
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat, e.expired_at AS expired_at " +

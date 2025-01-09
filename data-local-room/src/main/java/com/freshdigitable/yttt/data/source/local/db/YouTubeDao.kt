@@ -8,7 +8,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import java.time.Duration
@@ -32,15 +32,12 @@ internal class YouTubeDao @Inject constructor(
         addSubscriptionEntities(subscriptions.map { it.toDbEntity() })
     }
 
-    suspend fun addChannelLogs(
-        logs: Collection<YouTubeChannelLog>,
-        current: Instant
-    ) = db.withTransaction {
+    suspend fun addChannelLogs(logs: Collection<YouTubeChannelLog>) = db.withTransaction {
         val channels = logs.map { it.channelId }.distinct()
             .filter { findChannel(it) == null }
             .map { YouTubeChannelTable(id = it) }
         val vIds = logs.map { it.videoId }.toSet()
-        val found = findVideosById(vIds, current).map { it.id }.toSet()
+        val found = findVideosById(vIds).map { it.id }.toSet()
         val videos = logs.distinctBy { it.videoId }
             .filter { !found.contains(it.videoId) }
             .map {
@@ -55,10 +52,10 @@ internal class YouTubeDao @Inject constructor(
         addChannelLogEntities(logs.map { it.toDbEntity() })
     }
 
-    suspend fun addVideos(videos: Map<YouTubeVideoExtended, Instant>) = db.withTransaction {
-        val v = videos.keys.map { it.toDbEntity() }
-        val freeChat = videos.keys.map { FreeChatTable(it.id, it.isFreeChat) }
-        val expiring = videos.entries.map { (v, e) -> YouTubeVideoExpireTable(v.id, e) }
+    suspend fun addVideos(videos: Collection<YouTubeVideoExtendedUpdatable>) = db.withTransaction {
+        val v = videos.map { it.toDbEntity() }
+        val freeChat = videos.map { FreeChatTable(it.id, it.isFreeChat) }
+        val expiring = videos.map { YouTubeVideoExpireTable(it.id, it.updatableAt) }
         addVideoEntities(v)
         addFreeChatItemEntities(freeChat)
         addLiveVideoExpire(expiring)

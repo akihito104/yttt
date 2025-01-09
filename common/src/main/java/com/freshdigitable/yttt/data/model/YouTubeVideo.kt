@@ -23,7 +23,6 @@ interface YouTubeVideo {
     val description: String
     val viewerCount: BigInteger?
     val liveBroadcastContent: BroadcastType?
-    fun needsUpdate(current: Instant): Boolean
 
     fun isLiveStream(): Boolean = isNowOnAir() || isUpcoming()
     fun isNowOnAir(): Boolean = liveBroadcastContent == BroadcastType.LIVE
@@ -55,8 +54,20 @@ interface YouTubeVideo {
             else -> YouTubeVideoExtendedImpl(old = old, video = this, null)
         }
 
-        fun YouTubeVideo.extendAsFreeChat(): YouTubeVideoExtended =
-            YouTubeVideoExtendedImpl(old = null, video = this, true)
+        fun YouTubeVideoExtendedUpdatable.asFreeChat(): YouTubeVideoExtendedUpdatable =
+            when (this) {
+                is YouTubeVideoExtendedUpdatableImpl -> YouTubeVideoExtendedUpdatableImpl(
+                    video = this,
+                    fetchedAt = fetchedAt,
+                )
+
+                else -> object : YouTubeVideoExtendedUpdatable, YouTubeVideoExtended by this {
+                    override val isFreeChat: Boolean
+                        get() = true
+                    override val updatableAt: Instant
+                        get() = this@asFreeChat.updatableAt
+                }
+            }
     }
 }
 
@@ -90,14 +101,15 @@ private class YouTubeVideoExtendedImpl(
             }
 }
 
-fun YouTubeVideoExtended.updatable(fetchedAt: Instant): YouTubeVideoExtendedUpdatable =
+fun YouTubeVideoExtended.updatable(fetchedAt: Instant? = null): YouTubeVideoExtendedUpdatable =
     when (this) {
         is YouTubeVideoExtendedUpdatable -> this
-        else -> YouTubeVideoExtendedUpdatableImpl(this, fetchedAt)
+        else -> YouTubeVideoExtendedUpdatableImpl(this, requireNotNull(fetchedAt))
     }
 
 interface YouTubeVideoExtendedUpdatable : YouTubeVideoExtended {
     val updatableAt: Instant
+    fun isUpdatable(current: Instant): Boolean = updatableAt <= current
 
     companion object {
         /**
@@ -124,7 +136,7 @@ interface YouTubeVideoExtendedUpdatable : YouTubeVideoExtended {
 
 private class YouTubeVideoExtendedUpdatableImpl(
     video: YouTubeVideoExtended,
-    private val fetchedAt: Instant,
+    val fetchedAt: Instant,
 ) : YouTubeVideoExtendedUpdatable, YouTubeVideoExtended by video {
     override val updatableAt: Instant
         get() {

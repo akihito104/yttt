@@ -13,7 +13,8 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable
+import com.freshdigitable.yttt.data.model.updatable
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +35,7 @@ class YouTubeRepository @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
     coroutineScope: CoroutineScope,
 ) : YoutubeDataSource {
-    val videos: StateFlow<List<YouTubeVideoExtended>> = localSource.videos
+    val videos: StateFlow<List<YouTubeVideoExtendedUpdatable>> = localSource.videos
         .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> {
@@ -94,23 +95,24 @@ class YouTubeRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtendedUpdatable> {
         if (ids.isEmpty()) {
             return emptyList()
         }
         val cache = localSource.fetchVideoList(ids)
-        val neededId = ids - cache.map { it.id }.toSet()
+        val current = dateTimeProvider.now()
+        val neededId = ids - cache.filter { it.isUpdatable(current) }.map { it.id }.toSet()
         if (neededId.isEmpty()) {
             return cache
         }
-        val map = videos.value.associateBy { it.id }
+        val map = cache.associateBy { it.id }
         val v = ids.associateWith { map[it] }
         val res = remoteSource.fetchVideoList(neededId)
-            .map { it.extend(v[it.id]) }
+            .map { it.extend(v[it.id]).updatable(current) }
         return cache + res
     }
 
-    override suspend fun addVideo(video: Collection<YouTubeVideoExtended>) {
+    override suspend fun addVideo(video: Collection<YouTubeVideoExtendedUpdatable>) {
         localSource.addVideo(video)
     }
 

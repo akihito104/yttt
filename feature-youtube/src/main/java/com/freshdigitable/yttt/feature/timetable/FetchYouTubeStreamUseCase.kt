@@ -97,7 +97,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val current = dateTimeProvider.now()
         val currentItems = liveRepository.videos.value
             .filter { it.isNowOnAir() || it.isUpcoming() || it.liveBroadcastContent == null }
-            .filter { it.needsUpdate(current) }
+            .filter { it.isUpdatable(current) }
             .map { it.id }
         videoUpdateTaskChannel.send(currentItems)
         trace?.putMetric("update_current", currentItems.size.toLong())
