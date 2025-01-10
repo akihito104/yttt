@@ -13,8 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable
-import com.freshdigitable.yttt.data.model.updatable
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -35,7 +34,7 @@ class YouTubeRepository @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
     coroutineScope: CoroutineScope,
 ) : YoutubeDataSource {
-    val videos: StateFlow<List<YouTubeVideoExtendedUpdatable>> = localSource.videos
+    val videos: StateFlow<List<YouTubeVideoExtended>> = localSource.videos
         .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> {
@@ -95,7 +94,7 @@ class YouTubeRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtendedUpdatable> {
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {
         if (ids.isEmpty()) {
             return emptyList()
         }
@@ -108,11 +107,11 @@ class YouTubeRepository @Inject constructor(
         val map = cache.associateBy { it.id }
         val v = ids.associateWith { map[it] }
         val res = remoteSource.fetchVideoList(neededId)
-            .map { it.extend(v[it.id]).updatable(current) }
+            .map { it.extend(old = v[it.id], fetchedAt = current) }
         return cache + res
     }
 
-    override suspend fun addVideo(video: Collection<YouTubeVideoExtendedUpdatable>) {
+    override suspend fun addVideo(video: Collection<YouTubeVideoExtended>) {
         localSource.addVideo(video)
     }
 

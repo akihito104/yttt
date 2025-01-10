@@ -10,7 +10,7 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedUpdatable
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
@@ -90,7 +90,7 @@ internal data class YouTubeVideoDb(
     override val isFreeChat: Boolean?,
     @ColumnInfo("expired_at")
     private val expiredAt: Instant?,
-) : YouTubeVideoExtendedUpdatable {
+) : YouTubeVideoExtended {
     override val id: YouTubeVideo.Id
         get() = video.id
     override val title: String
@@ -113,8 +113,6 @@ internal data class YouTubeVideoDb(
         get() = video.broadcastContent
     override val updatableAt: Instant
         get() = expiredAt ?: Instant.EPOCH
-
-    override fun isUpdatable(current: Instant): Boolean = updatableAt <= current
 
     @androidx.room.Dao
     internal interface Dao {

@@ -6,8 +6,8 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.model.updatable
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.liveFinished
 import com.freshdigitable.yttt.data.source.local.db.DatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
@@ -56,7 +56,7 @@ class YouTubeLocalDataSourceTest {
                     YouTubeVideoEntity.uploadedVideo(),
                     YouTubeVideoEntity.archivedStream(),
                 )
-                val video = (unfinished + inactive).map { it.updatable(dateTimeProvider.now()) }
+                val video = unfinished + inactive
                 val channels = video.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
                 dao.addChannels(channels)
                 // exercise
@@ -123,27 +123,28 @@ class YouTubeLocalDataSourceTest {
     class SimpleFindVideo {
         @get:Rule
         internal val rule = DatabaseTestRule()
-        private val live = YouTubeVideoEntity.liveStreaming()
-        private val unscheduled = YouTubeVideoEntity.unscheduledUpcoming()
-        private val upcoming = YouTubeVideoEntity.upcomingStream()
+        private val base = Instant.ofEpochSecond(1000)
+        private val live = YouTubeVideoEntity.liveStreaming(fetchedAt = base)
+        private val unscheduled = YouTubeVideoEntity.unscheduledUpcoming(fetchedAt = base)
+        private val upcoming = YouTubeVideoEntity.upcomingStream(fetchedAt = base)
         private val upcomingSoon = YouTubeVideoEntity.upcomingStream(
             id = "upcoming_soon",
             scheduledStartDateTime = Instant.ofEpochSecond(1500),
+            fetchedAt = base,
         )
-        private val freeChat = YouTubeVideoEntity.freeChat()
+        private val freeChat = YouTubeVideoEntity.freeChat(fetchedAt = base)
         private val archived = listOf(
-            YouTubeVideoEntity.uploadedVideo(),
-            YouTubeVideoEntity.archivedStream(),
+            YouTubeVideoEntity.uploadedVideo(fetchedAt = base),
+            YouTubeVideoEntity.archivedStream(fetchedAt = base),
         )
         private val video = listOf(live, upcomingSoon, upcoming, unscheduled, freeChat) + archived
-        private val base = Instant.ofEpochSecond(1000)
         private val datetimeProvider = DateTimeProviderFake(base)
 
         @Before
         fun setup() = rule.runWithLocalSource(datetimeProvider) { dao, sut ->
             val channels = video.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
             dao.addChannels(channels)
-            sut.addVideo(video.map { it.updatable(datetimeProvider.now()) })
+            sut.addVideo(video)
         }
 
         @Test
@@ -160,11 +161,11 @@ class YouTubeLocalDataSourceTest {
             }
 
         @Test
-        fun fetchVideo_liveExpiresAfter1min() =
+        fun fetchVideo_liveExpiresAfter5min() =
             rule.runWithLocalSource(datetimeProvider) { _, sut ->
                 // setup
                 listOf(
-                    Duration.ofSeconds(300),
+                    Duration.ofMinutes(5),
                     Duration.ofSeconds(500).minusMillis(1),
                 ).forEach { datetime ->
                     datetimeProvider.setValue(base + datetime)
@@ -198,7 +199,7 @@ class YouTubeLocalDataSourceTest {
             }
 
         @Test
-        fun fetchVideo_upcomingExpiresAfter10min() =
+        fun fetchVideo_upcomingExpiresAfter20min() =
             rule.runWithLocalSource(datetimeProvider) { _, sut ->
                 // setup
                 listOf(
@@ -467,7 +468,7 @@ class YouTubeLocalDataSourceTest {
             val channels = videos.map { it.channel as YouTubeChannelTable }
                 .distinctBy { it.id }.toList()
             dao.addChannels(channels)
-            sut.addVideo(videos.map { it.updatable(datetimeProvider.now()) })
+            sut.addVideo(videos)
         }
 
         @Test
@@ -491,7 +492,7 @@ class YouTubeLocalDataSourceTest {
                 val duration = Duration.ofHours(1)
                 datetimeProvider.advance(duration)
                 val finishedLive = live.liveFinished(duration)
-                sut.addVideo(listOf(finishedLive).map { it.updatable(datetimeProvider.now()) })
+                sut.addVideo(listOf(finishedLive))
                 // exercise
                 sut.cleanUp()
                 // verify
@@ -544,73 +545,84 @@ private data class YouTubeVideoEntity(
     override val description: String = "",
     override val viewerCount: BigInteger? = null,
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?,
-    override val isFreeChat: Boolean? = null,
-) : YouTubeVideoExtended {
+) : YouTubeVideo {
     companion object {
-        fun uploadedVideo(id: String = "uploaded_video"): YouTubeVideoEntity = YouTubeVideoEntity(
+        fun uploadedVideo(
+            id: String = "uploaded_video",
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeVideoExtended = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
-        )
+        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
 
         fun archivedStream(
             id: String = "archived_stream",
             scheduledStartDateTime: Instant = Instant.ofEpochMilli(20),
             actualStartDateTime: Instant = scheduledStartDateTime,
             actualEndDateTime: Instant = Instant.ofEpochSecond(10 * 60),
-        ): YouTubeVideoEntity = YouTubeVideoEntity(
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeVideoExtended = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             scheduledStartDateTime = scheduledStartDateTime,
             actualStartDateTime = actualStartDateTime,
             actualEndDateTime = actualEndDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
-        )
+        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
 
         fun liveStreaming(
             id: String = "live_streaming",
             scheduledStartDateTime: Instant = Instant.ofEpochSecond(1000),
             actualStartDateTime: Instant = scheduledStartDateTime,
-        ): YouTubeVideoEntity = YouTubeVideoEntity(
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeVideoExtended = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             scheduledStartDateTime = scheduledStartDateTime,
             actualStartDateTime = actualStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE,
-        )
+        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
 
-        fun YouTubeVideo.liveFinished(duration: Duration = Duration.ofHours(1)): YouTubeVideoEntity {
+        fun YouTubeVideo.liveFinished(
+            duration: Duration = Duration.ofHours(1),
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeVideoExtended {
             check(liveBroadcastContent == YouTubeVideo.BroadcastType.LIVE)
             return archivedStream(
                 id = id.value,
                 scheduledStartDateTime = requireNotNull(scheduledStartDateTime),
                 actualStartDateTime = requireNotNull(actualStartDateTime),
                 actualEndDateTime = requireNotNull(actualStartDateTime) + duration,
+                fetchedAt = fetchedAt,
             )
         }
 
         fun upcomingStream(
             id: String = "upcoming_stream",
             scheduledStartDateTime: Instant = Instant.ofEpochSecond(5000),
-        ): YouTubeVideoEntity = YouTubeVideoEntity(
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeVideoExtended = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             scheduledStartDateTime = scheduledStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-        )
+        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
 
-        fun unscheduledUpcoming(id: String = "unscheduled_upcoming"): YouTubeVideoEntity =
-            YouTubeVideoEntity(
-                id = YouTubeVideo.Id(id),
-                liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-            )
+        fun unscheduledUpcoming(
+            id: String = "unscheduled_upcoming",
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeVideoExtended = YouTubeVideoEntity(
+            id = YouTubeVideo.Id(id),
+            liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
+        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
 
         fun freeChat(
             id: String = "free_chat",
             scheduledStartDateTime: Instant = Instant.EPOCH + Duration.ofDays(30),
-        ): YouTubeVideoEntity = YouTubeVideoEntity(
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeVideoExtended = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             title = "free chat",
             scheduledStartDateTime = scheduledStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-            isFreeChat = true,
-        )
+        ).extend(old = null, isFreeChat = true, fetchedAt = fetchedAt)
     }
 }
 

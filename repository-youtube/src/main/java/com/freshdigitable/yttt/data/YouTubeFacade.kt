@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.asFreeChat
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.asFreeChat
 import javax.inject.Inject
 import javax.inject.Singleton
 
