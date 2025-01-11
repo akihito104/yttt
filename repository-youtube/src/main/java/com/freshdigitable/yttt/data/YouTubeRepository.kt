@@ -98,17 +98,15 @@ class YouTubeRepository @Inject constructor(
         if (ids.isEmpty()) {
             return emptyList()
         }
-        val cache = localSource.fetchVideoList(ids)
+        val cache = localSource.fetchVideoList(ids).associateBy { it.id }
         val current = dateTimeProvider.now()
-        val neededId = ids - cache.filter { it.isUpdatable(current) }.map { it.id }.toSet()
-        if (neededId.isEmpty()) {
-            return cache
+        val updatable = cache.values.filter { it.isUpdatable(current) }.map { it.id }.toSet()
+        if (updatable.isEmpty()) {
+            return cache.values.toList()
         }
-        val map = cache.associateBy { it.id }
-        val v = ids.associateWith { map[it] }
-        val res = remoteSource.fetchVideoList(neededId)
-            .map { it.extend(old = v[it.id], fetchedAt = current) }
-        return cache + res
+        val res = remoteSource.fetchVideoList(updatable)
+            .map { it.extend(old = cache[it.id], fetchedAt = dateTimeProvider.now()) }
+        return (ids - updatable).mapNotNull { cache[it] } + res
     }
 
     override suspend fun addVideo(video: Collection<YouTubeVideoExtended>) {
