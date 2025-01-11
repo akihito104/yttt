@@ -117,11 +117,12 @@ internal data class YouTubeVideoDb(
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat, e.expired_at AS expired_at " +
-                "FROM (SELECT * FROM video WHERE id IN (:ids)) AS v " +
+            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
+                " e.expired_at AS expired_at FROM video AS v " +
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
-                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id"
+                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
+                "WHERE v.id IN (:ids)"
         )
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideoDb>
 
