@@ -12,7 +12,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isThumbnailUpdatable
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.logE
 import com.freshdigitable.yttt.logI

@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isThumbnailUpdatable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
