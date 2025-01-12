@@ -259,7 +259,6 @@ private class YouTubeVideoRemote(
     override val liveBroadcastContent: YouTubeVideo.BroadcastType =
         findBy(snippet.liveBroadcastContent)
 
-    override fun needsUpdate(current: Instant): Boolean = false
     override fun toString(): String = video.toString()
 
     companion object {

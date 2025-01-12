@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isThumbnailUpdatable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
@@ -18,16 +17,14 @@ class YouTubeVideoExtendedTest {
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = object : YouTubeVideoExtended, YouTubeVideo by old {
-            override val isFreeChat: Boolean = false
-        }
+        private val oldEx = old.extended(false)
 
         @Test
         fun init_freeChatIsFalse() {
             // setup
             val current = old
             // exercise
-            val actual = current.extend(null)
+            val actual = current.extend(null, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isFalse()
         }
@@ -37,7 +34,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy()
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isFalse()
         }
@@ -47,7 +44,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy(title = "free chat")
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isTrue()
         }
@@ -60,7 +57,7 @@ class YouTubeVideoExtendedTest {
                 liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
             )
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isFalse()
         }
@@ -70,7 +67,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy(title = "changed title")
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isFalse()
         }
@@ -81,9 +78,10 @@ class YouTubeVideoExtendedTest {
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(title = "changed title") {
                 override val isFreeChat: Boolean = true
+                override val updatableAt: Instant = Instant.EPOCH
             }
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual).isSameAs(actual)
             assertThat(actual.isFreeChat).isTrue()
@@ -97,16 +95,14 @@ class YouTubeVideoExtendedTest {
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = object : YouTubeVideoExtended, YouTubeVideo by old {
-            override val isFreeChat: Boolean = false
-        }
+        private val oldEx = old.extended(false)
 
         @Test
         fun init_thumbnailIsNotUpdatable() {
             // setup
             val current = old
             // exercise
-            val actual = current.extend(null)
+            val actual = current.extend(null, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isThumbnailUpdatable).isFalse()
         }
@@ -116,7 +112,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy()
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isThumbnailUpdatable).isFalse()
         }
@@ -126,7 +122,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isThumbnailUpdatable).isFalse()
         }
@@ -139,7 +135,7 @@ class YouTubeVideoExtendedTest {
                 title = "changed title",
             )
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isThumbnailUpdatable).isFalse()
         }
@@ -149,7 +145,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE)
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isThumbnailUpdatable).isTrue()
         }
@@ -159,7 +155,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy(title = "changed title")
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isThumbnailUpdatable).isTrue()
         }
@@ -170,9 +166,10 @@ class YouTubeVideoExtendedTest {
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(title = "changed title") {
                 override val isFreeChat: Boolean = true
+                override val updatableAt: Instant = Instant.EPOCH
             }
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual).isSameAs(actual)
             assertThat(actual.isThumbnailUpdatable).isFalse()
@@ -186,16 +183,14 @@ class YouTubeVideoExtendedTest {
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = object : YouTubeVideoExtended, YouTubeVideo by old {
-            override val isFreeChat: Boolean = true
-        }
+        private val oldEx = old.extended(true)
 
         @Test
         fun init_returnsTrue() {
             // setup
             val current = old
             // exercise
-            val actual = current.extend(null)
+            val actual = current.extend(null, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isTrue()
         }
@@ -205,7 +200,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy()
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isTrue()
         }
@@ -215,7 +210,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy(title = "changed title")
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isFalse()
         }
@@ -228,7 +223,7 @@ class YouTubeVideoExtendedTest {
                 liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE,
             )
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isFalse()
         }
@@ -238,7 +233,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE)
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isFalse()
         }
@@ -248,7 +243,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual.isFreeChat).isFalse()
         }
@@ -259,16 +254,17 @@ class YouTubeVideoExtendedTest {
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE) {
                 override val isFreeChat: Boolean = false
+                override val updatableAt: Instant = Instant.EPOCH
             }
             // exercise
-            val actual = current.extend(oldEx)
+            val actual = current.extend(oldEx, fetchedAt = Instant.EPOCH)
             // verify
             assertThat(actual).isSameAs(current)
         }
     }
 }
 
-private data class YouTubeVideoImpl(
+internal data class YouTubeVideoImpl(
     override val id: YouTubeVideo.Id,
     override val title: String,
     override val channel: YouTubeChannel = YouTubeChannelEntity(
@@ -284,8 +280,10 @@ private data class YouTubeVideoImpl(
     override val description: String = "",
     override val viewerCount: BigInteger? = null,
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?
-) : YouTubeVideo {
-    override fun needsUpdate(current: Instant): Boolean {
-        throw NotImplementedError()
+) : YouTubeVideo
+
+internal fun YouTubeVideoImpl.extended(isFreeChat: Boolean): YouTubeVideoExtended =
+    object : YouTubeVideoExtended, YouTubeVideo by this {
+        override val isFreeChat: Boolean = isFreeChat
+        override val updatableAt: Instant = Instant.EPOCH
     }
-}

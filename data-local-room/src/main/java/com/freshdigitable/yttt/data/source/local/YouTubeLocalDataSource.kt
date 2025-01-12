@@ -13,8 +13,8 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
@@ -69,7 +69,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>) {
-        dao.addChannelLogs(channelLogs, current = dateTimeProvider.now())
+        dao.addChannelLogs(channelLogs)
     }
 
     /**
@@ -137,35 +137,24 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {
-        val current = dateTimeProvider.now()
-        return fetchByIds(ids) { findVideosById(it, current = current) }.flatten()
+        return fetchByIds(ids) { findVideosById(it) }.flatten()
     }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
-        dao.addFreeChatItems(ids, true, dateTimeProvider.now() + EXPIRATION_FREE_CHAT)
+        val updatableAt =
+            dateTimeProvider.now() + YouTubeVideoUpdatable.UPDATABLE_DURATION_FREE_CHAT
+        dao.addFreeChatItems(ids, true, updatableAt)
     }
 
     override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) {
-        dao.addFreeChatItems(ids, false, dateTimeProvider.now() + EXPIRATION_DEFAULT)
+        val updatableAt = dateTimeProvider.now() + YouTubeVideoUpdatable.UPDATABLE_DURATION_DEFAULT
+        dao.addFreeChatItems(ids, false, updatableAt)
     }
 
     override suspend fun addVideo(
         video: Collection<YouTubeVideoExtended>,
     ) = withContext(ioDispatcher) {
-        val current = dateTimeProvider.now()
-        val defaultExpiredAt = current + EXPIRATION_DEFAULT
-        val expiring = video.associateWith {
-            when {
-                it.isFreeChat == true -> current + EXPIRATION_FREE_CHAT
-                it.isUpcoming() ->
-                    defaultExpiredAt.coerceAtMost(it.scheduledStartDateTime ?: defaultExpiredAt)
-
-                it.isNowOnAir() -> current + EXPIRATION_ON_AIR
-                it.isArchived -> EXPIRATION_MAX
-                else -> defaultExpiredAt
-            }
-        }
-        dao.addVideos(expiring)
+        dao.addVideos(video)
     }
 
     override suspend fun cleanUp() {
@@ -231,27 +220,5 @@ internal class YouTubeLocalDataSource @Inject constructor(
             }
             listOf(a).flatten()
         }
-    }
-
-    companion object {
-        /**
-         * cache expiration duration for archived video (`Long.MAX_VALUE`, because of DB limitation :( )
-         */
-        private val EXPIRATION_MAX: Instant = Instant.ofEpochMilli(Long.MAX_VALUE)
-
-        /**
-         * cache expiration duration for default (10 min.)
-         */
-        private val EXPIRATION_DEFAULT = Duration.ofMinutes(10)
-
-        /**
-         * cache expiration duration for free chat (1 day)
-         */
-        private val EXPIRATION_FREE_CHAT = Duration.ofDays(1)
-
-        /**
-         * cache expiration duration for on air stream (1 min.)
-         */
-        private val EXPIRATION_ON_AIR = Duration.ofMinutes(1)
     }
 }

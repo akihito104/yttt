@@ -1,7 +1,15 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isFreeChatTitle
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isUnscheduledLive
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedImpl.Companion.createAsFreeChat
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.NOT_UPDATABLE
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.UPDATABLE_DURATION_DEFAULT
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.UPDATABLE_DURATION_FREE_CHAT
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.UPDATABLE_DURATION_ON_AIR
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 
 interface YouTubeVideo {
@@ -16,7 +24,6 @@ interface YouTubeVideo {
     val description: String
     val viewerCount: BigInteger?
     val liveBroadcastContent: BroadcastType?
-    fun needsUpdate(current: Instant): Boolean
 
     fun isLiveStream(): Boolean = isNowOnAir() || isUpcoming()
     fun isNowOnAir(): Boolean = liveBroadcastContent == BroadcastType.LIVE
@@ -40,36 +47,67 @@ interface YouTubeVideo {
             "の予定".toRegex(),
         )
 
-        fun YouTubeVideo.extend(old: YouTubeVideoExtended?): YouTubeVideoExtended = when (this) {
-            is YouTubeVideoExtended -> this
-            else -> YouTubeVideoExtendedImpl(old = old, video = this, null)
-        }
+        fun YouTubeVideo.isUnscheduledLive(): Boolean =
+            isUpcoming() && scheduledStartDateTime == null
 
-        fun YouTubeVideo.extendAsFreeChat(): YouTubeVideoExtended =
-            YouTubeVideoExtendedImpl(old = null, video = this, true)
+        fun YouTubeVideo.extend(
+            old: YouTubeVideoExtended?,
+            isFreeChat: Boolean? = null,
+            fetchedAt: Instant,
+        ): YouTubeVideoExtended = when (this) {
+            is YouTubeVideoExtended -> this
+            else -> YouTubeVideoExtendedImpl(old = old, video = this, isFreeChat, fetchedAt)
+        }
     }
 }
 
-interface YouTubeVideoExtended : YouTubeVideo {
+interface YouTubeVideoExtended : YouTubeVideo, YouTubeVideoUpdatable {
     val isFreeChat: Boolean?
+    val isThumbnailUpdatable: Boolean get() = false
 
     companion object {
-        val YouTubeVideoExtended.isThumbnailUpdatable: Boolean
-            get() {
-                return if (this !is YouTubeVideoExtendedImpl) {
-                    false
-                } else {
-                    val o = old ?: return false
-                    isLiveStream() && (o.title != title || (o.isUpcoming() && isNowOnAir()))
-                }
+        fun YouTubeVideoExtended.asFreeChat(): YouTubeVideoExtended = when (this) {
+            is YouTubeVideoExtendedImpl -> this.createAsFreeChat()
+
+            else -> object : YouTubeVideoExtended by this {
+                override val isFreeChat: Boolean = true
             }
+        }
+    }
+}
+
+interface YouTubeVideoUpdatable {
+    val updatableAt: Instant
+    fun isUpdatable(current: Instant): Boolean = updatableAt <= current
+
+    companion object {
+        /**
+         * archived video is not needed to update (`Long.MAX_VALUE`, because of DB limitation :( )
+         */
+        internal val NOT_UPDATABLE: Instant = Instant.ofEpochMilli(Long.MAX_VALUE)
+
+        /**
+         * update duration for default (20 min.)
+         */
+        val UPDATABLE_DURATION_DEFAULT: Duration = Duration.ofMinutes(20)
+
+        /**
+         * update duration for free chat (1 day)
+         */
+        val UPDATABLE_DURATION_FREE_CHAT: Duration = Duration.ofDays(1)
+
+        /**
+         * update duration for on air stream (5 min.)
+         */
+        internal val UPDATABLE_DURATION_ON_AIR = Duration.ofMinutes(5)
     }
 }
 
 private class YouTubeVideoExtendedImpl(
-    val old: YouTubeVideoExtended?,
+    private val old: YouTubeVideoExtended?,
     video: YouTubeVideo,
     private val _isFreeChat: Boolean?,
+    private val fetchedAt: Instant,
 ) : YouTubeVideoExtended, YouTubeVideo by video {
     override val isFreeChat: Boolean
         get() = _isFreeChat
@@ -78,4 +116,32 @@ private class YouTubeVideoExtendedImpl(
             } else {
                 isUpcoming() && isFreeChatTitle
             }
+    override val updatableAt: Instant
+        get() {
+            val defaultValue = fetchedAt + UPDATABLE_DURATION_DEFAULT
+            val expiring = when {
+                isFreeChat -> fetchedAt + UPDATABLE_DURATION_FREE_CHAT
+                isUnscheduledLive() -> defaultValue
+                isUpcoming() -> defaultValue.coerceAtMost(checkNotNull(scheduledStartDateTime))
+                isNowOnAir() -> fetchedAt + UPDATABLE_DURATION_ON_AIR
+                isArchived -> NOT_UPDATABLE
+                else -> defaultValue
+            }
+            return expiring
+        }
+    override val isThumbnailUpdatable: Boolean
+        get() {
+            val o = old ?: return false
+            return isLiveStream() && (o.title != title || (o.isUpcoming() && isNowOnAir()))
+        }
+
+    companion object {
+        fun YouTubeVideoExtendedImpl.createAsFreeChat(): YouTubeVideoExtended =
+            YouTubeVideoExtendedImpl(
+                old = this.old,
+                video = this,
+                _isFreeChat = true,
+                fetchedAt = this.fetchedAt,
+            )
+    }
 }

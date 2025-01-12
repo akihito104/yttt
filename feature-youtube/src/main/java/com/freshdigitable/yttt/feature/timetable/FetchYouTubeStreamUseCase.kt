@@ -12,7 +12,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isThumbnailUpdatable
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.logE
 import com.freshdigitable.yttt.logI
@@ -97,7 +96,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val current = dateTimeProvider.now()
         val currentItems = liveRepository.videos.value
             .filter { it.isNowOnAir() || it.isUpcoming() || it.liveBroadcastContent == null }
-            .filter { it.needsUpdate(current) }
+            .filter { it.isUpdatable(current) }
             .map { it.id }
         videoUpdateTaskChannel.send(currentItems)
         trace?.putMetric("update_current", currentItems.size.toLong())
