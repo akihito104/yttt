@@ -4,14 +4,13 @@ import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
-import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
+import com.freshdigitable.yttt.data.source.local.YouTubePlaylistUpdatable
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -95,22 +94,11 @@ internal class YouTubeDao @Inject constructor(
         addLiveVideoExpire(expires)
     }
 
-    suspend fun setPlaylistItems(
-        id: YouTubePlaylist.Id,
-        lastModified: Instant,
-        maxAge: Duration? = null,
-        items: Collection<YouTubePlaylistItem>,
-    ) = db.withTransaction {
-        if (items.isEmpty()) {
-            addPlaylist(YouTubePlaylistTable.createWithMaxAge(id, lastModified))
-        } else if (maxAge == null) {
-            addPlaylist(YouTubePlaylistTable(id, lastModified))
-        } else {
-            updatePlaylist(id, maxAge = maxAge, lastModified = lastModified)
-        }
-        removePlaylistItemsByPlaylistId(id)
-        if (items.isNotEmpty()) {
-            addPlaylistItems(items.map { it.toDbEntity() })
+    suspend fun setPlaylistItems(updatable: YouTubePlaylistUpdatable) = db.withTransaction {
+        addPlaylist(updatable.toEntity())
+        removePlaylistItemsByPlaylistId(updatable.playlistId)
+        if (updatable.items.isNotEmpty()) {
+            addPlaylistItems(updatable.items.map { it.toDbEntity() })
         }
     }
 
@@ -163,6 +151,12 @@ private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
 
 private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
     id = id, title = title, iconUrl = iconUrl,
+)
+
+private fun YouTubePlaylistUpdatable.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
+    id = playlistId,
+    lastModified = fetchedAt,
+    maxAge = maxAge,
 )
 
 private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(

@@ -18,7 +18,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -93,47 +92,22 @@ internal class YouTubeLocalDataSource @Inject constructor(
         id: YouTubePlaylist.Id,
         items: Collection<YouTubePlaylistItem>?,
     ) {
-        if (items == null) {
-            dao.setPlaylistItems(
-                id = id,
-                items = emptyList(),
-                lastModified = dateTimeProvider.now(),
-                maxAge = YouTubePlaylistTable.getMaxAgeUpperLimit(false),
-            )
-            return
-        }
-        if (items.isEmpty()) {
-            dao.setPlaylistItems(
-                id = id,
-                items = emptyList(),
-                lastModified = dateTimeProvider.now(),
-            )
-            return
-        }
-        check(items.all { it.playlistId == id })
-        val cache = dao.findPlaylistById(id)
-        if (cache == null) {
-            dao.setPlaylistItems(id = id, items = items, lastModified = dateTimeProvider.now())
-            return
-        }
-        val playlistItems = dao.findPlaylistItemByPlaylistId(cache.id)
-        val cachedIds = playlistItems.map { it.id }.toSet()
-        val newIds = items.map { it.id }.toSet()
-        val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
-        val maxAge = if (isNotModified) {
-            val boarder = dateTimeProvider.now().minus(YouTubePlaylistTable.RECENTLY_BOARDER)
-            val isPublishedRecently = items.any { boarder < it.publishedAt }
-            val maxAgeMax = YouTubePlaylistTable.getMaxAgeUpperLimit(isPublishedRecently)
-            cache.maxAge.multipliedBy(2).coerceIn(YouTubePlaylistTable.MAX_AGE_DEFAULT..maxAgeMax)
+        val entity = if (items.isNullOrEmpty()) {
+            YouTubePlaylistUpdatable
+                .nullOrEmpty(playlistId = id, items = items, fetchedAt = dateTimeProvider.now())
         } else {
-            YouTubePlaylistTable.MAX_AGE_DEFAULT
+            val playlist = dao.findPlaylistById(id)
+            val cachedItems =
+                if (playlist == null) emptyList() else dao.findPlaylistItemByPlaylistId(id)
+            YouTubePlaylistUpdatable(
+                playlistId = id,
+                playlist = playlist,
+                cachedItems = cachedItems,
+                newItems = items,
+                fetchedAt = dateTimeProvider.now(),
+            )
         }
-        dao.setPlaylistItems(
-            id = id,
-            maxAge = maxAge,
-            items = items,
-            lastModified = dateTimeProvider.now(),
-        )
+        dao.setPlaylistItems(entity)
     }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {

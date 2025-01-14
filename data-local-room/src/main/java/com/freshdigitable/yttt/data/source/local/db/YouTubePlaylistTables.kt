@@ -16,6 +16,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
+import com.freshdigitable.yttt.data.source.local.YouTubePlaylistUpdatable.Companion.MAX_AGE_DEFAULT
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -35,19 +36,6 @@ internal class YouTubePlaylistTable(
 
     @Ignore
     override val title: String = "" // TODO
-
-    companion object {
-        val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
-        private val MAX_AGE_MAX: Duration = Duration.ofDays(1)
-        private val MAX_AGE_FOR_ACTIVE_ACCOUNT: Duration = Duration.ofMinutes(30)
-        val RECENTLY_BOARDER: Duration = Duration.ofDays(3)
-
-        fun getMaxAgeUpperLimit(isPublishedRecently: Boolean): Duration =
-            if (isPublishedRecently) MAX_AGE_FOR_ACTIVE_ACCOUNT else MAX_AGE_MAX
-
-        fun createWithMaxAge(id: YouTubePlaylist.Id, lastModified: Instant): YouTubePlaylistTable =
-            YouTubePlaylistTable(id, lastModified, maxAge = MAX_AGE_MAX)
-    }
 
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
