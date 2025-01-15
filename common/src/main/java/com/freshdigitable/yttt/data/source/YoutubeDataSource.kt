@@ -7,6 +7,8 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemsUpdatable
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -36,10 +38,13 @@ interface YoutubeDataSource {
         suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
         suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>)
         suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>?
+        suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems?
         suspend fun setPlaylistItemsByPlaylistId(
             id: YouTubePlaylist.Id,
             items: Collection<YouTubePlaylistItem>?,
         )
+
+        suspend fun replacePlaylistItemsWithUpdatable(updatable: YouTubePlaylistItemsUpdatable)
 
         suspend fun fetchPlaylistItemSummary(
             playlistId: YouTubePlaylist.Id,

@@ -1,25 +1,25 @@
-package com.freshdigitable.yttt.data.source.local
+package com.freshdigitable.yttt.data.model
 
-import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import java.time.Duration
 import java.time.Instant
 
-class YouTubePlaylistUpdatable(
+class YouTubePlaylistItemsUpdatable(
     val playlistId: YouTubePlaylist.Id,
-    private val playlist: YouTubePlaylist?,
-    private val cachedItems: Collection<YouTubePlaylistItem> = emptyList(),
+    private val cachedPlaylistWithItems: YouTubePlaylistWithItems?,
     private val newItems: Collection<YouTubePlaylistItem>?,
-    val fetchedAt: Instant,
-) {
+    override val fetchedAt: Instant,
+) : Updatable {
+    private val playlist: YouTubePlaylist? get() = cachedPlaylistWithItems?.playlist
+    private val cachedItems: Collection<YouTubePlaylistItem>
+        get() = cachedPlaylistWithItems?.items ?: emptyList()
+
     init {
-        checkNotNull(playlist == null || playlistId == playlist.id)
+        checkNotNull(playlist == null || playlistId == playlist?.id)
     }
 
     val items: Collection<YouTubePlaylistItem>
         get() = newItems ?: emptyList()
-    val maxAge: Duration
+    override val maxAge: Duration
         get() = if (items.isEmpty()) {
             MAX_AGE_MAX
         } else if (playlist == null) {
@@ -27,12 +27,12 @@ class YouTubePlaylistUpdatable(
         } else {
             val cachedIds = cachedItems.map { it.id }.toSet()
             val newIds = items.map { it.id }.toSet()
-            val isNotModified = (cachedIds - newIds).isEmpty() && (newIds - cachedIds).isEmpty()
+            val isNotModified = cachedIds == newIds
             if (isNotModified) {
                 val boarder = fetchedAt - RECENTLY_BOARDER
                 val isPublishedRecently = items.any { boarder < it.publishedAt }
                 val maxAgeMax = getMaxAgeUpperLimit(isPublishedRecently)
-                (playlist as YouTubePlaylistTable).maxAge.multipliedBy(2)
+                requireNotNull(cachedPlaylistWithItems).maxAge.multipliedBy(2)
                     .coerceIn(MAX_AGE_DEFAULT..maxAgeMax)
             } else {
                 MAX_AGE_DEFAULT
@@ -44,14 +44,14 @@ class YouTubePlaylistUpdatable(
             playlistId: YouTubePlaylist.Id,
             items: Collection<YouTubePlaylistItem>?,
             fetchedAt: Instant
-        ): YouTubePlaylistUpdatable = YouTubePlaylistUpdatable(
+        ): YouTubePlaylistItemsUpdatable = YouTubePlaylistItemsUpdatable(
             playlistId = playlistId,
-            playlist = null,
+            cachedPlaylistWithItems = null,
             newItems = items,
             fetchedAt = fetchedAt,
         )
 
-        internal val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
+        val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
         internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
         private val MAX_AGE_FOR_ACTIVE_ACCOUNT: Duration = Duration.ofMinutes(30)
         internal val RECENTLY_BOARDER: Duration = Duration.ofDays(5)

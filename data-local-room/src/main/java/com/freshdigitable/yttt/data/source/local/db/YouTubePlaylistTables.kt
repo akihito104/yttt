@@ -14,9 +14,10 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemsUpdatable.Companion.MAX_AGE_DEFAULT
+import com.freshdigitable.yttt.data.model.YouTubePlaylistUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import com.freshdigitable.yttt.data.source.local.YouTubePlaylistUpdatable.Companion.MAX_AGE_DEFAULT
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -27,10 +28,10 @@ internal class YouTubePlaylistTable(
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylist.Id,
     @ColumnInfo(name = "last_modified")
-    val lastModified: Instant = Instant.EPOCH,
+    override val fetchedAt: Instant = Instant.EPOCH,
     @ColumnInfo(name = "max_age")
-    val maxAge: Duration = MAX_AGE_DEFAULT,
-) : YouTubePlaylist {
+    override val maxAge: Duration = MAX_AGE_DEFAULT,
+) : YouTubePlaylistUpdatable {
     @Ignore
     override val thumbnailUrl: String = "" // TODO
 

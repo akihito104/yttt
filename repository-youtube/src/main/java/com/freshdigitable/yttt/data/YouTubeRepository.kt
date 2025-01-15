@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemsUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
@@ -153,7 +154,24 @@ class YouTubeRepository @Inject constructor(
     ): List<YouTubePlaylistItemSummary> {
         val playlistId = checkNotNull(summary.uploadedPlaylistId)
         if (summary.needsUpdatePlaylist(current)) {
-            updatePlaylistItemCache(playlistId, maxResult)
+            val newItems = remoteSource.fetchPlaylistItems(playlistId, maxResult = maxResult)
+            val fetchedAt = dateTimeProvider.now()
+            val updatable = if (newItems.isNullOrEmpty()) {
+                YouTubePlaylistItemsUpdatable.nullOrEmpty(
+                    playlistId = playlistId,
+                    items = newItems,
+                    fetchedAt = fetchedAt,
+                )
+            } else {
+                val cachedPlaylistWithItems = localSource.fetchPlaylistWithItems(playlistId)
+                YouTubePlaylistItemsUpdatable(
+                    playlistId = playlistId,
+                    cachedPlaylistWithItems = checkNotNull(cachedPlaylistWithItems),
+                    newItems = newItems,
+                    fetchedAt = fetchedAt,
+                )
+            }
+            localSource.replacePlaylistItemsWithUpdatable(updatable)
         }
         return localSource.fetchPlaylistItemSummary(playlistId, maxResult)
     }

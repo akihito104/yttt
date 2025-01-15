@@ -5,11 +5,11 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemsUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import com.freshdigitable.yttt.data.source.local.YouTubePlaylistUpdatable
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import java.time.Instant
 import javax.inject.Inject
@@ -94,7 +94,7 @@ internal class YouTubeDao @Inject constructor(
         addLiveVideoExpire(expires)
     }
 
-    suspend fun setPlaylistItems(updatable: YouTubePlaylistUpdatable) = db.withTransaction {
+    suspend fun setPlaylistItems(updatable: YouTubePlaylistItemsUpdatable) = db.withTransaction {
         addPlaylist(updatable.toEntity())
         removePlaylistItemsByPlaylistId(updatable.playlistId)
         if (updatable.items.isNotEmpty()) {
@@ -153,9 +153,9 @@ private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTab
     id = id, title = title, iconUrl = iconUrl,
 )
 
-private fun YouTubePlaylistUpdatable.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
+private fun YouTubePlaylistItemsUpdatable.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
     id = playlistId,
-    lastModified = fetchedAt,
+    fetchedAt = fetchedAt,
     maxAge = maxAge,
 )
 
