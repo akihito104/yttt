@@ -37,7 +37,8 @@ interface Updatable {
     val fetchedAt: Instant
 
     companion object {
-        val Updatable.updatableAt: Instant get() = fetchedAt + maxAge
+        private val Updatable.updatableAt: Instant get() = fetchedAt + maxAge
+        fun Updatable.isUpdatable(current: Instant): Boolean = updatableAt <= current
     }
 }
 

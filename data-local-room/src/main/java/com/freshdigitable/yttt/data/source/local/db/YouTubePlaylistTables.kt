@@ -46,18 +46,8 @@ internal class YouTubePlaylistTable(
         @Upsert
         suspend fun addPlaylists(playlist: List<YouTubePlaylistTable>)
 
-        @Query("SELECT * FROM (SELECT * FROM playlist WHERE :since < (last_modified + max_age)) WHERE id = :id")
-        suspend fun findPlaylistById(
-            id: YouTubePlaylist.Id,
-            since: Instant = Instant.EPOCH,
-        ): YouTubePlaylistTable?
-
-        @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
-        suspend fun updatePlaylist(
-            id: YouTubePlaylist.Id,
-            lastModified: Instant,
-            maxAge: Duration,
-        )
+        @Query("SELECT * FROM playlist WHERE id = :id")
+        suspend fun findPlaylistById(id: YouTubePlaylist.Id): YouTubePlaylistTable?
 
         @Query("DELETE FROM playlist")
         override suspend fun deleteTable()

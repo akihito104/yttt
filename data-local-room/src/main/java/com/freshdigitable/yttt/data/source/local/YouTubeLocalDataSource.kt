@@ -74,40 +74,10 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.addChannelLogs(channelLogs)
     }
 
-    /**
-     * returns playlist item list. `null` means that list items have not cached yet or have expired (needs download from remote).
-     * returned empty list means that there is no items in the playlist (because of not updated yet or the playlist is to be private).
-     */
-    override suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>? {
-        return database.withTransaction {
-            val p = dao.findPlaylistById(id, since = dateTimeProvider.now())
-                ?: return@withTransaction null
-            dao.findPlaylistItemByPlaylistId(p.id)
-        }
-    }
-
     override suspend fun fetchPlaylistItemSummary(
         playlistId: YouTubePlaylist.Id,
         maxResult: Long,
     ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(playlistId, maxResult)
-
-    override suspend fun setPlaylistItemsByPlaylistId(
-        id: YouTubePlaylist.Id,
-        items: Collection<YouTubePlaylistItem>?,
-    ) {
-        val entity = if (items.isNullOrEmpty()) {
-            YouTubePlaylistItemsUpdatable
-                .nullOrEmpty(playlistId = id, items = items, fetchedAt = dateTimeProvider.now())
-        } else {
-            YouTubePlaylistItemsUpdatable(
-                playlistId = id,
-                cachedPlaylistWithItems = fetchPlaylistWithItems(id),
-                newItems = items,
-                fetchedAt = dateTimeProvider.now(),
-            )
-        }
-        replacePlaylistItemsWithUpdatable(entity)
-    }
 
     override suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems? =
         database.withTransaction {

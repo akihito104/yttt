@@ -37,13 +37,7 @@ interface YoutubeDataSource {
         suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>)
         suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
         suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>)
-        suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>?
         suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems?
-        suspend fun setPlaylistItemsByPlaylistId(
-            id: YouTubePlaylist.Id,
-            items: Collection<YouTubePlaylistItem>?,
-        )
-
         suspend fun replacePlaylistItemsWithUpdatable(updatable: YouTubePlaylistItemsUpdatable)
 
         suspend fun fetchPlaylistItemSummary(
