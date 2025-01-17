@@ -58,22 +58,8 @@ class YouTubeRepository @Inject constructor(
                     val page = value - acc.toSet()
                     localSource.addSubscribes(page)
                     val summary = localSource.findSubscriptionSummaries(page.map { it.id })
-                    val needsChannelDetail = summary.filter { it.uploadedPlaylistId == null }
-                    if (needsChannelDetail.isEmpty()) {
-                        emit(res + summary)
-                        res.addAll(summary)
-                    } else {
-                        fetchChannelList(needsChannelDetail.map { it.channelId }.toSet())
-                        val updated = needsChannelDetail.map { it.subscriptionId }.toSet()
-                        val s = summary.associateBy { it.subscriptionId }.toMutableMap().apply {
-                            localSource.findSubscriptionSummaries(updated).forEach {
-                                this[it.subscriptionId] = it
-                            }
-                        }.values
-                        check((page.map { it.id } - s.map { it.subscriptionId }.toSet()).isEmpty())
-                        emit(res + s)
-                        res.addAll(s)
-                    }
+                    emit(res + summary)
+                    res.addAll(summary)
                     value
                 }
             val deleted = cache.map { it.id } - subs.map { it.id }.toSet()
