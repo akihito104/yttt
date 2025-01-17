@@ -14,8 +14,8 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemsUpdatable.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubePlaylistUpdatable
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Duration
@@ -44,10 +44,16 @@ internal class YouTubePlaylistTable(
         suspend fun addPlaylist(playlist: YouTubePlaylistTable)
 
         @Upsert
-        suspend fun addPlaylists(playlist: List<YouTubePlaylistTable>)
+        suspend fun addPlaylists(playlist: Collection<YouTubePlaylistTable>)
 
         @Query("SELECT * FROM playlist WHERE id = :id")
         suspend fun findPlaylistById(id: YouTubePlaylist.Id): YouTubePlaylistTable?
+
+        @Query("SELECT * FROM playlist WHERE id IN (:id)")
+        suspend fun findPlaylistsById(id: Collection<YouTubePlaylist.Id>): List<YouTubePlaylistTable>
+
+        @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
+        suspend fun updatePlaylist(id: YouTubePlaylist.Id, lastModified: Instant, maxAge: Duration)
 
         @Query("DELETE FROM playlist")
         override suspend fun deleteTable()

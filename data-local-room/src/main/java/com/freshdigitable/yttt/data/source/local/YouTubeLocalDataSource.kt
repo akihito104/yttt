@@ -2,16 +2,13 @@ package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemsUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
@@ -79,18 +76,18 @@ internal class YouTubeLocalDataSource @Inject constructor(
         maxResult: Long,
     ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(playlistId, maxResult)
 
+    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist> =
+        dao.findPlaylistsById(ids)
+
     override suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems? =
         database.withTransaction {
             val playlist = dao.findPlaylistById(id) ?: return@withTransaction null
             val items = dao.findPlaylistItemByPlaylistId(playlist.id)
-            object : YouTubePlaylistWithItems, Updatable by playlist {
-                override val playlist: YouTubePlaylist = playlist
-                override val items: List<YouTubePlaylistItem> = items
-            }
+            YouTubePlaylistWithItems.create(playlist, items)
         }
 
-    override suspend fun replacePlaylistItemsWithUpdatable(updatable: YouTubePlaylistItemsUpdatable) {
-        dao.setPlaylistItems(updatable)
+    override suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems) {
+        dao.updatePlaylistWithItems(updatable)
     }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {

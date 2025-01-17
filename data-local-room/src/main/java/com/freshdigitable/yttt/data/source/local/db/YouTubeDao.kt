@@ -5,7 +5,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemsUpdatable
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -94,11 +94,21 @@ internal class YouTubeDao @Inject constructor(
         addLiveVideoExpire(expires)
     }
 
-    suspend fun setPlaylistItems(updatable: YouTubePlaylistItemsUpdatable) = db.withTransaction {
-        addPlaylist(updatable.toEntity())
-        removePlaylistItemsByPlaylistId(updatable.playlistId)
-        if (updatable.items.isNotEmpty()) {
-            addPlaylistItems(updatable.items.map { it.toDbEntity() })
+    suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems) = db.withTransaction {
+        if (updatable.playlist is YouTubePlaylistTable) {
+            updatePlaylist(
+                id = updatable.playlist.id,
+                lastModified = updatable.fetchedAt,
+                maxAge = updatable.maxAge,
+            )
+        } else {
+            addPlaylist(updatable.toEntity())
+        }
+        if (updatable.items.any { it !is YouTubePlaylistItemDb }) {
+            removePlaylistItemsByPlaylistId(updatable.playlist.id)
+            if (updatable.items.isNotEmpty()) {
+                addPlaylistItems(updatable.items.map { it.toDbEntity() })
+            }
         }
     }
 
@@ -153,8 +163,8 @@ private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTab
     id = id, title = title, iconUrl = iconUrl,
 )
 
-private fun YouTubePlaylistItemsUpdatable.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
-    id = playlistId,
+private fun YouTubePlaylistWithItems.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
+    id = playlist.id,
     fetchedAt = fetchedAt,
     maxAge = maxAge,
 )

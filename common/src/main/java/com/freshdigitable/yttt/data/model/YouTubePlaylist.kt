@@ -27,11 +27,6 @@ interface YouTubePlaylistItem {
     data class Id(override val value: String) : YouTubeId
 }
 
-interface YouTubePlaylistWithItems : Updatable {
-    val playlist: YouTubePlaylist
-    val items: List<YouTubePlaylistItem>
-}
-
 interface Updatable {
     val maxAge: Duration
     val fetchedAt: Instant
