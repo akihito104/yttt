@@ -8,7 +8,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -135,32 +135,36 @@ class YouTubeRepository @Inject constructor(
         return updatable.items.toList()
     }
 
-    suspend fun fetchPlaylistItemSummaries(
+    suspend fun fetchPlaylistWithItems(
         summary: YouTubeSubscriptionSummary,
         current: Instant = dateTimeProvider.now(),
         maxResult: Long = 10,
-    ): List<YouTubePlaylistItemSummary> {
+    ): YouTubePlaylistWithItems? {
         val playlistId = checkNotNull(summary.uploadedPlaylistId)
-        if (summary.needsUpdatePlaylist(current)) {
-            val updatable = fetchPlaylistWithItemsUpdatable(playlistId, maxResult, null)
-            localSource.updatePlaylistWithItems(updatable)
+        if (!summary.needsUpdatePlaylist(current)) {
+            return null
         }
-        return localSource.fetchPlaylistItemSummary(playlistId, maxResult)
+        val updatable = fetchPlaylistWithItemsUpdatable(
+            playlistId,
+            maxResult,
+            localSource.fetchPlaylistWithItemSummaries(playlistId),
+        )
+        localSource.updatePlaylistWithItems(updatable)
+        return updatable
     }
 
     private suspend fun fetchPlaylistWithItemsUpdatable(
         playlistId: YouTubePlaylist.Id,
         maxResult: Long = 10,
-        cachedPlaylistWithItems: YouTubePlaylistWithItems?
+        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?
     ): YouTubePlaylistWithItems {
-        val cache = cachedPlaylistWithItems ?: localSource.fetchPlaylistWithItems(playlistId)
         val newItems = remoteSource.fetchPlaylistItems(playlistId, maxResult = maxResult)
         val fetchedAt = dateTimeProvider.now()
         return cache?.update(newItems, fetchedAt)
             ?: YouTubePlaylistWithItems.newPlaylist(
                 playlist = remoteSource.fetchPlaylist(setOf(playlistId)).first(),
                 items = newItems,
-                fetchedAt = fetchedAt
+                fetchedAt = fetchedAt,
             )
     }
 

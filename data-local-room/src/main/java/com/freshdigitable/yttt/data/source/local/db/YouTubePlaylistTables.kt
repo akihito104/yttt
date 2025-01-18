@@ -9,12 +9,16 @@ import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Relation
+import androidx.room.Transaction
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubePlaylistUpdatable
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
@@ -140,6 +144,23 @@ internal class YouTubePlaylistItemSummaryDb(
     }
 }
 
+internal class YouTubePlaylistWithItemSummariesDb(
+    @Embedded
+    override val playlist: YouTubePlaylistTable,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "playlist_id",
+    )
+    override val summary: List<YouTubePlaylistItemSummaryDb>,
+) : YouTubePlaylistWithItemSummaries, Updatable by playlist {
+    @androidx.room.Dao
+    interface Dao {
+        @Transaction
+        @Query("SELECT * FROM playlist WHERE id = :id")
+        suspend fun findPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummariesDb?
+    }
+}
+
 internal data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylistItem.Id,
@@ -175,17 +196,20 @@ internal interface YouTubePlaylistDaoProviders {
     val youTubePlaylistItemDao: YouTubePlaylistItemTable.Dao
     val youTubePlaylistItemSummaryDbDao: YouTubePlaylistItemSummaryDb.Dao
     val youTubePlaylistItemDbDao: YouTubePlaylistItemDb.Dao
+    val youTubePlaylistWithItemSummariesDbDao: YouTubePlaylistWithItemSummariesDb.Dao
 }
 
 internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistItemTable.Dao,
-    YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao
+    YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao,
+    YouTubePlaylistWithItemSummariesDb.Dao
 
 internal class YouTubePlaylistDaoImpl @Inject constructor(
     private val db: YouTubePlaylistDaoProviders
 ) : YouTubePlaylistDao, YouTubePlaylistTable.Dao by db.youTubePlaylistDao,
     YouTubePlaylistItemTable.Dao by db.youTubePlaylistItemDao,
     YouTubePlaylistItemSummaryDb.Dao by db.youTubePlaylistItemSummaryDbDao,
-    YouTubePlaylistItemDb.Dao by db.youTubePlaylistItemDbDao {
+    YouTubePlaylistItemDb.Dao by db.youTubePlaylistItemDbDao,
+    YouTubePlaylistWithItemSummariesDb.Dao by db.youTubePlaylistWithItemSummariesDbDao {
     override suspend fun deleteTable() {
         listOf(
             db.youTubePlaylistDao,

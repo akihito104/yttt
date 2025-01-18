@@ -23,6 +23,7 @@ class YouTubePlaylistWithItemsTest {
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(YouTubePlaylistWithItems.MAX_AGE_MAX)
+            assertThat(sut.addedItems).isEmpty()
         }
 
         @Test
@@ -35,6 +36,7 @@ class YouTubePlaylistWithItemsTest {
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(YouTubePlaylistWithItems.MAX_AGE_MAX)
+            assertThat(sut.addedItems).isEmpty()
         }
 
         @Test
@@ -52,6 +54,8 @@ class YouTubePlaylistWithItemsTest {
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(YouTubePlaylistWithItems.MAX_AGE_DEFAULT)
+            assertThat(sut.addedItems.map { it.id })
+                .containsExactlyInAnyOrder(YouTubePlaylistItem.Id("item_id_01"))
         }
 
         @Test
@@ -81,6 +85,8 @@ class YouTubePlaylistWithItemsTest {
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(YouTubePlaylistWithItems.MAX_AGE_DEFAULT)
+            assertThat(sut.addedItems.map { it.id })
+                .containsExactlyInAnyOrder(YouTubePlaylistItem.Id("item_id_02"))
         }
 
         @Test
@@ -101,6 +107,7 @@ class YouTubePlaylistWithItemsTest {
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(YouTubePlaylistWithItems.MAX_AGE_MAX)
+            assertThat(sut.addedItems).isEmpty()
         }
     }
 
@@ -134,6 +141,7 @@ class YouTubePlaylistWithItemsTest {
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(maxAge.multipliedBy(2))
+            assertThat(sut.addedItems).isEmpty()
         }
 
         @Test
@@ -185,13 +193,13 @@ private fun playlistWithItems(
     maxAge: Duration = Duration.ZERO,
     items: List<YouTubePlaylistItem>,
     fetchedAt: Instant = Instant.EPOCH,
-): YouTubePlaylistWithItems = object : YouTubePlaylistWithItems {
-    override val playlist: YouTubePlaylist
-        get() = playlist(playlistId)
-    override val maxAge: Duration = maxAge
-    override val items: Collection<YouTubePlaylistItem> = items
-    override val fetchedAt: Instant = fetchedAt
-}
+): YouTubePlaylistWithItems = YouTubePlaylistWithItems.create(
+    playlist = object : YouTubePlaylistUpdatable, YouTubePlaylist by playlist(playlistId) {
+        override val maxAge: Duration = maxAge
+        override val fetchedAt: Instant = fetchedAt
+    },
+    items = items,
+)
 
 private fun playlistItem(
     playlistId: YouTubePlaylist.Id,

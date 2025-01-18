@@ -9,6 +9,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
@@ -85,6 +86,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
             val items = dao.findPlaylistItemByPlaylistId(playlist.id)
             YouTubePlaylistWithItems.create(playlist, items)
         }
+
+    override suspend fun fetchPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummaries? =
+        dao.findPlaylistWithItemSummaries(id)
 
     override suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems) {
         dao.updatePlaylistWithItems(updatable)
