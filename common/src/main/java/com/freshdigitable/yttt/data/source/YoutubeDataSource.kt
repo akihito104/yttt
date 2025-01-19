@@ -7,6 +7,8 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -28,6 +30,7 @@ interface YoutubeDataSource {
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail>
     suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection>
+    suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist>
 
     interface Local : YoutubeDataSource, ImageDataSource {
         val videos: Flow<List<YouTubeVideoExtended>>
@@ -35,11 +38,9 @@ interface YoutubeDataSource {
         suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>)
         suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
         suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>)
-        suspend fun fetchPlaylistItems(id: YouTubePlaylist.Id): List<YouTubePlaylistItem>?
-        suspend fun setPlaylistItemsByPlaylistId(
-            id: YouTubePlaylist.Id,
-            items: Collection<YouTubePlaylistItem>?,
-        )
+        suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems?
+        suspend fun fetchPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummaries?
+        suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems)
 
         suspend fun fetchPlaylistItemSummary(
             playlistId: YouTubePlaylist.Id,
@@ -62,8 +63,6 @@ interface YoutubeDataSource {
             maxResult: Long = 20,
             pageToken: String? = null,
         ): List<YouTubePlaylistItem>?
-
-        suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist>
 
         override suspend fun addVideo(video: Collection<YouTubeVideoExtended>) =
             throw UnsupportedOperationException()

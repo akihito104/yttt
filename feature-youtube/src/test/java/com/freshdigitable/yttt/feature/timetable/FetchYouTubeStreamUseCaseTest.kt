@@ -83,7 +83,7 @@ class FetchYouTubeStreamUseCaseTest {
             settingRepository.lastUpdateDatetime = eq(Instant.parse("2023-12-12T18:00:00.000Z"))
         }
         coVerify(exactly = 0) {
-            liveRepository.fetchPlaylistItemSummaries(any(), any(), any()) wasNot called
+            liveRepository.fetchPlaylistWithItems(any(), any(), any())?.wasNot(called)
         }
     }
 

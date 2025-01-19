@@ -4,14 +4,13 @@ import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
-import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -95,22 +94,21 @@ internal class YouTubeDao @Inject constructor(
         addLiveVideoExpire(expires)
     }
 
-    suspend fun setPlaylistItems(
-        id: YouTubePlaylist.Id,
-        lastModified: Instant,
-        maxAge: Duration? = null,
-        items: Collection<YouTubePlaylistItem>,
-    ) = db.withTransaction {
-        if (items.isEmpty()) {
-            addPlaylist(YouTubePlaylistTable.createWithMaxAge(id, lastModified))
-        } else if (maxAge == null) {
-            addPlaylist(YouTubePlaylistTable(id, lastModified))
+    suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems) = db.withTransaction {
+        if (updatable.playlist is YouTubePlaylistTable) {
+            updatePlaylist(
+                id = updatable.playlist.id,
+                lastModified = updatable.fetchedAt,
+                maxAge = updatable.maxAge,
+            )
         } else {
-            updatePlaylist(id, maxAge = maxAge, lastModified = lastModified)
+            addPlaylist(updatable.toEntity())
         }
-        removePlaylistItemsByPlaylistId(id)
-        if (items.isNotEmpty()) {
-            addPlaylistItems(items.map { it.toDbEntity() })
+        if (updatable.items.any { it !is YouTubePlaylistItemDb }) {
+            removePlaylistItemsByPlaylistId(updatable.playlist.id)
+            if (updatable.items.isNotEmpty()) {
+                addPlaylistItems(updatable.items.map { it.toDbEntity() })
+            }
         }
     }
 
@@ -163,6 +161,12 @@ private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
 
 private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
     id = id, title = title, iconUrl = iconUrl,
+)
+
+private fun YouTubePlaylistWithItems.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
+    id = playlist.id,
+    fetchedAt = fetchedAt,
+    maxAge = maxAge,
 )
 
 private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(

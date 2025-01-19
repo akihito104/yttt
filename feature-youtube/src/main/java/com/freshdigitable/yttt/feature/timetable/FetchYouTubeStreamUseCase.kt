@@ -6,7 +6,7 @@ import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
@@ -28,7 +28,6 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.chunked
 import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.joinAll
@@ -59,10 +58,8 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             updateCurrentVideoItemsTask = this::updateCurrentVideos,
             updateFromPlaylistTask = this::fetchUploadedPlaylists,
         ) { videoUpdateTaskChannel ->
-            val idCache = mutableSetOf<YouTubeVideo.Id>()
             videoUpdateTaskChannel.consumeAsFlow()
                 .flatMapConcat { it.asFlow() }
-                .filter { id -> !idCache.contains(id).also { idCache.add(id) } }
                 .chunked(50).collect { ids ->
                     val v = liveRepository.fetchVideoList(ids.toSet())
 
@@ -112,7 +109,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 }
                 val current = dateTimeProvider.now()
                 val tasks = newSummary.associate { s ->
-                    val t = if (s.isPlaylistUpdatable(current)) {
+                    val t = if (s.needsUpdatePlaylist(current)) {
                         coroutineScope.async(start = CoroutineStart.LAZY) {
                             fetchVideoByPlaylistIdTask(s, dateTimeProvider.now())
                         }
@@ -140,17 +137,29 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
     private suspend fun fetchVideoByPlaylistIdTask(
         subscriptionSummary: YouTubeSubscriptionSummary,
-        current: Instant
+        current: Instant,
     ): List<YouTubeVideo.Id> {
-        val id = checkNotNull(subscriptionSummary.uploadedPlaylistId)
+        val summary = if (subscriptionSummary.uploadedPlaylistId != null) {
+            subscriptionSummary
+        } else {
+            val channel = liveRepository.fetchChannelList(setOf(subscriptionSummary.channelId))
+                .first()
+            if (channel.uploadedPlayList == null) {
+                return emptyList()
+            }
+            object : YouTubeSubscriptionSummary by subscriptionSummary {
+                override val uploadedPlaylistId: YouTubePlaylist.Id?
+                    get() = channel.uploadedPlayList
+            }
+        }
+        val id = checkNotNull(summary.uploadedPlaylistId)
         try {
-            val itemIds = liveRepository.fetchPlaylistItemSummaries(
-                subscriptionSummary,
+            val playlistWithItems = liveRepository.fetchPlaylistWithItems(
+                summary,
                 current,
                 maxResult = 10,
             )
-                .filter { it.isArchived != true && it.isExpired(current) }
-                .map { it.videoId }
+            val itemIds = checkNotNull(playlistWithItems).addedItems.map { it.videoId }
             if (itemIds.isNotEmpty()) {
                 logD { "fetchVideoByPlaylistIdTask: playlistId> $id,count>${itemIds.size}" }
             }
@@ -174,14 +183,6 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         ).awaitAll()
         videoUpdateTaskChannel.close()
         t.join()
-    }
-
-    companion object {
-        private fun YouTubeSubscriptionSummary.isPlaylistUpdatable(current: Instant): Boolean =
-            uploadedPlaylistId != null && needsUpdatePlaylist(current)
-
-        private fun YouTubePlaylistItemSummary.isExpired(current: Instant): Boolean =
-            (videoExpiredAt ?: Instant.EPOCH) <= current
     }
 }
 

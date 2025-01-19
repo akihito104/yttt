@@ -9,11 +9,17 @@ import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
+import androidx.room.Relation
+import androidx.room.Transaction
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylistUpdatable
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Duration
@@ -26,28 +32,15 @@ internal class YouTubePlaylistTable(
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylist.Id,
     @ColumnInfo(name = "last_modified")
-    val lastModified: Instant = Instant.EPOCH,
+    override val fetchedAt: Instant = Instant.EPOCH,
     @ColumnInfo(name = "max_age")
-    val maxAge: Duration = MAX_AGE_DEFAULT,
-) : YouTubePlaylist {
+    override val maxAge: Duration = MAX_AGE_DEFAULT,
+) : YouTubePlaylistUpdatable {
     @Ignore
     override val thumbnailUrl: String = "" // TODO
 
     @Ignore
     override val title: String = "" // TODO
-
-    companion object {
-        val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
-        private val MAX_AGE_MAX: Duration = Duration.ofDays(1)
-        private val MAX_AGE_FOR_ACTIVE_ACCOUNT: Duration = Duration.ofMinutes(30)
-        val RECENTLY_BOARDER: Duration = Duration.ofDays(3)
-
-        fun getMaxAgeUpperLimit(isPublishedRecently: Boolean): Duration =
-            if (isPublishedRecently) MAX_AGE_FOR_ACTIVE_ACCOUNT else MAX_AGE_MAX
-
-        fun createWithMaxAge(id: YouTubePlaylist.Id, lastModified: Instant): YouTubePlaylistTable =
-            YouTubePlaylistTable(id, lastModified, maxAge = MAX_AGE_MAX)
-    }
 
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -55,20 +48,16 @@ internal class YouTubePlaylistTable(
         suspend fun addPlaylist(playlist: YouTubePlaylistTable)
 
         @Upsert
-        suspend fun addPlaylists(playlist: List<YouTubePlaylistTable>)
+        suspend fun addPlaylists(playlist: Collection<YouTubePlaylistTable>)
 
-        @Query("SELECT * FROM (SELECT * FROM playlist WHERE :since < (last_modified + max_age)) WHERE id = :id")
-        suspend fun findPlaylistById(
-            id: YouTubePlaylist.Id,
-            since: Instant = Instant.EPOCH,
-        ): YouTubePlaylistTable?
+        @Query("SELECT * FROM playlist WHERE id = :id")
+        suspend fun findPlaylistById(id: YouTubePlaylist.Id): YouTubePlaylistTable?
+
+        @Query("SELECT * FROM playlist WHERE id IN (:id)")
+        suspend fun findPlaylistsById(id: Collection<YouTubePlaylist.Id>): List<YouTubePlaylistTable>
 
         @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
-        suspend fun updatePlaylist(
-            id: YouTubePlaylist.Id,
-            lastModified: Instant,
-            maxAge: Duration,
-        )
+        suspend fun updatePlaylist(id: YouTubePlaylist.Id, lastModified: Instant, maxAge: Duration)
 
         @Query("DELETE FROM playlist")
         override suspend fun deleteTable()
@@ -155,6 +144,23 @@ internal class YouTubePlaylistItemSummaryDb(
     }
 }
 
+internal class YouTubePlaylistWithItemSummariesDb(
+    @Embedded
+    override val playlist: YouTubePlaylistTable,
+    @Relation(
+        parentColumn = "id",
+        entityColumn = "playlist_id",
+    )
+    override val summary: List<YouTubePlaylistItemSummaryDb>,
+) : YouTubePlaylistWithItemSummaries, Updatable by playlist {
+    @androidx.room.Dao
+    interface Dao {
+        @Transaction
+        @Query("SELECT * FROM playlist WHERE id = :id")
+        suspend fun findPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummariesDb?
+    }
+}
+
 internal data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylistItem.Id,
@@ -190,17 +196,20 @@ internal interface YouTubePlaylistDaoProviders {
     val youTubePlaylistItemDao: YouTubePlaylistItemTable.Dao
     val youTubePlaylistItemSummaryDbDao: YouTubePlaylistItemSummaryDb.Dao
     val youTubePlaylistItemDbDao: YouTubePlaylistItemDb.Dao
+    val youTubePlaylistWithItemSummariesDbDao: YouTubePlaylistWithItemSummariesDb.Dao
 }
 
 internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistItemTable.Dao,
-    YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao
+    YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao,
+    YouTubePlaylistWithItemSummariesDb.Dao
 
 internal class YouTubePlaylistDaoImpl @Inject constructor(
     private val db: YouTubePlaylistDaoProviders
 ) : YouTubePlaylistDao, YouTubePlaylistTable.Dao by db.youTubePlaylistDao,
     YouTubePlaylistItemTable.Dao by db.youTubePlaylistItemDao,
     YouTubePlaylistItemSummaryDb.Dao by db.youTubePlaylistItemSummaryDbDao,
-    YouTubePlaylistItemDb.Dao by db.youTubePlaylistItemDbDao {
+    YouTubePlaylistItemDb.Dao by db.youTubePlaylistItemDbDao,
+    YouTubePlaylistWithItemSummariesDb.Dao by db.youTubePlaylistWithItemSummariesDbDao {
     override suspend fun deleteTable() {
         listOf(
             db.youTubePlaylistDao,

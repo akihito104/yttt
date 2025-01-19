@@ -12,21 +12,32 @@ import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import java.time.Duration
+import java.time.Instant
+import kotlin.coroutines.CoroutineContext
 
-internal class DatabaseTestRule : TestWatcher() {
+internal class DatabaseTestRule(baseTime: Instant = Instant.EPOCH) : TestWatcher() {
     private lateinit var database: AppDatabase
     private lateinit var dao: YouTubeDao
+    val dateTimeProvider: DateTimeProviderFake = DateTimeProviderFake(baseTime)
 
     fun runWithDao(body: suspend CoroutineScope.(YouTubeDao) -> Unit) =
         runTest { body(dao) }
 
     fun runWithLocalSource(
-        datetimeProvider: DateTimeProvider,
-        body: suspend CoroutineScope.(YouTubeDao, YouTubeLocalDataSource) -> Unit,
-    ) = runTest { body(dao, localSource(datetimeProvider, StandardTestDispatcher(testScheduler))) }
+        body: suspend DatabaseTestScope.() -> Unit,
+    ) = runTest {
+        DatabaseTestScope(
+            testScope = this,
+            dateTimeProvider = dateTimeProvider,
+            dao = dao,
+            sut = localSource(dateTimeProvider, StandardTestDispatcher(testScheduler)),
+        ).body()
+    }
 
     fun <E> query(stmt: String, res: (Cursor) -> E): E = database.query(stmt, null).useCursor(res)
 
@@ -60,6 +71,29 @@ internal class DatabaseTestRule : TestWatcher() {
     }
 }
 
+internal class DatabaseTestScope(
+    private val testScope: TestScope,
+    val dateTimeProvider: DateTimeProviderFake,
+    val dao: YouTubeDao,
+    val sut: YouTubeLocalDataSource,
+) : CoroutineScope {
+    override val coroutineContext: CoroutineContext
+        get() = testScope.coroutineContext
+}
+
 private object NopImageDataSource : ImageDataSource {
     override fun removeImageByUrl(url: Collection<String>) {}
+}
+
+internal class DateTimeProviderFake(value: Instant = Instant.EPOCH) : DateTimeProvider {
+    private var _value = value
+    fun setValue(value: Instant) {
+        _value = value
+    }
+
+    fun advance(value: Duration) {
+        _value += value
+    }
+
+    override fun now(): Instant = _value
 }
