@@ -9,6 +9,7 @@ import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.pow
 
 @RunWith(Enclosed::class)
 class YouTubePlaylistWithItemsTest {
@@ -183,6 +184,50 @@ class YouTubePlaylistWithItemsTest {
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(MAX_AGE_MAX)
+        }
+
+        @Test
+        fun updatedLatestPublishedAt_basedOnLatestPublishedAt_maxAgeBy4() {
+            // setup
+            val maxAge = MAX_AGE_DEFAULT
+            val updatedLatest = latestModified + Duration.ofHours(3)
+            val newItems = items.associateBy { it.id }.toMutableMap().apply {
+                val latest = items.maxBy { it.publishedAt }
+                this[latest.id] = playlistItem(
+                    playlistId = latest.playlistId,
+                    itemId = latest.id,
+                    publishedAt = updatedLatest,
+                )
+            }.values
+            // exercise
+            val sut = playlistWithItems(maxAge).update(
+                newItems = newItems,
+                fetchedAt = updatedLatest + Duration.ofDays(3).minusMillis(1),
+            )
+            // verify
+            assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT.multipliedBy(2.0.pow(n = 2).toLong()))
+        }
+
+        @Test
+        fun updatedLatestPublishedAt_basedOnLatestPublishedAt_maxAgeBy8() {
+            // setup
+            val maxAge = MAX_AGE_DEFAULT
+            val updatedLatest = latestModified + Duration.ofHours(3)
+            val newItems = items.associateBy { it.id }.toMutableMap().apply {
+                val latest = items.maxBy { it.publishedAt }
+                this[latest.id] = playlistItem(
+                    playlistId = latest.playlistId,
+                    itemId = latest.id,
+                    publishedAt = updatedLatest,
+                )
+            }.values
+            // exercise
+            val sut = playlistWithItems(maxAge).update(
+                newItems = newItems,
+                fetchedAt = updatedLatest + Duration.ofDays(3),
+            )
+            // verify
+            assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT.multipliedBy(2.0.pow(n = 3).toLong()))
         }
     }
 }
