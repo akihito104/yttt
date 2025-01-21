@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.pow
 
 interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id> {
     val items: Collection<YouTubePlaylistItem>
@@ -34,13 +35,8 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
             items: Collection<YouTubePlaylistItem>
         ): YouTubePlaylistWithItems = CachedPlaylist(playlist, items)
 
-        val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(10)
         internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
-        private val MAX_AGE_FOR_ACTIVE_ACCOUNT: Duration = Duration.ofMinutes(30)
-        internal val RECENTLY_BOARDER: Duration = Duration.ofDays(5)
-
-        internal fun getMaxAgeUpperLimit(isPublishedRecently: Boolean): Duration =
-            if (isPublishedRecently) MAX_AGE_FOR_ACTIVE_ACCOUNT else MAX_AGE_MAX
+        val MAX_AGE_DEFAULT: Duration = MAX_AGE_MAX.dividedBy(2.0.pow(n = 7).toLong())
     }
 
     private class ForUpdate(
@@ -60,11 +56,10 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
                 val newIds = items.map { it.id }.toSet()
                 val isNotModified = cachedIds == newIds
                 if (isNotModified) {
-                    val boarder = fetchedAt - RECENTLY_BOARDER
-                    val isPublishedRecently = items.any { boarder < it.publishedAt }
-                    val maxAgeMax = getMaxAgeUpperLimit(isPublishedRecently)
-                    cachedPlaylistWithItems.maxAge.multipliedBy(2)
-                        .coerceIn(MAX_AGE_DEFAULT..maxAgeMax)
+                    val latest = items.maxOf { it.publishedAt }
+                    val inactionDays = Duration.between(latest, fetchedAt).toDays().coerceIn(0L..7)
+                    val pow = 2.0.pow(inactionDays.toDouble())
+                    MAX_AGE_DEFAULT.multipliedBy(pow.toLong())
                 } else {
                     MAX_AGE_DEFAULT
                 }
