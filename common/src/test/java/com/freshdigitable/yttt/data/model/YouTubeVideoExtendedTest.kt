@@ -118,6 +118,21 @@ class YouTubeVideoExtendedTest {
         }
 
         @Test
+        fun notUpdatedButFreeChat_returnsTrue() {
+            // setup
+            val current = old.copy()
+            val oldAsFreeChat = old.extend(old = null, isFreeChat = true, fetchedAt = Instant.EPOCH)
+            // exercise
+            val actual = current.extend(
+                oldAsFreeChat,
+                isFreeChat = true,
+                fetchedAt = Instant.EPOCH + YouTubeVideoUpdatable.UPDATABLE_DURATION_FREE_CHAT,
+            )
+            // verify
+            assertThat(actual.isThumbnailUpdatable).isTrue()
+        }
+
+        @Test
         fun liveIsArchived_returnsFalse() {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)

@@ -146,7 +146,11 @@ private class YouTubeVideoExtendedImpl(
     override val isThumbnailUpdatable: Boolean
         get() {
             val o = old ?: return false
-            return isLiveStream() && (o.title != title || (o.isUpcoming() && isNowOnAir()))
+            return when {
+                isFreeChat -> o.isUpdatable(fetchedAt) // at same time of updating this entity
+                isLiveStream() -> (o.title != title || (o.isUpcoming() && isNowOnAir()))
+                else -> false
+            }
         }
 
     companion object {
