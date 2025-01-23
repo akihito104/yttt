@@ -5,6 +5,7 @@ import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.toLocalDateTime
+import com.freshdigitable.yttt.feature.timetable.UpcomingLiveVideo.Companion.asUpcoming
 import com.freshdigitable.yttt.logI
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -14,7 +15,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import java.time.Duration
-import java.time.temporal.ChronoUnit
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -58,12 +62,10 @@ internal class TimetablePageDelegateImpl @Inject constructor(
     }
     private val upcomingItems: Flow<Map<String, List<LiveVideo>>> =
         combine(sourceTable[TimetablePage.Upcoming]!!, extraHourOfDay) { v, t ->
-            v.groupBy {
-                val scheduledStart = checkNotNull(it.scheduledStartDateTime) { it }
-                (scheduledStart - t).toLocalDateTime()
-                    .truncatedTo(ChronoUnit.DAYS)
-                    .format(dateWeekdayFormatter)
-            }
+            val current = LocalDateTime.now()
+            v.map { it.asUpcoming(t, current) }
+                .filter { it.isStreamTodayOnwards }
+                .groupBy { it.scheduledStartLocalDateWithOffset().format(dateWeekdayFormatter) }
         }
     private val groupedItemLists = mapOf(
         TimetablePage.Upcoming to upcomingItems,
@@ -78,5 +80,25 @@ internal class TimetablePageDelegateImpl @Inject constructor(
         }
     ) {
         it.toList().sorted()
+    }
+}
+
+internal data class UpcomingLiveVideo internal constructor(
+    private val liveVideo: LiveVideo,
+    private val offset: Duration,
+    private val today: LocalDateTime,
+) : LiveVideo by liveVideo {
+    override val scheduledStartDateTime: Instant
+        get() = checkNotNull(liveVideo.scheduledStartDateTime)
+
+    fun scheduledStartLocalDateWithOffset(zoneId: ZoneId = ZoneId.systemDefault()): LocalDate =
+        (scheduledStartDateTime - offset).toLocalDateTime(zoneId).toLocalDate()
+
+    val isStreamTodayOnwards: Boolean
+        get() = (today - offset).toLocalDate() <= scheduledStartLocalDateWithOffset()
+
+    companion object {
+        fun LiveVideo.asUpcoming(offset: Duration, today: LocalDateTime): UpcomingLiveVideo =
+            UpcomingLiveVideo(this, offset, today)
     }
 }
