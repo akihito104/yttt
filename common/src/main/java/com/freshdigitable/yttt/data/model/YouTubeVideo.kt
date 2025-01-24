@@ -2,12 +2,14 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isFreeChatTitle
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isPostponedLive
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isUnscheduledLive
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedImpl.Companion.createAsFreeChat
 import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.NOT_UPDATABLE
 import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.UPDATABLE_DURATION_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.UPDATABLE_DURATION_FREE_CHAT
 import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.UPDATABLE_DURATION_ON_AIR
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable.Companion.UPDATABLE_LIMIT_SOON
 import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
@@ -49,6 +51,12 @@ interface YouTubeVideo {
 
         fun YouTubeVideo.isUnscheduledLive(): Boolean =
             isUpcoming() && scheduledStartDateTime == null
+
+        fun YouTubeVideo.isPostponedLive(current: Instant): Boolean {
+            val s = scheduledStartDateTime ?: return false
+            return isUpcoming() && s <= current
+                && Duration.between(s, current) > UPDATABLE_LIMIT_SOON
+        }
 
         fun YouTubeVideo.extend(
             old: YouTubeVideoExtended?,
@@ -100,6 +108,11 @@ interface YouTubeVideoUpdatable {
          * update duration for on air stream (5 min.)
          */
         internal val UPDATABLE_DURATION_ON_AIR = Duration.ofMinutes(5)
+
+        /**
+         * updatable deadline as scheduled starting datetime (30 min.)
+         */
+        internal val UPDATABLE_LIMIT_SOON = Duration.ofMinutes(30)
     }
 }
 
@@ -122,6 +135,7 @@ private class YouTubeVideoExtendedImpl(
             val expiring = when {
                 isFreeChat -> fetchedAt + UPDATABLE_DURATION_FREE_CHAT
                 isUnscheduledLive() -> defaultValue
+                isPostponedLive(fetchedAt) -> defaultValue
                 isUpcoming() -> defaultValue.coerceAtMost(checkNotNull(scheduledStartDateTime))
                 isNowOnAir() -> fetchedAt + UPDATABLE_DURATION_ON_AIR
                 isArchived -> NOT_UPDATABLE
@@ -132,7 +146,11 @@ private class YouTubeVideoExtendedImpl(
     override val isThumbnailUpdatable: Boolean
         get() {
             val o = old ?: return false
-            return isLiveStream() && (o.title != title || (o.isUpcoming() && isNowOnAir()))
+            return when {
+                isFreeChat -> o.isUpdatable(fetchedAt) // at same time of updating this entity
+                isLiveStream() -> (o.title != title || (o.isUpcoming() && isNowOnAir()))
+                else -> false
+            }
         }
 
     companion object {

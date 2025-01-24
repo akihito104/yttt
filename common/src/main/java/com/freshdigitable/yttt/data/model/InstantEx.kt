@@ -40,4 +40,5 @@ fun Instant.toLocalFormattedText(formatter: DateTimeFormatter): String {
     return localDateTime.format(formatter)
 }
 
-fun Instant.toLocalDateTime(): LocalDateTime = LocalDateTime.ofInstant(this, ZoneId.systemDefault())
+fun Instant.toLocalDateTime(zoneId: ZoneId = ZoneId.systemDefault()): LocalDateTime =
+    LocalDateTime.ofInstant(this, zoneId)
