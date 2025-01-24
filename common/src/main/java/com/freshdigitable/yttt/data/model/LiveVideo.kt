@@ -1,7 +1,10 @@
 package com.freshdigitable.yttt.data.model
 
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.reflect.KClass
 
 interface LiveVideoThumbnail {
@@ -38,6 +41,16 @@ interface LiveVideo : LiveVideoThumbnail {
         override val value: String,
         override val type: KClass<out IdBase>,
     ) : LiveId
+}
+
+interface UpcomingLiveVideo : LiveVideo {
+    val offset: Duration
+    override val scheduledStartDateTime: Instant
+
+    companion object {
+        fun UpcomingLiveVideo.scheduledStartLocalDateWithOffset(zoneId: ZoneId = ZoneId.systemDefault()): LocalDate =
+            (scheduledStartDateTime - offset).toLocalDateTime(zoneId).toLocalDate()
+    }
 }
 
 data class LiveVideoEntity(
