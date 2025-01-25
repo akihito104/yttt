@@ -1,8 +1,8 @@
 package com.freshdigitable.yttt.data.source.local
 
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -42,19 +42,11 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         dao.setMe(me, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster> {
-        return dao.findBroadcastersByFollowerId(userId, current = dateTimeProvider.now())
-    }
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings =
+        dao.findFollowingsByFollowerId(userId)
 
-    override suspend fun replaceAllFollowings(
-        userId: TwitchUser.Id,
-        followings: Collection<TwitchBroadcaster>,
-    ) {
-        dao.replaceAllBroadcasters(
-            userId,
-            followings,
-            expiredAt = dateTimeProvider.now() + MAX_AGE_BROADCASTER,
-        )
+    override suspend fun replaceAllFollowings(followings: TwitchFollowings) {
+        dao.replaceAllBroadcasters(followings)
     }
 
     override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) {
@@ -106,6 +98,10 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         }
     }
 
+    override suspend fun removeChannelSchedulesByBroadcasterId(id: Collection<TwitchUser.Id>) {
+        dao.removeChannelSchedulesByBroadcasterId(id)
+    }
+
     override suspend fun fetchStreamDetail(
         id: TwitchVideo.TwitchVideoId,
     ): TwitchVideo<out TwitchVideo.TwitchVideoId>? {
@@ -128,7 +124,6 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
     }
 
     companion object {
-        private val MAX_AGE_BROADCASTER = Duration.ofHours(12)
         private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
         private val MAX_AGE_STREAM = Duration.ofMinutes(10)
         private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)

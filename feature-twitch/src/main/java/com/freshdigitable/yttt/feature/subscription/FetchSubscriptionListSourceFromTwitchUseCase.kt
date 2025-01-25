@@ -16,7 +16,7 @@ internal class FetchSubscriptionListSourceFromTwitchUseCase @Inject constructor(
             emit(emptyList())
             return@flow
         }
-        val broadcasters = repository.fetchAllFollowings(me.id)
+        val broadcasters = repository.fetchAllFollowings(me.id).followings
         val userIds = broadcasters.map { it.id }.toSet()
         val users = repository.findUsersById(userIds).associateBy { it.id }
         val followings = broadcasters.mapIndexed { i, b ->

@@ -1,7 +1,8 @@
 package com.freshdigitable.yttt.data
 
-import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -21,6 +22,7 @@ import javax.inject.Singleton
 class TwitchLiveRepository @Inject constructor(
     private val remoteDataSource: TwitchLiveDataSource.Remote,
     private val localDataSource: TwitchLiveDataSource.Local,
+    private val dateTimeProvider: DateTimeProvider,
     coroutineScope: CoroutineScope,
 ) : TwitchLiveDataSource, ImageDataSource by localDataSource {
     override val onAir: StateFlow<List<TwitchStream>> = localDataSource.onAir
@@ -55,13 +57,15 @@ class TwitchLiveRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster> {
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings {
         val cache = localDataSource.fetchAllFollowings(userId)
-        if (cache.isNotEmpty()) {
+        if (dateTimeProvider.now() < cache.updatableAt) {
             return cache
         }
         val remote = remoteDataSource.fetchAllFollowings(userId)
-        localDataSource.replaceAllFollowings(userId, remote)
+        localDataSource.replaceAllFollowings(remote)
+        val removed = cache.followings.map { it.id } - remote.followings.map { it.id }.toSet()
+        localDataSource.removeChannelSchedulesByBroadcasterId(removed)
         return remote
     }
 

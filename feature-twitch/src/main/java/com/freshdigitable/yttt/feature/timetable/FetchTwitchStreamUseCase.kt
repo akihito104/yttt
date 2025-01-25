@@ -25,7 +25,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         t.start()
         val streams = updateOnAirStreams(me)
         t.putMetric("streaming_channel", streams.size.toLong())
-        val following = twitchRepository.fetchAllFollowings(me.id)
+        val following = twitchRepository.fetchAllFollowings(me.id).followings
         t.putMetric("subs", following.size.toLong())
         val tasks = coroutineScope {
             following.map { async { twitchRepository.fetchFollowedStreamSchedule(it.id) } }

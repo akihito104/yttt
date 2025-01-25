@@ -1,8 +1,10 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.data.BuildConfig
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -12,6 +14,7 @@ import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.g
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import retrofit2.Call
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -20,6 +23,7 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
     private val oauth: TwitchOauthService,
     private val helix: TwitchHelixService,
     private val ioDispatcher: CoroutineDispatcher,
+    private val dateTimeProvider: DateTimeProvider,
 ) : TwitchLiveDataSource.Remote {
     override suspend fun getAuthorizeUrl(state: String): String = withContext(ioDispatcher) {
         val response = oauth.authorizeImplicitly(
@@ -61,8 +65,15 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
         response.body()?.data?.firstOrNull()
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster> {
-        return fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings {
+        val items =
+            fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
+        val fetchedAt = dateTimeProvider.now()
+        return object : TwitchFollowings {
+            override val followerId: TwitchUser.Id get() = userId
+            override val followings: List<TwitchBroadcaster> get() = items
+            override val updatableAt: Instant get() = fetchedAt + TwitchFollowings.MAX_AGE_BROADCASTER
+        }
     }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
