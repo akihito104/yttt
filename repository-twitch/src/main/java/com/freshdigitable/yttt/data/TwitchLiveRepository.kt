@@ -64,7 +64,7 @@ class TwitchLiveRepository @Inject constructor(
         }
         val remote = remoteDataSource.fetchAllFollowings(userId)
         localDataSource.replaceAllFollowings(remote)
-        val removed = cache.followings.map { it.id } - remote.followings.map { it.id }.toSet()
+        val removed = TwitchFollowings.getRemovedFollowingIds(cache, remote)
         localDataSource.removeChannelSchedulesByBroadcasterId(removed)
         return remote
     }

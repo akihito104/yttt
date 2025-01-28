@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -14,7 +13,6 @@ import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.g
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import retrofit2.Call
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -69,11 +67,7 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
         val items =
             fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
         val fetchedAt = dateTimeProvider.now()
-        return object : TwitchFollowings {
-            override val followerId: TwitchUser.Id get() = userId
-            override val followings: List<TwitchBroadcaster> get() = items
-            override val updatableAt: Instant get() = fetchedAt + TwitchFollowings.MAX_AGE_BROADCASTER
-        }
+        return TwitchFollowings.createAtFetched(userId, items, fetchedAt)
     }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {

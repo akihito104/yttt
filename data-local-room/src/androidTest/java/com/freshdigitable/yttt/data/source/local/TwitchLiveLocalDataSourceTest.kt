@@ -183,11 +183,7 @@ private fun followings(
     followerId: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
     fetchedAt: Instant = Instant.EPOCH,
-): TwitchFollowings = object : TwitchFollowings {
-    override val followerId: TwitchUser.Id get() = followerId
-    override val followings: List<TwitchBroadcaster> get() = followings
-    override val updatableAt: Instant get() = fetchedAt + TwitchFollowings.MAX_AGE_BROADCASTER
-}
+): TwitchFollowings = TwitchFollowings.createAtFetched(followerId, followings, fetchedAt)
 
 private fun broadcaster(
     user: TwitchUser,
