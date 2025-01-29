@@ -5,6 +5,7 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Insert
+import androidx.room.MapColumn
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
@@ -32,6 +33,9 @@ internal data class TwitchUserTable(
 
         @Query("SELECT * FROM twitch_user WHERE id = :id")
         suspend fun findUser(id: TwitchUser.Id): TwitchUserTable?
+
+        @Query("DELETE FROM twitch_user WHERE id IN (:id)")
+        suspend fun removeUsers(id: Collection<TwitchUser.Id>)
 
         @Query("DELETE FROM twitch_user")
         override suspend fun deleteTable()
@@ -65,6 +69,9 @@ internal class TwitchUserDetailTable(
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addUserDetailEntities(details: Collection<TwitchUserDetailTable>)
+
+        @Query("DELETE FROM twitch_user_detail WHERE user_id IN (:id)")
+        suspend fun removeUserDetail(id: Collection<TwitchUser.Id>)
 
         @Query("DELETE FROM twitch_user_detail")
         override suspend fun deleteTable()
@@ -172,6 +179,14 @@ internal class TwitchBroadcasterTable(
         @Query("DELETE FROM twitch_broadcaster WHERE follower_user_id = :followerId")
         suspend fun removeBroadcastersByFollowerId(followerId: TwitchUser.Id)
 
+        @Query(
+            "SELECT b.user_id AS user_id, COUNT(follower_user_id) > 0 AS is_followed " +
+                "FROM twitch_broadcaster AS b WHERE user_id IN (:ids) " +
+                "GROUP BY user_id"
+        )
+        suspend fun isBroadcasterFollowed(ids: Collection<TwitchUser.Id>):
+            Map<@MapColumn("user_id") TwitchUser.Id, @MapColumn("is_followed") Boolean>
+
         @Query("DELETE FROM twitch_broadcaster")
         override suspend fun deleteTable()
     }
@@ -199,6 +214,9 @@ internal class TwitchBroadcasterExpireTable(
         @Upsert
         suspend fun addBroadcasterExpireEntity(expires: TwitchBroadcasterExpireTable)
 
+        @Query("SELECT * FROM twitch_broadcaster_expire WHERE follower_user_id = :id")
+        suspend fun findByFollowerUserId(id: TwitchUser.Id): TwitchBroadcasterExpireTable?
+
         @Query("DELETE FROM twitch_broadcaster_expire")
         override suspend fun deleteTable()
     }
@@ -208,22 +226,16 @@ internal data class TwitchBroadcasterDb(
     @Embedded
     private val user: TwitchUserTable,
     @ColumnInfo("followed_at")
-    override val followedAt: Instant
+    override val followedAt: Instant,
 ) : TwitchBroadcaster, TwitchUser by user {
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT u.*, b.followed_at FROM " +
-                "(SELECT bb.* FROM twitch_broadcaster AS bb " +
-                " INNER JOIN twitch_broadcaster_expire AS e ON e.follower_user_id = bb.follower_user_id " +
-                " WHERE :current < e.expire_at) AS b " +
+            "SELECT u.*, b.followed_at FROM twitch_broadcaster AS b " +
                 "INNER JOIN twitch_user AS u ON b.user_id = u.id " +
                 "WHERE b.follower_user_id = :id"
         )
-        suspend fun findBroadcastersByFollowerId(
-            id: TwitchUser.Id,
-            current: Instant,
-        ): List<TwitchBroadcasterDb>
+        suspend fun findBroadcastersByFollowerId(id: TwitchUser.Id): List<TwitchBroadcasterDb>
     }
 }
 
@@ -246,6 +258,9 @@ internal class TwitchAuthorizedUserTable(
     internal interface Dao : TableDeletable {
         @Insert
         suspend fun setMeEntity(me: TwitchAuthorizedUserTable)
+
+        @Query("SELECT * FROM twitch_auth_user WHERE user_id IN (:ids)")
+        suspend fun findAuthorizedUser(ids: Collection<TwitchUser.Id>): List<TwitchAuthorizedUserTable>
 
         @Query("DELETE FROM twitch_auth_user")
         override suspend fun deleteTable()

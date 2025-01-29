@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.data.source
 
-import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -15,7 +15,7 @@ interface TwitchLiveDataSource {
     suspend fun getAuthorizeUrl(state: String): String
     suspend fun findUsersById(ids: Set<TwitchUser.Id>? = null): List<TwitchUserDetail>
     suspend fun fetchMe(): TwitchUserDetail?
-    suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster>
+    suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings
     suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): List<TwitchStream>
     suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>)
     suspend fun fetchFollowedStreamSchedule(
@@ -29,20 +29,19 @@ interface TwitchLiveDataSource {
         itemCount: Int = 20,
     ): List<TwitchVideoDetail>
 
+    suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>)
+
     interface Local : TwitchLiveDataSource, ImageDataSource {
         suspend fun addUsers(users: Collection<TwitchUserDetail>)
         suspend fun setMe(me: TwitchUserDetail)
-        suspend fun replaceAllFollowings(
-            userId: TwitchUser.Id,
-            followings: Collection<TwitchBroadcaster>,
-        )
-
+        suspend fun replaceAllFollowings(followings: TwitchFollowings)
         suspend fun setFollowedStreamSchedule(
             userId: TwitchUser.Id,
             schedule: Collection<TwitchChannelSchedule>,
         )
 
         suspend fun deleteAllTables()
+        override suspend fun getAuthorizeUrl(state: String): String = throw NotImplementedError()
     }
 
     interface Remote : TwitchLiveDataSource {
@@ -52,6 +51,9 @@ interface TwitchLiveDataSource {
             throw NotImplementedError()
 
         override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) =
+            throw NotImplementedError()
+
+        override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>): Unit =
             throw NotImplementedError()
     }
 }

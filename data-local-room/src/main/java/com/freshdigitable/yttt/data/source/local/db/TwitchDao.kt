@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.local.db
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreamSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
@@ -35,6 +36,11 @@ internal class TwitchDao @Inject constructor(
         addUserDetailExpireEntities(expires)
     }
 
+    private suspend fun removeUser(id: Collection<TwitchUser.Id>) = db.withTransaction {
+        removeUserDetail(id)
+        removeUsers(id)
+    }
+
     private suspend fun addBroadcasters(
         followerId: TwitchUser.Id,
         broadcasters: Collection<TwitchBroadcaster>,
@@ -43,14 +49,19 @@ internal class TwitchDao @Inject constructor(
         addBroadcasterEntities(broadcasters.map { it.toTable(followerId) })
     }
 
-    suspend fun replaceAllBroadcasters(
-        followerId: TwitchUser.Id,
-        broadcasters: Collection<TwitchBroadcaster>,
-        expiredAt: Instant,
-    ) = db.withTransaction {
-        removeBroadcastersByFollowerId(followerId)
-        addBroadcasters(followerId, broadcasters)
-        addBroadcasterExpireEntity(TwitchBroadcasterExpireTable(followerId, expiredAt))
+    suspend fun findFollowingsByFollowerId(userId: TwitchUser.Id): TwitchFollowings =
+        db.withTransaction {
+            val items = findBroadcastersByFollowerId(userId)
+            val expires = findByFollowerUserId(userId)
+            val updatableAt = expires?.expireAt ?: Instant.EPOCH
+            TwitchFollowings.create(userId, items, updatableAt)
+        }
+
+    suspend fun replaceAllBroadcasters(followings: TwitchFollowings) = db.withTransaction {
+        removeBroadcastersByFollowerId(followings.followerId)
+        addBroadcasters(followings.followerId, followings.followings)
+        val expires = TwitchBroadcasterExpireTable(followings.followerId, followings.updatableAt)
+        addBroadcasterExpireEntity(expires)
     }
 
     suspend fun replaceChannelSchedules(
@@ -61,12 +72,23 @@ internal class TwitchDao @Inject constructor(
         val streams = schedule.map { it.toStreamScheduleTable() }.flatten()
         val vacations = schedule.map { it.toVacationScheduleTable() }
         val expire = userIds.map { TwitchChannelScheduleExpireTable(it, expiredAt) }
-        removeChannelStreamSchedulesByUserIds(userIds)
-        removeChannelScheduleExpireEntity(userIds)
-        removeChannelVacationSchedulesByUserIds(userIds)
+        removeChannelSchedules(userIds)
         addChannelStreamSchedules(streams)
         addChannelVacationSchedules(vacations)
         addChannelScheduleExpireEntity(expire)
+    }
+
+    suspend fun removeChannelSchedulesByBroadcasterId(id: Collection<TwitchUser.Id>) =
+        db.withTransaction {
+            val isFollowed = isBroadcasterFollowed(id.toSet())
+            val removed = id.associateWith { isFollowed[it] ?: false }.filter { !it.value }.keys
+            removeChannelSchedules(removed)
+        }
+
+    private suspend fun removeChannelSchedules(id: Collection<TwitchUser.Id>) = db.withTransaction {
+        removeChannelStreamSchedulesByUserIds(id)
+        removeChannelScheduleExpireEntity(id)
+        removeChannelVacationSchedulesByUserIds(id)
     }
 
     suspend fun updateChannelScheduleExpireEntity(userId: TwitchUser.Id, expiredAt: Instant) =
@@ -94,6 +116,14 @@ internal class TwitchDao @Inject constructor(
         setStreamExpire(TwitchStreamExpireTable(me, expiredAt))
         addUsers(streams.map { it.user.toTable() })
         addStreams(streams.map { it.toTable() })
+    }
+
+    suspend fun cleanUpByUserId(id: Collection<TwitchUser.Id>) = db.withTransaction {
+        val isFollowed = isBroadcasterFollowed(id.toSet())
+        val removed = id.associateWith { isFollowed[it] ?: false }.filter { !it.value }.keys
+        removeChannelSchedules(removed)
+        val me = findAuthorizedUser(removed)
+        removeUser(removed - me.map { it.userId }.toSet())
     }
 
     override suspend fun deleteTable() = db.withTransaction {

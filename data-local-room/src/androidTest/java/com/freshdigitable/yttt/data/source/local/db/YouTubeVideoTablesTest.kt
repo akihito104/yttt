@@ -15,7 +15,7 @@ import java.time.Instant
 class YouTubeVideoTablesTest {
     class Init {
         @get:Rule
-        internal val dbRule = DatabaseTestRule()
+        internal val dbRule = YouTubeDatabaseTestRule()
 
         @Test
         fun findApis_returnEmpty() = dbRule.runWithDao { dao ->
@@ -38,7 +38,7 @@ class YouTubeVideoTablesTest {
 
     class ItemsAddedByDao {
         @get:Rule
-        internal val dbRule = DatabaseTestRule()
+        internal val dbRule = YouTubeDatabaseTestRule()
         private val simple = YouTubeVideo.Id("test")
         private val freechat = YouTubeVideo.Id("test_freechat")
         private val hasNoExpire = YouTubeVideo.Id("test_no_expire")

@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
+import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.logI
@@ -25,7 +26,8 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         t.start()
         val streams = updateOnAirStreams(me)
         t.putMetric("streaming_channel", streams.size.toLong())
-        val following = twitchRepository.fetchAllFollowings(me.id)
+        val followings = twitchRepository.fetchAllFollowings(me.id)
+        val following = followings.followings
         t.putMetric("subs", following.size.toLong())
         val tasks = coroutineScope {
             following.map { async { twitchRepository.fetchFollowedStreamSchedule(it.id) } }
@@ -35,6 +37,9 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         t.putMetric("schedule", schedules.size.toLong())
         val users = streams.map { it.user.id } + schedules.map { it.broadcaster.id }
         twitchRepository.findUsersById(users.toSet())
+        if (followings is TwitchFollowings.Updated) {
+            twitchRepository.cleanUpByUserId(followings.removed)
+        }
         t.stop()
         logI { "end" }
     }

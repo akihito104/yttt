@@ -1,8 +1,9 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.data.BuildConfig
-import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -20,6 +21,7 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
     private val oauth: TwitchOauthService,
     private val helix: TwitchHelixService,
     private val ioDispatcher: CoroutineDispatcher,
+    private val dateTimeProvider: DateTimeProvider,
 ) : TwitchLiveDataSource.Remote {
     override suspend fun getAuthorizeUrl(state: String): String = withContext(ioDispatcher) {
         val response = oauth.authorizeImplicitly(
@@ -61,8 +63,11 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
         response.body()?.data?.firstOrNull()
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): List<TwitchBroadcaster> {
-        return fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings {
+        val items =
+            fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
+        val fetchedAt = dateTimeProvider.now()
+        return TwitchFollowings.createAtFetched(userId, items, fetchedAt)
     }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {

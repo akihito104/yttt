@@ -10,8 +10,8 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.liveFinished
-import com.freshdigitable.yttt.data.source.local.db.DatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -27,19 +27,19 @@ import java.time.Instant
 class YouTubeLocalDataSourceTest {
     class Init {
         @get:Rule
-        internal val rule = DatabaseTestRule()
+        internal val rule = YouTubeDatabaseTestRule()
 
         @Test
         fun videoFlowIsEmpty() = rule.runWithLocalSource {
-            sut.videos.test {
+            dataSource.videos.test {
                 assertThat(awaitItem()).isEmpty()
             }
         }
 
         @Test
         fun videoIsEmpty() = rule.runWithLocalSource {
-            assertThat(sut.fetchVideoList(emptySet())).isEmpty()
-            assertThat(sut.fetchVideoList(setOf(YouTubeVideo.Id("test")))).isEmpty()
+            assertThat(dataSource.fetchVideoList(emptySet())).isEmpty()
+            assertThat(dataSource.fetchVideoList(setOf(YouTubeVideo.Id("test")))).isEmpty()
         }
 
         @Test
@@ -58,7 +58,7 @@ class YouTubeLocalDataSourceTest {
             val channels = video.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
             dao.addChannels(channels)
             // exercise
-            sut.addVideo(video)
+            dataSource.addVideo(video)
             // verify
             val found = dao.findVideosById(video.map { it.id })
             found.containsVideoIdInAnyOrderElementsOf(video)
@@ -79,7 +79,7 @@ class YouTubeLocalDataSourceTest {
                 fetchedAt = dateTimeProvider.now(),
             )
             // exercise
-            sut.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable)
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(id)).isEmpty()
             assertThat(dao.findPlaylistById(id)?.id).isEqualTo(id)
@@ -96,7 +96,7 @@ class YouTubeLocalDataSourceTest {
                 fetchedAt = dateTimeProvider.now(),
             )
             // exercise
-            sut.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable)
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(id)).isEmpty()
             assertThat(dao.findPlaylistById(id)?.id).isEqualTo(id)
@@ -122,7 +122,7 @@ class YouTubeLocalDataSourceTest {
                 fetchedAt = dateTimeProvider.now(),
             )
             // exercise
-            sut.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable)
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(playlistId)).hasSize(1)
             assertThat(dao.findPlaylistById(playlistId)?.id).isEqualTo(playlistId)
@@ -134,7 +134,7 @@ class YouTubeLocalDataSourceTest {
         private val base = Instant.ofEpochSecond(1000)
 
         @get:Rule
-        internal val rule = DatabaseTestRule(base)
+        internal val rule = YouTubeDatabaseTestRule(base)
         private val live = YouTubeVideoEntity.liveStreaming(fetchedAt = base)
         private val unscheduled = YouTubeVideoEntity.unscheduledUpcoming(fetchedAt = base)
         private val upcoming = YouTubeVideoEntity.upcomingStream(fetchedAt = base)
@@ -154,13 +154,13 @@ class YouTubeLocalDataSourceTest {
         fun setup() = rule.runWithLocalSource {
             val channels = video.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
             dao.addChannels(channels)
-            sut.addVideo(video)
+            dataSource.addVideo(video)
         }
 
         @Test
         fun fetchVideo_returnsAllItems() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchVideoList(video.map { it.id }.toSet())
+            val actual = dataSource.fetchVideoList(video.map { it.id }.toSet())
             // verify
             actual.containsVideoIdInAnyOrderElementsOf(video)
         }
@@ -168,7 +168,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_withUnknownKey_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("unknown_entity")))
+            val actual = dataSource.fetchVideoList(setOf(YouTubeVideo.Id("unknown_entity")))
             // verify
             assertThat(actual).isEmpty()
         }
@@ -176,7 +176,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_withFreeChat_returns1Item() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchVideoList(setOf(freeChat.id))
+            val actual = dataSource.fetchVideoList(setOf(freeChat.id))
             // verify
             assertThat(actual).hasSize(1)
             assertThat(actual.first().isFreeChat).isTrue()
@@ -196,7 +196,7 @@ class YouTubeLocalDataSourceTest {
 
     class SimpleFindPlaylistWithItems {
         @get:Rule
-        internal val rule = DatabaseTestRule()
+        internal val rule = YouTubeDatabaseTestRule()
         private val simple = YouTubePlaylist.Id("simple")
         private val privatePlaylist = YouTubePlaylist.Id("private")
         private val empty = YouTubePlaylist.Id("empty")
@@ -223,13 +223,13 @@ class YouTubeLocalDataSourceTest {
         @Before
         fun setup() = rule.runWithLocalSource {
             dao.addChannels(channel)
-            items.values.forEach { sut.updatePlaylistWithItems(it) }
+            items.values.forEach { dataSource.updatePlaylistWithItems(it) }
         }
 
         @Test
         fun fetchPlaylistWithItems_simple_returns1Item() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchPlaylistWithItems(simple)
+            val actual = dataSource.fetchPlaylistWithItems(simple)
             // verify
             assertThat(actual?.items).hasSize(1)
         }
@@ -237,11 +237,11 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistWithItems_simple_addSameItem_returns1Item() = rule.runWithLocalSource {
             // setup
-            val updatable = sut.fetchPlaylistWithItems(simple)!!
+            val updatable = dataSource.fetchPlaylistWithItems(simple)!!
                 .update(checkNotNull(items[simple]!!.items), dateTimeProvider.now())
-            sut.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable)
             // exercise
-            val actual = sut.fetchPlaylistWithItems(simple)
+            val actual = dataSource.fetchPlaylistWithItems(simple)
             // verify
             assertThat(actual?.items).hasSize(1)
         }
@@ -256,11 +256,11 @@ class YouTubeLocalDataSourceTest {
                     videoId = YouTubeVideo.Id("video_item2"),
                 )
             ) + checkNotNull(items[simple]!!.items)
-            val updatable = sut.fetchPlaylistWithItems(simple)!!
+            val updatable = dataSource.fetchPlaylistWithItems(simple)!!
                 .update(newItems, dateTimeProvider.now())
-            sut.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable)
             // exercise
-            val actual = sut.fetchPlaylistWithItems(simple)
+            val actual = dataSource.fetchPlaylistWithItems(simple)
             // verify
             assertThat(actual?.items).hasSize(2)
         }
@@ -268,7 +268,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistWithItems_private_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchPlaylistWithItems(privatePlaylist)
+            val actual = dataSource.fetchPlaylistWithItems(privatePlaylist)
             // verify
             assertThat(actual?.items).isEmpty()
         }
@@ -276,7 +276,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistWithItems_empty_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchPlaylistWithItems(empty)
+            val actual = dataSource.fetchPlaylistWithItems(empty)
             // verify
             assertThat(actual?.items).isEmpty()
         }
@@ -284,7 +284,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistItemSummary_simple_returns1Item() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchPlaylistItemSummary(simple, 10)
+            val actual = dataSource.fetchPlaylistItemSummary(simple, 10)
             // verify
             assertThat(actual).hasSize(1)
         }
@@ -292,7 +292,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistItemSummary_private_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchPlaylistItemSummary(privatePlaylist, 10)
+            val actual = dataSource.fetchPlaylistItemSummary(privatePlaylist, 10)
             // verify
             assertThat(actual).isEmpty()
         }
@@ -300,7 +300,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistItemSummary_empty_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = sut.fetchPlaylistItemSummary(empty, 10)
+            val actual = dataSource.fetchPlaylistItemSummary(empty, 10)
             // verify
             assertThat(actual).isEmpty()
         }
@@ -308,7 +308,7 @@ class YouTubeLocalDataSourceTest {
 
     class CleanUp {
         @get:Rule
-        internal val rule = DatabaseTestRule()
+        internal val rule = YouTubeDatabaseTestRule()
         private val upcoming = YouTubeVideoEntity.upcomingStream()
         private val live = YouTubeVideoEntity.liveStreaming()
         private val archivedInPlaylist = YouTubeVideoEntity.archivedStream()
@@ -333,17 +333,17 @@ class YouTubeLocalDataSourceTest {
                 items = items,
                 fetchedAt = dateTimeProvider.now(),
             )
-            sut.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable)
             val channels = videos.map { it.channel as YouTubeChannelTable }
                 .distinctBy { it.id }.toList()
             dao.addChannels(channels)
-            sut.addVideo(videos)
+            dataSource.addVideo(videos)
         }
 
         @Test
         fun cleanUp_remainsUnfinishedVideos() = rule.runWithLocalSource {
             // exercise
-            sut.cleanUp()
+            dataSource.cleanUp()
             // verify
             assertThat(dao.findAllArchivedVideos()).isEmpty()
             assertThat(dao.findUnusedVideoIds()).isEmpty()
@@ -359,9 +359,9 @@ class YouTubeLocalDataSourceTest {
             val duration = Duration.ofHours(1)
             dateTimeProvider.advance(duration)
             val finishedLive = live.liveFinished(duration)
-            sut.addVideo(listOf(finishedLive))
+            dataSource.addVideo(listOf(finishedLive))
             // exercise
-            sut.cleanUp()
+            dataSource.cleanUp()
             // verify
             assertThat(dao.findAllArchivedVideos()).isEmpty()
             assertThat(dao.findUnusedVideoIds()).isEmpty()
@@ -371,7 +371,7 @@ class YouTubeLocalDataSourceTest {
                 .containsExactlyInAnyOrder(live.id, archivedInPlaylist.id)
         }
 
-        private fun DatabaseTestRule.queryVideoIsArchived(): List<YouTubeVideoIsArchivedTable> {
+        private fun YouTubeDatabaseTestRule.queryVideoIsArchived(): List<YouTubeVideoIsArchivedTable> {
             return query("select * from yt_video_is_archived") {
                 val videoIdIndex = it.getColumnIndex("video_id")
                 val isArchivedIndex = it.getColumnIndex("is_archived")
