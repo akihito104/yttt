@@ -36,6 +36,11 @@ internal class TwitchDao @Inject constructor(
         addUserDetailExpireEntities(expires)
     }
 
+    private suspend fun removeUser(id: Collection<TwitchUser.Id>) = db.withTransaction {
+        removeUserDetail(id)
+        removeUsers(id)
+    }
+
     private suspend fun addBroadcasters(
         followerId: TwitchUser.Id,
         broadcasters: Collection<TwitchBroadcaster>,
@@ -111,6 +116,14 @@ internal class TwitchDao @Inject constructor(
         setStreamExpire(TwitchStreamExpireTable(me, expiredAt))
         addUsers(streams.map { it.user.toTable() })
         addStreams(streams.map { it.toTable() })
+    }
+
+    suspend fun cleanUpByUserId(id: Collection<TwitchUser.Id>) = db.withTransaction {
+        val isFollowed = isBroadcasterFollowed(id.toSet())
+        val removed = id.associateWith { isFollowed[it] ?: false }.filter { !it.value }.keys
+        removeChannelSchedules(removed)
+        val me = findAuthorizedUser(removed)
+        removeUser(removed - me.map { it.userId }.toSet())
     }
 
     override suspend fun deleteTable() = db.withTransaction {

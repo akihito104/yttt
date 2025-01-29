@@ -98,10 +98,6 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun removeChannelSchedulesByBroadcasterId(id: Collection<TwitchUser.Id>) {
-        dao.removeChannelSchedulesByBroadcasterId(id)
-    }
-
     override suspend fun fetchStreamDetail(
         id: TwitchVideo.TwitchVideoId,
     ): TwitchVideo<out TwitchVideo.TwitchVideoId>? {
@@ -112,12 +108,14 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun getAuthorizeUrl(state: String): String = throw AssertionError()
-
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
     ): List<TwitchVideoDetail> = emptyList()
+
+    override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>) {
+        dao.cleanUpByUserId(ids)
+    }
 
     override suspend fun deleteAllTables() {
         dao.deleteTable()

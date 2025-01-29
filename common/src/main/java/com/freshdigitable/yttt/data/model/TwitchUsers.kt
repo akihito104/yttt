@@ -41,14 +41,21 @@ interface TwitchFollowings {
             fetchedAt: Instant,
         ): TwitchFollowings = Impl(follower, followings, fetchedAt + MAX_AGE_BROADCASTER)
 
-        fun getRemovedFollowingIds(
+        fun TwitchFollowings.update(new: TwitchFollowings): Updated {
+            require(this.updatableAt < new.updatableAt) {
+                "old.updatableAt: ${this.updatableAt}, new.updatableAt: ${new.updatableAt}"
+            }
+            require(this.followerId == new.followerId) { "followerId must be same." }
+            return object : Updated, TwitchFollowings by new {
+                override val removed: Set<TwitchUser.Id>
+                    get() = getRemovedFollowingIds(this@update, new)
+            }
+        }
+
+        private fun getRemovedFollowingIds(
             old: TwitchFollowings,
             new: TwitchFollowings,
         ): Set<TwitchUser.Id> {
-            require(old.updatableAt < new.updatableAt) {
-                "old.updatableAt: ${old.updatableAt}, new.updatableAt: ${new.updatableAt}"
-            }
-            require(old.followerId == new.followerId) { "followerId must be same." }
             val removed = old.followings.map { it.id } - new.followings.map { it.id }.toSet()
             return removed.toSet()
         }
@@ -59,4 +66,8 @@ interface TwitchFollowings {
         override val followings: List<TwitchBroadcaster>,
         override val updatableAt: Instant,
     ) : TwitchFollowings
+
+    interface Updated : TwitchFollowings {
+        val removed: Set<TwitchUser.Id>
+    }
 }

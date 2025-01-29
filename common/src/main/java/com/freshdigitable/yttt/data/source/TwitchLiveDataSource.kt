@@ -29,17 +29,19 @@ interface TwitchLiveDataSource {
         itemCount: Int = 20,
     ): List<TwitchVideoDetail>
 
+    suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>)
+
     interface Local : TwitchLiveDataSource, ImageDataSource {
         suspend fun addUsers(users: Collection<TwitchUserDetail>)
         suspend fun setMe(me: TwitchUserDetail)
         suspend fun replaceAllFollowings(followings: TwitchFollowings)
-        suspend fun removeChannelSchedulesByBroadcasterId(id: Collection<TwitchUser.Id>)
         suspend fun setFollowedStreamSchedule(
             userId: TwitchUser.Id,
             schedule: Collection<TwitchChannelSchedule>,
         )
 
         suspend fun deleteAllTables()
+        override suspend fun getAuthorizeUrl(state: String): String = throw NotImplementedError()
     }
 
     interface Remote : TwitchLiveDataSource {
@@ -49,6 +51,9 @@ interface TwitchLiveDataSource {
             throw NotImplementedError()
 
         override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) =
+            throw NotImplementedError()
+
+        override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>): Unit =
             throw NotImplementedError()
     }
 }

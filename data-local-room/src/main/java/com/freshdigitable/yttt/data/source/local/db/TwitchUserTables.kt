@@ -34,6 +34,9 @@ internal data class TwitchUserTable(
         @Query("SELECT * FROM twitch_user WHERE id = :id")
         suspend fun findUser(id: TwitchUser.Id): TwitchUserTable?
 
+        @Query("DELETE FROM twitch_user WHERE id IN (:id)")
+        suspend fun removeUsers(id: Collection<TwitchUser.Id>)
+
         @Query("DELETE FROM twitch_user")
         override suspend fun deleteTable()
     }
@@ -66,6 +69,9 @@ internal class TwitchUserDetailTable(
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addUserDetailEntities(details: Collection<TwitchUserDetailTable>)
+
+        @Query("DELETE FROM twitch_user_detail WHERE user_id IN (:id)")
+        suspend fun removeUserDetail(id: Collection<TwitchUser.Id>)
 
         @Query("DELETE FROM twitch_user_detail")
         override suspend fun deleteTable()
@@ -252,6 +258,9 @@ internal class TwitchAuthorizedUserTable(
     internal interface Dao : TableDeletable {
         @Insert
         suspend fun setMeEntity(me: TwitchAuthorizedUserTable)
+
+        @Query("SELECT * FROM twitch_auth_user WHERE user_id IN (:ids)")
+        suspend fun findAuthorizedUser(ids: Collection<TwitchUser.Id>): List<TwitchAuthorizedUserTable>
 
         @Query("DELETE FROM twitch_auth_user")
         override suspend fun deleteTable()

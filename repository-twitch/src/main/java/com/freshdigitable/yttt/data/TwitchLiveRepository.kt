@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
+import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -64,9 +65,7 @@ class TwitchLiveRepository @Inject constructor(
         }
         val remote = remoteDataSource.fetchAllFollowings(userId)
         localDataSource.replaceAllFollowings(remote)
-        val removed = TwitchFollowings.getRemovedFollowingIds(cache, remote)
-        localDataSource.removeChannelSchedulesByBroadcasterId(removed)
-        return remote
+        return cache.update(remote)
     }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
@@ -104,6 +103,10 @@ class TwitchLiveRepository @Inject constructor(
         id: TwitchUser.Id,
         itemCount: Int,
     ): List<TwitchVideoDetail> = remoteDataSource.fetchVideosByUserId(id, itemCount)
+
+    override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>) {
+        localDataSource.cleanUpByUserId(ids)
+    }
 
     suspend fun deleteAllTables() {
         localDataSource.deleteAllTables()

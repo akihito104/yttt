@@ -43,40 +43,48 @@ class TwitchLiveLocalDataSourceTest {
         }
 
         @Test
-        fun removeChannelSchedulesByBroadcasterId_cannotRemoveFollowingBroadcaster() =
+        fun cleanUpByUserId_cannotRemoveFollowingBroadcaster() =
             rule.runWithLocalSource {
                 // exercise
-                dataSource.removeChannelSchedulesByBroadcasterId(listOf(broadcaster.id))
+                dataSource.cleanUpByUserId(listOf(broadcaster.id))
                 // verify
                 val entity = dao.findStreamScheduleEntity(streamSchedule.id)
                 assertThat(entity).isNotNull()
+                val user = dao.findUser(broadcaster.id)
+                assertThat(user).isNotNull()
             }
 
         @Test
-        fun removeChannelSchedulesByBroadcasterId_removedAfterUnfollowing() =
+        fun cleanUpByUserId_removedAfterUnfollowing() =
             rule.runWithLocalSource {
                 // setup
                 dataSource.replaceAllFollowings(followings(me.id, emptyList()))
                 // exercise
-                dataSource.removeChannelSchedulesByBroadcasterId(listOf(broadcaster.id))
+                dataSource.cleanUpByUserId(listOf(broadcaster.id))
                 // verify
                 val entity = dao.findStreamScheduleEntity(streamSchedule.id)
                 assertThat(entity).isNull()
+                val user = dao.findUser(broadcaster.id)
+                assertThat(user).isNull()
             }
     }
 
     class MultiAccount {
         @get:Rule
         internal val rule = TwitchDatabaseTestRule()
-        private val me = listOf(userDetail(id = "user_me"), userDetail(id = "user_me2"))
+        private val me1 = userDetail(id = "user_me")
+        private val me2 = userDetail(id = "user_me2")
         private val broadcaster = userDetail(id = "broadcaster")
         private val streamSchedule = streamSchedule("stream_id")
 
         @Before
         fun setup() = rule.runWithLocalSource {
-            me.forEach {
-                dataSource.setMe(it)
-                dataSource.replaceAllFollowings(followings(it.id, listOf(broadcaster(broadcaster))))
+            mapOf(
+                me1 to listOf(broadcaster(broadcaster)),
+                me2 to listOf(broadcaster(broadcaster), broadcaster(me1))
+            ).forEach { (me, broadcasters) ->
+                dataSource.setMe(me)
+                dataSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
             dao.replaceChannelSchedules(listOf(schedule), Instant.EPOCH)
@@ -86,38 +94,46 @@ class TwitchLiveLocalDataSourceTest {
         }
 
         @Test
-        fun removeChannelSchedulesByBroadcasterId_cannotRemoveFollowingBroadcaster() =
+        fun cleanUpByUserId_cannotRemoveFollowingBroadcaster() =
             rule.runWithLocalSource {
                 // exercise
-                dataSource.removeChannelSchedulesByBroadcasterId(listOf(broadcaster.id))
+                dataSource.cleanUpByUserId(listOf(broadcaster.id))
                 // verify
                 val entity = dao.findStreamScheduleEntity(streamSchedule.id)
                 assertThat(entity).isNotNull()
+                val user = dao.findUser(broadcaster.id)
+                assertThat(user).isNotNull()
             }
 
         @Test
-        fun removeChannelSchedulesByBroadcasterId_cannotRemoveScheduleOfFollowedBroadcaster() =
+        fun cleanUpByUserId_cannotRemoveScheduleOfFollowedBroadcaster() =
             rule.runWithLocalSource {
                 // setup
-                dataSource.replaceAllFollowings(followings(me[0].id, emptyList()))
+                dataSource.replaceAllFollowings(followings(me1.id, emptyList()))
                 // exercise
-                dataSource.removeChannelSchedulesByBroadcasterId(listOf(broadcaster.id))
+                dataSource.cleanUpByUserId(listOf(broadcaster.id))
                 // verify
                 val entity = dao.findStreamScheduleEntity(streamSchedule.id)
                 assertThat(entity).isNotNull()
+                val user = dao.findUser(broadcaster.id)
+                assertThat(user).isNotNull()
             }
 
         @Test
-        fun removeChannelSchedulesByBroadcasterId_removedSchedule() = rule.runWithLocalSource {
+        fun cleanUpByUserId_removedSchedule() = rule.runWithLocalSource {
             // setup
-            me.forEach {
+            listOf(me1, me2).forEach {
                 dataSource.replaceAllFollowings(followings(it.id, emptyList()))
             }
             // exercise
-            dataSource.removeChannelSchedulesByBroadcasterId(listOf(broadcaster.id))
+            dataSource.cleanUpByUserId(listOf(broadcaster.id, me2.id))
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             assertThat(entity).isNull()
+            val user = dao.findUser(broadcaster.id)
+            assertThat(user).isNull()
+            val userMe2 = dao.findUser(me2.id)
+            assertThat(userMe2).isNotNull()
         }
     }
 }

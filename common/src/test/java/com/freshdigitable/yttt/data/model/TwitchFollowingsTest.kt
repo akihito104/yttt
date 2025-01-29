@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.Test
@@ -25,7 +26,7 @@ class TwitchFollowingsTest {
     }
 
     @RunWith(Parameterized::class)
-    internal class GetRemovedFollowingIdsReturnsEmpty(private val params: TestParam) {
+    internal class UpdateHasNoRemovedItem(private val params: TestParam) {
         companion object {
             @JvmStatic
             @Parameterized.Parameters(name = "{0}")
@@ -42,11 +43,11 @@ class TwitchFollowingsTest {
 
         @Test
         fun test() {
+            // setup
+            val sut = followings(me, params.old.broadcasters(), 99)
+                .update(followings(me, params.new.broadcasters(), 100))
             // exercise
-            val actual = TwitchFollowings.getRemovedFollowingIds(
-                old = followings(me, params.old.broadcasters(), 99),
-                new = followings(me, params.new.broadcasters(), 100),
-            )
+            val actual = sut.removed
             // verify
             assertThat(actual).isEmpty()
         }
@@ -59,7 +60,7 @@ class TwitchFollowingsTest {
     }
 
     @RunWith(Parameterized::class)
-    internal class GetRemovedFollowingIdsReturnsItems(private val params: TestParam) {
+    internal class UpdateHasRemovedItems(private val params: TestParam) {
         companion object {
             @JvmStatic
             @Parameterized.Parameters(name = "{0}")
@@ -93,11 +94,11 @@ class TwitchFollowingsTest {
 
         @Test
         fun test() {
+            // setup
+            val sut = followings(me, params.oldBroadcasters, 99)
+                .update(followings(me, params.new.broadcasters(), 100))
             // exercise
-            val actual = TwitchFollowings.getRemovedFollowingIds(
-                old = followings(me, params.oldBroadcasters, 99),
-                new = followings(me, params.new.broadcasters(), 100),
-            )
+            val actual = sut.removed
             // verify
             assertThat(actual).containsExactlyInAnyOrderElementsOf(params.expected)
         }
@@ -114,30 +115,26 @@ class TwitchFollowingsTest {
         }
     }
 
-    class GetRemovedFollowingIdsThrowsException {
+    class UpdateThrowsException {
         @Test
-        fun getRemovedFollowingIds_updatableAtOfNewIsNotNewer_throwsIllegalArgumentException() {
+        fun updatableAtOfNewIsNotNewer_throwsIllegalArgumentException() {
             // exercise
             val actual = catchThrowable {
-                TwitchFollowings.getRemovedFollowingIds(
-                    old = followings(me, emptyList(), 100),
-                    new = followings(me, emptyList(), 99),
-                )
+                followings(me, emptyList(), 100)
+                    .update(followings(me, emptyList(), 99))
             }
             // verify
             assertThat(actual).isExactlyInstanceOf(IllegalArgumentException::class.java)
         }
 
         @Test
-        fun getRemovedFollowingIds_followerIsNotSame_throwsIllegalArgumentException() {
+        fun followerIsNotSame_throwsIllegalArgumentException() {
             // setup
             val others = TwitchUser.Id("me2")
             // exercise
             val actual = catchThrowable {
-                TwitchFollowings.getRemovedFollowingIds(
-                    old = followings(me, emptyList(), 99),
-                    new = followings(others, emptyList(), 100),
-                )
+                followings(me, emptyList(), 99)
+                    .update(followings(others, emptyList(), 100))
             }
             // verify
             assertThat(actual).isExactlyInstanceOf(IllegalArgumentException::class.java)
