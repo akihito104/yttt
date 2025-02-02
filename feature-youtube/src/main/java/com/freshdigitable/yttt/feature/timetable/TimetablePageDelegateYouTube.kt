@@ -4,8 +4,7 @@ import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.UpcomingLiveVideo
-import com.freshdigitable.yttt.data.model.UpcomingLiveVideo.Companion.scheduledStartLocalDateWithOffset
+import com.freshdigitable.yttt.data.model.LiveVideo.Upcoming.Companion.scheduledStartLocalDateWithOffset
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.mapTo
@@ -56,7 +55,7 @@ internal class FetchYouTubeFreeChatItemSourceUseCase @Inject constructor(
 internal data class YouTubeUpcomingLiveVideo(
     private val video: YouTubeVideoExtended,
     private val changeDateTime: Int?,
-) : UpcomingLiveVideo {
+) : LiveVideo.Upcoming {
     override val offset: Duration
         get() = Duration.ofHours(((changeDateTime ?: 24) - 24).toLong())
     override val scheduledStartDateTime: Instant

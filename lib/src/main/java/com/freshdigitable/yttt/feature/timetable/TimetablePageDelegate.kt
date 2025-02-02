@@ -3,8 +3,7 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.UpcomingLiveVideo
-import com.freshdigitable.yttt.data.model.UpcomingLiveVideo.Companion.scheduledStartLocalDateWithOffset
+import com.freshdigitable.yttt.data.model.LiveVideo.Upcoming.Companion.scheduledStartLocalDateWithOffset
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.feature.timetable.UpcomingLiveVideoImpl.Companion.asUpcoming
 import com.freshdigitable.yttt.logI
@@ -82,13 +81,13 @@ internal class TimetablePageDelegateImpl @Inject constructor(
 internal data class UpcomingLiveVideoImpl internal constructor(
     private val liveVideo: LiveVideo,
     override val offset: Duration,
-) : UpcomingLiveVideo, LiveVideo by liveVideo {
+) : LiveVideo.Upcoming, LiveVideo by liveVideo {
     override val scheduledStartDateTime: Instant
         get() = checkNotNull(liveVideo.scheduledStartDateTime)
 
     companion object {
-        fun LiveVideo.asUpcoming(offset: Duration): UpcomingLiveVideo = when (this) {
-            is UpcomingLiveVideo -> this
+        fun LiveVideo.asUpcoming(offset: Duration): LiveVideo.Upcoming = when (this) {
+            is LiveVideo.Upcoming -> this
             else -> UpcomingLiveVideoImpl(this, offset)
         }
     }

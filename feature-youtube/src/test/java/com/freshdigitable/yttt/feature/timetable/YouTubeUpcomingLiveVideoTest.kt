@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import com.freshdigitable.yttt.data.model.UpcomingLiveVideo.Companion.scheduledStartLocalDateWithOffset
+import com.freshdigitable.yttt.data.model.LiveVideo.Upcoming.Companion.scheduledStartLocalDateWithOffset
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended

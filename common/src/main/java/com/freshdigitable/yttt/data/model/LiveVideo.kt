@@ -41,15 +41,15 @@ interface LiveVideo : LiveVideoThumbnail {
         override val value: String,
         override val type: KClass<out IdBase>,
     ) : LiveId
-}
 
-interface UpcomingLiveVideo : LiveVideo {
-    val offset: Duration
-    override val scheduledStartDateTime: Instant
+    interface Upcoming : LiveVideo {
+        val offset: Duration
+        override val scheduledStartDateTime: Instant
 
-    companion object {
-        fun UpcomingLiveVideo.scheduledStartLocalDateWithOffset(zoneId: ZoneId = ZoneId.systemDefault()): LocalDate =
-            (scheduledStartDateTime - offset).toLocalDateTime(zoneId).toLocalDate()
+        companion object {
+            fun Upcoming.scheduledStartLocalDateWithOffset(zoneId: ZoneId = ZoneId.systemDefault()): LocalDate =
+                (scheduledStartDateTime - offset).toLocalDateTime(zoneId).toLocalDate()
+        }
     }
 }
 
