@@ -19,8 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
+import com.freshdigitable.yttt.data.model.LiveVideoForDetail
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
@@ -43,7 +42,7 @@ fun VideoDetailScreen(
 
 @Composable
 private fun VideoDetailScreen(
-    videoProvider: () -> LiveVideoDetailAnnotatedEntity?,
+    videoProvider: () -> LiveVideoForDetail?,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
 ) {
@@ -54,7 +53,8 @@ private fun VideoDetailScreen(
             .wrapContentHeight()
             .verticalScroll(rememberScrollState()),
     ) {
-        val video = videoProvider() ?: return
+        val entity = videoProvider() ?: return
+        val video = entity.video
         ImageLoadableView.Thumbnail(
             url = video.thumbnailUrl,
             modifier = Modifier
@@ -67,7 +67,7 @@ private fun VideoDetailScreen(
             modifier = Modifier.padding(8.dp),
         ) {
             AnnotatableText(
-                annotatableString = video.annotatableTitle,
+                annotatableString = entity.annotatableTitle,
                 fontSize = 18.sp,
                 modifier = titleModifier,
                 dialog = dialog,
@@ -85,7 +85,7 @@ private fun VideoDetailScreen(
                 platformColor = Color(video.channel.platform.color)
             )
             AnnotatableText(
-                annotatableString = video.annotatableDescription,
+                annotatableString = entity.annotatableDescription,
                 fontSize = 14.sp,
                 dialog = dialog,
             )
@@ -96,36 +96,39 @@ private fun VideoDetailScreen(
 
 private val LiveVideo.statsText: String
     get() {
-        val time = if (isNowOnAir()) {
-            "Started:${
-                requireNotNull(actualStartDateTime).toLocalFormattedText(dateTimeSecondFormatter)
-            }"
-        } else if (isUpcoming()) {
-            "Starting:${
-                requireNotNull(scheduledStartDateTime).toLocalFormattedText(dateTimeFormatter)
-            }"
-        } else null
-        val count =
-            if ((this as? LiveVideoDetail)?.viewerCount != null) "Viewers:${viewerCount.toString()}"
-            else null
+        val time = when (this) {
+            is LiveVideo.OnAir ->
+                "Started:${actualStartDateTime.toLocalFormattedText(dateTimeSecondFormatter)}"
+
+            is LiveVideo.Upcoming ->
+                "Starting:${scheduledStartDateTime.toLocalFormattedText(dateTimeFormatter)}"
+
+            else -> null
+        }
+        val count = if (viewerCount != null) "Viewers:${viewerCount.toString()}" else null
         return listOfNotNull(time, count).joinToString("・")
     }
 
 @LightDarkModePreview
 @Composable
 fun VideoDetailComposePreview() {
-    val detail = object : LiveVideoDetail,
-        LiveVideo by LiveVideoPreviewParamProvider.liveVideo() {
-        override val description: String = "description\nhttps://example.com"
-        override val viewerCount: BigInteger? = BigInteger.valueOf(100)
-    }
+    val detail = LiveVideoPreviewParamProvider.liveVideo(
+        description = "description\nhttps://example.com",
+        viewerCount = BigInteger.valueOf(100),
+    )
     AppTheme {
         VideoDetailScreen(videoProvider = {
             LiveVideoDetailAnnotatedEntity(
-                detail = detail,
+                video = detail,
                 annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
                 annotatableTitle = AnnotatableString.empty()
             )
         })
     }
 }
+
+private data class LiveVideoDetailAnnotatedEntity(
+    override val video: LiveVideo,
+    override val annotatableDescription: AnnotatableString,
+    override val annotatableTitle: AnnotatableString,
+) : LiveVideoForDetail

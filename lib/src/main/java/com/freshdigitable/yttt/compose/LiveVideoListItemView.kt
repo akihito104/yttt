@@ -26,15 +26,16 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoEntity
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
+import java.math.BigInteger
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -133,9 +134,10 @@ private fun LiveVideoListItemView(
     }
 }
 
-private fun LiveVideo.datetime(format: DateTimeFormatter): String = when {
-    isNowOnAir() -> requireNotNull(actualStartDateTime).toLocalFormattedText(format)
-    isUpcoming() -> requireNotNull(scheduledStartDateTime).toLocalFormattedText(format)
+private fun LiveVideo.datetime(format: DateTimeFormatter): String = when (this) {
+    is LiveVideo.OnAir -> actualStartDateTime.toLocalFormattedText(format)
+    is LiveVideo.Upcoming -> scheduledStartDateTime.toLocalFormattedText(format)
+    is LiveVideo.FreeChat -> scheduledStartDateTime.toLocalFormattedText(format)
     else -> ""
 }
 
@@ -200,6 +202,8 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
         fun liveVideo(
             title: String = "video title",
             channelTitle: String = "channel title",
+            description: String = "",
+            viewerCount: BigInteger? = null,
         ): LiveVideo = LiveVideoEntity(
             title = title,
             scheduledStartDateTime = Instant.now(),
@@ -212,6 +216,22 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             id = YouTubeVideo.Id("a").mapTo(),
             thumbnailUrl = "",
             url = "",
+            description = description,
+            viewerCount = viewerCount,
         )
     }
 }
+
+private data class LiveVideoEntity(
+    override val id: LiveVideo.Id,
+    override val channel: LiveChannel,
+    override val title: String,
+    override val scheduledStartDateTime: Instant? = null,
+    override val scheduledEndDateTime: Instant? = null,
+    override val actualStartDateTime: Instant? = null,
+    override val actualEndDateTime: Instant? = null,
+    override val thumbnailUrl: String,
+    override val url: String,
+    override val description: String,
+    override val viewerCount: BigInteger?,
+) : LiveVideo

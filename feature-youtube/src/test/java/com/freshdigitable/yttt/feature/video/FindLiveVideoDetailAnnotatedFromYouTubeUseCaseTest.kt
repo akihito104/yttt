@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.MockkResponseRule
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -52,7 +51,7 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
     }
 
     @RunWith(Parameterized::class)
-    class DescriptionAnnotationParameterizedTest(val param: Param) {
+    class DescriptionAnnotationParameterizedTest(private val param: Param) {
         private val responseRule = MockkResponseRule()
 
         @get:Rule
@@ -127,7 +126,7 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
             responseRule.run {
                 addMocks(useCase)
                 useCase.apply uc@{
-                    coRegister { this@uc.invoke(any()) } returns mockk<LiveVideoDetail>().apply {
+                    coRegister { this@uc.invoke(any()) } returns mockk<LiveVideo>().apply {
                         every { description } returns param.description
                         every { title } returns ""
                     }

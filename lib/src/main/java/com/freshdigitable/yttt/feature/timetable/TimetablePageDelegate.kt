@@ -3,9 +3,8 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideo.Upcoming.Companion.scheduledStartLocalDateWithOffset
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
-import com.freshdigitable.yttt.feature.timetable.UpcomingLiveVideoImpl.Companion.asUpcoming
+import com.freshdigitable.yttt.data.model.toLocalDateTime
 import com.freshdigitable.yttt.logI
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -16,6 +15,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import java.time.Duration
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -59,8 +60,12 @@ internal class TimetablePageDelegateImpl @Inject constructor(
     }
     private val upcomingItems: Flow<Map<String, List<LiveVideo>>> =
         combine(sourceTable[TimetablePage.Upcoming]!!, extraHourOfDay) { v, t ->
-            v.map { it.asUpcoming(t) }
-                .groupBy { it.scheduledStartLocalDateWithOffset().format(dateWeekdayFormatter) }
+            v.groupBy {
+                GroupKey.create(
+                    scheduledStartDateTime = (it as LiveVideo.Upcoming).scheduledStartDateTime,
+                    extraHourOfDay = t
+                )
+            }.mapKeys { (k, _) -> k.text }
         }
     private val groupedItemLists = mapOf(
         TimetablePage.Upcoming to upcomingItems,
@@ -78,17 +83,19 @@ internal class TimetablePageDelegateImpl @Inject constructor(
     }
 }
 
-internal data class UpcomingLiveVideoImpl internal constructor(
-    private val liveVideo: LiveVideo,
-    override val offset: Duration,
-) : LiveVideo.Upcoming, LiveVideo by liveVideo {
-    override val scheduledStartDateTime: Instant
-        get() = checkNotNull(liveVideo.scheduledStartDateTime)
+internal data class GroupKey(
+    val key: LocalDate,
+) {
+    val text: String
+        get() = key.format(dateWeekdayFormatter)
 
     companion object {
-        fun LiveVideo.asUpcoming(offset: Duration): LiveVideo.Upcoming = when (this) {
-            is LiveVideo.Upcoming -> this
-            else -> UpcomingLiveVideoImpl(this, offset)
-        }
+        internal fun create(
+            scheduledStartDateTime: Instant,
+            extraHourOfDay: Duration,
+            zoneId: ZoneId = ZoneId.systemDefault(),
+        ): GroupKey = GroupKey(
+            (scheduledStartDateTime - extraHourOfDay).toLocalDateTime(zoneId).toLocalDate()
+        )
     }
 }

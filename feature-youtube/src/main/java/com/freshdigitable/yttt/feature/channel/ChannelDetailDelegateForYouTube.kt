@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.feature.channel
 
-import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
@@ -11,8 +10,8 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannelDetail
-import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toLiveVideoThumbnail
+import com.freshdigitable.yttt.feature.create
 import com.freshdigitable.yttt.feature.video.createForYouTube
 import com.freshdigitable.yttt.logE
 import dagger.assisted.Assisted
@@ -25,7 +24,6 @@ import java.io.IOException
 
 internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
-    private val facade: YouTubeFacade,
     @Assisted id: LiveChannel.Id,
 ) : ChannelDetailDelegate {
     @AssistedFactory
@@ -119,7 +117,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             .map { v -> v to logs.find { v.id == it.videoId } }
             .sortedBy { it.second?.dateTime }
             .map { it.first }
-            .map { it.toLiveVideo() }
+            .map { LiveVideo.create(it) }
         emit(videos)
     }
 }

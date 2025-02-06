@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.LiveVideoSharedTransitionRoute
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
+import com.freshdigitable.yttt.data.model.LiveVideoForDetail
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
 import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
@@ -25,7 +25,7 @@ class VideoDetailViewModel @Inject constructor(
 ) : ViewModel() {
     val videoId = LiveVideoSharedTransitionRoute.VideoDetail.getId(savedStateHandle)
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
-    fun fetchViewDetail(): LiveData<LiveVideoDetailAnnotatedEntity?> {
+    fun fetchViewDetail(): LiveData<LiveVideoForDetail?> {
         return liveData(viewModelScope.coroutineContext) {
             val detail = findLiveVideo(videoId)
             if (detail == null) { // TODO: informing video is not found

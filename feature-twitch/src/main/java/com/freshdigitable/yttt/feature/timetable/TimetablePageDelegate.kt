@@ -4,8 +4,8 @@ import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.model.toLiveVideo
 import com.freshdigitable.yttt.data.model.toTwitchVideoList
+import com.freshdigitable.yttt.feature.create
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Duration
@@ -18,7 +18,7 @@ internal class FetchTwitchOnAirItemSourceUseCase @Inject constructor(
         it.map { s ->
             val user = s.user as? TwitchUserDetail
                 ?: repository.findUsersById(setOf(s.user.id)).first()
-            s.toLiveVideo(user)
+            LiveVideo.create(s, user)
         }
     }
 }
@@ -34,7 +34,7 @@ internal class FetchTwitchUpcomingItemSourceUseCase @Inject constructor(
             .map { s ->
                 val user = s.user as? TwitchUserDetail
                     ?: repository.findUsersById(setOf(s.user.id)).first()
-                s.toLiveVideo(user)
+                LiveVideo.create(s, user)
             }
     }
 }
