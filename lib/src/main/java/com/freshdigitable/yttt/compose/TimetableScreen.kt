@@ -47,7 +47,7 @@ fun TimetableScreen(
 }
 
 fun LazyListScope.simpleContent(
-    itemsProvider: () -> List<LiveVideo>,
+    itemsProvider: () -> List<LiveVideo<*>>,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     onListItemClicked: (LiveVideo.Id) -> Unit,
@@ -68,7 +68,7 @@ fun LazyListScope.simpleContent(
 
 @OptIn(ExperimentalFoundationApi::class)
 fun LazyListScope.groupedContent(
-    itemsProvider: () -> Map<String, List<LiveVideo>>,
+    itemsProvider: () -> Map<String, List<LiveVideo<*>>>,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     onListItemClicked: (LiveVideo.Id) -> Unit,

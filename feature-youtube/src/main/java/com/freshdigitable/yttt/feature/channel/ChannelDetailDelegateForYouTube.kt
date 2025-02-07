@@ -111,7 +111,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         )
     }
 
-    override val activities: Flow<List<LiveVideo>> = flow {
+    override val activities: Flow<List<LiveVideo<*>>> = flow {
         val logs = repository.fetchLiveChannelLogs(id.mapTo(), maxResult = 20)
         val videos = repository.fetchVideoList(logs.map { it.videoId }.toSet())
             .map { v -> v to logs.find { v.id == it.videoId } }

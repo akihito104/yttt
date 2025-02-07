@@ -126,7 +126,7 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
             responseRule.run {
                 addMocks(useCase)
                 useCase.apply uc@{
-                    coRegister { this@uc.invoke(any()) } returns mockk<LiveVideo>().apply {
+                    coRegister { this@uc.invoke(any()) } returns mockk<LiveVideo<*>>().apply {
                         every { description } returns param.description
                         every { title } returns ""
                     }

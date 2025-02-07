@@ -21,8 +21,8 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
 internal interface TimetablePageDelegate {
-    fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo>>
-    fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<LiveVideo>>>
+    fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo<*>>>
+    fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<LiveVideo<*>>>>
     val tabs: Flow<List<TimetableTabData>>
 }
 
@@ -30,35 +30,22 @@ internal class TimetablePageDelegateImpl @Inject constructor(
     items: Map<TimetablePage, @JvmSuppressWildcards Set<FetchTimetableItemSourceUseCase>>,
     settingRepository: SettingRepository,
 ) : TimetablePageDelegate {
-    private val sorterTable = mapOf<TimetablePage, (List<LiveVideo>) -> List<LiveVideo>>(
-        TimetablePage.OnAir to { i ->
-            i.sortedByDescending { it.actualStartDateTime }
-        },
-        TimetablePage.Upcoming to { i ->
-            i.sortedBy { it.scheduledStartDateTime }
-        },
-        TimetablePage.FreeChat to { i ->
-            i.sortedBy { it.channel.id.value }
-        },
-    )
-
     @OptIn(FlowPreview::class)
-    private val sourceTable: Map<TimetablePage, Flow<List<LiveVideo>>> = items.entries
+    private val sourceTable: Map<TimetablePage, Flow<List<LiveVideo<*>>>> = items.entries
         .associate { (p, uc) ->
-            val sorter = checkNotNull(sorterTable[p])
             p to combine(uc.map { it().distinctUntilChanged() }) { v -> v.flatMap { it } }
                 .debounce(50.milliseconds)
-                .map { sorter(it) }
+                .map { v -> v.sortedWith(compareBy { it }) }
                 .onEach { logI { "${p.name}: size=${it.size}" } }
         }
 
-    override fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo>> =
+    override fun getSimpleItemList(page: TimetablePage): Flow<List<LiveVideo<*>>> =
         checkNotNull(sourceTable[page])
 
     private val extraHourOfDay = settingRepository.changeDateTime.map {
         Duration.ofHours(((it ?: 24) - 24).toLong())
     }
-    private val upcomingItems: Flow<Map<String, List<LiveVideo>>> =
+    private val upcomingItems: Flow<Map<String, List<LiveVideo<*>>>> =
         combine(sourceTable[TimetablePage.Upcoming]!!, extraHourOfDay) { v, t ->
             v.groupBy {
                 GroupKey.create(
@@ -71,7 +58,7 @@ internal class TimetablePageDelegateImpl @Inject constructor(
         TimetablePage.Upcoming to upcomingItems,
     )
 
-    override fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<LiveVideo>>> =
+    override fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<LiveVideo<*>>>> =
         checkNotNull(groupedItemLists[page])
 
     override val tabs: Flow<List<TimetableTabData>> = combine(

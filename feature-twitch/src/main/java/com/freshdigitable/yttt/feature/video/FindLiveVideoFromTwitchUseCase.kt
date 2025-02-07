@@ -14,7 +14,7 @@ import javax.inject.Inject
 internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
     private val repository: TwitchLiveRepository,
 ) : FindLiveVideoUseCase {
-    override suspend operator fun invoke(id: LiveVideo.Id): LiveVideo? {
+    override suspend operator fun invoke(id: LiveVideo.Id): LiveVideo<*>? {
         val twitchVideoId = when (id.type) {
             TwitchStream.Id::class -> id.mapTo<TwitchStream.Id>()
             TwitchChannelSchedule.Stream.Id::class -> id.mapTo<TwitchChannelSchedule.Stream.Id>()
@@ -36,7 +36,7 @@ internal class FindLiveVideoDetailAnnotatedFromTwitchUseCase @Inject constructor
 }
 
 internal data class TwitchLiveVideoForDetail(
-    override val video: LiveVideo,
+    override val video: LiveVideo<*>,
 ) : LiveVideoForDetail {
     override val annotatableTitle: AnnotatableString
         get() = AnnotatableString.createForTwitch(video.title)

@@ -13,7 +13,7 @@ import javax.inject.Inject
 internal class FetchYouTubeOnAirItemSourceUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
-    override fun invoke(): Flow<List<LiveVideo>> = repository.videos.map { v ->
+    override fun invoke(): Flow<List<LiveVideo<*>>> = repository.videos.map { v ->
         v.filter { it.isNowOnAir() }.map { LiveVideo.create(it) }
     }
 }
@@ -22,7 +22,7 @@ internal class FetchYouTubeUpcomingItemSourceUseCase @Inject constructor(
     private val repository: YouTubeRepository,
     private val dateTimeProvider: DateTimeProvider,
 ) : FetchTimetableItemSourceUseCase {
-    override fun invoke(): Flow<List<LiveVideo>> {
+    override fun invoke(): Flow<List<LiveVideo<*>>> {
         val video = repository.videos.map { v ->
             val current = dateTimeProvider.now()
             v.filter {
@@ -37,7 +37,7 @@ internal class FetchYouTubeUpcomingItemSourceUseCase @Inject constructor(
 internal class FetchYouTubeFreeChatItemSourceUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
-    override fun invoke(): Flow<List<LiveVideo>> = repository.videos.map { v ->
+    override fun invoke(): Flow<List<LiveVideo<*>>> = repository.videos.map { v ->
         v.filter { it.isFreeChat == true }.map { LiveVideo.create(it) }
     }
 }

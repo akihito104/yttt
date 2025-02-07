@@ -44,7 +44,7 @@ import java.time.temporal.ChronoUnit
 
 @Composable
 fun LiveVideoListItemView(
-    video: LiveVideo,
+    video: LiveVideo<*>,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
@@ -82,7 +82,7 @@ fun LiveVideoListItemView(
 
 @Composable
 private fun LiveVideoListItemView(
-    video: LiveVideo,
+    video: LiveVideo<*>,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
@@ -134,7 +134,7 @@ private fun LiveVideoListItemView(
     }
 }
 
-private fun LiveVideo.datetime(format: DateTimeFormatter): String = when (this) {
+private fun LiveVideo<*>.datetime(format: DateTimeFormatter): String = when (this) {
     is LiveVideo.OnAir -> actualStartDateTime.toLocalFormattedText(format)
     is LiveVideo.Upcoming -> scheduledStartDateTime.toLocalFormattedText(format)
     is LiveVideo.FreeChat -> scheduledStartDateTime.toLocalFormattedText(format)
@@ -143,7 +143,7 @@ private fun LiveVideo.datetime(format: DateTimeFormatter): String = when (this) 
 
 @Composable
 private fun RowScope.ThumbnailView(
-    video: LiveVideo,
+    video: LiveVideo<*>,
     modifier: Modifier = Modifier,
 ) {
     ImageLoadableView.Thumbnail(
@@ -173,7 +173,7 @@ fun LiveVideoHeaderView(label: String) {
 @LightDarkModePreview
 @Composable
 private fun LiveVideoListItemViewPreview(
-    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveVideo,
+    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveVideo<*>,
 ) {
     AppTheme {
         LiveVideoListItemView(video, onItemClick = {}) {}
@@ -192,8 +192,8 @@ fun LiveVideoHeaderViewPreview() {
     }
 }
 
-class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
-    override val values: Sequence<LiveVideo> = sequenceOf(
+class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo<*>> {
+    override val values: Sequence<LiveVideo<*>> = sequenceOf(
         liveVideo(),
         liveVideo(channelTitle = "channel title - チャンネルタイトル"),
     )
@@ -204,7 +204,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             channelTitle: String = "channel title",
             description: String = "",
             viewerCount: BigInteger? = null,
-        ): LiveVideo = LiveVideoEntity(
+        ): LiveVideo<*> = LiveVideoEntity(
             title = title,
             scheduledStartDateTime = Instant.now(),
             channel = LiveChannelEntity(
@@ -234,4 +234,4 @@ private data class LiveVideoEntity(
     override val url: String,
     override val description: String,
     override val viewerCount: BigInteger?,
-) : LiveVideo
+) : LiveVideo<LiveVideoEntity>

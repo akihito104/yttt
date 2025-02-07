@@ -12,7 +12,7 @@ import javax.inject.Inject
 internal class FindLiveVideoFromYouTubeUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FindLiveVideoUseCase {
-    override suspend fun invoke(id: LiveVideo.Id): LiveVideo? {
+    override suspend fun invoke(id: LiveVideo.Id): LiveVideo<*>? {
         check(id.type == YouTubeVideo.Id::class)
         val v = repository.fetchVideoList(setOf(id.mapTo())).firstOrNull() ?: return null
         return LiveVideo.create(v)
@@ -29,7 +29,7 @@ internal class FindLiveVideoDetailAnnotatedFromYouTubeUseCase @Inject constructo
 }
 
 internal data class YouTubeLiveVideoForDetail(
-    override val video: LiveVideo,
+    override val video: LiveVideo<*>,
 ) : LiveVideoForDetail {
     override val annotatableDescription: AnnotatableString
         get() = AnnotatableString.createForYouTube(video.description)

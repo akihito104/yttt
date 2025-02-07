@@ -28,5 +28,5 @@ class ChannelViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> get() = delegate.uploadedVideo
     override val channelSection: Flow<List<ChannelDetailChannelSection>> get() = delegate.channelSection
-    override val activities: Flow<List<LiveVideo>> get() = delegate.activities
+    override val activities: Flow<List<LiveVideo<*>>> get() = delegate.activities
 }

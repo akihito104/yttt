@@ -94,7 +94,7 @@ private fun VideoDetailScreen(
     LinkAnnotationDialog(state = dialog)
 }
 
-private val LiveVideo.statsText: String
+private val LiveVideo<*>.statsText: String
     get() {
         val time = when (this) {
             is LiveVideo.OnAir ->
@@ -128,7 +128,7 @@ fun VideoDetailComposePreview() {
 }
 
 private data class LiveVideoDetailAnnotatedEntity(
-    override val video: LiveVideo,
+    override val video: LiveVideo<*>,
     override val annotatableDescription: AnnotatableString,
     override val annotatableTitle: AnnotatableString,
 ) : LiveVideoForDetail

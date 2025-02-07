@@ -11,12 +11,14 @@ import com.freshdigitable.yttt.data.model.toLiveChannel
 import java.math.BigInteger
 import java.time.Instant
 
-internal fun LiveVideo.Companion.create(video: TwitchVideo<*>, user: TwitchUserDetail): LiveVideo =
-    when (video) {
-        is TwitchStream -> TwitchOnAirLiveVideo(video, user)
-        is TwitchStreamSchedule -> TwitchUpcomingLiveVideo(video, user)
-        else -> throw AssertionError("unsupported type: ${this::class.simpleName}")
-    }
+internal fun LiveVideo.Companion.create(
+    video: TwitchVideo<*>,
+    user: TwitchUserDetail,
+): LiveVideo<*> = when (video) {
+    is TwitchStream -> TwitchOnAirLiveVideo(video, user)
+    is TwitchStreamSchedule -> TwitchUpcomingLiveVideo(video, user)
+    else -> throw AssertionError("unsupported type: ${this::class.simpleName}")
+}
 
 internal data class TwitchOnAirLiveVideo(
     private val stream: TwitchStream,
