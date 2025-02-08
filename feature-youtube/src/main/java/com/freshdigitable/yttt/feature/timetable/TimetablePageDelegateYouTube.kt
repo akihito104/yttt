@@ -6,7 +6,6 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isUpcomingWithinPublicationDeadline
 import com.freshdigitable.yttt.feature.create
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -22,15 +21,12 @@ internal class FetchYouTubeUpcomingItemSourceUseCase @Inject constructor(
     private val repository: YouTubeRepository,
     private val dateTimeProvider: DateTimeProvider,
 ) : FetchTimetableItemSourceUseCase {
-    override fun invoke(): Flow<List<LiveVideo<*>>> {
-        val video = repository.videos.map { v ->
-            val current = dateTimeProvider.now()
-            v.filter {
-                it.isUpcoming() && it.isFreeChat != true && it.scheduledStartDateTime != null &&
-                    it.isUpcomingWithinPublicationDeadline(current)
-            }.map { LiveVideo.create(it) }
-        }.distinctUntilChanged()
-        return video
+    override fun invoke(): Flow<List<LiveVideo<*>>> = repository.videos.map { v ->
+        val current = dateTimeProvider.now()
+        v.filter {
+            it.isUpcoming() && it.isFreeChat != true && it.scheduledStartDateTime != null &&
+                it.isUpcomingWithinPublicationDeadline(current)
+        }.map { LiveVideo.create(it) }
     }
 }
 

@@ -29,6 +29,7 @@ import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
@@ -143,7 +144,7 @@ private fun LiveVideo<*>.datetime(format: DateTimeFormatter): String = when (thi
 
 @Composable
 private fun RowScope.ThumbnailView(
-    video: LiveVideo<*>,
+    video: LiveVideoThumbnail,
     modifier: Modifier = Modifier,
 ) {
     ImageLoadableView.Thumbnail(
