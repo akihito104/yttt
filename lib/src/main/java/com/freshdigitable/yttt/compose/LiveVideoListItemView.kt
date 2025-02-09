@@ -32,20 +32,19 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLocalFormattedText
+import com.freshdigitable.yttt.feature.timetable.TimelineItem
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 @Composable
 fun LiveVideoListItemView(
-    video: LiveVideo<*>,
+    video: TimelineItem,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
@@ -83,7 +82,7 @@ fun LiveVideoListItemView(
 
 @Composable
 private fun LiveVideoListItemView(
-    video: LiveVideo<*>,
+    video: TimelineItem,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
@@ -100,7 +99,7 @@ private fun LiveVideoListItemView(
                 .fillMaxWidth()
                 .wrapContentHeight()
         ) {
-            ThumbnailView(video, modifier = thumbnailModifier)
+            ThumbnailView(video.thumbnail, modifier = thumbnailModifier)
             Column(
                 modifier = Modifier
                     .wrapContentHeight()
@@ -115,7 +114,7 @@ private fun LiveVideoListItemView(
                     lineHeight = (14 * 1.25).sp,
                 )
                 Text(
-                    text = video.datetime(dateTimeFormatter),
+                    text = video.localDateTimeText,
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -133,13 +132,6 @@ private fun LiveVideoListItemView(
                 .padding(top = 4.dp)
         )
     }
-}
-
-private fun LiveVideo<*>.datetime(format: DateTimeFormatter): String = when (this) {
-    is LiveVideo.OnAir -> actualStartDateTime.toLocalFormattedText(format)
-    is LiveVideo.Upcoming -> scheduledStartDateTime.toLocalFormattedText(format)
-    is LiveVideo.FreeChat -> scheduledStartDateTime.toLocalFormattedText(format)
-    else -> ""
 }
 
 @Composable
@@ -174,7 +166,7 @@ fun LiveVideoHeaderView(label: String) {
 @LightDarkModePreview
 @Composable
 private fun LiveVideoListItemViewPreview(
-    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveVideo<*>,
+    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: TimelineItem,
 ) {
     AppTheme {
         LiveVideoListItemView(video, onItemClick = {}) {}
@@ -193,13 +185,18 @@ fun LiveVideoHeaderViewPreview() {
     }
 }
 
-class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo<*>> {
-    override val values: Sequence<LiveVideo<*>> = sequenceOf(
-        liveVideo(),
-        liveVideo(channelTitle = "channel title - チャンネルタイトル"),
+class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
+    override val values: Sequence<TimelineItem> = sequenceOf(
+        timelineItem(video = liveVideo()),
+        timelineItem(liveVideo(channelTitle = "channel title - チャンネルタイトル")),
     )
 
     companion object {
+        fun timelineItem(video: LiveVideo<*>): TimelineItem = TimelineItem(
+            video = video,
+            extraHourOfDay = Duration.ZERO,
+        )
+
         fun liveVideo(
             title: String = "video title",
             channelTitle: String = "channel title",

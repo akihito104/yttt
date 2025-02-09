@@ -101,7 +101,7 @@ private val LiveVideo<*>.statsText: String
                 "Started:${actualStartDateTime.toLocalFormattedText(dateTimeSecondFormatter)}"
 
             is LiveVideo.Upcoming ->
-                "Starting:${scheduledStartDateTime.toLocalFormattedText(dateTimeFormatter)}"
+                "Starting:${scheduledStartDateTime.toLocalFormattedText(dateTimeFormatter())}"
 
             else -> null
         }

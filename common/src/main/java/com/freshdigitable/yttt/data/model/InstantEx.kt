@@ -4,6 +4,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 
 interface DateTimeProvider {
@@ -27,7 +28,8 @@ val dateWeekdayFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/
 /**
  * yyyy/MM/dd(E) HH:mm
  */
-val dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd(E) HH:mm")
+fun dateTimeFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy/MM/dd(E) HH:mm", locale)
 
 /**
  * yyyy/MM/dd(E) HH:mm:ss
