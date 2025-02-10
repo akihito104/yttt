@@ -1,16 +1,14 @@
 package com.freshdigitable.yttt.feature.video
 
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.LiveVideoSharedTransitionRoute
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
 import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -19,21 +17,21 @@ import javax.inject.Inject
 
 @HiltViewModel
 class VideoDetailViewModel @Inject constructor(
-    findLiveVideoTable: IdBaseClassMap<FindLiveVideoDetailAnnotatedUseCase>,
+    findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
+    annotatedStringFactory: IdBaseClassMap<AnnotatableStringFactory>,
     private val contextMenuDelegate: TimetableContextMenuDelegate,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
     val videoId = LiveVideoSharedTransitionRoute.VideoDetail.getId(savedStateHandle)
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
-    fun fetchViewDetail(): LiveData<LiveVideoDetailAnnotatedEntity?> {
-        return liveData(viewModelScope.coroutineContext) {
-            val detail = findLiveVideo(videoId)
-            if (detail == null) { // TODO: informing video is not found
-                emit(null)
-                return@liveData
-            }
-            emit(detail)
-        }
+    private val annotatedString = checkNotNull(annotatedStringFactory[videoId.type.java])
+    internal val detail: Flow<LiveVideoDetailItem?> = flowOf(videoId).map {
+        val v = findLiveVideo(it) ?: return@map null
+        LiveVideoDetailItem(
+            video = v,
+            annotatableDescription = annotatedString(v.description),
+            annotatableTitle = annotatedString(v.title),
+        )
     }
 
     val contextMenuItems = flowOf(videoId).map {

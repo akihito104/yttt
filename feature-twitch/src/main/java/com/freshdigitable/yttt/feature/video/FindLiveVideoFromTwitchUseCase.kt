@@ -3,19 +3,17 @@ package com.freshdigitable.yttt.feature.video
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.LiveVideoDetailAnnotatedEntity
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLiveVideoDetail
+import com.freshdigitable.yttt.feature.create
 import javax.inject.Inject
 
 internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
     private val repository: TwitchLiveRepository,
 ) : FindLiveVideoUseCase {
-    override suspend operator fun invoke(id: LiveVideo.Id): LiveVideo? {
+    override suspend operator fun invoke(id: LiveVideo.Id): LiveVideo<*>? {
         val twitchVideoId = when (id.type) {
             TwitchStream.Id::class -> id.mapTo<TwitchStream.Id>()
             TwitchChannelSchedule.Stream.Id::class -> id.mapTo<TwitchChannelSchedule.Stream.Id>()
@@ -23,22 +21,12 @@ internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
         }
         val d = repository.fetchStreamDetail(twitchVideoId) ?: return null
         val u = (d.user as? TwitchUserDetail) ?: repository.findUsersById(setOf(d.user.id)).first()
-        return d.toLiveVideoDetail(u)
+        return LiveVideo.create(d, u)
     }
 }
 
-internal class FindLiveVideoDetailAnnotatedFromTwitchUseCase @Inject constructor(
-    private val findLiveVideoUseCase: FindLiveVideoFromTwitchUseCase
-) : FindLiveVideoDetailAnnotatedUseCase {
-    override suspend fun invoke(id: LiveVideo.Id): LiveVideoDetailAnnotatedEntity? {
-        val v = findLiveVideoUseCase(id) ?: return null
-        check(v is LiveVideoDetail)
-        return LiveVideoDetailAnnotatedEntity(
-            v,
-            annotatableDescription = AnnotatableString.createForTwitch(v.description),
-            annotatableTitle = AnnotatableString.createForTwitch(v.title),
-        )
-    }
+internal class TwitchAnnotatableStringFactory @Inject constructor() : AnnotatableStringFactory {
+    override fun invoke(text: String): AnnotatableString = AnnotatableString.createForTwitch(text)
 }
 
 internal fun AnnotatableString.Companion.createForTwitch(annotatable: String?): AnnotatableString =

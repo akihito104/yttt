@@ -19,17 +19,21 @@ data class LiveVideoThumbnailEntity(
     override val thumbnailUrl: String,
 ) : LiveVideoThumbnail
 
-interface LiveVideo : LiveVideoThumbnail {
+interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
     val channel: LiveChannel
     val scheduledStartDateTime: Instant?
     val scheduledEndDateTime: Instant?
     val actualStartDateTime: Instant?
     val actualEndDateTime: Instant?
-    val isFreeChat: Boolean? get() = null
     val url: String
+    val description: String
+    val viewerCount: BigInteger?
 
-    fun isNowOnAir(): Boolean = actualStartDateTime != null && actualEndDateTime == null
-    fun isUpcoming(): Boolean = scheduledStartDateTime != null && actualStartDateTime == null
+    override fun compareTo(other: T): Int {
+        val type = this.id.type.java.simpleName.compareTo(other.id.type.java.simpleName)
+        if (type != 0) return type
+        return this.id.value.compareTo(other.id.value)
+    }
 
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
@@ -38,33 +42,48 @@ interface LiveVideo : LiveVideoThumbnail {
         override val value: String,
         override val type: KClass<out IdBase>,
     ) : LiveId
-}
 
-data class LiveVideoEntity(
-    override val id: LiveVideo.Id,
-    override val channel: LiveChannel,
-    override val title: String,
-    override val scheduledStartDateTime: Instant? = null,
-    override val scheduledEndDateTime: Instant? = null,
-    override val actualStartDateTime: Instant? = null,
-    override val actualEndDateTime: Instant? = null,
-    override val thumbnailUrl: String,
-    override val url: String,
-    override val isFreeChat: Boolean? = null,
-    private val isNowOnAir: Boolean? = null,
-    private val isUpcoming: Boolean? = null,
-) : LiveVideo {
-    override fun isNowOnAir(): Boolean = isNowOnAir ?: super.isNowOnAir()
-    override fun isUpcoming(): Boolean = isUpcoming ?: super.isUpcoming()
-}
+    companion object
 
-interface LiveVideoDetail : LiveVideo {
-    val description: String
-    val viewerCount: BigInteger?
-}
+    interface OnAir : LiveVideo<OnAir> {
+        override val actualStartDateTime: Instant
+        override fun compareTo(other: OnAir): Int = comparator.compare(this, other)
 
-data class LiveVideoDetailAnnotatedEntity(
-    private val detail: LiveVideoDetail,
-    val annotatableDescription: AnnotatableString,
-    val annotatableTitle: AnnotatableString,
-) : LiveVideoDetail by detail
+        companion object {
+            private val comparator: Comparator<OnAir> = Comparator { p0, p1 ->
+                // desc. order for actualStartDateTime
+                val date = p1.actualStartDateTime.compareTo(p0.actualStartDateTime)
+                if (date != 0) return@Comparator date
+                p0.title.compareTo(p1.title)
+            }
+        }
+    }
+
+    interface Upcoming : LiveVideo<Upcoming> {
+        override val scheduledStartDateTime: Instant
+        override fun compareTo(other: Upcoming): Int = comparator.compare(this, other)
+
+        companion object {
+            private val comparator: Comparator<Upcoming> = Comparator { p0, p1 ->
+                val date = p0.scheduledStartDateTime.compareTo(p1.scheduledStartDateTime)
+                if (date != 0) return@Comparator date
+                p0.title.compareTo(p1.title)
+            }
+        }
+    }
+
+    interface FreeChat : LiveVideo<FreeChat> {
+        override val scheduledStartDateTime: Instant
+        override fun compareTo(other: FreeChat): Int = comparator.compare(this, other)
+
+        companion object {
+            private val comparator: Comparator<FreeChat> = Comparator { p0, p1 ->
+                val channelId = p0.channel.id.value.compareTo(p1.channel.id.value)
+                if (channelId != 0) return@Comparator channelId
+                val date = p0.scheduledStartDateTime.compareTo(p1.scheduledStartDateTime)
+                if (date != 0) return@Comparator date
+                p0.title.compareTo(p1.title)
+            }
+        }
+    }
+}

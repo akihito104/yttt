@@ -3,8 +3,8 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.data.model.LiveVideo
 
 interface TimetableContextMenuSelector {
-    fun findMenuItems(video: LiveVideo): List<TimetableMenuItem>
-    suspend fun consumeMenuItem(video: LiveVideo, item: TimetableMenuItem)
+    fun findMenuItems(video: LiveVideo<*>): List<TimetableMenuItem>
+    suspend fun consumeMenuItem(video: LiveVideo<*>, item: TimetableMenuItem)
 }
 
 enum class TimetableMenuItem(val text: String) {

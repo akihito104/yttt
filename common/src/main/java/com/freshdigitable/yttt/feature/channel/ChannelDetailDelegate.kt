@@ -12,7 +12,7 @@ interface ChannelDetailDelegate {
     val channelDetail: Flow<AnnotatedLiveChannelDetail?>
     val uploadedVideo: Flow<List<LiveVideoThumbnail>>
     val channelSection: Flow<List<ChannelDetailChannelSection>>
-    val activities: Flow<List<LiveVideo>>
+    val activities: Flow<List<LiveVideo<*>>>
 
     interface Factory {
         fun create(id: LiveChannel.Id): ChannelDetailDelegate

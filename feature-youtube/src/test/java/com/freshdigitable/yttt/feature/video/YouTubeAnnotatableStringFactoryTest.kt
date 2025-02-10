@@ -1,17 +1,10 @@
 package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.MockkResponseRule
-import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoDetail
-import com.freshdigitable.yttt.data.model.YouTubeVideo
-import io.mockk.every
-import io.mockk.impl.annotations.MockK
 import io.mockk.junit4.MockKRule
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
@@ -21,48 +14,18 @@ import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Enclosed::class)
-class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
-
-    class Standard {
-        private val responseRule = MockkResponseRule()
-
-        @get:Rule
-        val rule: RuleChain = RuleChain.outerRule(MockKRule(this))
-            .around(responseRule)
-
-        @MockK
-        internal lateinit var useCase: FindLiveVideoFromYouTubeUseCase
-
-        @Test
-        fun testNotFound(): Unit = runBlocking {
-            // setup
-            responseRule.run {
-                addMocks(useCase)
-                useCase.apply uc@{
-                    coRegister { this@uc.invoke(any()) } returns null
-                }
-            }
-            val sut = FindLiveVideoDetailAnnotatedFromYouTubeUseCase(useCase)
-            // exercise
-            val actual = sut(LiveVideo.Id(value = "test01", type = YouTubeVideo.Id::class))
-            // verify
-            assertNotNull(sut)
-            assertNull(actual)
-        }
-    }
+class YouTubeAnnotatableStringFactoryTest {
 
     @RunWith(Parameterized::class)
-    class DescriptionAnnotationParameterizedTest(val param: Param) {
+    class DescriptionAnnotationParameterizedTest(private val param: Param) {
         private val responseRule = MockkResponseRule()
 
         @get:Rule
         val rule: RuleChain = RuleChain.outerRule(MockKRule(this))
             .around(responseRule)
 
-        @MockK
-        internal lateinit var useCase: FindLiveVideoFromYouTubeUseCase
-        private val sut: FindLiveVideoDetailAnnotatedFromYouTubeUseCase by lazy {
-            FindLiveVideoDetailAnnotatedFromYouTubeUseCase(useCase)
+        private val sut: YouTubeAnnotatableStringFactory by lazy {
+            YouTubeAnnotatableStringFactory()
         }
 
         companion object {
@@ -124,26 +87,16 @@ class FindLiveVideoDetailAnnotatedFromYouTubeUseCaseTest {
 
         @Test
         fun test(): Unit = runBlocking {
-            responseRule.run {
-                addMocks(useCase)
-                useCase.apply uc@{
-                    coRegister { this@uc.invoke(any()) } returns mockk<LiveVideoDetail>().apply {
-                        every { description } returns param.description
-                        every { title } returns ""
-                    }
-                }
-            }
             // exercise
-            val actual = sut.invoke(LiveVideo.Id(value = "test01", type = YouTubeVideo.Id::class))
+            val actual = sut.invoke(param.description)
             // verify
             assertNotNull(actual)
-            checkNotNull(actual)
             assertEquals(
                 param.expected.size,
-                actual.annotatableDescription.annotationRangeItems.size,
+                actual.annotationRangeItems.size,
             )
             param.expected.forEachIndexed { i, e ->
-                val a = actual.annotatableDescription.annotationRangeItems[i]
+                val a = actual.annotationRangeItems[i]
                 assertEquals(e.range, a.range)
                 assertEquals(e.text, a.text)
                 assertEquals(e.url, a.url)
