@@ -58,6 +58,6 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     }
     override val channelSection: Flow<List<ChannelDetailChannelSection>>
         get() = throw AssertionError("unsupported operation")
-    override val activities: Flow<List<LiveVideo>>
+    override val activities: Flow<List<LiveVideo<*>>>
         get() = throw AssertionError("unsupported operation")
 }

@@ -10,14 +10,14 @@ internal class TimetableContextMenuDelegateForYouTube @Inject constructor(
     private val repository: YouTubeRepository,
     private val launchApp: LaunchAppWithUrlUseCase,
 ) : TimetableContextMenuSelector {
-    override fun findMenuItems(video: LiveVideo): List<TimetableMenuItem> {
+    override fun findMenuItems(video: LiveVideo<*>): List<TimetableMenuItem> {
         return listOfNotNull(
-            if (video.isFreeChat == true) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
+            if (video is LiveVideo.FreeChat) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
             TimetableMenuItem.LAUNCH_LIVE,
         )
     }
 
-    override suspend fun consumeMenuItem(video: LiveVideo, item: TimetableMenuItem) {
+    override suspend fun consumeMenuItem(video: LiveVideo<*>, item: TimetableMenuItem) {
         val id = video.id
         when (item) {
             TimetableMenuItem.ADD_FREE_CHAT -> {

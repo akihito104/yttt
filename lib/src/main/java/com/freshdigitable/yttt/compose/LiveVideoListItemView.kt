@@ -26,24 +26,25 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoEntity
+import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLocalFormattedText
+import com.freshdigitable.yttt.feature.timetable.TimelineItem
+import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
 @Composable
 fun LiveVideoListItemView(
-    video: LiveVideo,
+    video: TimelineItem,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
@@ -81,7 +82,7 @@ fun LiveVideoListItemView(
 
 @Composable
 private fun LiveVideoListItemView(
-    video: LiveVideo,
+    video: TimelineItem,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
@@ -98,7 +99,7 @@ private fun LiveVideoListItemView(
                 .fillMaxWidth()
                 .wrapContentHeight()
         ) {
-            ThumbnailView(video, modifier = thumbnailModifier)
+            ThumbnailView(video.thumbnail, modifier = thumbnailModifier)
             Column(
                 modifier = Modifier
                     .wrapContentHeight()
@@ -113,7 +114,7 @@ private fun LiveVideoListItemView(
                     lineHeight = (14 * 1.25).sp,
                 )
                 Text(
-                    text = video.datetime(dateTimeFormatter),
+                    text = video.localDateTimeText,
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -133,15 +134,9 @@ private fun LiveVideoListItemView(
     }
 }
 
-private fun LiveVideo.datetime(format: DateTimeFormatter): String = when {
-    isNowOnAir() -> requireNotNull(actualStartDateTime).toLocalFormattedText(format)
-    isUpcoming() -> requireNotNull(scheduledStartDateTime).toLocalFormattedText(format)
-    else -> ""
-}
-
 @Composable
 private fun RowScope.ThumbnailView(
-    video: LiveVideo,
+    video: LiveVideoThumbnail,
     modifier: Modifier = Modifier,
 ) {
     ImageLoadableView.Thumbnail(
@@ -171,7 +166,7 @@ fun LiveVideoHeaderView(label: String) {
 @LightDarkModePreview
 @Composable
 private fun LiveVideoListItemViewPreview(
-    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveVideo,
+    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: TimelineItem,
 ) {
     AppTheme {
         LiveVideoListItemView(video, onItemClick = {}) {}
@@ -190,17 +185,24 @@ fun LiveVideoHeaderViewPreview() {
     }
 }
 
-class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
-    override val values: Sequence<LiveVideo> = sequenceOf(
-        liveVideo(),
-        liveVideo(channelTitle = "channel title - チャンネルタイトル"),
+class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
+    override val values: Sequence<TimelineItem> = sequenceOf(
+        timelineItem(video = liveVideo()),
+        timelineItem(liveVideo(channelTitle = "channel title - チャンネルタイトル")),
     )
 
     companion object {
+        fun timelineItem(video: LiveVideo<*>): TimelineItem = TimelineItem(
+            video = video,
+            extraHourOfDay = Duration.ZERO,
+        )
+
         fun liveVideo(
             title: String = "video title",
             channelTitle: String = "channel title",
-        ): LiveVideo = LiveVideoEntity(
+            description: String = "",
+            viewerCount: BigInteger? = null,
+        ): LiveVideo<*> = LiveVideoEntity(
             title = title,
             scheduledStartDateTime = Instant.now(),
             channel = LiveChannelEntity(
@@ -212,6 +214,22 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             id = YouTubeVideo.Id("a").mapTo(),
             thumbnailUrl = "",
             url = "",
+            description = description,
+            viewerCount = viewerCount,
         )
     }
 }
+
+private data class LiveVideoEntity(
+    override val id: LiveVideo.Id,
+    override val channel: LiveChannel,
+    override val title: String,
+    override val scheduledStartDateTime: Instant? = null,
+    override val scheduledEndDateTime: Instant? = null,
+    override val actualStartDateTime: Instant? = null,
+    override val actualEndDateTime: Instant? = null,
+    override val thumbnailUrl: String,
+    override val url: String,
+    override val description: String,
+    override val viewerCount: BigInteger?,
+) : LiveVideo<LiveVideoEntity>

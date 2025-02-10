@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.UPCOMING_DEADLINE
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isFreeChatTitle
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isPostponedLive
@@ -36,6 +37,7 @@ interface YouTubeVideo {
     enum class BroadcastType { LIVE, UPCOMING, NONE, }
 
     companion object {
+        internal val UPCOMING_DEADLINE: Duration = Duration.ofHours(6)
         val YouTubeVideo.url: String get() = "https://youtube.com/watch?v=${id.value}"
         val YouTubeVideo.isArchived: Boolean
             get() = liveBroadcastContent != null && (!isLiveStream() || actualEndDateTime != null)
@@ -80,6 +82,12 @@ interface YouTubeVideoExtended : YouTubeVideo, YouTubeVideoUpdatable {
             else -> object : YouTubeVideoExtended by this {
                 override val isFreeChat: Boolean = true
             }
+        }
+
+        fun YouTubeVideoExtended.isUpcomingWithinPublicationDeadline(current: Instant): Boolean {
+            check(isUpcoming())
+            check(isFreeChat != true)
+            return current <= (checkNotNull(scheduledStartDateTime) + UPCOMING_DEADLINE)
         }
     }
 }

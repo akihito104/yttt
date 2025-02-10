@@ -15,9 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.liveVideo
+import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.timelineItem
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.feature.timetable.TimelineItem
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -47,7 +50,7 @@ fun TimetableScreen(
 }
 
 fun LazyListScope.simpleContent(
-    itemsProvider: () -> List<LiveVideo>,
+    itemsProvider: () -> List<TimelineItem>,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     onListItemClicked: (LiveVideo.Id) -> Unit,
@@ -68,7 +71,7 @@ fun LazyListScope.simpleContent(
 
 @OptIn(ExperimentalFoundationApi::class)
 fun LazyListScope.groupedContent(
-    itemsProvider: () -> Map<String, List<LiveVideo>>,
+    itemsProvider: () -> Map<String, List<TimelineItem>>,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     onListItemClicked: (LiveVideo.Id) -> Unit,
@@ -101,7 +104,7 @@ private fun SimpleTimetableScreenPreview() {
             onRefresh = {},
         ) {
             simpleContent(
-                itemsProvider = { listOf(LiveVideoPreviewParamProvider.liveVideo()) },
+                itemsProvider = { listOf(timelineItem(liveVideo())) },
                 onListItemClicked = {},
             ) {}
         }
@@ -111,7 +114,7 @@ private fun SimpleTimetableScreenPreview() {
 @LightDarkModePreview
 @Composable
 private fun GroupedTimetableScreenPreview() {
-    val items = mapOf("2023/06/29(木)" to listOf(LiveVideoPreviewParamProvider.liveVideo()))
+    val items = mapOf("2023/06/29(木)" to listOf(timelineItem(liveVideo())))
     AppTheme {
         TimetableScreen(
             refreshingProvider = { false },

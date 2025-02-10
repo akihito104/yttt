@@ -81,8 +81,8 @@ class TimetableContextMenuDelegate @Inject constructor(
     private val findLiveVideoMap: IdBaseClassMap<FindLiveVideoUseCase>,
     private val menuSelectorMap: IdBaseClassMap<TimetableContextMenuSelector>,
 ) {
-    private val _selectedLiveVideo = MutableStateFlow<LiveVideo?>(null)
-    private val selected: LiveVideo get() = checkNotNull(_selectedLiveVideo.value)
+    private val _selectedLiveVideo = MutableStateFlow<LiveVideo<*>?>(null)
+    private val selected: LiveVideo<*> get() = checkNotNull(_selectedLiveVideo.value)
     private val menuSelector get() = checkNotNull(menuSelectorMap[selected.id.type.java])
     val menuItems: Flow<List<TimetableMenuItem>> = _selectedLiveVideo.map {
         if (it == null) {

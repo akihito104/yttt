@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data.model
 
-import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import java.math.BigInteger
 
 inline fun <reified T : IdBase> IdBase.mapTo(): T {
@@ -71,70 +70,6 @@ fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelD
     publishedAt = publishedAt,
     iconUrl = iconUrl,
     platform = YouTube,
-)
-
-fun TwitchStream.toLiveVideo(user: TwitchUserDetail): LiveVideo = LiveVideoEntity(
-    id = id.mapTo(),
-    channel = user.toLiveChannel(),
-    title = title,
-    actualStartDateTime = startedAt,
-    thumbnailUrl = getThumbnailUrl(),
-    url = url,
-)
-
-fun TwitchStreamSchedule.toLiveVideo(user: TwitchUserDetail): LiveVideo = LiveVideoEntity(
-    id = id.mapTo(),
-    channel = user.toLiveChannel(),
-    scheduledStartDateTime = schedule.startTime,
-    scheduledEndDateTime = schedule.endTime,
-    title = title,
-    thumbnailUrl = getThumbnailUrl(),
-    url = url,
-)
-
-fun YouTubeVideoExtended.toLiveVideo(): LiveVideo = LiveVideoEntity(
-    id = id.mapTo(),
-    title = title,
-    channel = channel.toLiveChannel(),
-    thumbnailUrl = thumbnailUrl,
-    scheduledStartDateTime = scheduledStartDateTime,
-    scheduledEndDateTime = scheduledEndDateTime,
-    actualStartDateTime = actualStartDateTime,
-    actualEndDateTime = actualEndDateTime,
-    url = url,
-    isFreeChat = isFreeChat,
-    isNowOnAir = isNowOnAir(),
-    isUpcoming = isUpcoming(),
-)
-
-private data class LiveVideoDetailImpl(
-    private val video: LiveVideo,
-    override val description: String,
-    override val viewerCount: BigInteger? = null,
-) : LiveVideoDetail, LiveVideo by video
-
-fun TwitchVideo<*>.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail = when (this) {
-    is TwitchStream -> this.toLiveVideoDetail(user)
-    is TwitchStreamSchedule -> this.toLiveVideoDetail(user)
-    else -> throw AssertionError("unsupported type: ${this::class.simpleName}")
-}
-
-fun TwitchStream.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail = LiveVideoDetailImpl(
-    video = this.toLiveVideo(user),
-    description = "${this.gameName} tag: ${this.tags.joinToString()}",
-    viewerCount = BigInteger.valueOf(this.viewCount.toLong())
-)
-
-fun TwitchStreamSchedule.toLiveVideoDetail(user: TwitchUserDetail): LiveVideoDetail =
-    LiveVideoDetailImpl(
-        video = this.toLiveVideo(user),
-        description = "",
-    )
-
-fun YouTubeVideoExtended.toLiveVideoDetail(): LiveVideoDetail = LiveVideoDetailImpl(
-    video = this.toLiveVideo(),
-    description = description,
-    viewerCount = viewerCount,
 )
 
 fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): LiveSubscription =
