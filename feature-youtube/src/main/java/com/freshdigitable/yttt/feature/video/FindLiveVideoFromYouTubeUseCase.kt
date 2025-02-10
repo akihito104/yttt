@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.feature.video
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoForDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.feature.create
@@ -19,22 +18,8 @@ internal class FindLiveVideoFromYouTubeUseCase @Inject constructor(
     }
 }
 
-internal class FindLiveVideoDetailAnnotatedFromYouTubeUseCase @Inject constructor(
-    private val findLiveVideo: FindLiveVideoFromYouTubeUseCase,
-) : FindLiveVideoDetailAnnotatedUseCase {
-    override suspend fun invoke(id: LiveVideo.Id): LiveVideoForDetail? {
-        val v = findLiveVideo(id) ?: return null
-        return YouTubeLiveVideoForDetail(v)
-    }
-}
-
-internal data class YouTubeLiveVideoForDetail(
-    override val video: LiveVideo<*>,
-) : LiveVideoForDetail {
-    override val annotatableDescription: AnnotatableString
-        get() = AnnotatableString.createForYouTube(video.description)
-    override val annotatableTitle: AnnotatableString
-        get() = AnnotatableString.createForYouTube(video.title)
+internal class YouTubeAnnotatableStringFactory @Inject constructor() : AnnotatableStringFactory {
+    override fun invoke(text: String): AnnotatableString = AnnotatableString.createForYouTube(text)
 }
 
 internal fun AnnotatableString.Companion.createForYouTube(description: String): AnnotatableString =

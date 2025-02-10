@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.feature.video
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoForDetail
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -26,22 +25,8 @@ internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
     }
 }
 
-internal class FindLiveVideoDetailAnnotatedFromTwitchUseCase @Inject constructor(
-    private val findLiveVideoUseCase: FindLiveVideoFromTwitchUseCase
-) : FindLiveVideoDetailAnnotatedUseCase {
-    override suspend fun invoke(id: LiveVideo.Id): LiveVideoForDetail? {
-        val v = findLiveVideoUseCase(id) ?: return null
-        return TwitchLiveVideoForDetail(v)
-    }
-}
-
-internal data class TwitchLiveVideoForDetail(
-    override val video: LiveVideo<*>,
-) : LiveVideoForDetail {
-    override val annotatableTitle: AnnotatableString
-        get() = AnnotatableString.createForTwitch(video.title)
-    override val annotatableDescription: AnnotatableString
-        get() = AnnotatableString.createForTwitch(video.description)
+internal class TwitchAnnotatableStringFactory @Inject constructor() : AnnotatableStringFactory {
+    override fun invoke(text: String): AnnotatableString = AnnotatableString.createForTwitch(text)
 }
 
 internal fun AnnotatableString.Companion.createForTwitch(annotatable: String?): AnnotatableString =

@@ -87,9 +87,3 @@ interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
         }
     }
 }
-
-interface LiveVideoForDetail {
-    val video: LiveVideo<*>
-    val annotatableDescription: AnnotatableString
-    val annotatableTitle: AnnotatableString
-}
