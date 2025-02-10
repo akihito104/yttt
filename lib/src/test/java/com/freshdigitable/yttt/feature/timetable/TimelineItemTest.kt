@@ -1,10 +1,10 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
+import io.mockk.every
+import io.mockk.mockk
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
-import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
@@ -57,19 +57,6 @@ class TimelineItemTest {
     }
 }
 
-private fun onAir(actualStartDateTime: Instant): LiveVideo.OnAir = object : LiveVideo.OnAir {
-    override val actualStartDateTime: Instant
-        get() = actualStartDateTime
-    override val channel: LiveChannel get() = throw UnsupportedOperationException()
-    override val scheduledStartDateTime: Instant get() = throw UnsupportedOperationException()
-    override val scheduledEndDateTime: Instant get() = throw UnsupportedOperationException()
-    override val actualEndDateTime: Instant get() = throw UnsupportedOperationException()
-    override val url: String get() = throw UnsupportedOperationException()
-    override val description: String get() = throw UnsupportedOperationException()
-    override val viewerCount: BigInteger get() = throw UnsupportedOperationException()
-    override val id: LiveVideo.Id get() = throw UnsupportedOperationException()
-    override val title: String get() = throw UnsupportedOperationException()
-    override val thumbnailUrl: String get() = throw UnsupportedOperationException()
-    override fun equals(other: Any?): Boolean = throw UnsupportedOperationException()
-    override fun hashCode(): Int = throw UnsupportedOperationException()
+private fun onAir(actualStartDateTime: Instant): LiveVideo.OnAir = mockk<LiveVideo.OnAir>().apply {
+    every { this@apply.actualStartDateTime } returns actualStartDateTime
 }

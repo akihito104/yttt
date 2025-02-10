@@ -24,39 +24,41 @@ internal class TimetablePageDelegateImpl @Inject constructor(
     items: Map<TimetablePage, @JvmSuppressWildcards Set<FetchTimetableItemSourceUseCase>>,
     settingRepository: SettingRepository,
 ) : TimetablePageDelegate {
-    private val extraHourOfDay = settingRepository.changeDateTime.map {
-        Duration.ofHours(((it ?: 24) - 24).toLong())
-    }
-
-    @OptIn(FlowPreview::class)
-    private val sourceTable: Map<TimetablePage, Flow<List<TimelineItem>>> =
-        items.mapValues { (p, uc) ->
-            val videos = combine(uc.map { it() }) { v -> v.flatMap { it } }
-                .debounce(50.milliseconds)
-                .map { v -> v.sortedWith(compareBy { it }) }
-                .onEach { logI { "${p.name}: size=${it.size}" } }
-            combine(videos, extraHourOfDay) { v, e -> v.map { TimelineItem(it, e) } }
-        }
-
+    private val factory = items.mapValues { (k, v) -> Factory(k, v, settingRepository) }
     override fun getSimpleItemList(page: TimetablePage): Flow<List<TimelineItem>> =
-        checkNotNull(sourceTable[page])
-
-    private val upcomingItems: Flow<Map<String, List<TimelineItem>>> =
-        checkNotNull(sourceTable[TimetablePage.Upcoming]).map { v ->
-            v.groupBy { checkNotNull(it.groupKey) }.mapKeys { (k, _) -> k.text }
-        }
-    private val groupedItemLists = mapOf(
-        TimetablePage.Upcoming to upcomingItems,
-    )
+        checkNotNull(factory[page]).simpleItem
 
     override fun getGroupedItemList(page: TimetablePage): Flow<Map<String, List<TimelineItem>>> =
-        checkNotNull(groupedItemLists[page])
+        checkNotNull(factory[page]).groupedItem
 
-    override val tabs: Flow<List<TimetableTabData>> = combine(
-        sourceTable.entries.map { (k, v) ->
-            v.map { it.size }.distinctUntilChanged().map { TimetableTabData(k, it) }
-        }
-    ) {
+    override val tabs: Flow<List<TimetableTabData>> = combine(factory.map { (_, v) -> v.tab }) {
         it.toList().sorted()
+    }
+
+    private class Factory(
+        page: TimetablePage,
+        useCase: Set<FetchTimetableItemSourceUseCase>,
+        settingRepository: SettingRepository,
+    ) {
+        private val extraHourOfDay = settingRepository.changeDateTime.map {
+            Duration.ofHours(((it ?: 24) - 24).toLong())
+        }
+
+        @OptIn(FlowPreview::class)
+        private val videos = combine(useCase.map { it() }) { v -> v.flatMap { it } }
+            .debounce(50.milliseconds)
+            .map { v -> v.sortedWith(compareBy { it }) }
+            .onEach { logI { "${page.name}: size=${it.size}" } }
+        val simpleItem = combine(videos, extraHourOfDay) { v, e ->
+            v.map { TimelineItem(it, e) }
+        }
+        val groupedItem = simpleItem.map { v ->
+            v.filter { it.groupKey != null }
+                .groupBy { checkNotNull(it.groupKey) }
+                .mapKeys { (k, _) -> k.text }
+        }
+        val tab = videos.map { it.size }
+            .distinctUntilChanged()
+            .map { TimetableTabData(page, it) }
     }
 }
