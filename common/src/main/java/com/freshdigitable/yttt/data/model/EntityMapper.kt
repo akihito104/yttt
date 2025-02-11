@@ -72,21 +72,6 @@ fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelD
     platform = YouTube,
 )
 
-fun TwitchBroadcaster.toLiveSubscription(order: Int, user: TwitchUserDetail): LiveSubscription =
-    LiveSubscriptionEntity(
-        id = id.mapTo(),
-        channel = user.toLiveChannel(),
-        order = order,
-        subscribeSince = followedAt,
-    )
-
-fun YouTubeSubscription.toLiveSubscription(): LiveSubscription = LiveSubscriptionEntity(
-    id = id.mapTo(),
-    channel = channel.toLiveChannel(),
-    subscribeSince = subscribeSince,
-    order = order,
-)
-
 fun YouTubePlaylist.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
     id = id.mapTo(),
     title = title,

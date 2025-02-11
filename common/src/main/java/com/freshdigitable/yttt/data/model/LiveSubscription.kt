@@ -19,10 +19,3 @@ interface LiveSubscription : Comparable<LiveSubscription> {
 
     override fun compareTo(other: LiveSubscription): Int = order - other.order
 }
-
-data class LiveSubscriptionEntity(
-    override val id: LiveSubscription.Id,
-    override val subscribeSince: Instant,
-    override val channel: LiveChannel,
-    override val order: Int,
-) : LiveSubscription
