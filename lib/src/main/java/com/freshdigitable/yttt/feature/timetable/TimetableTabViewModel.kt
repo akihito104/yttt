@@ -5,6 +5,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.AppPerformance
+import com.freshdigitable.yttt.compose.HorizontalPagerTabViewModel
+import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -30,7 +32,8 @@ internal class TimetableTabViewModel @Inject constructor(
     private val contextMenuDelegate: TimetableContextMenuDelegate,
     private val dateTimeProvider: DateTimeProvider,
     timetablePageDelegate: TimetablePageDelegate,
-) : ViewModel(), TimetablePageDelegate by timetablePageDelegate {
+) : ViewModel(), TimetablePageDelegate by timetablePageDelegate,
+    HorizontalPagerTabViewModel<TimetableTabData> {
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
     val canUpdate: Boolean
@@ -70,6 +73,9 @@ internal class TimetableTabViewModel @Inject constructor(
             contextMenuDelegate.consumeMenuItem(item)
         }
     }
+
+    override val tabData: Flow<List<TimetableTabData>> get() = tabs
+    override val initialTab: List<TimetableTabData> = TimetableTabData.initialValues()
 
     companion object {
         @Suppress("unused")

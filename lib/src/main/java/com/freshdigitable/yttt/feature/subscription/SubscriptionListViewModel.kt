@@ -4,10 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.compose.HorizontalPagerTabViewModel
 import com.freshdigitable.yttt.compose.TabData
 import com.freshdigitable.yttt.data.model.LivePlatform
+import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.di.ClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -20,30 +23,32 @@ import javax.inject.Inject
 class SubscriptionListViewModel @Inject constructor(
     private val useCases: ClassMap<LivePlatform, FetchSubscriptionListSourceUseCase>,
     platform: ClassMap<LivePlatform, LivePlatform>,
-) : ViewModel() {
-    private val sortedPlatform = platform.values.sortedBy { it.name }
-    private val table = platform.entries.associate { (k, v) -> v to requireNotNull(useCases[k]) }
-    val sources = table.entries.associate { (p, uc) ->
-        p to uc().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-    }
-    private val initialTab: List<TabData> = sortedPlatform.map { SubscriptionTabData(it, 0) }
-    val tabData: StateFlow<List<TabData>> = combine(sources.entries.map { (p, f) ->
-        f.map { it.size }.distinctUntilChanged().map { SubscriptionTabData(p, it) }
-    }) {
-        it.toList().sorted()
-    }.stateIn(viewModelScope, SharingStarted.Lazily, initialTab)
+) : ViewModel(), HorizontalPagerTabViewModel<SubscriptionTabData> {
+    private val sources = platform.map { (clz, p) ->
+        p to checkNotNull(useCases[clz])()
+            .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    }.toMap()
+    override val initialTab: List<SubscriptionTabData> = platform.values
+        .map { SubscriptionTabData(it, 0) }.sorted()
+    override val tabData: StateFlow<List<SubscriptionTabData>> =
+        combine(sources.map { (p, subs) ->
+            subs.map { it.size }.distinctUntilChanged().map { SubscriptionTabData(p, it) }
+        }) {
+            it.toList().sorted()
+        }.stateIn(viewModelScope, SharingStarted.Lazily, initialTab)
+
+    fun items(tab: SubscriptionTabData): Flow<List<LiveSubscription>> =
+        checkNotNull(sources[tab.platform])
 }
 
 @Immutable
-internal class SubscriptionTabData(
+class SubscriptionTabData(
     internal val platform: LivePlatform,
-    private val count: Int
-) : TabData {
+    private val count: Int,
+) : TabData<SubscriptionTabData> {
     @Composable
     override fun title(): String = "${platform.name}($count)"
 
-    override fun compareTo(other: TabData): Int {
-        val o = other as? SubscriptionTabData ?: return -1
-        return platform.name.compareTo(o.platform.name)
-    }
+    override fun compareTo(other: SubscriptionTabData): Int =
+        platform.name.compareTo(other.platform.name)
 }
