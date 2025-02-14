@@ -21,9 +21,24 @@ fun <T : TabData<T>> HorizontalPagerWithTabScreen(
     viewModel: HorizontalPagerTabViewModel<T>,
     page: @Composable (T) -> Unit,
 ) {
+    val tab = viewModel.tabData.collectAsState(initial = viewModel.initialTab)
+    HorizontalPagerWithTabScreen(
+        tabModifier = tabModifier,
+        tabCount = tab.value.size,
+        tab = { tab.value[it].title() },
+        page = { page(tab.value[it]) },
+    )
+}
+
+@Composable
+fun HorizontalPagerWithTabScreen(
+    tabModifier: Modifier = Modifier,
+    tabCount: Int,
+    tab: @Composable (Int) -> String,
+    page: @Composable (Int) -> Unit,
+) {
     Column(modifier = Modifier.fillMaxSize()) {
-        val tabData = viewModel.tabData.collectAsState(initial = viewModel.initialTab)
-        val pagerState = rememberPagerState { tabData.value.size }
+        val pagerState = rememberPagerState { tabCount }
         ScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
             modifier = Modifier
@@ -31,7 +46,7 @@ fun <T : TabData<T>> HorizontalPagerWithTabScreen(
                 .then(tabModifier),
         ) {
             val coroutineScope = rememberCoroutineScope()
-            tabData.value.forEachIndexed { index, data ->
+            for (index in 0..<tabCount) {
                 Tab(
                     selected = pagerState.currentPage == index,
                     onClick = {
@@ -39,13 +54,13 @@ fun <T : TabData<T>> HorizontalPagerWithTabScreen(
                             pagerState.animateScrollToPage(index)
                         }
                     },
-                    text = { Text(text = data.title()) }
+                    text = { Text(text = tab(index)) }
                 )
             }
         }
         HorizontalPager(
             state = pagerState,
-            pageContent = { page(tabData.value[it]) },
+            pageContent = { page(it) },
         )
     }
 }

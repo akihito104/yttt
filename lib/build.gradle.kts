@@ -47,8 +47,8 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":common"))
-    implementation(project(":common-ui"))
+    api(project(":common"))
+    api(project(":common-ui"))
     implementation(project(":feature-twitch"))
     implementation(project(":repository-youtube"))
     implementation(project(":repository-twitch"))
@@ -79,6 +79,9 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.paging.compose)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

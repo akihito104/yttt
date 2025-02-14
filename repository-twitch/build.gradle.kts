@@ -54,7 +54,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":common"))
+    api(project(":common"))
     implementation(project(":data-local-room"))
 
     implementation(platform(libs.okhttp.bom))
@@ -64,6 +64,7 @@ dependencies {
     ksp(libs.retrofit.responseTypeKeeper)
     implementation(libs.converter.gson)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.paging.runtime)
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)

@@ -40,8 +40,8 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":common"))
-    implementation(project(":common-ui"))
+    api(project(":common"))
+    api(project(":common-ui"))
     implementation(project(":repository-youtube"))
     implementation(project(":repository-appuser"))
 
@@ -62,6 +62,8 @@ dependencies {
 
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    implementation(libs.androidx.paging.runtime)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

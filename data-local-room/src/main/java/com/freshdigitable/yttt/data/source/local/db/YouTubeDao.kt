@@ -182,4 +182,4 @@ private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTube
 )
 
 internal interface YouTubeDaoProviders : YouTubeChannelDaoProviders, YouTubeVideoDaoProviders,
-    YouTubePlaylistDaoProviders, YouTubeSubscriptionDaoProviders
+    YouTubePlaylistDaoProviders, YouTubeSubscriptionDaoProviders, YouTubePageSourceDaoProviders
