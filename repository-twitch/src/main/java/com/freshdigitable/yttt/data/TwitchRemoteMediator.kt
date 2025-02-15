@@ -8,9 +8,10 @@ import androidx.paging.PagingData
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.paging.map
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.source.local.db.TwitchPagingSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchLiveSubscription
+import com.freshdigitable.yttt.data.source.local.db.TwitchPagingSource
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,6 +20,8 @@ import javax.inject.Inject
 @OptIn(ExperimentalPagingApi::class)
 class TwitchRemoteMediator @Inject constructor(
     private val pagingSource: TwitchPagingSource,
+    private val repository: TwitchLiveRepository,
+    private val dateTimeProvider: DateTimeProvider,
 ) : RemoteMediator<Int, TwitchLiveSubscription>() {
     val pager: Flow<PagingData<LiveSubscription>> = Pager(
         config = PagingConfig(pageSize = 50),
@@ -28,6 +31,9 @@ class TwitchRemoteMediator @Inject constructor(
     }.flow.map { p -> p.map { it } }
 
     override suspend fun initialize(): InitializeAction {
+        if (pagingSource.isExpired(dateTimeProvider.now())) {
+            return InitializeAction.LAUNCH_INITIAL_REFRESH
+        }
         return InitializeAction.SKIP_INITIAL_REFRESH
     }
 
@@ -36,6 +42,18 @@ class TwitchRemoteMediator @Inject constructor(
         state: PagingState<Int, TwitchLiveSubscription>,
     ): MediatorResult {
         logD { "load: $loadType, $state" }
-        return MediatorResult.Success(endOfPaginationReached = true)
+        return when (loadType) {
+            LoadType.REFRESH -> {
+                val me = repository.fetchMe()
+                    ?: return MediatorResult.Success(endOfPaginationReached = true)
+                val followings = repository.fetchAllFollowings(me.id)
+                val userId = followings.followings.map { it.id }
+                repository.findUsersById(userId.toSet())
+                MediatorResult.Success(false)
+            }
+
+            LoadType.PREPEND -> MediatorResult.Success(true)
+            LoadType.APPEND -> MediatorResult.Success(state.lastItemOrNull() == null)
+        }
     }
 }

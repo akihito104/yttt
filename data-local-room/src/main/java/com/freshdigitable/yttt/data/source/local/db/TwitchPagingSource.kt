@@ -4,6 +4,7 @@ import androidx.paging.PagingSource
 import androidx.room.ColumnInfo
 import androidx.room.Ignore
 import androidx.room.Query
+import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveSubscription
@@ -69,6 +70,7 @@ internal class TwitchPageSourceDaoImpl @Inject constructor(
 
 interface TwitchPagingSource {
     fun getTwitchLiveSubscriptionPagingSource(): PagingSource<Int, TwitchLiveSubscription>
+    suspend fun isExpired(current: Instant): Boolean
 }
 
 @Singleton
@@ -77,6 +79,16 @@ internal class TwitchPagingSourceImpl @Inject constructor(
 ) : TwitchPagingSource {
     override fun getTwitchLiveSubscriptionPagingSource(): PagingSource<Int, TwitchLiveSubscription> =
         db.twitchLiveSubscription.getTwitchLiveSubscriptionPagingSource()
+
+    override suspend fun isExpired(current: Instant): Boolean = db.withTransaction {
+        val users = db.twitchAuthUserDao.fetchAllUsers()
+        for (u in users) {
+            val expire = db.twitchStreamExpireDao.findStreamExpire(u.userId)
+                ?: return@withTransaction true
+            if (expire.expiredAt <= current) return@withTransaction true
+        }
+        return@withTransaction false
+    }
 }
 
 @InstallIn(SingletonComponent::class)

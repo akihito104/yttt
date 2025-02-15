@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.fold
+import kotlinx.coroutines.flow.reduce
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.Period
@@ -39,13 +40,17 @@ class YouTubeRepository @Inject constructor(
 ) : YoutubeDataSource {
     val videos: StateFlow<List<YouTubeVideoExtended>> = localSource.videos
         .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
+    internal var subscriptionFetchedAt: Instant? = null
 
     override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> {
-        val res = remoteSource.fetchAllSubscribe(maxResult)
         val current = localSource.fetchAllSubscribe()
+        val res = remoteSource.fetchAllSubscribePaged(maxResult.toInt()).reduce { acc, v ->
+            localSource.addSubscribes(v)
+            acc + v
+        }
+        subscriptionFetchedAt = dateTimeProvider.now()
         val deleted = current.map { it.id }.toSet() - res.map { it.id }.toSet()
         localSource.removeSubscribes(deleted)
-        localSource.addSubscribes(res)
         return res
     }
 
@@ -62,6 +67,7 @@ class YouTubeRepository @Inject constructor(
                     res.addAll(summary)
                     value
                 }
+            subscriptionFetchedAt = dateTimeProvider.now()
             val deleted = cache.map { it.id } - subs.map { it.id }.toSet()
             localSource.removeSubscribes(deleted.toSet())
         }
