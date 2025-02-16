@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalBottomSheet
@@ -50,20 +51,25 @@ internal fun TimetableTabScreen(
         }
     }
     val refreshing = viewModel.isLoading.observeAsState(false)
+    val listState = TimetablePage.entries.associateWith { rememberLazyListState() }
+    val timetableContent = TimetablePage.entries.associateWith {
+        timetableContent(
+            page = it,
+            thumbnailModifier = thumbnailModifier,
+            titleModifier = titleModifier,
+            onListItemClicked = onListItemClicked,
+            viewModel = viewModel,
+        )
+    }
     HorizontalPagerWithTabScreen(
         tabModifier = tabModifier,
         viewModel = viewModel,
     ) { tab ->
         TimetableScreen(
+            lazyListState = checkNotNull(listState[tab.page]),
             refreshingProvider = { refreshing.value },
             onRefresh = viewModel::loadList,
-            listContent = timetableContent(
-                page = tab.page,
-                thumbnailModifier = thumbnailModifier,
-                titleModifier = titleModifier,
-                onListItemClicked = onListItemClicked,
-                viewModel = viewModel,
-            ),
+            listContent = checkNotNull(timetableContent[tab.page]),
         )
     }
     val menuItems = viewModel.menuItems.collectAsState(emptyList())

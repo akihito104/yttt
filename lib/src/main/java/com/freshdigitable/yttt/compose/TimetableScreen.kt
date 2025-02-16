@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -25,6 +27,7 @@ import com.freshdigitable.yttt.feature.timetable.TimelineItem
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun TimetableScreen(
+    lazyListState: LazyListState = rememberLazyListState(),
     refreshingProvider: () -> Boolean,
     onRefresh: () -> Unit,
     listContent: LazyListScope.() -> Unit,
@@ -38,6 +41,7 @@ fun TimetableScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
+            state = lazyListState,
             verticalArrangement = Arrangement.spacedBy(8.dp),
             content = listContent,
         )

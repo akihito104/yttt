@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.compose
 
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -14,12 +15,15 @@ fun SubscriptionListScreen(
     onListItemClicked: (LiveChannel.Id) -> Unit,
 ) {
     val items = viewModel.pagingData.map { v -> v.collectAsLazyPagingItems() }
+    val listState = items.indices.map { rememberLazyListState() }
     HorizontalPagerWithTabScreen(
         tabCount = viewModel.tabCount,
         tab = { viewModel.tabText(it, items[it].itemCount) },
     ) { index ->
         val item = items[index]
-        LazyColumn {
+        LazyColumn(
+            state = listState[index],
+        ) {
             items(
                 count = item.itemCount,
                 key = { i ->
