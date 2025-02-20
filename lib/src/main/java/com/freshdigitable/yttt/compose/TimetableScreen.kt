@@ -13,12 +13,14 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.liveVideo
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.timelineItem
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.feature.timetable.TimelineItem
+import com.freshdigitable.yttt.logD
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +30,7 @@ fun TimetableScreen(
     onRefresh: () -> Unit,
     listContent: LazyListScope.() -> Unit,
 ) {
+    AppLogger.logD("Timetable") { "start:" }
     PullToRefreshBox(
         isRefreshing = refreshingProvider(),
         onRefresh = onRefresh,

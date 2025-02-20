@@ -26,12 +26,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
 import com.freshdigitable.yttt.feature.timetable.textRes
+import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -45,6 +47,7 @@ internal fun TimetableTabScreen(
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
 ) {
+    AppLogger.logD("TimetableTab") { "start:" }
     LaunchedEffect(Unit) {
         if (viewModel.canUpdate) {
             viewModel.loadList()

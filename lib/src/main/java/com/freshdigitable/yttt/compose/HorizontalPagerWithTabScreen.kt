@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import com.freshdigitable.yttt.AppLogger
+import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
@@ -21,6 +23,7 @@ fun <T : TabData<T>> HorizontalPagerWithTabScreen(
     viewModel: HorizontalPagerTabViewModel<T>,
     page: @Composable (T) -> Unit,
 ) {
+    AppLogger.logD("HorizontalPager(VM)") { "start:" }
     val tab = viewModel.tabData.collectAsState(initial = viewModel.initialTab)
     HorizontalPagerWithTabScreen(
         tabModifier = tabModifier,
@@ -37,6 +40,7 @@ fun HorizontalPagerWithTabScreen(
     tab: @Composable (Int) -> String,
     page: @Composable (Int) -> Unit,
 ) {
+    AppLogger.logD("HorizontalPager") { "start:" }
     Column(modifier = Modifier.fillMaxSize()) {
         val pagerState = rememberPagerState { tabCount }
         ScrollableTabRow(
