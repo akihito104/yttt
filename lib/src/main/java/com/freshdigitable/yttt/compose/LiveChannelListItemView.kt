@@ -85,7 +85,11 @@ fun LiveChannelIcon(
     platformColor: Color? = null,
     iconSize: Dp,
 ) {
-    Box {
+    Box(
+        modifier = Modifier
+            .then(modifier)
+            .size(iconSize),
+    ) {
         ImageLoadableView.UserIcon(
             modifier = modifier,
             url = iconUrl,

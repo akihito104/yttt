@@ -24,7 +24,7 @@ class TwitchRemoteMediator @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
 ) : RemoteMediator<Int, TwitchLiveSubscription>() {
     val pager: Flow<PagingData<LiveSubscription>> = Pager(
-        config = PagingConfig(pageSize = 50),
+        config = PagingConfig(pageSize = 20),
         remoteMediator = this,
     ) {
         pagingSource.getTwitchLiveSubscriptionPagingSource()
@@ -49,11 +49,10 @@ class TwitchRemoteMediator @Inject constructor(
                 val followings = repository.fetchAllFollowings(me.id)
                 val userId = followings.followings.map { it.id }
                 repository.findUsersById(userId.toSet())
-                MediatorResult.Success(false)
+                MediatorResult.Success(true)
             }
 
-            LoadType.PREPEND -> MediatorResult.Success(true)
-            LoadType.APPEND -> MediatorResult.Success(state.lastItemOrNull() == null)
+            LoadType.PREPEND, LoadType.APPEND -> MediatorResult.Success(true)
         }
     }
 }

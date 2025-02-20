@@ -26,7 +26,7 @@ class YouTubeRemoteMediator @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
 ) : RemoteMediator<Int, YouTubeLiveSubscription>() {
     val page: Flow<PagingData<LiveSubscription>> = Pager(
-        config = PagingConfig(pageSize = 50),
+        config = PagingConfig(pageSize = 20),
         remoteMediator = this,
     ) {
         pagingSource.getYouTubeLiveSubscriptionPageSource()
@@ -48,11 +48,10 @@ class YouTubeRemoteMediator @Inject constructor(
         return when (loadType) {
             LoadType.REFRESH -> {
                 repository.fetchAllSubscribe(50)
-                MediatorResult.Success(false)
+                MediatorResult.Success(true)
             }
 
-            LoadType.PREPEND -> MediatorResult.Success(true)
-            LoadType.APPEND -> MediatorResult.Success(state.lastItemOrNull() == null)
+            LoadType.PREPEND, LoadType.APPEND -> MediatorResult.Success(true)
         }
     }
 }
