@@ -262,6 +262,9 @@ internal class TwitchAuthorizedUserTable(
         @Query("SELECT * FROM twitch_auth_user WHERE user_id IN (:ids)")
         suspend fun findAuthorizedUser(ids: Collection<TwitchUser.Id>): List<TwitchAuthorizedUserTable>
 
+        @Query("SELECT * FROM twitch_auth_user")
+        suspend fun fetchAllUsers(): List<TwitchAuthorizedUserTable>
+
         @Query("DELETE FROM twitch_auth_user")
         override suspend fun deleteTable()
     }

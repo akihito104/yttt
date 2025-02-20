@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalBottomSheet
@@ -25,12 +26,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
 import com.freshdigitable.yttt.feature.timetable.textRes
+import com.freshdigitable.yttt.logD
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,32 +47,32 @@ internal fun TimetableTabScreen(
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
 ) {
+    AppLogger.logD("TimetableTab") { "start:" }
     LaunchedEffect(Unit) {
         if (viewModel.canUpdate) {
             viewModel.loadList()
         }
     }
-    val tabData = viewModel.tabs.collectAsState(initial = TimetableTabData.initialValues())
     val refreshing = viewModel.isLoading.observeAsState(false)
-    val listContents: Map<TimetablePage, LazyListScope.() -> Unit> = TimetablePage.entries
-        .associateWith {
-            timetableContent(
-                it,
-                thumbnailModifier = thumbnailModifier,
-                titleModifier = titleModifier,
-                onListItemClicked,
-                viewModel,
-            )
-        }
+    val listState = TimetablePage.entries.associateWith { rememberLazyListState() }
+    val timetableContent = TimetablePage.entries.associateWith {
+        timetableContent(
+            page = it,
+            thumbnailModifier = thumbnailModifier,
+            titleModifier = titleModifier,
+            onListItemClicked = onListItemClicked,
+            viewModel = viewModel,
+        )
+    }
     HorizontalPagerWithTabScreen(
         tabModifier = tabModifier,
-        tabDataProvider = { tabData.value },
+        viewModel = viewModel,
     ) { tab ->
-        val p = (tab as TimetableTabData).page
         TimetableScreen(
+            lazyListState = checkNotNull(listState[tab.page]),
             refreshingProvider = { refreshing.value },
             onRefresh = viewModel::loadList,
-            listContent = checkNotNull(listContents[p]),
+            listContent = checkNotNull(timetableContent[tab.page]),
         )
     }
     val menuItems = viewModel.menuItems.collectAsState(emptyList())
@@ -162,14 +167,11 @@ private fun ColumnScope.MenuContent(
 internal class TimetableTabData(
     internal val page: TimetablePage,
     private val count: Int
-) : TabData {
+) : TabData<TimetableTabData> {
     @Composable
     @ReadOnlyComposable
     override fun title(): String = stringResource(id = page.textRes, count)
-    override fun compareTo(other: TabData): Int {
-        val o = other as? TimetableTabData ?: return -1
-        return page.ordinal - o.page.ordinal
-    }
+    override fun compareTo(other: TimetableTabData): Int = page.ordinal - other.page.ordinal
 
     companion object {
         fun initialValues(): List<TimetableTabData> {
@@ -181,16 +183,18 @@ internal class TimetableTabData(
 @LightModePreview
 @Composable
 private fun TimetableTabScreenPreview() {
+    val tabs = listOf(
+        TimetableTabData(TimetablePage.OnAir, 10),
+        TimetableTabData(TimetablePage.Upcoming, 3),
+        TimetableTabData(TimetablePage.FreeChat, 7),
+    )
     AppTheme {
         HorizontalPagerWithTabScreen(
-            tabDataProvider = {
-                listOf(
-                    TimetableTabData(TimetablePage.OnAir, 10),
-                    TimetableTabData(TimetablePage.Upcoming, 3),
-                    TimetableTabData(TimetablePage.FreeChat, 7),
-                )
+            viewModel = object : HorizontalPagerTabViewModel<TimetableTabData> {
+                override val tabData: Flow<List<TimetableTabData>> get() = flowOf(tabs)
+                override val initialTab: List<TimetableTabData> get() = tabs
             },
-        ) { Text("page: ${(it as TimetableTabData).page.name}") }
+        ) { Text("page: ${it.page.name}") }
     }
 }
 

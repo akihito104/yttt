@@ -40,8 +40,8 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":common"))
-    implementation(project(":common-ui"))
+    api(project(":common"))
+    api(project(":common-ui"))
     implementation(project(":repository-twitch"))
 
     implementation(libs.hilt.android)
@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+    implementation(libs.androidx.paging.runtime)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

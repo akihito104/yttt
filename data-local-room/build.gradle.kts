@@ -38,7 +38,7 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":common"))
+    api(project(":common"))
 
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.runtime)
@@ -47,6 +47,9 @@ dependencies {
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+
+    implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.room.paging)
 
     testImplementation(libs.junit)
     testImplementation(libs.assertj.core)

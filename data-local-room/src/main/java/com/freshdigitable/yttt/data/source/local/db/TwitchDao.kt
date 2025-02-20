@@ -185,4 +185,4 @@ private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
 )
 
 internal interface TwitchDaoProviders : TwitchUserDaoProviders, TwitchStreamDaoProviders,
-    TwitchScheduleDaoProviders
+    TwitchScheduleDaoProviders, TwitchPageSourceDaoProviders

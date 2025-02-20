@@ -11,7 +11,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionEntity
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
@@ -216,16 +215,23 @@ internal class YouTubeRemoteDataSource @Inject constructor(
 }
 
 private fun Subscription.toLiveSubscription(order: Int): YouTubeSubscription =
-    YouTubeSubscriptionEntity(
-        id = YouTubeSubscription.Id(id),
-        subscribeSince = Instant.ofEpochMilli(snippet.publishedAt.value),
-        channel = YouTubeChannelEntity(
-            id = YouTubeChannel.Id(snippet.resourceId.channelId),
-            iconUrl = snippet.thumbnails.iconUrl,
-            title = snippet.title,
-        ),
-        order = order,
-    )
+    YouTubeSubscriptionRemote(this, order)
+
+private data class YouTubeSubscriptionRemote(
+    private val subscription: Subscription,
+    override val order: Int,
+) : YouTubeSubscription {
+    override val id: YouTubeSubscription.Id
+        get() = YouTubeSubscription.Id(subscription.id)
+    override val subscribeSince: Instant
+        get() = Instant.ofEpochMilli(subscription.snippet.publishedAt.value)
+    override val channel: YouTubeChannel
+        get() = YouTubeChannelEntity(
+            id = YouTubeChannel.Id(subscription.snippet.resourceId.channelId),
+            iconUrl = subscription.snippet.thumbnails.iconUrl,
+            title = subscription.snippet.title,
+        )
+}
 
 private fun Activity.toChannelLog(): YouTubeChannelLog = YouTubeChannelLogEntity(
     id = YouTubeChannelLog.Id(id),

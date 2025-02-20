@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -75,19 +76,18 @@ object ImageLoadableView {
         url: String,
         contentDescription: String? = "",
         size: Dp,
-        altImage: Painter = rememberVectorPainter(image = Icons.Default.AccountCircle),
-        delegate: Delegate = requireImageLoadableViewDelegate(),
+        altImage: ImageVector = Icons.Default.AccountCircle,
     ) {
         if (url.isEmpty()) {
-            Icon(
-                painter = altImage,
-                contentDescription = contentDescription,
+            VectorUserIcon(
                 modifier = Modifier
                     .then(modifier)
                     .size(size),
+                altImage = altImage,
+                contentDescription = contentDescription,
             )
         } else {
-            delegate.UserIcon(
+            DelegateUserIcon(
                 modifier = Modifier
                     .then(modifier)
                     .size(size)
@@ -96,6 +96,33 @@ object ImageLoadableView {
                 contentDescription = contentDescription,
             )
         }
+    }
+
+    @Composable
+    private fun VectorUserIcon(
+        modifier: Modifier = Modifier,
+        altImage: ImageVector,
+        contentDescription: String?,
+    ) {
+        Icon(
+            painter = rememberVectorPainter(altImage),
+            contentDescription = contentDescription,
+            modifier = modifier,
+        )
+    }
+
+    @Composable
+    private fun DelegateUserIcon(
+        modifier: Modifier = Modifier,
+        url: String,
+        contentDescription: String?,
+        delegate: Delegate = requireImageLoadableViewDelegate(),
+    ) {
+        delegate.UserIcon(
+            modifier = modifier,
+            url = url,
+            contentDescription = contentDescription,
+        )
     }
 
     @Composable

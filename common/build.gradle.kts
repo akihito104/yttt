@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     ksp(libs.hilt.compiler)
     implementation(libs.kermit)
+    implementation(libs.androidx.paging.runtime)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
