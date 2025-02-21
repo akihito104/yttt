@@ -12,19 +12,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -53,7 +48,6 @@ import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.channel.ChannelDetailChannelSection
 import com.freshdigitable.yttt.feature.channel.ChannelPage
 import com.freshdigitable.yttt.feature.channel.ChannelViewModel
-import kotlinx.coroutines.launch
 import java.math.BigInteger
 import java.text.DecimalFormat
 import java.text.NumberFormat
@@ -181,31 +175,12 @@ private fun ChannelDetailPager(
     pages: List<ChannelPage>,
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
-    Column(Modifier.fillMaxSize()) {
-        val pagerState = rememberPagerState { pages.size }
-        ScrollableTabRow(
-            selectedTabIndex = pagerState.currentPage,
-            edgePadding = 0.dp,
-        ) {
-            val coroutineScope = rememberCoroutineScope()
-            pages.forEachIndexed { i, p ->
-                Tab(
-                    selected = pagerState.currentPage == i,
-                    onClick = {
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(i)
-                        }
-                    },
-                    text = { Text(text = p.name) }
-                )
-            }
-        }
-        HorizontalPager(
-            state = pagerState,
-            key = { i -> pages[i].ordinal },
-        ) { index ->
-            pageContent(pages[index])
-        }
+    HorizontalPagerWithTabScreen(
+        edgePadding = 0.dp,
+        tabCount = pages.size,
+        tab = { pages[it].name },
+    ) {
+        pageContent(pages[it])
     }
 }
 
