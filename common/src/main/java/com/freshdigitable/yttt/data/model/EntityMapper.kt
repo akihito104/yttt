@@ -1,7 +1,5 @@
 package com.freshdigitable.yttt.data.model
 
-import java.math.BigInteger
-
 inline fun <reified T : IdBase> IdBase.mapTo(): T {
     (this as? LiveId)?.checkMappable<T>()
     return when (T::class) {
@@ -36,50 +34,4 @@ fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
     title = title,
     iconUrl = iconUrl,
     platform = YouTube,
-)
-
-fun TwitchUserDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
-    id = id.mapTo(),
-    title = this.displayName,
-    iconUrl = this.profileImageUrl,
-    platform = Twitch,
-    bannerUrl = "",
-    customUrl = loginName,
-    description = description,
-    isSubscriberHidden = false,
-    keywords = emptyList(),
-    publishedAt = this.createdAt,
-    subscriberCount = BigInteger.ZERO,
-    uploadedPlayList = null,
-    videoCount = BigInteger.ZERO,
-    viewsCount = BigInteger.valueOf(this.viewsCount.toLong()),
-)
-
-fun YouTubeChannelDetail.toLiveChannelDetail(): LiveChannelDetail = LiveChannelDetailEntity(
-    id = id.mapTo(),
-    title = title,
-    videoCount = viewsCount,
-    isSubscriberHidden = isSubscriberHidden,
-    keywords = keywords,
-    subscriberCount = subscriberCount,
-    uploadedPlayList = uploadedPlayList,
-    bannerUrl = bannerUrl,
-    customUrl = customUrl,
-    description = description,
-    viewsCount = viewsCount,
-    publishedAt = publishedAt,
-    iconUrl = iconUrl,
-    platform = YouTube,
-)
-
-fun YouTubePlaylist.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
-    id = id.mapTo(),
-    title = title,
-    thumbnailUrl = thumbnailUrl,
-)
-
-fun YouTubePlaylistItem.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
-    id = id.mapTo(),
-    title = title,
-    thumbnailUrl = thumbnailUrl,
 )

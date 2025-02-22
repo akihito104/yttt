@@ -4,18 +4,25 @@ import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
+import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLiveChannelDetail
+import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.video.createForTwitch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import java.time.ZoneId
 
 internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     private val repository: TwitchLiveRepository,
@@ -35,29 +42,43 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         ChannelPage.UPLOADED,
         ChannelPage.DEBUG_CHANNEL,
     )
-    override val channelDetail: Flow<AnnotatedLiveChannelDetail?> = flow {
-        val users = repository.findUsersById(setOf(id.mapTo())).firstOrNull()
-        val detail = users?.let { u ->
-            val d = u.toLiveChannelDetail()
-            AnnotatedLiveChannelDetail(
-                detail = d,
-                annotatedDescription = AnnotatableString.createForTwitch(d.description)
-            )
-        }
-        emit(detail)
+    override val channelDetail: Flow<AnnotatedLiveChannelDetail?> = flowOf(id).map {
+        val user = repository.findUsersById(setOf(it.mapTo())).firstOrNull() ?: return@map null
+        AnnotatedLiveChannelDetail(
+            detail = LiveChannelDetailTwitch(user),
+            annotatedDescription = AnnotatableString.createForTwitch(user.description)
+        )
     }
-    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flow {
-        val res = repository.fetchVideosByUserId(id.mapTo()).map {
+    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flowOf(id).map { i ->
+        repository.fetchVideosByUserId(i.mapTo()).map {
             LiveVideoThumbnailEntity(
                 id = it.id.mapTo(),
                 thumbnailUrl = it.getThumbnailUrl(),
                 title = it.title,
             )
         }
-        emit(res)
     }
     override val channelSection: Flow<List<ChannelDetailChannelSection>>
         get() = throw AssertionError("unsupported operation")
     override val activities: Flow<List<LiveVideo<*>>>
         get() = throw AssertionError("unsupported operation")
+}
+
+internal data class LiveChannelDetailTwitch(
+    private val detail: TwitchUserDetail,
+    private val zoneId: ZoneId = ZoneId.systemDefault(),
+) : LiveChannelDetailBody {
+    override val id: LiveChannel.Id get() = detail.id.mapTo()
+    override val statsText: String get() = detail.statsText(zoneId)
+    override val title: String get() = detail.displayName
+    override val iconUrl: String get() = detail.profileImageUrl
+    override val platform: LivePlatform get() = Twitch
+    override val bannerUrl: String? get() = null
+
+    companion object {
+        private fun TwitchUserDetail.statsText(zoneId: ZoneId): String = listOf(
+            loginName,
+            "Published:${createdAt.toLocalFormattedText(dateFormatter, zoneId)}",
+        ).joinToString(LiveChannelDetailBody.STATS_SEPARATOR)
+    }
 }

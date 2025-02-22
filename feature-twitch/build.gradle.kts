@@ -56,6 +56,9 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.assertj.core)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

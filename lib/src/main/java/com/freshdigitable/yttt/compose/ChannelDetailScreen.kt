@@ -32,8 +32,8 @@ import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveChannelDetail
-import com.freshdigitable.yttt.data.model.LiveChannelDetailEntity
+import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
@@ -42,17 +42,11 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.channel.ChannelDetailChannelSection
 import com.freshdigitable.yttt.feature.channel.ChannelPage
 import com.freshdigitable.yttt.feature.channel.ChannelViewModel
-import java.math.BigInteger
-import java.text.DecimalFormat
-import java.text.NumberFormat
 import java.time.Instant
-import java.util.Locale
 
 @Composable
 fun ChannelDetailScreen(
@@ -117,7 +111,7 @@ fun ChannelDetailScreen(
 
 @Composable
 private fun ChannelDetailScreen(
-    channelDetail: () -> LiveChannelDetail?,
+    channelDetail: () -> LiveChannelDetailBody?,
     pages: List<ChannelPage> = ChannelPage.entries,
     pageContent: @Composable (ChannelPage) -> Unit,
 ) {
@@ -129,20 +123,13 @@ private fun ChannelDetailScreen(
 
 @Composable
 private fun ChannelDetailHeader(
-    channelDetailProvider: () -> LiveChannelDetail?,
+    channelDetailProvider: () -> LiveChannelDetailBody?,
 ) {
     val channelDetail = channelDetailProvider() ?: return
-    val subscriberCount = if (!channelDetail.isSubscriberHidden)
-        "Subscribers:${channelDetail.subscriberCount.toStringWithUnitPrefix}"
-    else null
-    val statsText = listOfNotNull(
-        channelDetail.customUrl,
-        subscriberCount,
-        "Videos:${channelDetail.videoCount}",
-        "Views:${channelDetail.viewsCount.toStringWithComma}",
-        "Published:${channelDetail.publishedAt.toLocalFormattedText(dateFormatter)}",
-    ).joinToString("・")
-    Column {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         val bannerUrl = channelDetail.bannerUrl
         if (bannerUrl?.isNotEmpty() == true) {
             ImageLoadableView.ChannelArt(url = bannerUrl)
@@ -162,7 +149,7 @@ private fun ChannelDetailHeader(
                 fontSize = 20.sp,
             )
             Text(
-                text = statsText,
+                text = channelDetail.statsText,
                 textAlign = TextAlign.Center,
                 fontSize = 12.sp,
             )
@@ -338,44 +325,21 @@ fun MultiChannelContent(item: LiveChannel, modifier: Modifier = Modifier) {
     }
 }
 
-private val BigInteger.toStringWithComma: String
-    get() = NumberFormat.getNumberInstance(Locale.US).format(this)
-private val BigInteger.toStringWithUnitPrefix: String
-    get() {
-        val decimal = this.toBigDecimal()
-        val precision = decimal.precision()
-        return if (precision <= 3) {
-            this.toString()
-        } else {
-            val prefixGrade = (precision - 1) / 3
-            val shift = prefixGrade * 3
-            val digit = DecimalFormat("#.##").format(decimal.movePointLeft(shift))
-            "${digit}${unitPrefix[prefixGrade]}"
-        }
-    }
-private val unitPrefix = arrayOf("", "k", "M", "G", "T", "P", "E")
-
 @LightDarkModePreview
 @Composable
 fun ChannelScreenPreview() {
     AppTheme {
         ChannelDetailScreen({
-            LiveChannelDetailEntity(
-                id = YouTubeVideo.Id("a").mapTo(),
-                title = "channel title",
-                iconUrl = "",
-                platform = YouTube,
-                bannerUrl = "",
-                subscriberCount = BigInteger.valueOf(52400),
-                isSubscriberHidden = false,
-                videoCount = BigInteger.valueOf(132),
-                viewsCount = BigInteger.valueOf(38498283),
-                publishedAt = Instant.parse("2021-04-13T00:23:11Z"),
-                customUrl = "@custom_url",
-                keywords = emptyList(),
-                description = "description is here.",
-                uploadedPlayList = YouTubePlaylist.Id("a"),
-            )
+            object : LiveChannelDetailBody {
+                override val id: LiveChannel.Id get() = YouTubeVideo.Id("a").mapTo()
+                override val title: String = "channel title"
+                override val statsText: String get() = "@custom_url・Subscribers:52.4k・Videos:132・Views:38,498,283・Published:2021/04/13"
+                override val bannerUrl: String? get() = null
+                override val iconUrl: String get() = ""
+                override val platform: LivePlatform get() = YouTube
+                override fun equals(other: Any?): Boolean = throw NotImplementedError()
+                override fun hashCode(): Int = throw NotImplementedError()
+            }
         }) {
             PlainTextPage { "text here." }
         }
