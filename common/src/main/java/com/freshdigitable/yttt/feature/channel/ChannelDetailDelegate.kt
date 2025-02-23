@@ -1,18 +1,21 @@
 package com.freshdigitable.yttt.feature.channel
 
-import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
+import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import kotlinx.coroutines.flow.Flow
 
 interface ChannelDetailDelegate {
     val tabs: List<ChannelPage>
-    val channelDetail: Flow<AnnotatedLiveChannelDetail?>
+    val channelDetailBody: Flow<LiveChannelDetailBody?>
+    val annotatedDetail: Flow<AnnotatableString>
     val uploadedVideo: Flow<List<LiveVideoThumbnail>>
     val channelSection: Flow<List<ChannelDetailChannelSection>>
     val activities: Flow<List<LiveVideo<*>>>
+    suspend fun clearForDetail() {}
 
     interface Factory {
         fun create(id: LiveChannel.Id): ChannelDetailDelegate

@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.feature.channel
 
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.STATS_SEPARATOR
@@ -58,13 +57,12 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val detail: Flow<YouTubeChannelDetail?> = flowOf(id).map {
         repository.fetchChannelList(setOf(it.mapTo())).firstOrNull()
     }
-    override val channelDetail: Flow<AnnotatedLiveChannelDetail?> = detail.map { d ->
-        d?.let {
-            AnnotatedLiveChannelDetail(
-                LiveChannelDetailYouTube(it),
-                AnnotatableString.createForYouTube(it.description ?: ""),
-            )
-        }
+    override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
+        d?.let { LiveChannelDetailYouTube(it) }
+    }
+    override val annotatedDetail: Flow<AnnotatableString> = detail.map { d ->
+        val desc = d?.description ?: return@map AnnotatableString.empty()
+        AnnotatableString.createForYouTube(desc)
     }
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = detail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
@@ -130,6 +128,10 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             .sortedBy { it.second?.dateTime }
             .map { it.first }
             .map { LiveVideo.create(it) }
+    }
+
+    override suspend fun clearForDetail() {
+        repository.cleanUp()
     }
 }
 

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerScope
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
@@ -24,7 +25,7 @@ fun <T : TabData<T>> HorizontalPagerWithTabScreen(
     tabModifier: Modifier = Modifier,
     edgePadding: Dp = TabRowDefaults.ScrollableTabRowEdgeStartPadding,
     viewModel: HorizontalPagerTabViewModel<T>,
-    page: @Composable (T) -> Unit,
+    page: @Composable PagerScope.(T) -> Unit,
 ) {
     AppLogger.logD("HorizontalPager(VM)") { "start:" }
     val tab = viewModel.tabData.collectAsState(initial = viewModel.initialTab)
@@ -43,7 +44,7 @@ fun HorizontalPagerWithTabScreen(
     edgePadding: Dp = TabRowDefaults.ScrollableTabRowEdgeStartPadding,
     tabCount: Int,
     tab: @Composable (Int) -> String,
-    page: @Composable (Int) -> Unit,
+    page: @Composable PagerScope.(Int) -> Unit,
 ) {
     AppLogger.logD("HorizontalPager") { "start:" }
     Column(modifier = Modifier.fillMaxSize()) {

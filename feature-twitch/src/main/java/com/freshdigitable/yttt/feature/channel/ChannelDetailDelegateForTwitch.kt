@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.feature.channel
 
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LivePlatform
@@ -42,12 +41,15 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         ChannelPage.UPLOADED,
         ChannelPage.DEBUG_CHANNEL,
     )
-    override val channelDetail: Flow<AnnotatedLiveChannelDetail?> = flowOf(id).map {
-        val user = repository.findUsersById(setOf(it.mapTo())).firstOrNull() ?: return@map null
-        AnnotatedLiveChannelDetail(
-            detail = LiveChannelDetailTwitch(user),
-            annotatedDescription = AnnotatableString.createForTwitch(user.description)
-        )
+    private val detail: Flow<TwitchUserDetail?> = flowOf(id).map {
+        repository.findUsersById(setOf(it.mapTo())).firstOrNull()
+    }
+    override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
+        d?.let { LiveChannelDetailTwitch(it) }
+    }
+    override val annotatedDetail: Flow<AnnotatableString> = detail.map { d ->
+        val desc = d?.description ?: return@map AnnotatableString.empty()
+        AnnotatableString.createForTwitch(desc)
     }
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flowOf(id).map { i ->
         repository.fetchVideosByUserId(i.mapTo()).map {
