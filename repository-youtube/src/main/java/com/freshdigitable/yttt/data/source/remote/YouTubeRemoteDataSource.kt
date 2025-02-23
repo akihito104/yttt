@@ -312,7 +312,7 @@ private data class YouTubeChannelImpl(
     override val viewsCount: BigInteger
         get() = channel.statistics.viewCount
     override val customUrl: String
-        get() = channel.snippet.customUrl
+        get() = channel.snippet.customUrl ?: ""
     override val keywords: Collection<String>
         get() = channel.brandingSettings?.channel?.keywords?.split(",", " ") ?: emptyList()
     override val publishedAt: Instant
