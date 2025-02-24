@@ -356,18 +356,17 @@ private data class YouTubeChannelSectionImpl(
             "subscriptions" to YouTubeChannelSection.Type.SUBSCRIPTION,
             "upcomingEvents" to YouTubeChannelSection.Type.UPCOMING_EVENT,
             "channelsectiontypeundefined" to YouTubeChannelSection.Type.UNDEFINED,
-        )
+        ).mapKeys { it.key.lowercase() }
 
-        private fun ChannelSectionSnippet.parseType(): YouTubeChannelSection.Type? {
-            return typeTable[type]
-                ?: typeTable.entries.firstOrNull { it.key.lowercase() == type.lowercase() }?.value
-        }
+        private fun ChannelSectionSnippet.parseType(): YouTubeChannelSection.Type? =
+            typeTable[type.lowercase()]
 
         private fun ChannelSection.parseContent(): YouTubeChannelSection.Content<*>? {
             if (contentDetails == null) {
                 return null
             }
-            return when (requireNotNull(snippet.parseType()).metaType) {
+            val type = requireNotNull(snippet.parseType()) { "type is null: $snippet" }
+            return when (type.metaType) {
                 YouTubeChannelSection.Content.Playlist::class -> YouTubeChannelSection.Content.Playlist(
                     contentDetails.playlists.map { YouTubePlaylist.Id(it) }
                 )
@@ -376,7 +375,7 @@ private data class YouTubeChannelSectionImpl(
                     contentDetails.channels.map { YouTubeChannel.Id(it) }
                 )
 
-                else -> throw IllegalStateException()
+                else -> throw IllegalStateException("unknown type: $snippet")
             }
         }
     }

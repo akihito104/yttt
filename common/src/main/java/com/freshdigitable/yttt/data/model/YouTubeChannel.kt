@@ -57,8 +57,14 @@ interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {
     interface Content<T> {
         data class Playlist(override val item: List<YouTubePlaylist.Id>) :
             Content<YouTubePlaylist.Id>
+
         data class Channels(override val item: List<YouTubeChannel.Id>) : Content<YouTubeChannel.Id>
 
         val item: List<T>
+    }
+
+    companion object {
+        val Type.isNestedPlaylist: Boolean
+            get() = this == Type.ALL_PLAYLIST || this == Type.MULTIPLE_PLAYLIST
     }
 }

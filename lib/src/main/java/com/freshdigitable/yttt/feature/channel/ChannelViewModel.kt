@@ -10,9 +10,11 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -33,7 +35,10 @@ class ChannelViewModel @Inject constructor(
         .mapNotNull { it }
         .stateIn(viewModelScope, SharingStarted.Lazily, AnnotatableString.empty())
     override val uploadedVideo: Flow<List<LiveVideoThumbnail>> get() = delegate.uploadedVideo
-    override val channelSection: Flow<List<ChannelDetailChannelSection>> get() = delegate.channelSection
+
+    @OptIn(FlowPreview::class)
+    override val channelSection: Flow<List<ChannelDetailChannelSection>>
+        get() = delegate.channelSection.debounce(timeoutMillis = 200)
     override val activities: Flow<List<LiveVideo<*>>> get() = delegate.activities
 
     override fun onCleared() {

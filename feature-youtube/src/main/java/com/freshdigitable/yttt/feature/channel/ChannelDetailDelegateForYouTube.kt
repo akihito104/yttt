@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
+import com.freshdigitable.yttt.data.model.YouTubeChannelSection.Companion.isNestedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.dateFormatter
@@ -27,8 +28,11 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transform
 import java.io.IOException
 import java.math.BigInteger
 import java.text.DecimalFormat
@@ -74,51 +78,74 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         }
     }
 
-    override val channelSection: Flow<List<ChannelDetailChannelSection>> = flowOf(id).map { i ->
-        repository.fetchChannelSection(i.mapTo())
-            .mapNotNull { cs ->
+    override val channelSection: Flow<List<ChannelDetailChannelSection>> =
+        flowOf(id).transform { i ->
+            val sections = repository.fetchChannelSection(i.mapTo())
+                .sortedBy { it.position }
+                .map { cs -> fetchSectionItems(cs) }
+            combine(sections) { it.toList() }
+                .collect { emit(it) }
+        }
+
+    private suspend fun fetchSectionItems(cs: YouTubeChannelSection): Flow<ChannelDetailChannelSection> {
+        val content = cs.content
+        val items = flow<ChannelDetailChannelSection.ChannelDetailContent<*>> {
+            emit(ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(emptyList()))
+            try {
+                emit(fetchSectionItems(content, cs.type))
+            } catch (e: IOException) {
+                logE(throwable = e) { "fetchChannelSection: error>${cs.title} " }
+            }
+        }
+        val title = flow {
+            if (content is YouTubeChannelSection.Content.Playlist && !cs.type.isNestedPlaylist) {
+                emit("")
                 try {
-                    fetchSectionItems(cs)
+                    emit(repository.fetchPlaylist(setOf(content.item.first())).first().title)
                 } catch (e: IOException) {
                     logE(throwable = e) { "fetchChannelSection: error>${cs.title} " }
-                    null
                 }
+            } else {
+                emit(cs.title ?: cs.type.name)
             }
-            .sortedBy { it.position }
+        }
+        return combine(title, items) { t, i ->
+            ChannelDetailChannelSection(
+                id = cs.id,
+                position = cs.position.toInt(),
+                title = t,
+                content = i,
+            )
+        }
     }
 
-    private suspend fun fetchSectionItems(cs: YouTubeChannelSection): ChannelDetailChannelSection {
-        val content = cs.content
-        val c = if (content is YouTubeChannelSection.Content.Playlist) {
-            if (cs.type == YouTubeChannelSection.Type.MULTIPLE_PLAYLIST ||
-                cs.type == YouTubeChannelSection.Type.ALL_PLAYLIST
-            ) {
-                val item =
-                    repository.fetchPlaylist(content.item.toSet()).map { it.toLiveVideoThumbnail() }
+    private suspend fun fetchSectionItems(
+        content: YouTubeChannelSection.Content<*>?,
+        type: YouTubeChannelSection.Type,
+    ): ChannelDetailChannelSection.ChannelDetailContent<*> = when (content) {
+        is YouTubeChannelSection.Content.Playlist -> {
+            if (type.isNestedPlaylist) {
+                val playlist = repository.fetchPlaylist(content.item.toSet()).associateBy { it.id }
+                val item = content.item.mapNotNull { playlist[it] }
+                    .map { it.toLiveVideoThumbnail() }
                 ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist(item)
             } else {
-                val p = repository.fetchPlaylist(content.item.toSet())
                 val item = repository.fetchPlaylistItems(content.item.first(), maxResult = 20)
                     .map { it.toLiveVideoThumbnail() }
-                return ChannelDetailChannelSection(
-                    id = cs.id,
-                    position = cs.position.toInt(),
-                    title = p.first().title,
-                    content = ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(item),
-                )
+                ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(item)
             }
-        } else if (content is YouTubeChannelSection.Content.Channels) {
-            val item = repository.fetchChannelList(content.item.toSet())
-            ChannelDetailChannelSection.ChannelDetailContent.ChannelList(item.map { it.toLiveChannel() })
-        } else {
+        }
+
+        is YouTubeChannelSection.Content.Channels -> {
+            val channel = repository.fetchChannelList(content.item.toSet()).associateBy { it.id }
+            val item = content.item.mapNotNull { channel[it] }
+                .map { it.toLiveChannel() }
+            ChannelDetailChannelSection.ChannelDetailContent.ChannelList(item)
+        }
+
+        else -> {
             ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(emptyList())
         }
-        return ChannelDetailChannelSection(
-            id = cs.id,
-            position = cs.position.toInt(),
-            title = cs.title ?: cs.type.name,
-            content = c,
-        )
     }
 
     override val activities: Flow<List<LiveVideo<*>>> = flowOf(id).map { i ->
