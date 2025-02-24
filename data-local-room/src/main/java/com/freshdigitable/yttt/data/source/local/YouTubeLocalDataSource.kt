@@ -157,6 +157,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>) {
+        if (channelSection.isEmpty()) {
+            return
+        }
         channelSections[channelSection.first().channelId] = channelSection.toList()
     }
 
