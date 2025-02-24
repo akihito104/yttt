@@ -31,6 +31,7 @@ import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
+import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
@@ -335,11 +336,14 @@ private fun MultiChannelContent(item: LiveChannel, modifier: Modifier = Modifier
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        LiveChannelIcon(
-            iconUrl = item.iconUrl,
-            iconSize = 56.dp,
+        Box(
             modifier = Modifier.padding(vertical = 8.dp),
-        )
+        ) {
+            LiveChannelIcon(
+                iconUrl = item.iconUrl,
+                iconSize = 48.dp,
+            )
+        }
         Text(
             text = item.title,
             maxLines = 2,
@@ -421,5 +425,27 @@ private fun LazyColumnPreview() {
             idProvider = { it.id },
             content = { VideoListItem(thumbnailUrl = it.thumbnailUrl, title = it.title) },
         )
+    }
+}
+
+@LightDarkModePreview
+@Composable
+private fun ChannelListItemPreview() {
+    AppTheme {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(5) {
+                MultiChannelContent(
+                    item = LiveChannelEntity(
+                        id = LiveChannel.Id("channel_$it", YouTubeChannel.Id::class),
+                        title = "example_$it channel",
+                        platform = YouTube,
+                        iconUrl = "",
+                    ),
+                    modifier = Modifier.fillParentMaxWidth(0.3f),
+                )
+            }
+        }
     }
 }
