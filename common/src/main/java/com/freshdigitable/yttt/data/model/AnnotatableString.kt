@@ -1,5 +1,8 @@
 package com.freshdigitable.yttt.data.model
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.PolymorphicSerializer
@@ -220,5 +223,18 @@ internal object IntRangeSerializer : KSerializer<IntRange> {
         }
         require(s >= 0 && e >= 0 && s < e)
         IntRange(start = s, endInclusive = e)
+    }
+}
+
+class LinkAnnotationDialogState {
+    var currentDialog by mutableStateOf<LinkAnnotationRange?>(null)
+        private set
+
+    fun showDialog(dialog: LinkAnnotationRange) {
+        currentDialog = dialog
+    }
+
+    fun dismiss() {
+        currentDialog = null
     }
 }

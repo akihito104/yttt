@@ -1,5 +1,8 @@
 package com.freshdigitable.yttt.compose
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerScope
 import androidx.compose.foundation.rememberScrollState
@@ -20,8 +22,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -29,41 +31,71 @@ import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
+import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
-import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
+import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
 import com.freshdigitable.yttt.data.model.YouTube
-import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
-import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.channel.ChannelDetailChannelSection
 import com.freshdigitable.yttt.feature.channel.ChannelDetailDelegate
-import com.freshdigitable.yttt.feature.channel.ChannelPage
+import com.freshdigitable.yttt.feature.channel.ChannelDetailPageComposable
+import com.freshdigitable.yttt.feature.channel.ChannelDetailPageComposableFactory
+import com.freshdigitable.yttt.feature.channel.ChannelDetailPageScope
+import com.freshdigitable.yttt.feature.channel.ChannelDetailPageTab
 import com.freshdigitable.yttt.feature.channel.ChannelViewModel
 import com.freshdigitable.yttt.logD
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.components.ActivityComponent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import java.time.Instant
+
+@EntryPoint
+@InstallIn(ActivityComponent::class)
+internal interface ChannelDetailEntryPoint {
+    val factory: IdBaseClassMap<ChannelDetailPageComposableFactory>
+}
+
+private lateinit var factoryEntryPoint: ChannelDetailEntryPoint
+
+@Composable
+private fun requireChannelDetailPageComposableFactory(): IdBaseClassMap<ChannelDetailPageComposableFactory> {
+    if (!::factoryEntryPoint.isInitialized) {
+        factoryEntryPoint =
+            EntryPointAccessors.fromActivity<ChannelDetailEntryPoint>(LocalContext.current.getActivity())
+    }
+    return factoryEntryPoint.factory
+}
+
+private fun Context.getActivity(): Activity {
+    var context: Context = this
+    while (context is ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    error("activity is not found.")
+}
 
 @Composable
 fun ChannelDetailScreen(
     viewModel: ChannelViewModel = hiltViewModel(),
+    pageFactory: IdBaseClassMap<ChannelDetailPageComposableFactory> = requireChannelDetailPageComposableFactory(),
 ) {
     AppLogger.logD("ChannelDetail") { "start:" }
     val detail = viewModel.channelDetailBody.collectAsState()
     val dialog = remember { LinkAnnotationDialogState() }
     val scope = remember(viewModel, dialog) { ChannelDetailPageScope.create(viewModel, dialog) }
+    val composableFactory = checkNotNull(pageFactory[viewModel.channelId.type.java])
     ChannelDetailScreen(
         channelDetail = { detail.value },
-        tabs = viewModel.tabs,
-        pages = pages,
+        pages = viewModel.tabs.associateWith { composableFactory.create(it) },
         pageScope = scope,
     )
     LinkAnnotationDialog(state = dialog)
@@ -72,15 +104,14 @@ fun ChannelDetailScreen(
 @Composable
 private fun ChannelDetailScreen(
     channelDetail: () -> LiveChannelDetailBody?,
-    tabs: List<ChannelPage> = ChannelPage.entries,
-    pages: Map<ChannelPage, ChannelDetailPageComposable> = emptyMap(),
+    pages: Map<ChannelDetailPageTab<*>, ChannelDetailPageComposable> = emptyMap(),
     pageScope: ChannelDetailPageScope,
 ) {
     Column(Modifier.fillMaxSize()) {
         ChannelDetailHeader(channelDetail)
-        ChannelDetailPager(tabs) { page ->
+        ChannelDetailPager(pages.keys.toList()) { page ->
             AppLogger.logD("ChannelDetail") { "page:$page" }
-            pages[page]?.invoke(pageScope)
+            checkNotNull(pages[page])(pageScope)
         }
     }
 }
@@ -123,84 +154,38 @@ private fun ChannelDetailHeader(
 
 @Composable
 private fun ChannelDetailPager(
-    pages: List<ChannelPage>,
-    pageContent: @Composable PagerScope.(ChannelPage) -> Unit,
+    pages: List<ChannelDetailPageTab<*>>,
+    pageContent: @Composable PagerScope.(ChannelDetailPageTab<*>) -> Unit,
 ) {
     HorizontalPagerWithTabScreen(
         edgePadding = 0.dp,
         tabCount = pages.size,
-        tab = { pages[it].name },
+        tab = { pages[it].title() },
     ) {
         pageContent(pages[it])
     }
 }
 
-interface ChannelDetailPageScope {
-    val delegate: ChannelDetailDelegate
-    val dialogState: LinkAnnotationDialogState
-
-    companion object {
-        internal fun create(
-            delegate: ChannelDetailDelegate,
-            dialogState: LinkAnnotationDialogState,
-        ): ChannelDetailPageScope = object : ChannelDetailPageScope {
-            override val delegate: ChannelDetailDelegate get() = delegate
-            override val dialogState: LinkAnnotationDialogState get() = dialogState
-        }
+private fun ChannelDetailPageScope.Companion.create(
+    delegate: ChannelDetailDelegate,
+    dialogState: LinkAnnotationDialogState,
+): ChannelDetailPageScope = object : ChannelDetailPageScope {
+    override val delegate: ChannelDetailDelegate get() = delegate
+    override val dialogState: LinkAnnotationDialogState get() = dialogState
+    override fun annotatedText(textProvider: () -> AnnotatableString): @Composable () -> Unit = {
+        AnnotatedTextPage(textProvider = textProvider, dialog = dialogState)
     }
-}
 
-typealias ChannelDetailPageComposable = @Composable ChannelDetailPageScope.() -> Unit
+    override fun <T> list(
+        itemProvider: () -> List<T>,
+        idProvider: (T) -> IdBase,
+        content: @Composable (T) -> Unit
+    ): @Composable () -> Unit = {
+        PlainListPage(listProvider = itemProvider, idProvider = idProvider, content = content)
+    }
 
-private val pages = mapOf<ChannelPage, ChannelDetailPageComposable>(
-    ChannelPage.ABOUT to {
-        val desc = delegate.annotatedDetail.collectAsState(AnnotatableString.empty())
-        AnnotatedTextPage(textProvider = { desc.value }, dialog = dialogState)
-    },
-    ChannelPage.CHANNEL_SECTION to {
-        val sectionState = delegate.channelSection.collectAsState(emptyList())
-        PlainListPage(
-            listProvider = { sectionState.value },
-            idProvider = { it.id },
-            content = { cs -> ChannelSectionContent(cs) },
-        )
-    },
-    ChannelPage.UPLOADED to {
-        val itemsState = delegate.uploadedVideo.collectAsState(emptyList())
-        PlainListPage(
-            listProvider = { itemsState.value },
-            idProvider = { it.id },
-            content = { VideoListItem(thumbnailUrl = it.thumbnailUrl, title = it.title) },
-        )
-    },
-    ChannelPage.ACTIVITIES to {
-        val logs = delegate.activities.collectAsState(initial = emptyList())
-        PlainListPage(
-            listProvider = { logs.value },
-            idProvider = { it.id },
-            content = { VideoListItem(thumbnailUrl = it.thumbnailUrl, title = it.title) },
-        )
-    },
-    ChannelPage.DEBUG_CHANNEL to {
-        val text = delegate.channelDetailBody.collectAsState(initial = null)
-        PlainTextPage { text.value?.toString() ?: "" }
-    },
-)
-
-@Composable
-private fun PlainTextPage(
-    text: @Composable () -> String,
-) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(8.dp)
-    ) {
-        Text(
-            text = text(),
-            textAlign = TextAlign.Start,
-        )
+    override fun videoItem(item: LiveVideoThumbnail): @Composable () -> Unit = {
+        VideoListItem(thumbnailUrl = item.thumbnailUrl, title = item.title)
     }
 }
 
@@ -268,91 +253,6 @@ private fun VideoListItem(
     }
 }
 
-@Composable
-private fun ChannelSectionContent(cs: ChannelDetailChannelSection) {
-    Column {
-        Text(text = cs.title)
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            content = {
-                val content = cs.content
-                items(count = content?.item?.size ?: 0) { i ->
-                    when (content) {
-                        is ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist ->
-                            SinglePlaylistContent(
-                                item = content.item[i],
-                                modifier = Modifier.fillParentMaxWidth(0.4f),
-                            )
-
-                        is ChannelDetailChannelSection.ChannelDetailContent.ChannelList ->
-                            MultiChannelContent(
-                                item = content.item[i],
-                                modifier = Modifier.fillParentMaxWidth(0.3f),
-                            )
-
-                        is ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist ->
-                            MultiPlaylistContent(
-                                item = content.item[i],
-                                modifier = Modifier.fillParentMaxWidth(0.4f),
-                            )
-
-                        else -> {}
-                    }
-                }
-            },
-        )
-    }
-}
-
-@Composable
-private fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
-        Text(
-            text = item.title,
-            maxLines = 2,
-            fontSize = 12.sp,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
-        Text(
-            text = item.title,
-            maxLines = 2,
-            fontSize = 12.sp,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun MultiChannelContent(item: LiveChannel, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier.padding(vertical = 8.dp),
-        ) {
-            LiveChannelIcon(
-                iconUrl = item.iconUrl,
-                iconSize = 48.dp,
-            )
-        }
-        Text(
-            text = item.title,
-            maxLines = 2,
-            fontSize = 12.sp,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
 @LightDarkModePreview
 @Composable
 private fun ChannelScreenPreview() {
@@ -366,32 +266,35 @@ private fun ChannelScreenPreview() {
         override fun equals(other: Any?): Boolean = throw NotImplementedError()
         override fun hashCode(): Int = throw NotImplementedError()
     }
-    val pageScope = object : ChannelDetailPageScope {
-        override val delegate: ChannelDetailDelegate
-            get() = object : ChannelDetailDelegate {
-                override val annotatedDetail: Flow<AnnotatableString> = flowOf(
-                    AnnotatableString.create(
-                        annotatable = "text.",
-                        accountUrlCreator = { emptyList() },
-                    )
+    val pageScope = ChannelDetailPageScope.create(
+        delegate = object : ChannelDetailDelegate {
+            override val annotatedDetail: Flow<AnnotatableString> = flowOf(
+                AnnotatableString.create(
+                    annotatable = "text.",
+                    accountUrlCreator = { emptyList() },
                 )
-                override val uploadedVideo: Flow<List<LiveVideoThumbnail>>
-                    get() = TODO("Not yet implemented")
-                override val channelSection: Flow<List<ChannelDetailChannelSection>>
-                    get() = TODO("Not yet implemented")
-                override val activities: Flow<List<LiveVideo<*>>>
-                    get() = TODO("Not yet implemented")
-                override val tabs: List<ChannelPage>
-                    get() = TODO("Not yet implemented")
-                override val channelDetailBody: Flow<LiveChannelDetailBody?>
-                    get() = TODO("Not yet implemented")
-            }
-        override val dialogState: LinkAnnotationDialogState = LinkAnnotationDialogState()
-    }
+            )
+            override val tabs: List<ChannelDetailPageTab<*>>
+                get() = Tab.entries
+            override val uploadedVideo: Flow<List<LiveVideoThumbnail>>
+                get() = TODO("Not yet implemented")
+            override val channelSection: Flow<List<ChannelDetailChannelSection>>
+                get() = TODO("Not yet implemented")
+            override val activities: Flow<List<LiveVideo<*>>>
+                get() = TODO("Not yet implemented")
+            override val channelDetailBody: Flow<LiveChannelDetailBody?>
+                get() = TODO("Not yet implemented")
+        },
+        dialogState = LinkAnnotationDialogState(),
+    )
     AppTheme {
         ChannelDetailScreen(
             channelDetail = { channelDetail },
             pageScope = pageScope,
+            pages = mapOf(
+                Tab.ABOUT to { Text("text is here.") },
+                Tab.VIDEO to { Text("video is here.") },
+            ),
         )
     }
 }
@@ -403,23 +306,11 @@ private fun LazyColumnPreview() {
         PlainListPage(
             listProvider = {
                 listOf("a", "b", "c").mapIndexed { i, title ->
-                    object : YouTubePlaylistItem by YouTubePlaylistItemEntity(
-                        id = YouTubePlaylistItem.Id(title),
-                        playlistId = YouTubePlaylist.Id("d"),
-                        title = "title($i)",
-                        channel = YouTubeChannelEntity(
-                            id = YouTubeChannel.Id("e"),
-                            title = "channel title",
-                            iconUrl = "",
-                        ),
-                        videoId = YouTubeVideo.Id("f"),
+                    LiveVideoThumbnailEntity(
+                        id = LiveVideo.Id("video_$i", LiveVideo.Id::class),
+                        title = title,
                         thumbnailUrl = "",
-                        description = "description",
-                        videoOwnerChannelId = YouTubeChannel.Id("e"),
-                        publishedAt = Instant.now(),
-                    ) {
-                        override fun toString(): String = "id: $id"
-                    }
+                    )
                 }
             },
             idProvider = { it.id },
@@ -428,24 +319,9 @@ private fun LazyColumnPreview() {
     }
 }
 
-@LightDarkModePreview
-@Composable
-private fun ChannelListItemPreview() {
-    AppTheme {
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(5) {
-                MultiChannelContent(
-                    item = LiveChannelEntity(
-                        id = LiveChannel.Id("channel_$it", YouTubeChannel.Id::class),
-                        title = "example_$it channel",
-                        platform = YouTube,
-                        iconUrl = "",
-                    ),
-                    modifier = Modifier.fillParentMaxWidth(0.3f),
-                )
-            }
-        }
-    }
+private enum class Tab : ChannelDetailPageTab<Tab> {
+    ABOUT, VIDEO;
+
+    @Composable
+    override fun title(): String = name
 }

@@ -17,7 +17,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
-
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.extension.get()
+    }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -40,6 +45,7 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.kermit)
     implementation(libs.androidx.paging.runtime)
+    implementation(libs.androidx.runtime.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

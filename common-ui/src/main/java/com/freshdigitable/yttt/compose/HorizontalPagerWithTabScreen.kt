@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.logD
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 @Composable
@@ -74,15 +73,4 @@ fun HorizontalPagerWithTabScreen(
             pageContent = { page(it) },
         )
     }
-}
-
-interface TabData<T : TabData<T>> : Comparable<T> {
-    @Composable
-    fun title(): String
-    override fun compareTo(other: T): Int
-}
-
-interface HorizontalPagerTabViewModel<T : TabData<T>> {
-    val tabData: Flow<List<T>>
-    val initialTab: List<T>
 }

@@ -1,11 +1,32 @@
 package com.freshdigitable.yttt.feature.channel
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.freshdigitable.yttt.compose.AppTheme
+import com.freshdigitable.yttt.compose.ImageLoadableView
+import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.STATS_SEPARATOR
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.toStringWithComma
+import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
@@ -21,12 +42,19 @@ import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLiveChannel
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
+import com.freshdigitable.yttt.di.IdBaseClassKey
 import com.freshdigitable.yttt.feature.create
+import com.freshdigitable.yttt.feature.timetable.youtube.BuildConfig
 import com.freshdigitable.yttt.feature.video.createForYouTube
 import com.freshdigitable.yttt.logE
+import dagger.Binds
+import dagger.Module
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import dagger.hilt.InstallIn
+import dagger.hilt.android.components.ActivityComponent
+import dagger.multibindings.IntoMap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
@@ -37,6 +65,7 @@ import java.io.IOException
 import java.math.BigInteger
 import java.text.DecimalFormat
 import java.time.ZoneId
+import javax.inject.Inject
 
 internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
@@ -51,12 +80,12 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         check(id.type == YouTubeChannel.Id::class) { "unsupported id type: ${id.type}" }
     }
 
-    override val tabs: List<ChannelPage> = listOf(
-        ChannelPage.ABOUT,
-        ChannelPage.CHANNEL_SECTION,
-        ChannelPage.UPLOADED,
-        ChannelPage.ACTIVITIES,
-        ChannelPage.DEBUG_CHANNEL,
+    override val tabs: List<YouTubeChannelDetailTab> = listOfNotNull(
+        YouTubeChannelDetailTab.About,
+        YouTubeChannelDetailTab.Uploaded,
+        YouTubeChannelDetailTab.Sections,
+        YouTubeChannelDetailTab.Actions,
+        if (BuildConfig.DEBUG) YouTubeChannelDetailTab.Debug else null
     )
     private val detail: Flow<YouTubeChannelDetail?> = flowOf(id).map {
         repository.fetchChannelList(setOf(it.mapTo())).firstOrNull()
@@ -216,3 +245,189 @@ private fun YouTubePlaylistItem.toLiveVideoThumbnail(): LiveVideoThumbnail =
         title = title,
         thumbnailUrl = thumbnailUrl,
     )
+
+internal sealed class YouTubeChannelDetailTab(
+    private val title: String,
+    private val ordinal: Int,
+) : ChannelDetailPageTab<YouTubeChannelDetailTab> {
+    @Composable
+    override fun title(): String = title
+    override fun compareTo(other: YouTubeChannelDetailTab): Int = ordinal.compareTo(other.ordinal)
+
+    object About : YouTubeChannelDetailTab(title = "ABOUT", 0)
+    object Uploaded : YouTubeChannelDetailTab(title = "UPLOADED", 1)
+    object Sections : YouTubeChannelDetailTab(title = "CHANNEL SECTIONS", 2)
+    object Actions : YouTubeChannelDetailTab(title = "ACTIVITY", 3)
+    object Debug : YouTubeChannelDetailTab(title = "DEBUG", 99)
+}
+
+internal class YouTubeChannelDetailPageComposableFactory @Inject constructor() :
+    ChannelDetailPageComposableFactory {
+    override fun create(tab: ChannelDetailPageTab<*>): ChannelDetailPageComposable {
+        val t = tab as YouTubeChannelDetailTab
+        return checkNotNull(pages[t])
+    }
+
+    companion object {
+        private val pages = mapOf<YouTubeChannelDetailTab, ChannelDetailPageComposable>(
+            YouTubeChannelDetailTab.About to {
+                val desc = delegate.annotatedDetail.collectAsState(AnnotatableString.empty())
+                annotatedText { desc.value }()
+            },
+            YouTubeChannelDetailTab.Sections to {
+                val sectionState = delegate.channelSection.collectAsState(emptyList())
+                list(
+                    itemProvider = { sectionState.value },
+                    idProvider = { it.id },
+                    content = { cs -> ChannelSectionContent(cs) },
+                )()
+            },
+            YouTubeChannelDetailTab.Uploaded to {
+                val itemsState = delegate.uploadedVideo.collectAsState(emptyList())
+                list(
+                    itemProvider = { itemsState.value },
+                    idProvider = { it.id },
+                    content = { videoItem(it)() },
+                )()
+            },
+            YouTubeChannelDetailTab.Actions to {
+                val logs = delegate.activities.collectAsState(initial = emptyList())
+                list(
+                    itemProvider = { logs.value },
+                    idProvider = { it.id },
+                    content = { videoItem(it)() },
+                )()
+            },
+            YouTubeChannelDetailTab.Debug to {
+                val text = delegate.channelDetailBody.collectAsState(initial = null)
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = text.value?.toString() ?: "",
+                        textAlign = TextAlign.Start,
+                    )
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun ChannelSectionContent(cs: ChannelDetailChannelSection) {
+    Column {
+        Text(text = cs.title)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            content = {
+                val content = cs.content
+                items(count = content?.item?.size ?: 0) { i ->
+                    when (content) {
+                        is ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist ->
+                            SinglePlaylistContent(
+                                item = content.item[i],
+                                modifier = Modifier.fillParentMaxWidth(0.4f),
+                            )
+
+                        is ChannelDetailChannelSection.ChannelDetailContent.ChannelList ->
+                            MultiChannelContent(
+                                item = content.item[i],
+                                modifier = Modifier.fillParentMaxWidth(0.3f),
+                            )
+
+                        is ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist ->
+                            MultiPlaylistContent(
+                                item = content.item[i],
+                                modifier = Modifier.fillParentMaxWidth(0.4f),
+                            )
+
+                        else -> {}
+                    }
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
+        Text(
+            text = item.title,
+            maxLines = 2,
+            fontSize = 12.sp,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
+        Text(
+            text = item.title,
+            maxLines = 2,
+            fontSize = 12.sp,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun MultiChannelContent(item: LiveChannel, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier.padding(vertical = 8.dp),
+        ) {
+            ImageLoadableView.UserIcon(
+                url = item.iconUrl,
+                size = 48.dp,
+            )
+        }
+        Text(
+            text = item.title,
+            maxLines = 2,
+            fontSize = 12.sp,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@LightDarkModePreview
+@Composable
+private fun ChannelListItemPreview() {
+    AppTheme {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(5) {
+                MultiChannelContent(
+                    item = LiveChannelEntity(
+                        id = LiveChannel.Id("channel_$it", YouTubeChannel.Id::class),
+                        title = "example_$it channel",
+                        platform = YouTube,
+                        iconUrl = "",
+                    ),
+                    modifier = Modifier.fillParentMaxWidth(0.3f),
+                )
+            }
+        }
+    }
+}
+
+@Module
+@InstallIn(ActivityComponent::class)
+internal interface YouTubeChannelDetailModule {
+    @Binds
+    @IdBaseClassKey(YouTubeChannel.Id::class)
+    @IntoMap
+    fun bindChannelDetailPageComposableFactory(factory: YouTubeChannelDetailPageComposableFactory): ChannelDetailPageComposableFactory
+}
