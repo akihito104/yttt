@@ -42,7 +42,6 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.di.IdBaseClassMap
-import com.freshdigitable.yttt.feature.channel.ChannelDetailChannelSection
 import com.freshdigitable.yttt.feature.channel.ChannelDetailDelegate
 import com.freshdigitable.yttt.feature.channel.ChannelDetailPageComposable
 import com.freshdigitable.yttt.feature.channel.ChannelDetailPageComposableFactory
@@ -268,22 +267,17 @@ private fun ChannelScreenPreview() {
     }
     val pageScope = ChannelDetailPageScope.create(
         delegate = object : ChannelDetailDelegate {
-            override val annotatedDetail: Flow<AnnotatableString> = flowOf(
-                AnnotatableString.create(
-                    annotatable = "text.",
-                    accountUrlCreator = { emptyList() },
-                )
-            )
-            override val tabs: List<ChannelDetailPageTab<*>>
-                get() = Tab.entries
-            override val uploadedVideo: Flow<List<LiveVideoThumbnail>>
-                get() = TODO("Not yet implemented")
-            override val channelSection: Flow<List<ChannelDetailChannelSection>>
-                get() = TODO("Not yet implemented")
-            override val activities: Flow<List<LiveVideo<*>>>
-                get() = TODO("Not yet implemented")
-            override val channelDetailBody: Flow<LiveChannelDetailBody?>
-                get() = TODO("Not yet implemented")
+            override val tabs: List<ChannelDetailPageTab<*>> = Tab.entries
+            override val channelDetailBody: Flow<LiveChannelDetailBody?> = flowOf(channelDetail)
+            override val pagerContent: ChannelDetailDelegate.PagerContent
+                get() = object : ChannelDetailDelegate.PagerContent {
+                    override val annotatedDetail: Flow<AnnotatableString> = flowOf(
+                        AnnotatableString.create(
+                            annotatable = "text.",
+                            accountUrlCreator = { emptyList() },
+                        )
+                    )
+                }
         },
         dialogState = LinkAnnotationDialogState(),
     )

@@ -17,7 +17,6 @@ import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
 import com.freshdigitable.yttt.data.model.Twitch
@@ -28,8 +27,8 @@ import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.di.IdBaseClassKey
 import com.freshdigitable.yttt.feature.video.createForTwitch
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -40,12 +39,11 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import java.time.ZoneId
-import javax.inject.Inject
 
 internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     private val repository: TwitchLiveRepository,
     @Assisted id: LiveChannel.Id,
-) : ChannelDetailDelegate {
+) : ChannelDetailDelegate, TwitchChannelDetailPagerContent {
     @AssistedFactory
     interface Factory : ChannelDetailDelegate.Factory {
         override fun create(id: LiveChannel.Id): ChannelDetailDelegateForTwitch
@@ -66,11 +64,13 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
         d?.let { LiveChannelDetailTwitch(it) }
     }
+    override val pagerContent: ChannelDetailDelegate.PagerContent
+        get() = this
     override val annotatedDetail: Flow<AnnotatableString> = detail.map { d ->
         val desc = d?.description ?: return@map AnnotatableString.empty()
         AnnotatableString.createForTwitch(desc)
     }
-    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flowOf(id).map { i ->
+    override val vod: Flow<List<LiveVideoThumbnail>> = flowOf(id).map { i ->
         repository.fetchVideosByUserId(i.mapTo()).map {
             LiveVideoThumbnailEntity(
                 id = it.id.mapTo(),
@@ -79,10 +79,10 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
             )
         }
     }
-    override val channelSection: Flow<List<ChannelDetailChannelSection>>
-        get() = throw AssertionError("unsupported operation")
-    override val activities: Flow<List<LiveVideo<*>>>
-        get() = throw AssertionError("unsupported operation")
+}
+
+internal interface TwitchChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
+    val vod: Flow<List<LiveVideoThumbnail>>
 }
 
 internal data class LiveChannelDetailTwitch(
@@ -117,18 +117,18 @@ internal sealed class TwitchChannelDetailTab(
     object Debug : TwitchChannelDetailTab(title = "DEBUG", 99)
 }
 
-internal class TwitchChannelDetailPageComposableFactory @Inject constructor() :
-    ChannelDetailPageComposableFactory {
+internal object TwitchChannelDetailPageComposableFactory : ChannelDetailPageComposableFactory {
     override fun create(tab: ChannelDetailPageTab<*>): ChannelDetailPageComposable {
         when (tab as TwitchChannelDetailTab) {
             TwitchChannelDetailTab.About -> return {
-                val text =
-                    delegate.annotatedDetail.collectAsState(initial = AnnotatableString.empty())
+                val text = delegate.pagerContent.annotatedDetail
+                    .collectAsState(initial = AnnotatableString.empty())
                 annotatedText { text.value }()
             }
 
             TwitchChannelDetailTab.Vod -> return {
-                val vod = delegate.uploadedVideo.collectAsState(initial = emptyList())
+                val p = delegate.pagerContent as TwitchChannelDetailPagerContent
+                val vod = p.vod.collectAsState(initial = emptyList())
                 list(itemProvider = { vod.value }, idProvider = { it.id }) {
                     videoItem(it)()
                 }()
@@ -155,8 +155,11 @@ internal class TwitchChannelDetailPageComposableFactory @Inject constructor() :
 @Module
 @InstallIn(ActivityComponent::class)
 internal interface TwitchChannelDetailModule {
-    @Binds
-    @IdBaseClassKey(TwitchUser.Id::class)
-    @IntoMap
-    fun bindChannelDetailPageComposableFactory(factory: TwitchChannelDetailPageComposableFactory): ChannelDetailPageComposableFactory
+    companion object {
+        @IdBaseClassKey(TwitchUser.Id::class)
+        @IntoMap
+        @Provides
+        fun provideChannelDetailPageComposableFactory(): ChannelDetailPageComposableFactory =
+            TwitchChannelDetailPageComposableFactory
+    }
 }

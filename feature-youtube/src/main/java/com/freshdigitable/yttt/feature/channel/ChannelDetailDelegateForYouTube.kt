@@ -22,6 +22,7 @@ import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.STATS_SEPARATOR
@@ -47,16 +48,18 @@ import com.freshdigitable.yttt.feature.create
 import com.freshdigitable.yttt.feature.timetable.youtube.BuildConfig
 import com.freshdigitable.yttt.feature.video.createForYouTube
 import com.freshdigitable.yttt.logE
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.InstallIn
 import dagger.hilt.android.components.ActivityComponent
 import dagger.multibindings.IntoMap
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -65,12 +68,11 @@ import java.io.IOException
 import java.math.BigInteger
 import java.text.DecimalFormat
 import java.time.ZoneId
-import javax.inject.Inject
 
 internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
     @Assisted id: LiveChannel.Id,
-) : ChannelDetailDelegate {
+) : ChannelDetailDelegate, YouTubeChannelDetailPagerContent {
     @AssistedFactory
     interface Factory : ChannelDetailDelegate.Factory {
         override fun create(id: LiveChannel.Id): ChannelDetailDelegateForYouTube
@@ -93,6 +95,8 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
         d?.let { LiveChannelDetailYouTube(it) }
     }
+    override val pagerContent: ChannelDetailDelegate.PagerContent
+        get() = this
     override val annotatedDetail: Flow<AnnotatableString> = detail.map { d ->
         val desc = d?.description ?: return@map AnnotatableString.empty()
         AnnotatableString.createForYouTube(desc)
@@ -107,15 +111,15 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         }
     }
 
-    override val channelSection: Flow<List<ChannelDetailChannelSection>> =
+    override val sections: Flow<List<ChannelDetailChannelSection>> =
         flowOf(id).transform { i ->
             val sections = repository.fetchChannelSection(i.mapTo())
-                .sortedBy { it.position }
                 .map { cs -> fetchSectionItems(cs) }
-            combine(sections) { it.toList() }
+            combine(sections) { it.apply { sort() }.toList() }
                 .collect { emit(it) }
         }
 
+    @OptIn(FlowPreview::class)
     private suspend fun fetchSectionItems(cs: YouTubeChannelSection): Flow<ChannelDetailChannelSection> {
         val content = cs.content
         val items = flow<ChannelDetailChannelSection.ChannelDetailContent<*>> {
@@ -127,10 +131,12 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             }
         }
         val title = flow {
-            if (content is YouTubeChannelSection.Content.Playlist && !cs.type.isNestedPlaylist) {
-                emit("")
+            if (content is YouTubeChannelSection.Content.Playlist &&
+                cs.type == YouTubeChannelSection.Type.SINGLE_PLAYLIST
+            ) {
                 try {
-                    emit(repository.fetchPlaylist(setOf(content.item.first())).first().title)
+                    val playlist = repository.fetchPlaylist(content.item.toSet())
+                    emit(playlist.first().title)
                 } catch (e: IOException) {
                     logE(throwable = e) { "fetchChannelSection: error>${cs.title} " }
                 }
@@ -145,7 +151,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
                 title = t,
                 content = i,
             )
-        }
+        }.debounce(timeoutMillis = 200)
     }
 
     private suspend fun fetchSectionItems(
@@ -191,6 +197,12 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     }
 }
 
+internal interface YouTubeChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
+    val uploadedVideo: Flow<List<LiveVideoThumbnail>>
+    val sections: Flow<List<ChannelDetailChannelSection>>
+    val activities: Flow<List<LiveVideoThumbnail>>
+}
+
 internal data class LiveChannelDetailYouTube(
     private val detail: YouTubeChannelDetail,
     private val zoneId: ZoneId = ZoneId.systemDefault(),
@@ -233,6 +245,29 @@ internal data class LiveChannelDetailYouTube(
     }
 }
 
+internal class ChannelDetailChannelSection(
+    val id: IdBase,
+    val position: Int,
+    val title: String,
+    val content: ChannelDetailContent<*>?,
+) : Comparable<ChannelDetailChannelSection> {
+    override fun compareTo(other: ChannelDetailChannelSection): Int =
+        position.compareTo(other.position)
+
+    sealed class ChannelDetailContent<T> {
+        data class MultiPlaylist(override val item: List<LiveVideoThumbnail>) :
+            ChannelDetailContent<LiveVideoThumbnail>()
+
+        data class SinglePlaylist(override val item: List<LiveVideoThumbnail>) :
+            ChannelDetailContent<LiveVideoThumbnail>()
+
+        data class ChannelList(override val item: List<LiveChannel>) :
+            ChannelDetailContent<LiveChannel>()
+
+        abstract val item: List<T>
+    }
+}
+
 private fun YouTubePlaylist.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
     id = id.mapTo(),
     title = title,
@@ -261,44 +296,46 @@ internal sealed class YouTubeChannelDetailTab(
     object Debug : YouTubeChannelDetailTab(title = "DEBUG", 99)
 }
 
-internal class YouTubeChannelDetailPageComposableFactory @Inject constructor() :
-    ChannelDetailPageComposableFactory {
+internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageComposableFactory {
     override fun create(tab: ChannelDetailPageTab<*>): ChannelDetailPageComposable {
-        val t = tab as YouTubeChannelDetailTab
-        return checkNotNull(pages[t])
-    }
-
-    companion object {
-        private val pages = mapOf<YouTubeChannelDetailTab, ChannelDetailPageComposable>(
-            YouTubeChannelDetailTab.About to {
-                val desc = delegate.annotatedDetail.collectAsState(AnnotatableString.empty())
+        when (tab as YouTubeChannelDetailTab) {
+            YouTubeChannelDetailTab.About -> return {
+                val desc = delegate.pagerContent.annotatedDetail
+                    .collectAsState(AnnotatableString.empty())
                 annotatedText { desc.value }()
-            },
-            YouTubeChannelDetailTab.Sections to {
-                val sectionState = delegate.channelSection.collectAsState(emptyList())
-                list(
-                    itemProvider = { sectionState.value },
-                    idProvider = { it.id },
-                    content = { cs -> ChannelSectionContent(cs) },
-                )()
-            },
-            YouTubeChannelDetailTab.Uploaded to {
-                val itemsState = delegate.uploadedVideo.collectAsState(emptyList())
-                list(
-                    itemProvider = { itemsState.value },
-                    idProvider = { it.id },
-                    content = { videoItem(it)() },
-                )()
-            },
-            YouTubeChannelDetailTab.Actions to {
-                val logs = delegate.activities.collectAsState(initial = emptyList())
+            }
+
+            YouTubeChannelDetailTab.Actions -> return {
+                val logs = (delegate.pagerContent as YouTubeChannelDetailPagerContent)
+                    .activities.collectAsState(initial = emptyList())
                 list(
                     itemProvider = { logs.value },
                     idProvider = { it.id },
                     content = { videoItem(it)() },
                 )()
-            },
-            YouTubeChannelDetailTab.Debug to {
+            }
+
+            YouTubeChannelDetailTab.Sections -> return {
+                val sectionState = (delegate.pagerContent as YouTubeChannelDetailPagerContent)
+                    .sections.collectAsState(emptyList())
+                list(
+                    itemProvider = { sectionState.value },
+                    idProvider = { it.id },
+                    content = { cs -> ChannelSectionContent(cs) },
+                )()
+            }
+
+            YouTubeChannelDetailTab.Uploaded -> return {
+                val itemsState = (delegate.pagerContent as YouTubeChannelDetailPagerContent)
+                    .uploadedVideo.collectAsState(emptyList())
+                list(
+                    itemProvider = { itemsState.value },
+                    idProvider = { it.id },
+                    content = { videoItem(it)() },
+                )()
+            }
+
+            YouTubeChannelDetailTab.Debug -> return {
                 val text = delegate.channelDetailBody.collectAsState(initial = null)
                 Box(
                     Modifier
@@ -311,8 +348,8 @@ internal class YouTubeChannelDetailPageComposableFactory @Inject constructor() :
                         textAlign = TextAlign.Start,
                     )
                 }
-            },
-        )
+            }
+        }
     }
 }
 
@@ -426,8 +463,11 @@ private fun ChannelListItemPreview() {
 @Module
 @InstallIn(ActivityComponent::class)
 internal interface YouTubeChannelDetailModule {
-    @Binds
-    @IdBaseClassKey(YouTubeChannel.Id::class)
-    @IntoMap
-    fun bindChannelDetailPageComposableFactory(factory: YouTubeChannelDetailPageComposableFactory): ChannelDetailPageComposableFactory
+    companion object {
+        @IdBaseClassKey(YouTubeChannel.Id::class)
+        @IntoMap
+        @Provides
+        fun provideChannelDetailPageComposeFactory(): ChannelDetailPageComposableFactory =
+            YouTubeChannelDetailPageComposableFactory
+    }
 }
