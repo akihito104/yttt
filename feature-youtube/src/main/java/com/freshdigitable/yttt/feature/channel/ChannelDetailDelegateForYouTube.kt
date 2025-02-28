@@ -5,12 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -22,12 +24,10 @@ import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.STATS_SEPARATOR
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.toStringWithComma
-import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
@@ -35,13 +35,13 @@ import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection.Companion.isNestedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLiveChannel
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.di.IdBaseClassKey
 import com.freshdigitable.yttt.feature.create
@@ -111,76 +111,49 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         }
     }
 
-    override val sections: Flow<List<ChannelDetailChannelSection>> =
-        flowOf(id).transform { i ->
-            val sections = repository.fetchChannelSection(i.mapTo())
-                .map { cs -> fetchSectionItems(cs) }
-            combine(sections) { it.apply { sort() }.toList() }
-                .collect { emit(it) }
-        }
-
     @OptIn(FlowPreview::class)
-    private suspend fun fetchSectionItems(cs: YouTubeChannelSection): Flow<ChannelDetailChannelSection> {
-        val content = cs.content
-        val items = flow<ChannelDetailChannelSection.ChannelDetailContent<*>> {
-            emit(ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(emptyList()))
-            try {
-                emit(fetchSectionItems(content, cs.type))
-            } catch (e: IOException) {
-                logE(throwable = e) { "fetchChannelSection: error>${cs.title} " }
-            }
-        }
-        val title = flow {
-            if (content is YouTubeChannelSection.Content.Playlist &&
-                cs.type == YouTubeChannelSection.Type.SINGLE_PLAYLIST
-            ) {
-                try {
-                    val playlist = repository.fetchPlaylist(content.item.toSet())
-                    emit(playlist.first().title)
-                } catch (e: IOException) {
-                    logE(throwable = e) { "fetchChannelSection: error>${cs.title} " }
-                }
-            } else {
-                emit(cs.title ?: cs.type.name)
-            }
-        }
-        return combine(title, items) { t, i ->
-            ChannelDetailChannelSection(
-                id = cs.id,
-                position = cs.position.toInt(),
-                title = t,
-                content = i,
-            )
-        }.debounce(timeoutMillis = 200)
+    override val sections: Flow<List<ChannelSection<*>>> = flowOf(id).transform { i ->
+        val sections = repository.fetchChannelSection(i.mapTo())
+            .map { cs -> sectionTask(cs) }
+        combine(sections) { it.apply { sort() }.toList() }
+            .debounce(timeoutMillis = 200)
+            .collect { emit(it) }
     }
 
-    private suspend fun fetchSectionItems(
-        content: YouTubeChannelSection.Content<*>?,
-        type: YouTubeChannelSection.Type,
-    ): ChannelDetailChannelSection.ChannelDetailContent<*> = when (content) {
+    private suspend fun sectionTask(section: YouTubeChannelSection): Flow<ChannelSection<*>> =
+        flow {
+            emit(ChannelSection(section, ChannelSection.Item.Empty))
+            val item = try {
+                fetchSectionItem(section)
+            } catch (e: IOException) {
+                logE(throwable = e) { "section: $section" }
+                ChannelSection.Item.Empty
+            }
+            emit(ChannelSection(section, item))
+        }
+
+    private suspend fun fetchSectionItem(
+        section: YouTubeChannelSection,
+    ): ChannelSection.Item = when (val content = section.content) {
         is YouTubeChannelSection.Content.Playlist -> {
-            if (type.isNestedPlaylist) {
+            if (section.type.isNestedPlaylist) {
                 val playlist = repository.fetchPlaylist(content.item.toSet()).associateBy { it.id }
                 val item = content.item.mapNotNull { playlist[it] }
-                    .map { it.toLiveVideoThumbnail() }
-                ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist(item)
+                ChannelSection.Item.MultiplePlaylist(item)
             } else {
+                val playlist = repository.fetchPlaylist(content.item.toSet()).first()
                 val item = repository.fetchPlaylistItems(content.item.first(), maxResult = 20)
-                    .map { it.toLiveVideoThumbnail() }
-                ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(item)
+                ChannelSection.Item.SinglePlaylist(playlist, item)
             }
         }
 
         is YouTubeChannelSection.Content.Channels -> {
             val channel = repository.fetchChannelList(content.item.toSet()).associateBy { it.id }
             val item = content.item.mapNotNull { channel[it] }
-                .map { it.toLiveChannel() }
-            ChannelDetailChannelSection.ChannelDetailContent.ChannelList(item)
+            ChannelSection.Item.ChannelList(item)
         }
 
-        else -> {
-            ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist(emptyList())
-        }
+        else -> ChannelSection.Item.Empty
     }
 
     override val activities: Flow<List<LiveVideo<*>>> = flowOf(id).map { i ->
@@ -199,7 +172,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
 
 internal interface YouTubeChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
     val uploadedVideo: Flow<List<LiveVideoThumbnail>>
-    val sections: Flow<List<ChannelDetailChannelSection>>
+    val sections: Flow<List<ChannelSection<*>>>
     val activities: Flow<List<LiveVideoThumbnail>>
 }
 
@@ -245,34 +218,45 @@ internal data class LiveChannelDetailYouTube(
     }
 }
 
-internal class ChannelDetailChannelSection(
-    val id: IdBase,
-    val position: Int,
-    val title: String,
-    val content: ChannelDetailContent<*>?,
-) : Comparable<ChannelDetailChannelSection> {
-    override fun compareTo(other: ChannelDetailChannelSection): Int =
-        position.compareTo(other.position)
+internal class ChannelSection<T : ChannelSection.Item>(
+    private val channelSection: YouTubeChannelSection,
+    val item: T,
+) : Comparable<ChannelSection<*>> {
+    val id: YouTubeChannelSection.Id get() = channelSection.id
+    val size: Int get() = item.size
+    val title: String
+        get() = if (item is Item.SinglePlaylist) {
+            item.playlist.title
+        } else {
+            channelSection.title ?: channelSection.type.name
+        }
 
-    sealed class ChannelDetailContent<T> {
-        data class MultiPlaylist(override val item: List<LiveVideoThumbnail>) :
-            ChannelDetailContent<LiveVideoThumbnail>()
+    override fun compareTo(other: ChannelSection<*>): Int =
+        channelSection.position.compareTo(other.channelSection.position)
 
-        data class SinglePlaylist(override val item: List<LiveVideoThumbnail>) :
-            ChannelDetailContent<LiveVideoThumbnail>()
+    sealed class Item {
+        abstract val size: Int
 
-        data class ChannelList(override val item: List<LiveChannel>) :
-            ChannelDetailContent<LiveChannel>()
+        data class SinglePlaylist(
+            val playlist: YouTubePlaylist,
+            val items: List<YouTubePlaylistItem>,
+        ) : Item() {
+            override val size: Int get() = items.size
+        }
 
-        abstract val item: List<T>
+        data class MultiplePlaylist(val items: List<YouTubePlaylist>) : Item() {
+            override val size: Int get() = items.size
+        }
+
+        data class ChannelList(val items: List<YouTubeChannel>) : Item() {
+            override val size: Int get() = items.size
+        }
+
+        data object Empty : Item() {
+            override val size: Int get() = 0
+        }
     }
 }
-
-private fun YouTubePlaylist.toLiveVideoThumbnail(): LiveVideoThumbnail = LiveVideoThumbnailEntity(
-    id = id.mapTo(),
-    title = title,
-    thumbnailUrl = thumbnailUrl,
-)
 
 private fun YouTubePlaylistItem.toLiveVideoThumbnail(): LiveVideoThumbnail =
     LiveVideoThumbnailEntity(
@@ -289,11 +273,11 @@ internal sealed class YouTubeChannelDetailTab(
     override fun title(): String = title
     override fun compareTo(other: YouTubeChannelDetailTab): Int = ordinal.compareTo(other.ordinal)
 
-    object About : YouTubeChannelDetailTab(title = "ABOUT", 0)
-    object Uploaded : YouTubeChannelDetailTab(title = "UPLOADED", 1)
-    object Sections : YouTubeChannelDetailTab(title = "CHANNEL SECTIONS", 2)
-    object Actions : YouTubeChannelDetailTab(title = "ACTIVITY", 3)
-    object Debug : YouTubeChannelDetailTab(title = "DEBUG", 99)
+    data object About : YouTubeChannelDetailTab(title = "ABOUT", 0)
+    data object Uploaded : YouTubeChannelDetailTab(title = "UPLOADED", 1)
+    data object Sections : YouTubeChannelDetailTab(title = "CHANNEL SECTIONS", 2)
+    data object Actions : YouTubeChannelDetailTab(title = "ACTIVITY", 3)
+    data object Debug : YouTubeChannelDetailTab(title = "DEBUG", 99)
 }
 
 internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageComposableFactory {
@@ -354,43 +338,44 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
 }
 
 @Composable
-private fun ChannelSectionContent(cs: ChannelDetailChannelSection) {
+private fun ChannelSectionContent(cs: ChannelSection<*>) {
+    val itemBody: @Composable LazyItemScope.(Int) -> Unit = remember(cs) {
+        when (val content = cs.item) {
+            is ChannelSection.Item.SinglePlaylist -> return@remember {
+                SinglePlaylistContent(
+                    item = content.items[it],
+                    modifier = Modifier.fillParentMaxWidth(0.4f),
+                )
+            }
+
+            is ChannelSection.Item.ChannelList -> return@remember {
+                MultiChannelContent(
+                    item = content.items[it],
+                    modifier = Modifier.fillParentMaxWidth(0.3f),
+                )
+            }
+
+            is ChannelSection.Item.MultiplePlaylist -> return@remember {
+                MultiPlaylistContent(
+                    item = content.items[it],
+                    modifier = Modifier.fillParentMaxWidth(0.4f),
+                )
+            }
+
+            else -> return@remember {}
+        }
+    }
     Column {
         Text(text = cs.title)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            content = {
-                val content = cs.content
-                items(count = content?.item?.size ?: 0) { i ->
-                    when (content) {
-                        is ChannelDetailChannelSection.ChannelDetailContent.SinglePlaylist ->
-                            SinglePlaylistContent(
-                                item = content.item[i],
-                                modifier = Modifier.fillParentMaxWidth(0.4f),
-                            )
-
-                        is ChannelDetailChannelSection.ChannelDetailContent.ChannelList ->
-                            MultiChannelContent(
-                                item = content.item[i],
-                                modifier = Modifier.fillParentMaxWidth(0.3f),
-                            )
-
-                        is ChannelDetailChannelSection.ChannelDetailContent.MultiPlaylist ->
-                            MultiPlaylistContent(
-                                item = content.item[i],
-                                modifier = Modifier.fillParentMaxWidth(0.4f),
-                            )
-
-                        else -> {}
-                    }
-                }
-            },
+            content = { items(count = cs.size, itemContent = itemBody) },
         )
     }
 }
 
 @Composable
-private fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
+private fun SinglePlaylistContent(item: YouTubePlaylistItem, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
         Text(
@@ -403,7 +388,7 @@ private fun SinglePlaylistContent(item: LiveVideoThumbnail, modifier: Modifier =
 }
 
 @Composable
-private fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = Modifier) {
+private fun MultiPlaylistContent(item: YouTubePlaylist, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
         Text(
@@ -416,7 +401,7 @@ private fun MultiPlaylistContent(item: LiveVideoThumbnail, modifier: Modifier = 
 }
 
 @Composable
-private fun MultiChannelContent(item: LiveChannel, modifier: Modifier = Modifier) {
+private fun MultiChannelContent(item: YouTubeChannel, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -447,10 +432,9 @@ private fun ChannelListItemPreview() {
         ) {
             items(5) {
                 MultiChannelContent(
-                    item = LiveChannelEntity(
-                        id = LiveChannel.Id("channel_$it", YouTubeChannel.Id::class),
+                    item = YouTubeChannelEntity(
+                        id = YouTubeChannel.Id("channel_$it"),
                         title = "example_$it channel",
-                        platform = YouTube,
                         iconUrl = "",
                     ),
                     modifier = Modifier.fillParentMaxWidth(0.3f),
