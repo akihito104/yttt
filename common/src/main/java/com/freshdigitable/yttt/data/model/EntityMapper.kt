@@ -21,17 +21,3 @@ inline fun <reified T : IdBase> IdBase.checkMappable() {
         check(this.type == T::class) { "unmappable: ${this.type} to ${T::class}" }
     }
 }
-
-fun TwitchUserDetail.toLiveChannel(): LiveChannel = LiveChannelEntity(
-    id = id.mapTo(),
-    title = displayName,
-    iconUrl = profileImageUrl,
-    platform = Twitch,
-)
-
-fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
-    id = id.mapTo(),
-    title = title,
-    iconUrl = iconUrl,
-    platform = YouTube,
-)

@@ -7,7 +7,6 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import kotlinx.coroutines.flow.Flow
 
 interface ChannelDetailDelegate {
@@ -35,7 +34,7 @@ interface ChannelDetailPageScope {
         content: @Composable (T) -> Unit,
     ): @Composable () -> Unit
 
-    fun videoItem(item: LiveVideoThumbnail): @Composable () -> Unit
+    fun videoItem(url: String, title: String): @Composable () -> Unit
 
     companion object
 }

@@ -1,11 +1,13 @@
 package com.freshdigitable.yttt.feature
 
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.YouTube
+import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLiveChannel
 import java.math.BigInteger
 import java.time.Instant
 
@@ -81,3 +83,10 @@ internal abstract class YouTubeLiveVideo<T : LiveVideo<T>>(
     override val thumbnailUrl: String
         get() = video.thumbnailUrl
 }
+
+internal fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
+    id = id.mapTo(),
+    title = title,
+    iconUrl = iconUrl,
+    platform = YouTube,
+)

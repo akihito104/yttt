@@ -37,8 +37,3 @@ interface LiveChannelDetailBody : LiveChannel {
         const val STATS_SEPARATOR: String = "・"
     }
 }
-
-data class AnnotatedLiveChannelDetail(
-    private val detail: LiveChannelDetailBody,
-    val annotatedDescription: AnnotatableString,
-) : LiveChannelDetailBody by detail

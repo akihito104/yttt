@@ -37,10 +37,6 @@ import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
-import com.freshdigitable.yttt.data.model.YouTube
-import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.channel.ChannelDetailDelegate
 import com.freshdigitable.yttt.feature.channel.ChannelDetailPageComposable
@@ -183,8 +179,8 @@ private fun ChannelDetailPageScope.Companion.create(
         PlainListPage(listProvider = itemProvider, idProvider = idProvider, content = content)
     }
 
-    override fun videoItem(item: LiveVideoThumbnail): @Composable () -> Unit = {
-        VideoListItem(thumbnailUrl = item.thumbnailUrl, title = item.title)
+    override fun videoItem(url: String, title: String): @Composable () -> Unit = {
+        VideoListItem(thumbnailUrl = url, title = title)
     }
 }
 
@@ -256,12 +252,17 @@ private fun VideoListItem(
 @Composable
 private fun ChannelScreenPreview() {
     val channelDetail = object : LiveChannelDetailBody {
-        override val id: LiveChannel.Id get() = YouTubeVideo.Id("a").mapTo()
+        override val id: LiveChannel.Id get() = LiveChannel.Id("a", LiveChannel.Id::class)
         override val title: String = "channel title"
         override val statsText: String get() = "@custom_url・Subscribers:52.4k・Videos:132・Views:38,498,283・Published:2021/04/13"
         override val bannerUrl: String? get() = null
         override val iconUrl: String get() = ""
-        override val platform: LivePlatform get() = YouTube
+        override val platform: LivePlatform
+            get() = object : LivePlatform {
+                override val name: String get() = "platform"
+                override val color: Long get() = 0xFF000000
+            }
+
         override fun equals(other: Any?): Boolean = throw NotImplementedError()
         override fun hashCode(): Int = throw NotImplementedError()
     }
@@ -312,6 +313,12 @@ private fun LazyColumnPreview() {
         )
     }
 }
+
+private data class LiveVideoThumbnailEntity(
+    override val id: LiveVideo.Id,
+    override val title: String,
+    override val thumbnailUrl: String,
+) : LiveVideoThumbnail
 
 private enum class Tab : ChannelDetailPageTab<Tab> {
     ABOUT, VIDEO;

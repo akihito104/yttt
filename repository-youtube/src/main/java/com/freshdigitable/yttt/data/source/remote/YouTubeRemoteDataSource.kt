@@ -239,6 +239,7 @@ private fun Activity.toChannelLog(): YouTubeChannelLog = YouTubeChannelLogEntity
     videoId = YouTubeVideo.Id(contentDetails.upload.videoId),
     channelId = YouTubeChannel.Id(snippet.channelId),
     thumbnailUrl = snippet.thumbnails.url,
+    title = snippet.title,
 )
 
 private class YouTubeVideoRemote(

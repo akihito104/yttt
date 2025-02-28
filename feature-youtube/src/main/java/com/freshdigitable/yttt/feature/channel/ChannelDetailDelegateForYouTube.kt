@@ -29,13 +29,11 @@ import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.STATS_SEPARATOR
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.toStringWithComma
 import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection.Companion.isNestedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
@@ -43,19 +41,12 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
-import com.freshdigitable.yttt.di.IdBaseClassKey
-import com.freshdigitable.yttt.feature.create
 import com.freshdigitable.yttt.feature.timetable.youtube.BuildConfig
 import com.freshdigitable.yttt.feature.video.createForYouTube
 import com.freshdigitable.yttt.logE
-import dagger.Module
-import dagger.Provides
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
-import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ActivityComponent
-import dagger.multibindings.IntoMap
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -101,10 +92,10 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         val desc = d?.description ?: return@map AnnotatableString.empty()
         AnnotatableString.createForYouTube(desc)
     }
-    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = detail.map { d ->
+    override val uploadedVideo: Flow<List<YouTubePlaylistItem>> = detail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
         try {
-            repository.fetchPlaylistItems(pId, maxResult = 20).map { it.toLiveVideoThumbnail() }
+            repository.fetchPlaylistItems(pId, maxResult = 20)
         } catch (e: Exception) {
             logE(throwable = e) { "detail:$d" }
             emptyList()
@@ -156,13 +147,8 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         else -> ChannelSection.Item.Empty
     }
 
-    override val activities: Flow<List<LiveVideo<*>>> = flowOf(id).map { i ->
-        val logs = repository.fetchLiveChannelLogs(i.mapTo(), maxResult = 20)
-        repository.fetchVideoList(logs.map { it.videoId }.toSet())
-            .map { v -> v to logs.find { v.id == it.videoId } }
-            .sortedBy { it.second?.dateTime }
-            .map { it.first }
-            .map { LiveVideo.create(it) }
+    override val activities: Flow<List<YouTubeChannelLog>> = flowOf(id).map { i ->
+        repository.fetchLiveChannelLogs(i.mapTo(), maxResult = 20)
     }
 
     override suspend fun clearForDetail() {
@@ -171,9 +157,9 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
 }
 
 internal interface YouTubeChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
-    val uploadedVideo: Flow<List<LiveVideoThumbnail>>
+    val uploadedVideo: Flow<List<YouTubePlaylistItem>>
     val sections: Flow<List<ChannelSection<*>>>
-    val activities: Flow<List<LiveVideoThumbnail>>
+    val activities: Flow<List<YouTubeChannelLog>>
 }
 
 internal data class LiveChannelDetailYouTube(
@@ -232,38 +218,29 @@ internal class ChannelSection<T : ChannelSection.Item>(
         }
 
     override fun compareTo(other: ChannelSection<*>): Int =
-        channelSection.position.compareTo(other.channelSection.position)
+        channelSection.compareTo(other.channelSection)
 
-    sealed class Item {
-        abstract val size: Int
+    sealed interface Item {
+        val size: Int get() = 0
 
         data class SinglePlaylist(
             val playlist: YouTubePlaylist,
             val items: List<YouTubePlaylistItem>,
-        ) : Item() {
+        ) : Item {
             override val size: Int get() = items.size
         }
 
-        data class MultiplePlaylist(val items: List<YouTubePlaylist>) : Item() {
+        data class MultiplePlaylist(val items: List<YouTubePlaylist>) : Item {
             override val size: Int get() = items.size
         }
 
-        data class ChannelList(val items: List<YouTubeChannel>) : Item() {
+        data class ChannelList(val items: List<YouTubeChannel>) : Item {
             override val size: Int get() = items.size
         }
 
-        data object Empty : Item() {
-            override val size: Int get() = 0
-        }
+        data object Empty : Item
     }
 }
-
-private fun YouTubePlaylistItem.toLiveVideoThumbnail(): LiveVideoThumbnail =
-    LiveVideoThumbnailEntity(
-        id = id.mapTo(),
-        title = title,
-        thumbnailUrl = thumbnailUrl,
-    )
 
 internal sealed class YouTubeChannelDetailTab(
     private val title: String,
@@ -295,7 +272,7 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
                 list(
                     itemProvider = { logs.value },
                     idProvider = { it.id },
-                    content = { videoItem(it)() },
+                    content = { videoItem(it.thumbnailUrl, it.title)() },
                 )()
             }
 
@@ -315,7 +292,7 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
                 list(
                     itemProvider = { itemsState.value },
                     idProvider = { it.id },
-                    content = { videoItem(it)() },
+                    content = { videoItem(it.thumbnailUrl, it.title)() },
                 )()
             }
 
@@ -441,17 +418,5 @@ private fun ChannelListItemPreview() {
                 )
             }
         }
-    }
-}
-
-@Module
-@InstallIn(ActivityComponent::class)
-internal interface YouTubeChannelDetailModule {
-    companion object {
-        @IdBaseClassKey(YouTubeChannel.Id::class)
-        @IntoMap
-        @Provides
-        fun provideChannelDetailPageComposeFactory(): ChannelDetailPageComposableFactory =
-            YouTubeChannelDetailPageComposableFactory
     }
 }

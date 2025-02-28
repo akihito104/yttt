@@ -17,24 +17,17 @@ import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
-import com.freshdigitable.yttt.di.IdBaseClassKey
 import com.freshdigitable.yttt.feature.video.createForTwitch
-import dagger.Module
-import dagger.Provides
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
-import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ActivityComponent
-import dagger.multibindings.IntoMap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -70,19 +63,13 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         val desc = d?.description ?: return@map AnnotatableString.empty()
         AnnotatableString.createForTwitch(desc)
     }
-    override val vod: Flow<List<LiveVideoThumbnail>> = flowOf(id).map { i ->
-        repository.fetchVideosByUserId(i.mapTo()).map {
-            LiveVideoThumbnailEntity(
-                id = it.id.mapTo(),
-                thumbnailUrl = it.getThumbnailUrl(),
-                title = it.title,
-            )
-        }
+    override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).map { i ->
+        repository.fetchVideosByUserId(i.mapTo())
     }
 }
 
 internal interface TwitchChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
-    val vod: Flow<List<LiveVideoThumbnail>>
+    val vod: Flow<List<TwitchVideoDetail>>
 }
 
 internal data class LiveChannelDetailTwitch(
@@ -112,9 +99,9 @@ internal sealed class TwitchChannelDetailTab(
     override fun title(): String = title
     override fun compareTo(other: TwitchChannelDetailTab): Int = ordinal.compareTo(other.ordinal)
 
-    object About : TwitchChannelDetailTab(title = "ABOUT", 0)
-    object Vod : TwitchChannelDetailTab(title = "VOD", 1)
-    object Debug : TwitchChannelDetailTab(title = "DEBUG", 99)
+    data object About : TwitchChannelDetailTab(title = "ABOUT", 0)
+    data object Vod : TwitchChannelDetailTab(title = "VOD", 1)
+    data object Debug : TwitchChannelDetailTab(title = "DEBUG", 99)
 }
 
 internal object TwitchChannelDetailPageComposableFactory : ChannelDetailPageComposableFactory {
@@ -130,7 +117,7 @@ internal object TwitchChannelDetailPageComposableFactory : ChannelDetailPageComp
                 val p = delegate.pagerContent as TwitchChannelDetailPagerContent
                 val vod = p.vod.collectAsState(initial = emptyList())
                 list(itemProvider = { vod.value }, idProvider = { it.id }) {
-                    videoItem(it)()
+                    videoItem(it.getThumbnailUrl(), it.title)()
                 }()
             }
 
@@ -149,17 +136,5 @@ internal object TwitchChannelDetailPageComposableFactory : ChannelDetailPageComp
                 }
             }
         }
-    }
-}
-
-@Module
-@InstallIn(ActivityComponent::class)
-internal interface TwitchChannelDetailModule {
-    companion object {
-        @IdBaseClassKey(TwitchUser.Id::class)
-        @IntoMap
-        @Provides
-        fun provideChannelDetailPageComposableFactory(): ChannelDetailPageComposableFactory =
-            TwitchChannelDetailPageComposableFactory
     }
 }
