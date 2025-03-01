@@ -28,18 +28,25 @@ import com.freshdigitable.yttt.feature.video.createForTwitch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import java.time.ZoneId
 
 internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     private val repository: TwitchLiveRepository,
     @Assisted id: LiveChannel.Id,
+    @Assisted coroutineScope: CoroutineScope,
 ) : ChannelDetailDelegate, TwitchChannelDetailPagerContent {
     @AssistedFactory
     interface Factory : ChannelDetailDelegate.Factory {
-        override fun create(id: LiveChannel.Id): ChannelDetailDelegateForTwitch
+        override fun create(
+            id: LiveChannel.Id,
+            coroutineScope: CoroutineScope,
+        ): ChannelDetailDelegateForTwitch
     }
 
     init {
@@ -65,7 +72,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     }
     override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).map { i ->
         repository.fetchVideosByUserId(i.mapTo())
-    }
+    }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 }
 
 internal interface TwitchChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {

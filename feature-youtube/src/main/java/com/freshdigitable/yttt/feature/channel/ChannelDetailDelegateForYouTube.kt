@@ -47,15 +47,19 @@ import com.freshdigitable.yttt.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
-import java.io.IOException
 import java.math.BigInteger
 import java.text.DecimalFormat
 import java.time.ZoneId
@@ -63,10 +67,14 @@ import java.time.ZoneId
 internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
     @Assisted id: LiveChannel.Id,
+    @Assisted coroutineScope: CoroutineScope,
 ) : ChannelDetailDelegate, YouTubeChannelDetailPagerContent {
     @AssistedFactory
     interface Factory : ChannelDetailDelegate.Factory {
-        override fun create(id: LiveChannel.Id): ChannelDetailDelegateForYouTube
+        override fun create(
+            id: LiveChannel.Id,
+            coroutineScope: CoroutineScope,
+        ): ChannelDetailDelegateForYouTube
     }
 
     init {
@@ -95,61 +103,83 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     override val uploadedVideo: Flow<List<YouTubePlaylistItem>> = detail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
         try {
-            repository.fetchPlaylistItems(pId, maxResult = 20)
+            repository.fetchPlaylistItems(pId, maxResult = 10)
         } catch (e: Exception) {
             logE(throwable = e) { "detail:$d" }
             emptyList()
         }
-    }
+    }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     @OptIn(FlowPreview::class)
     override val sections: Flow<List<ChannelSection<*>>> = flowOf(id).transform { i ->
         val sections = repository.fetchChannelSection(i.mapTo())
-            .map { cs -> sectionTask(cs) }
-        combine(sections) { it.apply { sort() }.toList() }
-            .debounce(timeoutMillis = 200)
-            .collect { emit(it) }
-    }
-
-    private suspend fun sectionTask(section: YouTubeChannelSection): Flow<ChannelSection<*>> =
-        flow {
-            emit(ChannelSection(section, ChannelSection.Item.Empty))
-            val item = try {
-                fetchSectionItem(section)
-            } catch (e: IOException) {
-                logE(throwable = e) { "section: $section" }
-                ChannelSection.Item.Empty
+        val playlistTask = flow {
+            val ids = sections.map { it.content }
+                .filterIsInstance<YouTubeChannelSection.Content.Playlist>()
+                .fold(emptySet<YouTubePlaylist.Id>()) { acc, c -> acc + c.item }
+            if (ids.isNotEmpty()) {
+                val playlist = repository.fetchPlaylist(ids).associateBy { it.id }
+                emit(playlist)
             }
-            emit(ChannelSection(section, item))
-        }
+        }.onStart { emit(emptyMap()) }
+        val playlistItemTask = flow {
+            val ids = sections.filter { it.type == YouTubeChannelSection.Type.SINGLE_PLAYLIST }
+                .map { it.content }
+                .filterIsInstance<YouTubeChannelSection.Content.Playlist>()
+                .fold(emptySet<YouTubePlaylist.Id>()) { acc, c -> acc + c.item }
+            if (ids.isNotEmpty()) {
+                val t = ids.map { i ->
+                    flow {
+                        val item = repository.fetchPlaylistItems(i, maxResult = 10)
+                        emit(i to item)
+                    }
+                }
+                emitAll(combine(t) { it.toMap() }.debounce(timeoutMillis = 100))
+            }
+        }.onStart { emit(emptyMap()) }
+        val channelTask = flow {
+            val ids = sections.map { it.content }
+                .filterIsInstance<YouTubeChannelSection.Content.Channels>()
+                .fold(emptySet<YouTubeChannel.Id>()) { acc, c -> acc + c.item }
+            if (ids.isNotEmpty()) {
+                val channel = repository.fetchChannelList(ids).associateBy { it.id }
+                emit(channel)
+            }
+        }.onStart { emit(emptyMap()) }
+        val sectionTask = combine(
+            playlistTask,
+            playlistItemTask,
+            channelTask,
+        ) { playlist, playlistItem, channel ->
+            sections.map { s ->
+                val item = when (val content = s.content) {
+                    is YouTubeChannelSection.Content.Playlist -> {
+                        if (s.type.isNestedPlaylist) {
+                            val p = content.item.mapNotNull { playlist[it] }
+                            ChannelSection.Item.MultiplePlaylist(p)
+                        } else {
+                            val p = content.item.firstNotNullOfOrNull { playlist[it] }
+                            val items = content.item.firstNotNullOfOrNull { playlistItem[it] }
+                            ChannelSection.Item.SinglePlaylist(p, items ?: emptyList())
+                        }
+                    }
 
-    private suspend fun fetchSectionItem(
-        section: YouTubeChannelSection,
-    ): ChannelSection.Item = when (val content = section.content) {
-        is YouTubeChannelSection.Content.Playlist -> {
-            if (section.type.isNestedPlaylist) {
-                val playlist = repository.fetchPlaylist(content.item.toSet()).associateBy { it.id }
-                val item = content.item.mapNotNull { playlist[it] }
-                ChannelSection.Item.MultiplePlaylist(item)
-            } else {
-                val playlist = repository.fetchPlaylist(content.item.toSet()).first()
-                val item = repository.fetchPlaylistItems(content.item.first(), maxResult = 20)
-                ChannelSection.Item.SinglePlaylist(playlist, item)
+                    is YouTubeChannelSection.Content.Channels -> {
+                        val c = content.item.mapNotNull { channel[it] }
+                        ChannelSection.Item.ChannelList(c)
+                    }
+
+                    else -> ChannelSection.Item.Empty
+                }
+                ChannelSection(s, item)
             }
         }
-
-        is YouTubeChannelSection.Content.Channels -> {
-            val channel = repository.fetchChannelList(content.item.toSet()).associateBy { it.id }
-            val item = content.item.mapNotNull { channel[it] }
-            ChannelSection.Item.ChannelList(item)
-        }
-
-        else -> ChannelSection.Item.Empty
-    }
+        emitAll(sectionTask)
+    }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     override val activities: Flow<List<YouTubeChannelLog>> = flowOf(id).map { i ->
         repository.fetchLiveChannelLogs(i.mapTo(), maxResult = 20)
-    }
+    }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     override suspend fun clearForDetail() {
         repository.cleanUp()
@@ -212,7 +242,7 @@ internal class ChannelSection<T : ChannelSection.Item>(
     val size: Int get() = item.size
     val title: String
         get() = if (item is Item.SinglePlaylist) {
-            item.playlist.title
+            item.title ?: channelSection.type.name
         } else {
             channelSection.title ?: channelSection.type.name
         }
@@ -224,10 +254,11 @@ internal class ChannelSection<T : ChannelSection.Item>(
         val size: Int get() = 0
 
         data class SinglePlaylist(
-            val playlist: YouTubePlaylist,
+            val playlist: YouTubePlaylist?,
             val items: List<YouTubePlaylistItem>,
         ) : Item {
             override val size: Int get() = items.size
+            val title: String? get() = playlist?.title
         }
 
         data class MultiplePlaylist(val items: List<YouTubePlaylist>) : Item {
@@ -248,7 +279,8 @@ internal sealed class YouTubeChannelDetailTab(
 ) : ChannelDetailPageTab<YouTubeChannelDetailTab> {
     @Composable
     override fun title(): String = title
-    override fun compareTo(other: YouTubeChannelDetailTab): Int = ordinal.compareTo(other.ordinal)
+    override fun compareTo(other: YouTubeChannelDetailTab): Int =
+        ordinal.compareTo(other.ordinal)
 
     data object About : YouTubeChannelDetailTab(title = "ABOUT", 0)
     data object Uploaded : YouTubeChannelDetailTab(title = "UPLOADED", 1)

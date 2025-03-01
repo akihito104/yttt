@@ -19,7 +19,8 @@ class ChannelViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel(), ChannelDetailDelegate {
     val channelId = MainNavRoute.ChannelDetail.getChannelId(savedStateHandle)
-    private val delegate = checkNotNull(delegateFactory[channelId.type.java]).create(channelId)
+    private val delegate = checkNotNull(delegateFactory[channelId.type.java])
+        .create(channelId, viewModelScope)
 
     override val tabs: List<ChannelDetailPageTab<*>> get() = delegate.tabs
     override val channelDetailBody: StateFlow<LiveChannelDetailBody?> = delegate.channelDetailBody

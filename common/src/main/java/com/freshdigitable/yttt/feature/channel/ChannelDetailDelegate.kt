@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 
 interface ChannelDetailDelegate {
@@ -16,7 +17,7 @@ interface ChannelDetailDelegate {
     suspend fun clearForDetail() {}
 
     interface Factory {
-        fun create(id: LiveChannel.Id): ChannelDetailDelegate
+        fun create(id: LiveChannel.Id, coroutineScope: CoroutineScope): ChannelDetailDelegate
     }
 
     interface PagerContent {
