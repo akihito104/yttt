@@ -367,12 +367,13 @@ private data class YouTubeChannelSectionImpl(
                 return null
             }
             val type = requireNotNull(snippet.parseType()) { "type is null: $snippet" }
-            return when (type.metaType) {
-                YouTubeChannelSection.Content.Playlist::class -> YouTubeChannelSection.Content.Playlist(
+            return when (type) {
+                YouTubeChannelSection.Type.SINGLE_PLAYLIST,
+                YouTubeChannelSection.Type.MULTIPLE_PLAYLIST -> YouTubeChannelSection.Content.Playlist(
                     contentDetails.playlists.map { YouTubePlaylist.Id(it) }
                 )
 
-                YouTubeChannelSection.Content.Channels::class -> YouTubeChannelSection.Content.Channels(
+                YouTubeChannelSection.Type.MULTIPLE_CHANNEL -> YouTubeChannelSection.Content.Channels(
                     contentDetails.channels.map { YouTubeChannel.Id(it) }
                 )
 

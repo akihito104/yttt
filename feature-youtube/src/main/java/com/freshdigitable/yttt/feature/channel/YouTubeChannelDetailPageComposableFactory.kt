@@ -52,7 +52,7 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
                     .sections.collectAsState(emptyList())
                 list(
                     itemProvider = { sectionState.value },
-                    idProvider = { it.id },
+                    idProvider = { it.section.id },
                     content = { cs -> ChannelSectionContent(cs) },
                 )()
             }
@@ -86,26 +86,26 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
 }
 
 @Composable
-private fun ChannelSectionContent(cs: ChannelSection<*>) {
-    val itemBody: @Composable LazyItemScope.(Int) -> Unit = remember(cs) {
-        when (val content = cs.item) {
-            is ChannelSection.Item.SinglePlaylist -> return@remember {
+private fun ChannelSectionContent(content: ChannelSectionItem) {
+    val itemBody: @Composable LazyItemScope.(Int) -> Unit = remember(content) {
+        when (content) {
+            is SinglePlaylist -> return@remember {
                 SinglePlaylistContent(
-                    item = content.items[it],
+                    item = content.item[it],
                     modifier = Modifier.fillParentMaxWidth(0.4f),
                 )
             }
 
-            is ChannelSection.Item.ChannelList -> return@remember {
+            is MultipleChannel -> return@remember {
                 MultiChannelContent(
-                    item = content.items[it],
+                    item = content.item[it],
                     modifier = Modifier.fillParentMaxWidth(0.3f),
                 )
             }
 
-            is ChannelSection.Item.MultiplePlaylist -> return@remember {
+            is MultiPlaylist -> return@remember {
                 MultiPlaylistContent(
-                    item = content.items[it],
+                    item = content.item[it],
                     modifier = Modifier.fillParentMaxWidth(0.4f),
                 )
             }
@@ -114,10 +114,10 @@ private fun ChannelSectionContent(cs: ChannelSection<*>) {
         }
     }
     Column {
-        Text(text = cs.title)
+        Text(text = content.title)
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            content = { items(count = cs.size, itemContent = itemBody) },
+            content = { items(count = content.size, itemContent = itemBody) },
         )
     }
 }
