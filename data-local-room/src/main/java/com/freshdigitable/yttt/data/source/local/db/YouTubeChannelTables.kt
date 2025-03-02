@@ -182,6 +182,9 @@ internal data class YouTubeChannelLogTable(
     @Ignore
     override val title: String = "" // TODO
 
+    @Ignore
+    override val type: String = "" // TODO
+
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert

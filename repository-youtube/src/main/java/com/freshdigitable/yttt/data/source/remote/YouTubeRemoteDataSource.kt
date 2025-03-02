@@ -5,7 +5,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
-import com.freshdigitable.yttt.data.model.YouTubeChannelLogEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -105,8 +104,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         },
         getItems = { items },
         getNextToken = { nextPageToken },
-    ).filter { it.contentDetails?.upload != null }
-        .map { it.toChannelLog() }
+    ).map { YouTubeChannelLogEntity(activity = it) }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> =
         fetchList(ids, getItems = { items }) { chunked ->
@@ -233,14 +231,24 @@ private data class YouTubeSubscriptionRemote(
         )
 }
 
-private fun Activity.toChannelLog(): YouTubeChannelLog = YouTubeChannelLogEntity(
-    id = YouTubeChannelLog.Id(id),
-    dateTime = Instant.ofEpochMilli(snippet.publishedAt.value),
-    videoId = YouTubeVideo.Id(contentDetails.upload.videoId),
-    channelId = YouTubeChannel.Id(snippet.channelId),
-    thumbnailUrl = snippet.thumbnails.url,
-    title = snippet.title,
-)
+private data class YouTubeChannelLogEntity(
+    val activity: Activity,
+) : YouTubeChannelLog {
+    override val id: YouTubeChannelLog.Id
+        get() = YouTubeChannelLog.Id(activity.id)
+    override val dateTime: Instant
+        get() = Instant.ofEpochMilli(activity.snippet.publishedAt.value)
+    override val videoId: YouTubeVideo.Id?
+        get() = activity.contentDetails.upload?.let { YouTubeVideo.Id(it.videoId) }
+    override val channelId: YouTubeChannel.Id
+        get() = YouTubeChannel.Id(activity.snippet.channelId)
+    override val thumbnailUrl: String
+        get() = activity.snippet.thumbnails.url
+    override val title: String
+        get() = activity.snippet.title
+    override val type: String
+        get() = activity.snippet.type
+}
 
 private class YouTubeVideoRemote(
     private val video: Video,

@@ -34,7 +34,7 @@ fun dateTimeFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
 /**
  * yyyy/MM/dd(E) HH:mm:ss
  */
-fun dateTimeSecondFormatter(locale: Locale): DateTimeFormatter =
+fun dateTimeSecondFormatter(locale: Locale = Locale.getDefault()): DateTimeFormatter =
     DateTimeFormatter.ofPattern("yyyy/MM/dd(E) HH:mm:ss", locale)
 
 fun Instant.toLocalFormattedText(

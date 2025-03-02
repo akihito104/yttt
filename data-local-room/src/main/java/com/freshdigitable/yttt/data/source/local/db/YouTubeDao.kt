@@ -35,20 +35,20 @@ internal class YouTubeDao @Inject constructor(
         val channels = logs.map { it.channelId }.distinct()
             .filter { findChannel(it) == null }
             .map { YouTubeChannelTable(id = it) }
-        val vIds = logs.map { it.videoId }.toSet()
-        val found = findVideosById(vIds).map { it.id }.toSet()
-        val videos = logs.distinctBy { it.videoId }
-            .filter { !found.contains(it.videoId) }
+        val vIds = logs.filter { it.videoId != null }.associateBy { it.videoId }
+        val found = findVideosById(vIds.keys.filterNotNull()).map { it.id }.toSet()
+        val needed = vIds.keys.filterNotNull() - found
+        val videos = needed.mapNotNull { vIds[it] }
             .map {
                 YouTubeVideoTable(
-                    id = it.videoId,
+                    id = checkNotNull(it.videoId),
                     channelId = it.channelId,
                     thumbnailUrl = it.thumbnailUrl,
                 )
             }
         addChannels(channels)
         addVideoEntities(videos)
-        addChannelLogEntities(logs.map { it.toDbEntity() })
+        addChannelLogEntities(logs.filter { it.videoId != null }.map { it.toDbEntity() })
     }
 
     suspend fun addVideos(videos: Collection<YouTubeVideoExtended>) = db.withTransaction {
@@ -125,7 +125,7 @@ private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTube
 private fun YouTubeChannelLog.toDbEntity(): YouTubeChannelLogTable = YouTubeChannelLogTable(
     id = id,
     dateTime = dateTime,
-    videoId = videoId,
+    videoId = checkNotNull(videoId),
     channelId = channelId,
     thumbnailUrl = thumbnailUrl,
 )

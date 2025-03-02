@@ -25,8 +25,11 @@ import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
+import com.freshdigitable.yttt.data.model.toLocalFormattedText
 
 internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageComposableFactory {
     override fun create(tab: ChannelDetailPageTab<*>): ChannelDetailPageComposable {
@@ -43,7 +46,7 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
                 list(
                     itemProvider = { logs.value },
                     idProvider = { it.id },
-                    content = { videoItem(it.thumbnailUrl, it.title)() },
+                    content = { videoItem(it.thumbnailUrl, it.text)() },
                 )()
             }
 
@@ -83,6 +86,9 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
             }
         }
     }
+
+    private val YouTubeChannelLog.text: String
+        get() = "[${type}]$title (${dateTime.toLocalFormattedText(dateTimeSecondFormatter())})"
 }
 
 @Composable

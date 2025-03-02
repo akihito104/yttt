@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.feature.channel
 import androidx.compose.runtime.Composable
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.STATS_SEPARATOR
@@ -35,11 +36,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
 import java.math.BigInteger
 import java.text.DecimalFormat
+import java.time.Duration
 import java.time.ZoneId
 
 internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
     private val channelSectionFacade: YouTubeChannelSectionFacade,
+    private val dateTimeProvider: DateTimeProvider,
     @Assisted id: LiveChannel.Id,
     @Assisted coroutineScope: CoroutineScope,
 ) : ChannelDetailDelegate, YouTubeChannelDetailPagerContent {
@@ -100,7 +103,11 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     override val activities: Flow<List<YouTubeChannelLog>> = flowOf(id).map { i ->
-        repository.fetchLiveChannelLogs(i.mapTo(), maxResult = 20)
+        repository.fetchLiveChannelLogs(
+            channelId = i.mapTo(),
+            publishedAfter = dateTimeProvider.now() - Duration.ofDays(7),
+            maxResult = 20,
+        )
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     override suspend fun clearForDetail() {
