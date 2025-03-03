@@ -10,8 +10,12 @@ internal class TwitchUserDetailRemote(
     override val displayName: String,
     @SerializedName("profile_image_url")
     override val profileImageUrl: String,
-    @SerializedName("view_count")
-    override val viewsCount: Int,
+    /**
+     * NOTE: This field has been deprecate (see [Get Users API endpoint – “view_count” deprecation](https://discuss.dev.twitch.tv/t/get-users-api-endpoint-view-count-deprecation/37777)).
+     * Any data in this field is not valid and should not be used.
+     */
+//    @SerializedName("view_count")
+//    override val viewsCount: Int,
     @SerializedName("created_at")
     override val createdAt: Instant,
     @SerializedName("login")

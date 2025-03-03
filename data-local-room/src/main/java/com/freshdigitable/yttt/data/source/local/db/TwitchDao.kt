@@ -134,7 +134,7 @@ internal class TwitchDao @Inject constructor(
 
 private fun TwitchUser.toTable(): TwitchUserTable = TwitchUserTable(id, loginName, displayName)
 private fun TwitchUserDetail.toTable(): TwitchUserDetailTable =
-    TwitchUserDetailTable(id, profileImageUrl, viewsCount, createdAt, description)
+    TwitchUserDetailTable(id, profileImageUrl, createdAt, description)
 
 private fun TwitchChannelSchedule.toStreamScheduleTable(): List<TwitchStreamScheduleTable> =
     segments?.map {
