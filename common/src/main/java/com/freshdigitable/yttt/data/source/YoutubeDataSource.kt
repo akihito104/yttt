@@ -41,6 +41,7 @@ interface YoutubeDataSource {
         suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems?
         suspend fun fetchPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummaries?
         suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems)
+        suspend fun addPlaylist(playlist: Collection<YouTubePlaylist>)
 
         suspend fun fetchPlaylistItemSummary(
             playlistId: YouTubePlaylist.Id,

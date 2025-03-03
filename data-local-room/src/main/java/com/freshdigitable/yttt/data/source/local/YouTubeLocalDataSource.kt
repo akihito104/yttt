@@ -77,8 +77,13 @@ internal class YouTubeLocalDataSource @Inject constructor(
         maxResult: Long,
     ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(playlistId, maxResult)
 
+    private val playlist = mutableMapOf<YouTubePlaylist.Id, YouTubePlaylist>()
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist> =
-        dao.findPlaylistsById(ids)
+        ids.mapNotNull { playlist[it] }
+
+    override suspend fun addPlaylist(playlist: Collection<YouTubePlaylist>) {
+        this.playlist.putAll(playlist.associateBy { it.id })
+    }
 
     override suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems? =
         database.withTransaction {

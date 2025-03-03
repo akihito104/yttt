@@ -121,6 +121,7 @@ class YouTubeRepository @Inject constructor(
             return cache
         }
         val remote = remoteSource.fetchPlaylist(needed)
+        localSource.addPlaylist(remote)
         return cache + remote
     }
 

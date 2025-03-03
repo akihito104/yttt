@@ -37,7 +37,7 @@ internal class YouTubePlaylistTable(
     override val maxAge: Duration = MAX_AGE_DEFAULT,
 ) : YouTubePlaylistUpdatable {
     @Ignore
-    override val thumbnailUrl: String = "" // TODO
+    override val thumbnailUrl: String = "" // TODO: implement for all_playlist with paging
 
     @Ignore
     override val title: String = "" // TODO
