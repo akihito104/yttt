@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.Twitch
+import com.freshdigitable.yttt.data.model.TwitchId
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
@@ -21,8 +22,10 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import java.time.ZoneId
 
@@ -63,10 +66,22 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).map { i ->
         repository.fetchVideosByUserId(i.mapTo())
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
+    override val debug: Flow<Map<TwitchChannelDetailPagerContent.DebugId, String>> = combine(
+        listOf(
+            detail.map { it.toString() },
+            vod.map { v -> v.joinToString { it.toString() } },
+        ).map { it.onStart { emit("") } },
+    ) {
+        it.mapIndexed { i, s -> TwitchChannelDetailPagerContent.DebugId("$i") to s }
+            .toMap()
+    }.stateIn(coroutineScope, SharingStarted.Lazily, emptyMap())
 }
 
 internal interface TwitchChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
     val vod: Flow<List<TwitchVideoDetail>>
+    val debug: Flow<Map<DebugId, String>>
+
+    data class DebugId(override val value: String) : TwitchId
 }
 
 internal data class LiveChannelDetailTwitch(

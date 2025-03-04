@@ -3,19 +3,15 @@ package com.freshdigitable.yttt.feature.channel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,13 +31,12 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
     override fun create(tab: ChannelDetailPageTab<*>): ChannelDetailPageComposable {
         when (tab as YouTubeChannelDetailTab) {
             YouTubeChannelDetailTab.About -> return {
-                val desc = delegate.pagerContent.annotatedDetail
-                    .collectAsState(AnnotatableString.empty())
+                val desc = pagerContent.annotatedDetail.collectAsState(AnnotatableString.empty())
                 annotatedText { desc.value }()
             }
 
             YouTubeChannelDetailTab.Actions -> return {
-                val logs = (delegate.pagerContent as YouTubeChannelDetailPagerContent)
+                val logs = (pagerContent as YouTubeChannelDetailPagerContent)
                     .activities.collectAsState(initial = emptyList())
                 list(
                     itemProvider = { logs.value },
@@ -51,7 +46,7 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
             }
 
             YouTubeChannelDetailTab.Sections -> return {
-                val sectionState = (delegate.pagerContent as YouTubeChannelDetailPagerContent)
+                val sectionState = (pagerContent as YouTubeChannelDetailPagerContent)
                     .sections.collectAsState(emptyList())
                 list(
                     itemProvider = { sectionState.value },
@@ -61,7 +56,7 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
             }
 
             YouTubeChannelDetailTab.Uploaded -> return {
-                val itemsState = (delegate.pagerContent as YouTubeChannelDetailPagerContent)
+                val itemsState = (pagerContent as YouTubeChannelDetailPagerContent)
                     .uploadedVideo.collectAsState(emptyList())
                 list(
                     itemProvider = { itemsState.value },
@@ -71,18 +66,12 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
             }
 
             YouTubeChannelDetailTab.Debug -> return {
-                val text = delegate.channelDetailBody.collectAsState(initial = null)
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = text.value?.toString() ?: "",
-                        textAlign = TextAlign.Start,
-                    )
-                }
+                val text = (pagerContent as YouTubeChannelDetailPagerContent).debug
+                    .collectAsState(initial = emptyMap())
+                list(
+                    itemProvider = { text.value.entries.toList() },
+                    idProvider = { it.key },
+                ) { Text(text = it.value) }()
             }
         }
     }

@@ -26,7 +26,7 @@ interface ChannelDetailDelegate {
 }
 
 interface ChannelDetailPageScope {
-    val delegate: ChannelDetailDelegate
+    val pagerContent: ChannelDetailDelegate.PagerContent
     val dialogState: LinkAnnotationDialogState
     fun annotatedText(textProvider: () -> AnnotatableString): @Composable () -> Unit
     fun <T> list(

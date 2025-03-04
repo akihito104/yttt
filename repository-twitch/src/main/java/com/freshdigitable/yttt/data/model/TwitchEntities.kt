@@ -128,7 +128,7 @@ internal class ChannelStreamSchedule(
         )
 }
 
-internal class TwitchVideoRemote(
+internal data class TwitchVideoRemote(
     @SerializedName("id")
     override val id: TwitchVideo.Id,
     @SerializedName("stream_id")
@@ -164,8 +164,7 @@ internal class TwitchVideoRemote(
     @SerializedName("muted_segments")
     override val mutedSegments: List<MutedSegmentRemote>,
 ) : TwitchVideoDetail {
-    override val user: TwitchUser = object :
-        TwitchUser {
+    override val user: TwitchUser = object : TwitchUser {
         override val id: TwitchUser.Id
             get() = TwitchUser.Id(userId)
         override val loginName: String

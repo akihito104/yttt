@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
@@ -27,11 +28,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
 import java.math.BigInteger
@@ -113,12 +116,27 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     override suspend fun clearForDetail() {
         repository.cleanUp()
     }
+
+    override val debug: Flow<Map<YouTubeChannelDetailPagerContent.DebugId, String>> = combine(
+        listOf(
+            detail.map { it.toString() },
+            uploadedVideo.map { v -> v.joinToString { it.toString() } },
+            sections.map { s -> s.joinToString { it.toString() } },
+            activities.map { a -> a.joinToString { it.toString() } },
+        ).map { it.onStart { emit("") } },
+    ) {
+        it.mapIndexed { i, s -> YouTubeChannelDetailPagerContent.DebugId("$i") to s }
+            .toMap()
+    }.stateIn(coroutineScope, SharingStarted.Lazily, emptyMap())
 }
 
 internal interface YouTubeChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
     val uploadedVideo: Flow<List<YouTubePlaylistItem>>
     val sections: Flow<List<ChannelSectionItem>>
     val activities: Flow<List<YouTubeChannelLog>>
+    val debug: Flow<Map<DebugId, String>>
+
+    data class DebugId(override val value: String) : YouTubeId
 }
 
 internal data class LiveChannelDetailYouTube(

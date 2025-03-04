@@ -86,7 +86,9 @@ fun ChannelDetailScreen(
     AppLogger.logD("ChannelDetail") { "start:" }
     val detail = viewModel.channelDetailBody.collectAsState()
     val dialog = remember { LinkAnnotationDialogState() }
-    val scope = remember(viewModel, dialog) { ChannelDetailPageScope.create(viewModel, dialog) }
+    val scope = remember(viewModel.pagerContent, dialog) {
+        ChannelDetailPageScope.create(viewModel.pagerContent, dialog)
+    }
     val composableFactory = checkNotNull(pageFactory[viewModel.channelId.type.java])
     ChannelDetailScreen(
         channelDetail = { detail.value },
@@ -162,10 +164,10 @@ private fun ChannelDetailPager(
 }
 
 private fun ChannelDetailPageScope.Companion.create(
-    delegate: ChannelDetailDelegate,
+    pagerContent: ChannelDetailDelegate.PagerContent,
     dialogState: LinkAnnotationDialogState,
 ): ChannelDetailPageScope = object : ChannelDetailPageScope {
-    override val delegate: ChannelDetailDelegate get() = delegate
+    override val pagerContent: ChannelDetailDelegate.PagerContent get() = pagerContent
     override val dialogState: LinkAnnotationDialogState get() = dialogState
     override fun annotatedText(textProvider: () -> AnnotatableString): @Composable () -> Unit = {
         AnnotatedTextPage(textProvider = textProvider, dialog = dialogState)
@@ -267,18 +269,13 @@ private fun ChannelScreenPreview() {
         override fun hashCode(): Int = throw NotImplementedError()
     }
     val pageScope = ChannelDetailPageScope.create(
-        delegate = object : ChannelDetailDelegate {
-            override val tabs: List<ChannelDetailPageTab<*>> = Tab.entries
-            override val channelDetailBody: Flow<LiveChannelDetailBody?> = flowOf(channelDetail)
-            override val pagerContent: ChannelDetailDelegate.PagerContent
-                get() = object : ChannelDetailDelegate.PagerContent {
-                    override val annotatedDetail: Flow<AnnotatableString> = flowOf(
-                        AnnotatableString.create(
-                            annotatable = "text.",
-                            accountUrlCreator = { emptyList() },
-                        )
-                    )
-                }
+        pagerContent = object : ChannelDetailDelegate.PagerContent {
+            override val annotatedDetail: Flow<AnnotatableString> = flowOf(
+                AnnotatableString.create(
+                    annotatable = "text.",
+                    accountUrlCreator = { emptyList() },
+                ),
+            )
         },
         dialogState = LinkAnnotationDialogState(),
     )
