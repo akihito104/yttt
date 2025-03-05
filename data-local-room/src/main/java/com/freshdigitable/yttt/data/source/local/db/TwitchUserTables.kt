@@ -58,12 +58,12 @@ internal class TwitchUserDetailTable(
     val id: TwitchUser.Id,
     @ColumnInfo(name = "profile_image_url")
     val profileImageUrl: String,
-    @ColumnInfo(name = "views_count")
-    val viewsCount: Int,
     @ColumnInfo(name = "created_at")
     val createdAt: Instant,
     @ColumnInfo("description")
     val description: String,
+    @ColumnInfo(name = "views_count")
+    val viewsCount: Int = 0,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -85,20 +85,17 @@ internal data class TwitchUserDetailDbView(
     override val description: String,
     @ColumnInfo("profile_image_url")
     override val profileImageUrl: String,
-    @ColumnInfo("views_count")
-    override val viewsCount: Int,
     @ColumnInfo("created_at")
     override val createdAt: Instant,
 ) : TwitchUserDetail, TwitchUser by user {
     companion object {
-        internal const val SQL_USER_DETAIL = "SELECT u.*, d.profile_image_url, d.views_count, " +
-            "d.created_at, d.description FROM twitch_user_detail AS d " +
-            "INNER JOIN twitch_user AS u ON d.user_id = u.id"
+        internal const val SQL_USER_DETAIL = "SELECT u.*, d.profile_image_url, d.created_at, " +
+            "d.description FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
         internal const val SQL_EMBED_PREFIX = "u_"
         internal const val SQL_EMBED_ALIAS = "u.id AS ${SQL_EMBED_PREFIX}id, " +
             "u.display_name AS ${SQL_EMBED_PREFIX}display_name, u.login_name AS ${SQL_EMBED_PREFIX}login_name, " +
             "u.description AS ${SQL_EMBED_PREFIX}description, u.created_at AS ${SQL_EMBED_PREFIX}created_at, " +
-            "u.views_count AS ${SQL_EMBED_PREFIX}views_count, u.profile_image_url AS ${SQL_EMBED_PREFIX}profile_image_url"
+            "u.profile_image_url AS ${SQL_EMBED_PREFIX}profile_image_url"
     }
 
     @androidx.room.Dao

@@ -14,7 +14,6 @@ interface TwitchUser {
 interface TwitchUserDetail : TwitchUser {
     val description: String
     val profileImageUrl: String
-    val viewsCount: Int
     val createdAt: Instant
 }
 

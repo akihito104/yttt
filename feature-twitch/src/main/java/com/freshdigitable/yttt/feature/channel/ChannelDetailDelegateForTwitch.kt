@@ -1,63 +1,117 @@
 package com.freshdigitable.yttt.feature.channel
 
+import androidx.compose.runtime.Composable
+import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
 import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnailEntity
+import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
+import com.freshdigitable.yttt.data.model.LivePlatform
+import com.freshdigitable.yttt.data.model.Twitch
+import com.freshdigitable.yttt.data.model.TwitchId
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLiveChannelDetail
+import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.feature.video.createForTwitch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import java.time.ZoneId
 
 internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     private val repository: TwitchLiveRepository,
     @Assisted id: LiveChannel.Id,
-) : ChannelDetailDelegate {
+    @Assisted coroutineScope: CoroutineScope,
+) : ChannelDetailDelegate, TwitchChannelDetailPagerContent {
     @AssistedFactory
     interface Factory : ChannelDetailDelegate.Factory {
-        override fun create(id: LiveChannel.Id): ChannelDetailDelegateForTwitch
+        override fun create(
+            id: LiveChannel.Id,
+            coroutineScope: CoroutineScope,
+        ): ChannelDetailDelegateForTwitch
     }
 
     init {
         check(id.type == TwitchUser.Id::class) { "unsupported id type: ${id.type}" }
     }
 
-    override val tabs: List<ChannelPage> = listOf(
-        ChannelPage.ABOUT,
-        ChannelPage.UPLOADED,
-        ChannelPage.DEBUG_CHANNEL,
+    override val tabs: List<ChannelDetailPageTab<*>> = listOfNotNull(
+        TwitchChannelDetailTab.About,
+        TwitchChannelDetailTab.Vod,
+        if (BuildConfig.DEBUG) TwitchChannelDetailTab.Debug else null
     )
-    override val channelDetail: Flow<AnnotatedLiveChannelDetail?> = flow {
-        val users = repository.findUsersById(setOf(id.mapTo())).firstOrNull()
-        val detail = users?.let { u ->
-            val d = u.toLiveChannelDetail()
-            AnnotatedLiveChannelDetail(
-                detail = d,
-                annotatedDescription = AnnotatableString.createForTwitch(d.description)
-            )
-        }
-        emit(detail)
+    private val detail: Flow<TwitchUserDetail?> = flowOf(id).map {
+        repository.findUsersById(setOf(it.mapTo())).firstOrNull()
     }
-    override val uploadedVideo: Flow<List<LiveVideoThumbnail>> = flow {
-        val res = repository.fetchVideosByUserId(id.mapTo()).map {
-            LiveVideoThumbnailEntity(
-                id = it.id.mapTo(),
-                thumbnailUrl = it.getThumbnailUrl(),
-                title = it.title,
-            )
-        }
-        emit(res)
+    override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
+        d?.let { LiveChannelDetailTwitch(it) }
     }
-    override val channelSection: Flow<List<ChannelDetailChannelSection>>
-        get() = throw AssertionError("unsupported operation")
-    override val activities: Flow<List<LiveVideo<*>>>
-        get() = throw AssertionError("unsupported operation")
+    override val pagerContent: ChannelDetailDelegate.PagerContent
+        get() = this
+    override val annotatedDetail: Flow<AnnotatableString> = detail.map { d ->
+        val desc = d?.description ?: return@map AnnotatableString.empty()
+        AnnotatableString.createForTwitch(desc)
+    }
+    override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).map { i ->
+        repository.fetchVideosByUserId(i.mapTo())
+    }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
+    override val debug: Flow<Map<TwitchChannelDetailPagerContent.DebugId, String>> = combine(
+        listOf(
+            detail.map { it.toString() },
+            vod.map { v -> v.joinToString { it.toString() } },
+        ).map { it.onStart { emit("") } },
+    ) {
+        it.mapIndexed { i, s -> TwitchChannelDetailPagerContent.DebugId("$i") to s }
+            .toMap()
+    }.stateIn(coroutineScope, SharingStarted.Lazily, emptyMap())
+}
+
+internal interface TwitchChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
+    val vod: Flow<List<TwitchVideoDetail>>
+    val debug: Flow<Map<DebugId, String>>
+
+    data class DebugId(override val value: String) : TwitchId
+}
+
+internal data class LiveChannelDetailTwitch(
+    private val detail: TwitchUserDetail,
+    private val zoneId: ZoneId = ZoneId.systemDefault(),
+) : LiveChannelDetailBody {
+    override val id: LiveChannel.Id get() = detail.id.mapTo()
+    override val statsText: String get() = detail.statsText(zoneId)
+    override val title: String get() = detail.displayName
+    override val iconUrl: String get() = detail.profileImageUrl
+    override val platform: LivePlatform get() = Twitch
+    override val bannerUrl: String? get() = null
+
+    companion object {
+        private fun TwitchUserDetail.statsText(zoneId: ZoneId): String = listOf(
+            loginName,
+            "Published:${createdAt.toLocalFormattedText(dateFormatter, zoneId)}",
+        ).joinToString(LiveChannelDetailBody.STATS_SEPARATOR)
+    }
+}
+
+internal sealed class TwitchChannelDetailTab(
+    private val title: String,
+    private val ordinal: Int,
+) : ChannelDetailPageTab<TwitchChannelDetailTab> {
+    @Composable
+    override fun title(): String = title
+    override fun compareTo(other: TwitchChannelDetailTab): Int = ordinal.compareTo(other.ordinal)
+
+    data object About : TwitchChannelDetailTab(title = "ABOUT", 0)
+    data object Vod : TwitchChannelDetailTab(title = "VOD", 1)
+    data object Debug : TwitchChannelDetailTab(title = "DEBUG", 99)
 }

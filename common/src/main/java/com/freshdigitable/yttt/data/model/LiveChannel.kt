@@ -1,7 +1,8 @@
 package com.freshdigitable.yttt.data.model
 
 import java.math.BigInteger
-import java.time.Instant
+import java.text.NumberFormat
+import java.util.Locale
 import kotlin.reflect.KClass
 
 interface LiveChannel {
@@ -26,39 +27,13 @@ data class LiveChannelEntity(
     override val platform: LivePlatform,
 ) : LiveChannel
 
-interface LiveChannelAddition {
+interface LiveChannelDetailBody : LiveChannel {
     val bannerUrl: String?
-    val subscriberCount: BigInteger
-    val isSubscriberHidden: Boolean
-    val videoCount: BigInteger
-    val viewsCount: BigInteger
-    val publishedAt: Instant
-    val customUrl: String
-    val keywords: Collection<String>
-    val description: String?
-    val uploadedPlayList: YouTubePlaylist.Id?
+    val statsText: String
+
+    companion object {
+        val BigInteger.toStringWithComma: String
+            get() = NumberFormat.getNumberInstance(Locale.US).format(this)
+        const val STATS_SEPARATOR: String = "・"
+    }
 }
-
-interface LiveChannelDetail : LiveChannel, LiveChannelAddition
-
-data class LiveChannelDetailEntity(
-    override val id: LiveChannel.Id,
-    override val title: String,
-    override val iconUrl: String,
-    override val platform: LivePlatform,
-    override val bannerUrl: String?,
-    override val subscriberCount: BigInteger,
-    override val isSubscriberHidden: Boolean,
-    override val videoCount: BigInteger,
-    override val viewsCount: BigInteger,
-    override val publishedAt: Instant,
-    override val customUrl: String,
-    override val keywords: Collection<String>,
-    override val description: String?,
-    override val uploadedPlayList: YouTubePlaylist.Id?,
-) : LiveChannelDetail
-
-data class AnnotatedLiveChannelDetail(
-    private val detail: LiveChannelDetail,
-    val annotatedDescription: AnnotatableString,
-) : LiveChannelDetail by detail

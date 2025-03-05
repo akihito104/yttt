@@ -116,10 +116,13 @@ class YouTubeRepository @Inject constructor(
 
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist> {
         val cache = localSource.fetchPlaylist(ids)
-        if (cache.isNotEmpty()) {
+        val needed = ids - cache.map { it.id }.toSet()
+        if (needed.isEmpty()) {
             return cache
         }
-        return remoteSource.fetchPlaylist(ids)
+        val remote = remoteSource.fetchPlaylist(needed)
+        localSource.addPlaylist(remote)
+        return cache + remote
     }
 
     suspend fun fetchPlaylistItems(
@@ -196,12 +199,12 @@ class YouTubeRepository @Inject constructor(
         }
         val remote = remoteSource.fetchChannelList(needed)
         localSource.addChannelList(remote)
-        return remote
+        return cache + remote
     }
 
     override suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
         val cache = localSource.fetchChannelSection(id)
-        if (cache.isNotEmpty()) {
+        if (cache.isNotEmpty()) { // TODO: updatable
             return cache
         }
         val remote = remoteSource.fetchChannelSection(id)

@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.data.model
 
 import java.math.BigInteger
 import java.time.Instant
-import kotlin.reflect.KClass
 
 interface YouTubeChannel {
     val id: Id
@@ -44,19 +43,21 @@ interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {
 
     data class Id(override val value: String) : YouTubeId
 
-    enum class Type(val metaType: KClass<out Content<*>>) {
-        ALL_PLAYLIST(Content.Playlist::class), COMPLETED_EVENT(Content.Playlist::class),
-        LIVE_EVENT(Content.Playlist::class), MULTIPLE_CHANNEL(Content.Channels::class),
-        MULTIPLE_PLAYLIST(Content.Playlist::class),
-        POPULAR_UPLOAD(Content.Playlist::class), RECENT_UPLOAD(Content.Playlist::class),
-        SINGLE_PLAYLIST(Content.Playlist::class), SUBSCRIPTION(Content.Channels::class),
-        UPCOMING_EVENT(Content.Playlist::class),
-        UNDEFINED(Content.Playlist::class),
+    enum class Type {
+        // has content
+        SINGLE_PLAYLIST, MULTIPLE_PLAYLIST, MULTIPLE_CHANNEL,
+
+        // content is null but can get from another api
+        ALL_PLAYLIST, COMPLETED_EVENT, LIVE_EVENT, UPCOMING_EVENT, SUBSCRIPTION,
+
+        // content is null and cannot get
+        POPULAR_UPLOAD, RECENT_UPLOAD, UNDEFINED,
     }
 
-    interface Content<T> {
+    sealed interface Content<T> {
         data class Playlist(override val item: List<YouTubePlaylist.Id>) :
             Content<YouTubePlaylist.Id>
+
         data class Channels(override val item: List<YouTubeChannel.Id>) : Content<YouTubeChannel.Id>
 
         val item: List<T>

@@ -1,14 +1,10 @@
 package com.freshdigitable.yttt.feature.video
 
-import com.freshdigitable.yttt.MockkResponseRule
-import io.mockk.junit4.MockKRule
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
-import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
 import org.junit.runners.Parameterized.Parameters
@@ -18,12 +14,6 @@ class YouTubeAnnotatableStringFactoryTest {
 
     @RunWith(Parameterized::class)
     class DescriptionAnnotationParameterizedTest(private val param: Param) {
-        private val responseRule = MockkResponseRule()
-
-        @get:Rule
-        val rule: RuleChain = RuleChain.outerRule(MockKRule(this))
-            .around(responseRule)
-
         private val sut: YouTubeAnnotatableStringFactory by lazy {
             YouTubeAnnotatableStringFactory()
         }

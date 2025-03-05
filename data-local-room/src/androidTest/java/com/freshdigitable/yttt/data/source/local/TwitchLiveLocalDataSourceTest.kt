@@ -167,7 +167,6 @@ private fun userDetail(
     override val displayName: String get() = loginName
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
-    override val viewsCount: Int get() = 100
     override val createdAt: Instant get() = Instant.EPOCH
 }
 

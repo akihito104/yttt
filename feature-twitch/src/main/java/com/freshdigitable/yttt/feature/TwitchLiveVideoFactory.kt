@@ -1,13 +1,14 @@
 package com.freshdigitable.yttt.feature
 
 import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreamSchedule
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.model.toLiveChannel
 import java.math.BigInteger
 import java.time.Instant
 
@@ -75,3 +76,10 @@ internal data class TwitchUpcomingLiveVideo(
     override val viewerCount: BigInteger?
         get() = null
 }
+
+internal fun TwitchUserDetail.toLiveChannel(): LiveChannel = LiveChannelEntity(
+    id = id.mapTo(),
+    title = displayName,
+    iconUrl = profileImageUrl,
+    platform = Twitch,
+)

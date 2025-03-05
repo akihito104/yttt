@@ -11,9 +11,7 @@ import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_ALIAS
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_PREFIX
-import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_USER_DETAIL
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
@@ -65,16 +63,26 @@ internal class TwitchStreamTable(
     }
 }
 
+private const val SQL_USER_DETAIL_ = "SELECT u.*, d.profile_image_url, d.views_count, " +
+    "d.created_at, d.description FROM twitch_user_detail AS d " +
+    "INNER JOIN twitch_user AS u ON d.user_id = u.id"
+private const val SQL_EMBED_ALIAS_ = "u.id AS ${SQL_EMBED_PREFIX}id, " +
+    "u.display_name AS ${SQL_EMBED_PREFIX}display_name, u.login_name AS ${SQL_EMBED_PREFIX}login_name, " +
+    "u.description AS ${SQL_EMBED_PREFIX}description, u.created_at AS ${SQL_EMBED_PREFIX}created_at, " +
+    "u.views_count AS ${SQL_EMBED_PREFIX}views_count, u.profile_image_url AS ${SQL_EMBED_PREFIX}profile_image_url"
+
 @DatabaseView(
     viewName = "twitch_stream_view",
-    value = "SELECT s.*, $SQL_EMBED_ALIAS FROM twitch_stream AS s " +
-        "INNER JOIN ($SQL_USER_DETAIL) AS u ON u.id = s.user_id",
+    value = "SELECT s.*, $SQL_EMBED_ALIAS_ FROM twitch_stream AS s " +
+        "INNER JOIN ($SQL_USER_DETAIL_) AS u ON u.id = s.user_id",
 )
 internal data class TwitchStreamDbView(
     @Embedded
     private val streamEntity: TwitchStreamTable,
     @Embedded(SQL_EMBED_PREFIX)
     override val user: TwitchUserDetailDbView,
+    @ColumnInfo("u_views_count")
+    private val viewsCount: Int,
 ) : TwitchStream {
     override val gameId: String get() = streamEntity.gameId
     override val gameName: String get() = streamEntity.gameName

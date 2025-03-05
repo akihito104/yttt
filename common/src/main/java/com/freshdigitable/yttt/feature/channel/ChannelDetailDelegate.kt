@@ -1,45 +1,49 @@
 package com.freshdigitable.yttt.feature.channel
 
-import com.freshdigitable.yttt.data.model.AnnotatedLiveChannelDetail
+import androidx.compose.runtime.Composable
+import com.freshdigitable.yttt.compose.TabData
+import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
+import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
+import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 
 interface ChannelDetailDelegate {
-    val tabs: List<ChannelPage>
-    val channelDetail: Flow<AnnotatedLiveChannelDetail?>
-    val uploadedVideo: Flow<List<LiveVideoThumbnail>>
-    val channelSection: Flow<List<ChannelDetailChannelSection>>
-    val activities: Flow<List<LiveVideo<*>>>
+    val tabs: List<ChannelDetailPageTab<*>>
+    val channelDetailBody: Flow<LiveChannelDetailBody?>
+    val pagerContent: PagerContent
+    suspend fun clearForDetail() {}
 
     interface Factory {
-        fun create(id: LiveChannel.Id): ChannelDetailDelegate
+        fun create(id: LiveChannel.Id, coroutineScope: CoroutineScope): ChannelDetailDelegate
+    }
+
+    interface PagerContent {
+        val annotatedDetail: Flow<AnnotatableString>
     }
 }
 
-class ChannelDetailChannelSection(
-    val id: IdBase,
-    val position: Int,
-    val title: String,
-    val content: ChannelDetailContent<*>?,
-) {
-    sealed class ChannelDetailContent<T> {
-        data class MultiPlaylist(override val item: List<LiveVideoThumbnail>) :
-            ChannelDetailContent<LiveVideoThumbnail>()
+interface ChannelDetailPageScope {
+    val pagerContent: ChannelDetailDelegate.PagerContent
+    val dialogState: LinkAnnotationDialogState
+    fun annotatedText(textProvider: () -> AnnotatableString): @Composable () -> Unit
+    fun <T> list(
+        itemProvider: () -> List<T>,
+        idProvider: (T) -> IdBase,
+        content: @Composable (T) -> Unit,
+    ): @Composable () -> Unit
 
-        data class SinglePlaylist(override val item: List<LiveVideoThumbnail>) :
-            ChannelDetailContent<LiveVideoThumbnail>()
+    fun videoItem(url: String, title: String): @Composable () -> Unit
 
-        data class ChannelList(override val item: List<LiveChannel>) :
-            ChannelDetailContent<LiveChannel>()
-
-        abstract val item: List<T>
-    }
+    companion object
 }
 
-enum class ChannelPage {
-    ABOUT, CHANNEL_SECTION, UPLOADED, ACTIVITIES, DEBUG_CHANNEL,
-    ;
+interface ChannelDetailPageTab<T : ChannelDetailPageTab<T>> : TabData<T>
+
+typealias ChannelDetailPageComposable = @Composable ChannelDetailPageScope.() -> Unit
+
+interface ChannelDetailPageComposableFactory {
+    fun create(tab: ChannelDetailPageTab<*>): ChannelDetailPageComposable
 }

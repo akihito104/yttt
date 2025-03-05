@@ -179,6 +179,11 @@ internal data class YouTubeChannelLogTable(
     @ColumnInfo(name = "thumbnail", defaultValue = "")
     override val thumbnailUrl: String = "",
 ) : YouTubeChannelLog {
+    @Ignore
+    override val title: String = "" // TODO
+
+    @Ignore
+    override val type: String = "" // TODO
 
     @androidx.room.Dao
     internal interface Dao : TableDeletable {

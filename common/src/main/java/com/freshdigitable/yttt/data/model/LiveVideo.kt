@@ -13,12 +13,6 @@ interface LiveVideoThumbnail {
     override fun hashCode(): Int
 }
 
-data class LiveVideoThumbnailEntity(
-    override val id: LiveVideo.Id,
-    override val title: String,
-    override val thumbnailUrl: String,
-) : LiveVideoThumbnail
-
 interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
     val channel: LiveChannel
     val scheduledStartDateTime: Instant?

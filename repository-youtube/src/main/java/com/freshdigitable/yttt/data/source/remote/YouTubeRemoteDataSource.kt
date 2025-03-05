@@ -5,7 +5,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
-import com.freshdigitable.yttt.data.model.YouTubeChannelLogEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -105,8 +104,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         },
         getItems = { items },
         getNextToken = { nextPageToken },
-    ).filter { it.contentDetails?.upload != null }
-        .map { it.toChannelLog() }
+    ).map { YouTubeChannelLogEntity(activity = it) }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> =
         fetchList(ids, getItems = { items }) { chunked ->
@@ -233,13 +231,24 @@ private data class YouTubeSubscriptionRemote(
         )
 }
 
-private fun Activity.toChannelLog(): YouTubeChannelLog = YouTubeChannelLogEntity(
-    id = YouTubeChannelLog.Id(id),
-    dateTime = Instant.ofEpochMilli(snippet.publishedAt.value),
-    videoId = YouTubeVideo.Id(contentDetails.upload.videoId),
-    channelId = YouTubeChannel.Id(snippet.channelId),
-    thumbnailUrl = snippet.thumbnails.url,
-)
+private data class YouTubeChannelLogEntity(
+    val activity: Activity,
+) : YouTubeChannelLog {
+    override val id: YouTubeChannelLog.Id
+        get() = YouTubeChannelLog.Id(activity.id)
+    override val dateTime: Instant
+        get() = Instant.ofEpochMilli(activity.snippet.publishedAt.value)
+    override val videoId: YouTubeVideo.Id?
+        get() = activity.contentDetails.upload?.let { YouTubeVideo.Id(it.videoId) }
+    override val channelId: YouTubeChannel.Id
+        get() = YouTubeChannel.Id(activity.snippet.channelId)
+    override val thumbnailUrl: String
+        get() = activity.snippet.thumbnails.url
+    override val title: String
+        get() = activity.snippet.title
+    override val type: String
+        get() = activity.snippet.type
+}
 
 private class YouTubeVideoRemote(
     private val video: Video,
@@ -312,7 +321,7 @@ private data class YouTubeChannelImpl(
     override val viewsCount: BigInteger
         get() = channel.statistics.viewCount
     override val customUrl: String
-        get() = channel.snippet.customUrl
+        get() = channel.snippet.customUrl ?: ""
     override val keywords: Collection<String>
         get() = channel.brandingSettings?.channel?.keywords?.split(",", " ") ?: emptyList()
     override val publishedAt: Instant
@@ -356,27 +365,27 @@ private data class YouTubeChannelSectionImpl(
             "subscriptions" to YouTubeChannelSection.Type.SUBSCRIPTION,
             "upcomingEvents" to YouTubeChannelSection.Type.UPCOMING_EVENT,
             "channelsectiontypeundefined" to YouTubeChannelSection.Type.UNDEFINED,
-        )
+        ).mapKeys { it.key.lowercase() }
 
-        private fun ChannelSectionSnippet.parseType(): YouTubeChannelSection.Type? {
-            return typeTable[type]
-                ?: typeTable.entries.firstOrNull { it.key.lowercase() == type.lowercase() }?.value
-        }
+        private fun ChannelSectionSnippet.parseType(): YouTubeChannelSection.Type? =
+            typeTable[type.lowercase()]
 
         private fun ChannelSection.parseContent(): YouTubeChannelSection.Content<*>? {
             if (contentDetails == null) {
                 return null
             }
-            return when (requireNotNull(snippet.parseType()).metaType) {
-                YouTubeChannelSection.Content.Playlist::class -> YouTubeChannelSection.Content.Playlist(
+            val type = requireNotNull(snippet.parseType()) { "type is null: $snippet" }
+            return when (type) {
+                YouTubeChannelSection.Type.SINGLE_PLAYLIST,
+                YouTubeChannelSection.Type.MULTIPLE_PLAYLIST -> YouTubeChannelSection.Content.Playlist(
                     contentDetails.playlists.map { YouTubePlaylist.Id(it) }
                 )
 
-                YouTubeChannelSection.Content.Channels::class -> YouTubeChannelSection.Content.Channels(
+                YouTubeChannelSection.Type.MULTIPLE_CHANNEL -> YouTubeChannelSection.Content.Channels(
                     contentDetails.channels.map { YouTubeChannel.Id(it) }
                 )
 
-                else -> throw IllegalStateException()
+                else -> throw IllegalStateException("unknown type: $snippet")
             }
         }
     }

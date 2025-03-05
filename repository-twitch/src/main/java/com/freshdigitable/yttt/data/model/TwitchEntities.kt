@@ -10,8 +10,12 @@ internal class TwitchUserDetailRemote(
     override val displayName: String,
     @SerializedName("profile_image_url")
     override val profileImageUrl: String,
-    @SerializedName("view_count")
-    override val viewsCount: Int,
+    /**
+     * NOTE: This field has been deprecate (see [Get Users API endpoint – “view_count” deprecation](https://discuss.dev.twitch.tv/t/get-users-api-endpoint-view-count-deprecation/37777)).
+     * Any data in this field is not valid and should not be used.
+     */
+//    @SerializedName("view_count")
+//    override val viewsCount: Int,
     @SerializedName("created_at")
     override val createdAt: Instant,
     @SerializedName("login")
@@ -124,7 +128,7 @@ internal class ChannelStreamSchedule(
         )
 }
 
-internal class TwitchVideoRemote(
+internal data class TwitchVideoRemote(
     @SerializedName("id")
     override val id: TwitchVideo.Id,
     @SerializedName("stream_id")
@@ -160,8 +164,7 @@ internal class TwitchVideoRemote(
     @SerializedName("muted_segments")
     override val mutedSegments: List<MutedSegmentRemote>,
 ) : TwitchVideoDetail {
-    override val user: TwitchUser = object :
-        TwitchUser {
+    override val user: TwitchUser = object : TwitchUser {
         override val id: TwitchUser.Id
             get() = TwitchUser.Id(userId)
         override val loginName: String

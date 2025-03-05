@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
@@ -53,21 +52,49 @@ object ImageLoadableView {
         url: String,
         contentDescription: String? = "",
         contentScale: ContentScale = ContentScale.FillWidth,
-        altImage: Painter = rememberVectorPainter(image = Icons.Default.PlayArrow),
-        delegate: Delegate = requireImageLoadableViewDelegate(),
+        altImage: ImageVector = Icons.Default.PlayArrow,
     ) {
         val m = Modifier
             .then(modifier)
             .aspectRatio(16f / 9f)
         if (url.isEmpty()) {
-            Image(
-                painter = altImage,
-                contentDescription = contentDescription,
+            VectorThumbnail(
+                altImage = altImage,
                 modifier = m,
+                contentDescription = contentDescription,
             )
         } else {
-            delegate.Thumbnail(m, url, contentDescription, contentScale)
+            DelegateThumbnail(
+                url = url,
+                contentDescription = contentDescription,
+                contentScale = contentScale,
+                modifier = m,
+            )
         }
+    }
+
+    @Composable
+    private fun VectorThumbnail(
+        modifier: Modifier = Modifier,
+        contentDescription: String? = "",
+        altImage: ImageVector,
+    ) {
+        Image(
+            painter = rememberVectorPainter(image = altImage),
+            contentDescription = contentDescription,
+            modifier = modifier,
+        )
+    }
+
+    @Composable
+    private fun DelegateThumbnail(
+        modifier: Modifier = Modifier,
+        url: String,
+        contentDescription: String?,
+        contentScale: ContentScale,
+        delegate: Delegate = requireImageLoadableViewDelegate(),
+    ) {
+        delegate.Thumbnail(modifier, url, contentDescription, contentScale)
     }
 
     @Composable
