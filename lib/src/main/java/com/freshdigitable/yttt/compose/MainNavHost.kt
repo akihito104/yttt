@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -24,11 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.navigation.NavBackStackEntry
-import com.freshdigitable.yttt.compose.navigation.LiveIdPathParam
-import com.freshdigitable.yttt.compose.navigation.NavArg
+import com.freshdigitable.yttt.compose.navigation.NavContent.Scope.Companion.asAnimatedSharedTransitionScope
+import com.freshdigitable.yttt.compose.navigation.NavParam
 import com.freshdigitable.yttt.compose.navigation.NavRoute
-import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
+import com.freshdigitable.yttt.compose.navigation.ScopedNavContent
 import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -36,7 +34,7 @@ import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import com.freshdigitable.yttt.lib.R
 import kotlinx.coroutines.launch
 
-sealed class MainNavRoute(path: String) : NavRoute(path) {
+sealed class MainNavRoute(override val root: String) : NavRoute {
     companion object {
         val routes: Collection<NavRoute>
             get() = setOf(
@@ -47,70 +45,44 @@ sealed class MainNavRoute(path: String) : NavRoute(path) {
             )
     }
 
-    object Subscription : MainNavRoute(path = "subscription") {
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
-            screenStateHolder.topAppBarStateHolder?.update(title = stringResource(id = R.string.title_subscription))
+    object Subscription : MainNavRoute("subscription") {
+        override fun body(): ScopedNavContent = {
+            topAppBarState?.update(title = stringResource(id = R.string.title_subscription))
             SubscriptionListScreen(
                 onListItemClicked = {
-                    val route = ChannelDetail.parseRoute(it)
-                    screenStateHolder.navController.navigate(route)
+                    val route = ChannelDetail.route(it)
+                    navController.navigate(route)
                 },
             )
         }
     }
 
-    object ChannelDetail : MainNavRoute(path = "channel") {
-        private val navArgParams = LiveIdPathParam<LiveChannel.Id>()
-        override val params: Array<NavArg.PathParam<String>> = navArgParams.params
-
-        fun parseRoute(id: LiveChannel.Id): String =
-            super.parseRoute(*navArgParams.parseToPathParam(id))
-
+    object ChannelDetail : MainNavRoute("channel"), NavParam.LiveIdPath<LiveChannel.Id> {
         fun getChannelId(savedStateHandle: SavedStateHandle): LiveChannel.Id =
-            navArgParams.parseToId(savedStateHandle) { v, t -> LiveChannel.Id(v, t) }
+            getLiveId(savedStateHandle) { v, t -> LiveChannel.Id(v, t) }
 
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
-            screenStateHolder.topAppBarStateHolder?.update(stringResource(id = R.string.title_channel_detail))
+        override fun body(): ScopedNavContent = {
+            topAppBarState?.update(stringResource(id = R.string.title_channel_detail))
             ChannelDetailScreen()
         }
     }
 
-    object Settings : MainNavRoute(path = "settings") {
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
-            screenStateHolder.topAppBarStateHolder?.update(stringResource(id = R.string.title_setting))
+    object Settings : MainNavRoute("settings") {
+        override fun body(): ScopedNavContent = {
+            topAppBarState?.update(stringResource(id = R.string.title_setting))
             AppSettingsScreen()
         }
     }
 
-    object Auth : MainNavRoute(path = "auth") {
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
-            screenStateHolder.topAppBarStateHolder?.update(title = stringResource(id = R.string.title_account_setting))
+    object Auth : MainNavRoute("auth") {
+        override fun body(): ScopedNavContent = {
+            topAppBarState?.update(title = stringResource(id = R.string.title_account_setting))
             AuthScreen()
         }
     }
 }
 
-sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
+sealed class LiveVideoSharedTransitionRoute(override val root: String) : NavRoute {
     companion object {
         val routes: Collection<NavRoute>
             get() = setOf(
@@ -122,20 +94,14 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
         private val LiveVideo.Id.titleTransitionKey: String get() = "title-${type.simpleName}-$value"
     }
 
-    object TimetableTab : LiveVideoSharedTransitionRoute(path = "ttt") {
+    object TimetableTab : LiveVideoSharedTransitionRoute("ttt") {
         @OptIn(ExperimentalSharedTransitionApi::class)
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
-            screenStateHolder.topAppBarStateHolder?.update(title = stringResource(id = R.string.title_timetable))
-            screenStateHolder.animatedSharedTransitionScope(animatedContentScope) {
-                val navController = screenStateHolder.navController
+        override fun body(): ScopedNavContent = {
+            topAppBarState?.update(title = stringResource(id = R.string.title_timetable))
+            asAnimatedSharedTransitionScope {
                 TimetableTabScreen(
                     onListItemClicked = {
-                        val route = VideoDetail.parseRoute(it)
+                        val route = VideoDetail.route(it)
                         navController.navigate(route)
                     },
                     tabModifier = Modifier
@@ -161,17 +127,10 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
         }
     }
 
-    object VideoDetail : LiveVideoSharedTransitionRoute(path = "videoDetail") {
-        private val liveIdPathParam = LiveIdPathParam<LiveVideo.Id>()
-        override val params: Array<NavArg.PathParam<String>> = liveIdPathParam.params
-
-        fun parseRoute(id: LiveVideo.Id): String = super.parseRoute(
-            *liveIdPathParam.parseToPathParam(id)
-        )
-
-        fun getId(savedStateHandle: SavedStateHandle): LiveVideo.Id {
-            return liveIdPathParam.parseToId(savedStateHandle) { v, t -> LiveVideo.Id(v, t) }
-        }
+    object VideoDetail : LiveVideoSharedTransitionRoute("videoDetail"),
+        NavParam.LiveIdPath<LiveVideo.Id> {
+        fun getId(savedStateHandle: SavedStateHandle): LiveVideo.Id =
+            getLiveId(savedStateHandle) { v, t -> LiveVideo.Id(v, t) }
 
         @Composable
         private fun TopAppBar(
@@ -208,17 +167,12 @@ sealed class LiveVideoSharedTransitionRoute(path: String) : NavRoute(path) {
         }
 
         @ExperimentalSharedTransitionApi
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
+        override fun body(): ScopedNavContent = {
             val viewModel = hiltViewModel<VideoDetailViewModel>()
-            val appBarStateHolder = requireNotNull(screenStateHolder.topAppBarStateHolder)
+            val appBarStateHolder = requireNotNull(topAppBarState)
             TopAppBar(viewModel = viewModel, appBarStateHolder = appBarStateHolder)
             val id = viewModel.videoId
-            screenStateHolder.animatedSharedTransitionScope(animatedContentScope) {
+            asAnimatedSharedTransitionScope {
                 VideoDetailScreen(
                     viewModel = viewModel,
                     thumbnailModifier = Modifier.Companion.sharedElement(
