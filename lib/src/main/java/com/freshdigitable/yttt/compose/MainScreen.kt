@@ -41,7 +41,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.DrawerMenuListItem.Companion.toListItem
 import com.freshdigitable.yttt.compose.navigation.NavActivity
-import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.routeFormat
+import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
@@ -181,7 +181,7 @@ fun NavigationIcon(
 ) {
     val backStack = currentBackStackEntryProvider()
     val route = backStack?.destination?.route
-    if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.routeFormat) {
+    if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
         HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
     } else {
         Icon(
@@ -324,7 +324,7 @@ class MainViewModel @Inject constructor(
     accountRepository: TwitchAccountRepository,
 ) : ViewModel() {
     val navigation: Set<NavRoute> = (MainNavRoute.routes + ossLicensePage).toSet()
-    val startDestination = LiveVideoSharedTransitionRoute.TimetableTab.routeFormat
+    val startDestination = LiveVideoSharedTransitionRoute.TimetableTab.route
     internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
         listOf(
             flowOf(DrawerMenuItem.SUBSCRIPTION.toListItem()),
@@ -350,16 +350,16 @@ class MainViewModel @Inject constructor(
                         duration = SnackbarDuration.Long,
                     )
                 ) {
-                    it.navigate(MainNavRoute.Auth.routeFormat)
+                    it.navigate(MainNavRoute.Auth.route)
                 }
             }
     )
 
     internal fun getDrawerRoute(item: DrawerMenuItem): String {
         return when (item) {
-            DrawerMenuItem.SUBSCRIPTION -> MainNavRoute.Subscription.routeFormat
-            DrawerMenuItem.AUTH_STATUS -> MainNavRoute.Auth.routeFormat
-            DrawerMenuItem.APP_SETTING -> MainNavRoute.Settings.routeFormat
+            DrawerMenuItem.SUBSCRIPTION -> MainNavRoute.Subscription.route
+            DrawerMenuItem.AUTH_STATUS -> MainNavRoute.Auth.route
+            DrawerMenuItem.APP_SETTING -> MainNavRoute.Settings.route
             DrawerMenuItem.OSS_LICENSE -> ossLicensePage.root
         }
     }

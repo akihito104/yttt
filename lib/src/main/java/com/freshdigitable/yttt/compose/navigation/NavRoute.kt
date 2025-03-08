@@ -11,13 +11,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
-import androidx.navigation.NavType
 import androidx.navigation.activity
 import androidx.navigation.compose.composable
-import androidx.navigation.navArgument
-import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.routeFormat
+import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import kotlin.reflect.KClass
 
 interface NavRoute : NavParam, NavContent
@@ -27,55 +27,51 @@ abstract class NavActivity(
     val activityClass: KClass<out Activity>? = null,
     val action: String? = Intent.ACTION_VIEW,
     val data: Uri? = null,
-) : NavRoute {
-    override fun body(): ScopedNavContent = {}
-}
+) : NavRoute
 
-@Suppress("UNCHECKED_CAST")
-fun <T> NavType<T?>.nonNull(): NavType<T> = this as NavType<T>
+interface NavParam {
+    val root: String
+    val deepLinks: List<NavDeepLink> get() = emptyList()
 
-fun NavGraphBuilder.composableWith(
-    screenStateHolder: ScreenStateHolder,
-    navRoutes: Collection<NavRoute>,
-) {
-    navRoutes.forEach { navRoute ->
-        when (navRoute) {
-            is NavActivity -> {
-                activity(route = navRoute.root) {
-                    activityClass = navRoute.activityClass
-                    action = navRoute.action
-                    data = navRoute.data
-                }
-            }
-
-            else -> composableWith(screenStateHolder, navRoute)
-        }
+    companion object {
+        val NavParam.route: String get() = root
     }
 }
 
-private fun NavGraphBuilder.composableWith(
-    screenStateHolder: ScreenStateHolder,
-    navRoute: NavRoute,
-) {
-    composable(
-        route = navRoute.routeFormat,
-        arguments = navRoute.args.map { navArg ->
-            navArgument(navArg.argName) {
-                type = navArg.type
-                navArg.nullable?.let {
-                    this.nullable = it
-                    this.defaultValue = navArg.defaultValue
-                }
-            }
-        },
-        deepLinks = navRoute.deepLinks,
-        content = {
-            val body = navRoute.body()
-            val scope = NavContent.Scope.create(screenStateHolder, this)
-            scope.body(it)
-        },
-    )
+typealias ScopedNavContent = @Composable NavAnimatedScopedComposable.Scope.(NavBackStackEntry) -> Unit
+
+sealed interface NavContent
+
+interface NavTypedComposable : NavContent {
+    fun content(): NavGraphBuilder.(ScreenStateHolder) -> Unit
 }
+
+interface NavAnimatedScopedComposable : NavContent {
+    interface Scope : AnimatedVisibilityScope {
+        val navController: NavHostController
+        val topAppBarState: TopAppBarStateHolder?
+
+        @OptIn(ExperimentalSharedTransitionApi::class)
+        val sharedTransition: SharedTransitionScope?
+
+        companion object {
+            @OptIn(ExperimentalSharedTransitionApi::class)
+            inline fun Scope.asAnimatedSharedTransitionScope(
+                content: AnimatedSharedTransitionScope.() -> Unit,
+            ) {
+                AnimatedSharedTransitionScope(requireNotNull(sharedTransition), this).content()
+            }
+        }
+    }
+
+    fun body(): ScopedNavContent
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+class AnimatedSharedTransitionScope(
+    private val sharedTransition: SharedTransitionScope,
+    private val animatedContent: AnimatedVisibilityScope,
+) : SharedTransitionScope by sharedTransition, AnimatedVisibilityScope by animatedContent
 
 interface TopAppBarState {
     val title: String?
@@ -108,11 +104,11 @@ class ScreenStateHolder(
 )
 
 @OptIn(ExperimentalSharedTransitionApi::class)
-private fun NavContent.Scope.Companion.create(
+internal fun NavAnimatedScopedComposable.Scope.Companion.create(
     screenStateHolder: ScreenStateHolder,
     animatedVisibilityScope: AnimatedVisibilityScope,
-): NavContent.Scope =
-    object : NavContent.Scope, AnimatedVisibilityScope by animatedVisibilityScope {
+): NavAnimatedScopedComposable.Scope =
+    object : NavAnimatedScopedComposable.Scope, AnimatedVisibilityScope by animatedVisibilityScope {
         override val navController: NavHostController
             get() = screenStateHolder.navController
         override val topAppBarState: TopAppBarStateHolder?
@@ -120,3 +116,46 @@ private fun NavContent.Scope.Companion.create(
         override val sharedTransition: SharedTransitionScope?
             get() = screenStateHolder.sharedTransition
     }
+
+fun NavGraphBuilder.composableWith(
+    screenStateHolder: ScreenStateHolder,
+    navRoutes: Collection<NavRoute>,
+) {
+    navRoutes.forEach { navRoute ->
+        when (navRoute) {
+            is NavActivity -> {
+                activity(route = navRoute.root) {
+                    activityClass = navRoute.activityClass
+                    action = navRoute.action
+                    data = navRoute.data
+                }
+            }
+
+            else -> when (navRoute) {
+                is NavAnimatedScopedComposable ->
+                    composableWith(screenStateHolder, navRoute, navRoute)
+
+                is NavTypedComposable ->
+                    (navRoute as NavTypedComposable).content()(this, screenStateHolder)
+
+                else -> throw IllegalArgumentException("unknown navRoute: $navRoute")
+            }
+        }
+    }
+}
+
+private fun NavGraphBuilder.composableWith(
+    screenStateHolder: ScreenStateHolder,
+    navRoute: NavRoute,
+    content: NavAnimatedScopedComposable,
+) {
+    composable(
+        route = navRoute.route,
+        deepLinks = navRoute.deepLinks,
+        content = {
+            val body = content.body()
+            val scope = NavAnimatedScopedComposable.Scope.create(screenStateHolder, this)
+            scope.body(it)
+        },
+    )
+}

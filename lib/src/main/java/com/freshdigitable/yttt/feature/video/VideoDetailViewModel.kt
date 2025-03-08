@@ -3,7 +3,8 @@ package com.freshdigitable.yttt.feature.video
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.freshdigitable.yttt.compose.LiveVideoSharedTransitionRoute
+import androidx.navigation.toRoute
+import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
 import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
@@ -22,7 +23,7 @@ class VideoDetailViewModel @Inject constructor(
     private val contextMenuDelegate: TimetableContextMenuDelegate,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    val videoId = LiveVideoSharedTransitionRoute.VideoDetail.getId(savedStateHandle)
+    private val videoId = savedStateHandle.toRoute<LiveVideo.Id>(navTypeMap)
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
     private val annotatedString = checkNotNull(annotatedStringFactory[videoId.type.java])
     internal val detail: Flow<LiveVideoDetailItem?> = flowOf(videoId).map {
