@@ -4,10 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.freshdigitable.yttt.compose.TopAppBarMenuItem
+import com.freshdigitable.yttt.compose.navTypeMap
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
-import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,12 +36,15 @@ class VideoDetailViewModel @Inject constructor(
         )
     }
 
-    val contextMenuItems = flowOf(videoId).map {
-        contextMenuDelegate.setupMenu(it)
-        contextMenuDelegate.findMenuItems(it)
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    suspend fun consumeMenuItem(item: TimetableMenuItem) {
-        contextMenuDelegate.consumeMenuItem(item)
-    }
+    val contextMenuItems: Flow<List<TopAppBarMenuItem>> =
+        flowOf(videoId).map { id ->
+            contextMenuDelegate.setupMenu(id)
+            contextMenuDelegate.findMenuItems(id)
+        }.map { items ->
+            items.map {
+                TopAppBarMenuItem.inOthers(it.text) {
+                    contextMenuDelegate.consumeMenuItem(it)
+                }
+            }
+        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }

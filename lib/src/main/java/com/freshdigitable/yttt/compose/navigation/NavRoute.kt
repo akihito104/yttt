@@ -6,17 +6,14 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.activity
 import androidx.navigation.compose.composable
+import com.freshdigitable.yttt.compose.TopAppBarStateHolder
 import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import kotlin.reflect.KClass
 
@@ -72,29 +69,6 @@ class AnimatedSharedTransitionScope(
     private val sharedTransition: SharedTransitionScope,
     private val animatedContent: AnimatedVisibilityScope,
 ) : SharedTransitionScope by sharedTransition, AnimatedVisibilityScope by animatedContent
-
-interface TopAppBarState {
-    val title: String?
-    val action: @Composable (RowScope.() -> Unit)? get() = null
-}
-
-class TopAppBarStateHolder {
-    var state: TopAppBarState? by mutableStateOf(null)
-        private set
-
-    fun update(title: String?, action: @Composable (RowScope.() -> Unit)? = null) {
-        update(TopAppBarStateImpl(title, action))
-    }
-
-    fun update(state: TopAppBarState) {
-        this.state = state
-    }
-
-    private data class TopAppBarStateImpl(
-        override val title: String?,
-        override val action: @Composable (RowScope.() -> Unit)?,
-    ) : TopAppBarState
-}
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 class ScreenStateHolder(
