@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.LaunchNavRoute
+import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.feature.oauth.TwitchOauthParser

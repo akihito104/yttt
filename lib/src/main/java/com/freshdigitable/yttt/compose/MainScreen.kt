@@ -4,14 +4,9 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -21,9 +16,9 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -34,16 +29,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.DrawerMenuListItem.Companion.toListItem
 import com.freshdigitable.yttt.compose.navigation.NavActivity
-import com.freshdigitable.yttt.compose.navigation.NavR
+import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
+import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
-import com.freshdigitable.yttt.compose.navigation.TopAppBarStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.TwitchAccountRepository
@@ -87,7 +81,7 @@ fun MainScreen(
 @Composable
 private fun MainScreen(
     navController: NavHostController = rememberNavController(),
-    navigation: Set<NavR>,
+    navigation: Set<NavRoute>,
     startDestination: String,
     showMenuBadge: () -> Boolean,
     drawerItems: () -> List<DrawerMenuListItem>,
@@ -128,26 +122,21 @@ private fun MainScreen(
             )
         },
     ) {
-        val topAppBarStateHolder = remember { TopAppBarStateHolder() }
+        val backStack = navController.currentBackStackEntryAsState()
+        val topAppBarStateHolder = remember {
+            val navIconState = NavigationIconStateImpl(
+                isRoot = {
+                    val route = backStack.value?.destination?.route
+                    route == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route
+                },
+                isBadgeShown = showMenuBadge,
+                onMenuIconClicked = { drawerState.open() },
+                onUpClicked = { navController.navigateUp() },
+            )
+            TopAppBarStateHolder(navIconState)
+        }
         Scaffold(
-            topBar = {
-                TopAppBarImpl(
-                    stateHolder = topAppBarStateHolder,
-                    icon = {
-                        val backStack = navController.currentBackStackEntryAsState()
-                        NavigationIcon(
-                            currentBackStackEntryProvider = { backStack.value },
-                            showMenuBadge = showMenuBadge,
-                            onMenuIconClicked = {
-                                coroutineScope.launch {
-                                    drawerState.open()
-                                }
-                            },
-                            onUpClicked = { navController.navigateUp() },
-                        )
-                    }
-                )
-            },
+            topBar = { AppTopAppBar(stateHolder = topAppBarStateHolder) },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { padding ->
             SharedTransitionLayout {
@@ -171,61 +160,13 @@ private fun MainScreen(
     }
 }
 
-@Composable
-fun NavigationIcon(
-    currentBackStackEntryProvider: () -> NavBackStackEntry?,
-    showMenuBadge: () -> Boolean,
-    onMenuIconClicked: () -> Unit,
-    onUpClicked: () -> Unit,
-) {
-    val backStack = currentBackStackEntryProvider()
-    val route = backStack?.destination?.route
-    if (backStack == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route) {
-        HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
-    } else {
-        Icon(
-            Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = "",
-            modifier = Modifier.clickable(onClick = onUpClicked),
-        )
-    }
-}
-
-@Composable
-fun HamburgerMenuIcon(
-    showMenuBadge: () -> Boolean,
-    onMenuIconClicked: () -> Unit,
-) {
-    BadgedBox(
-        badge = {
-            if (showMenuBadge()) {
-                Badge(containerColor = Color.Red)
-            }
-        }
-    ) {
-        Icon(
-            Icons.Filled.Menu,
-            contentDescription = "",
-            modifier = Modifier.clickable(onClick = onMenuIconClicked),
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TopAppBarImpl(
-    stateHolder: TopAppBarStateHolder,
-    icon: (@Composable () -> Unit)?,
-) {
-    TopAppBar(
-        title = {
-            val t = stateHolder.state?.title ?: return@TopAppBar
-            Text(t)
-        },
-        navigationIcon = icon ?: {},
-        actions = stateHolder.state?.action ?: {},
-    )
-}
+@Immutable
+private class NavigationIconStateImpl(
+    override val isRoot: () -> Boolean,
+    override val isBadgeShown: () -> Boolean,
+    override val onMenuIconClicked: suspend () -> Unit,
+    override val onUpClicked: () -> Unit,
+) : NavigationIconState
 
 @Composable
 private fun NavigationDrawerImpl(
@@ -271,39 +212,6 @@ internal enum class DrawerMenuItem(
 
 @LightDarkModePreview
 @Composable
-private fun TopAppBarImplPreview() {
-    AppTheme {
-        val title = stringResource(id = R.string.title_timetable)
-        TopAppBarImpl(
-            stateHolder = TopAppBarStateHolder().apply {
-                update(title = title)
-            },
-            icon = {
-                Icon(
-                    Icons.Filled.Menu,
-                    contentDescription = "",
-                    modifier = Modifier.clickable(onClick = {}),
-                )
-            }
-        )
-    }
-}
-
-@LightDarkModePreview
-@Composable
-private fun HamburgerMenuIconPreview() {
-    AppTheme {
-        TopAppBarImpl(
-            stateHolder = TopAppBarStateHolder().apply {
-                update(title = "Title")
-            },
-            icon = { HamburgerMenuIcon(showMenuBadge = { true }) {} },
-        )
-    }
-}
-
-@LightDarkModePreview
-@Composable
 private fun NavDrawerPreview() {
     AppTheme {
         NavigationDrawerImpl(items = {
@@ -322,7 +230,7 @@ class MainViewModel @Inject constructor(
     @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
     accountRepository: TwitchAccountRepository,
 ) : ViewModel() {
-    val navigation: Set<NavR> = (MainNavRoute.routes + ossLicensePage).toSet()
+    val navigation: Set<NavRoute> = (MainNavRoute.routes + ossLicensePage).toSet()
     val startDestination = LiveVideoSharedTransitionRoute.TimetableTab.route
     internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
         listOf(
@@ -359,7 +267,7 @@ class MainViewModel @Inject constructor(
             DrawerMenuItem.SUBSCRIPTION -> MainNavRoute.Subscription.route
             DrawerMenuItem.AUTH_STATUS -> MainNavRoute.Auth.route
             DrawerMenuItem.APP_SETTING -> MainNavRoute.Settings.route
-            DrawerMenuItem.OSS_LICENSE -> ossLicensePage.path
+            DrawerMenuItem.OSS_LICENSE -> ossLicensePage.root
         }
     }
 }

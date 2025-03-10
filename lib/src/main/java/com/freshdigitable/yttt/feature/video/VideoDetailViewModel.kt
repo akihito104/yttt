@@ -3,10 +3,12 @@ package com.freshdigitable.yttt.feature.video
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.freshdigitable.yttt.compose.LiveVideoSharedTransitionRoute
+import androidx.navigation.toRoute
+import com.freshdigitable.yttt.compose.TopAppBarMenuItem
+import com.freshdigitable.yttt.compose.navTypeMap
+import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
-import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,7 +24,7 @@ class VideoDetailViewModel @Inject constructor(
     private val contextMenuDelegate: TimetableContextMenuDelegate,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-    val videoId = LiveVideoSharedTransitionRoute.VideoDetail.getId(savedStateHandle)
+    private val videoId = savedStateHandle.toRoute<LiveVideo.Id>(navTypeMap)
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
     private val annotatedString = checkNotNull(annotatedStringFactory[videoId.type.java])
     internal val detail: Flow<LiveVideoDetailItem?> = flowOf(videoId).map {
@@ -34,12 +36,15 @@ class VideoDetailViewModel @Inject constructor(
         )
     }
 
-    val contextMenuItems = flowOf(videoId).map {
-        contextMenuDelegate.setupMenu(it)
-        contextMenuDelegate.findMenuItems(it)
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    suspend fun consumeMenuItem(item: TimetableMenuItem) {
-        contextMenuDelegate.consumeMenuItem(item)
-    }
+    val contextMenuItems: Flow<List<TopAppBarMenuItem>> =
+        flowOf(videoId).map { id ->
+            contextMenuDelegate.setupMenu(id)
+            contextMenuDelegate.findMenuItems(id)
+        }.map { items ->
+            items.map {
+                TopAppBarMenuItem.inOthers(it.text) {
+                    contextMenuDelegate.consumeMenuItem(it)
+                }
+            }
+        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }

@@ -44,7 +44,7 @@ class YtttApp : Application(), Configuration.Provider {
 }
 
 object OssLicenseNav : NavActivity(
-    path = "oss_license",
+    root = "oss_license",
     activityClass = OssLicensesMenuActivity::class,
     action = Intent.ACTION_VIEW,
 )

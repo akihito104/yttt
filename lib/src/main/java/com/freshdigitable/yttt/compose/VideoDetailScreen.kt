@@ -28,7 +28,10 @@ fun VideoDetailScreen(
     viewModel: VideoDetailViewModel = hiltViewModel(),
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
+    topAppBarStateHolder: TopAppBarStateHolder,
 ) {
+    val menuItems = viewModel.contextMenuItems.collectAsState(initial = emptyList())
+    topAppBarStateHolder.updateMenuItems(menuItems.value)
     val item = viewModel.detail.collectAsState(null)
     VideoDetailScreen(
         videoProvider = { item.value },
