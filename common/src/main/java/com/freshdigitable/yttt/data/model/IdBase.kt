@@ -17,5 +17,5 @@ interface LivePlatform {
 }
 
 interface LiveId : IdBase {
-    val type: KClass<*>
+    val type: KClass<out IdBase>
 }

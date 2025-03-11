@@ -3,9 +3,7 @@ package com.freshdigitable.yttt.feature.channel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
-import com.freshdigitable.yttt.compose.navTypeMap
-import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.compose.navigation.NavTypedComposable.Companion.toLiveChannelRoute
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,7 +18,7 @@ class ChannelViewModel @Inject constructor(
     delegateFactory: IdBaseClassMap<ChannelDetailDelegate.Factory>,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel(), ChannelDetailDelegate {
-    private val channelId = savedStateHandle.toRoute<LiveChannel.Id>(navTypeMap)
+    private val channelId = savedStateHandle.toLiveChannelRoute
     private val delegate = checkNotNull(delegateFactory[channelId.type.java])
         .create(channelId, viewModelScope)
 

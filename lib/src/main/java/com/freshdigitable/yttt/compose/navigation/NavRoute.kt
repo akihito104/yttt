@@ -3,19 +3,27 @@ package com.freshdigitable.yttt.compose.navigation
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.activity
 import androidx.navigation.compose.composable
+import androidx.navigation.toRoute
 import com.freshdigitable.yttt.compose.TopAppBarStateHolder
 import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
+import com.freshdigitable.yttt.data.model.IdBase
+import com.freshdigitable.yttt.data.model.LiveChannel
+import com.freshdigitable.yttt.data.model.LiveVideo
 import kotlin.reflect.KClass
+import kotlin.reflect.typeOf
 
 interface NavRoute : NavParam, NavContent
 
@@ -41,6 +49,27 @@ sealed interface NavContent
 
 interface NavTypedComposable : NavContent {
     fun content(): NavGraphBuilder.(ScreenStateHolder) -> Unit
+
+    companion object {
+        val liveIdTypeMap = mapOf(typeOf<KClass<out IdBase>>() to KClassNavType)
+        val SavedStateHandle.toLiveVideoRoute: LiveVideo.Id get() = toRoute(liveIdTypeMap)
+        val SavedStateHandle.toLiveChannelRoute: LiveChannel.Id get() = toRoute(liveIdTypeMap)
+    }
+
+    object KClassNavType : NavType<KClass<out IdBase>>(isNullableAllowed = false) {
+        override fun put(bundle: Bundle, key: String, value: KClass<out IdBase>) {
+            bundle.putString(key, value.java.name)
+        }
+
+        override fun get(bundle: Bundle, key: String): KClass<out IdBase> =
+            parseValue(checkNotNull(bundle.getString(key)))
+
+        override fun serializeAsValue(value: KClass<out IdBase>): String = value.java.name
+
+        @Suppress("UNCHECKED_CAST")
+        override fun parseValue(value: String): KClass<out IdBase> =
+            Class.forName(value).kotlin as KClass<out IdBase>
+    }
 }
 
 interface NavAnimatedScopedComposable : NavContent {

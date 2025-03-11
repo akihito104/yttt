@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.os.Bundle
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -9,22 +8,19 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavGraphBuilder
-import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.toRoute
 import com.freshdigitable.yttt.compose.navigation.NavAnimatedScopedComposable
 import com.freshdigitable.yttt.compose.navigation.NavAnimatedScopedComposable.Scope.Companion.asAnimatedSharedTransitionScope
 import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.compose.navigation.NavTypedComposable
+import com.freshdigitable.yttt.compose.navigation.NavTypedComposable.Companion.liveIdTypeMap
 import com.freshdigitable.yttt.compose.navigation.ScopedNavContent
 import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.create
-import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.lib.R
-import kotlin.reflect.KClass
-import kotlin.reflect.typeOf
 
 sealed class MainNavRoute(override val root: String) : NavRoute {
     companion object {
@@ -50,7 +46,7 @@ sealed class MainNavRoute(override val root: String) : NavRoute {
 
     object ChannelDetail : MainNavRoute("channel"), NavTypedComposable {
         override fun content(): NavGraphBuilder.(ScreenStateHolder) -> Unit = { screenState ->
-            composable<LiveChannel.Id>(typeMap = navTypeMap) {
+            composable<LiveChannel.Id>(typeMap = liveIdTypeMap) {
                 screenState.topAppBarStateHolder?.update(stringResource(id = R.string.title_channel_detail))
                 ChannelDetailScreen(channelId = it.toRoute())
             }
@@ -119,7 +115,7 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : NavRout
     object VideoDetail : LiveVideoSharedTransitionRoute("videoDetail"), NavTypedComposable {
         @OptIn(ExperimentalSharedTransitionApi::class)
         override fun content(): NavGraphBuilder.(ScreenStateHolder) -> Unit = { screenState ->
-            composable<LiveVideo.Id>(typeMap = navTypeMap) {
+            composable<LiveVideo.Id>(typeMap = liveIdTypeMap) {
                 val scope = NavAnimatedScopedComposable.Scope.create(screenState, this)
                 body().invoke(scope, it)
             }
@@ -149,25 +145,3 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : NavRout
         }
     }
 }
-
-val KClassType = object : NavType<KClass<out IdBase>>(isNullableAllowed = false) {
-    override fun put(bundle: Bundle, key: String, value: KClass<out IdBase>) {
-        bundle.putString(key, value.java.name)
-    }
-
-    override fun get(bundle: Bundle, key: String): KClass<out IdBase> {
-        val name = checkNotNull(bundle.getString(key))
-        @Suppress("UNCHECKED_CAST")
-        return Class.forName(name).kotlin as KClass<out IdBase>
-    }
-
-    override fun serializeAsValue(value: KClass<out IdBase>): String {
-        return value.java.name
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    override fun parseValue(value: String): KClass<out IdBase> {
-        return Class.forName(value).kotlin as KClass<out IdBase>
-    }
-}
-val navTypeMap = mapOf(typeOf<KClass<out IdBase>>() to KClassType)
