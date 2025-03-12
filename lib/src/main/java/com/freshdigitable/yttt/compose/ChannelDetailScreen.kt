@@ -81,6 +81,7 @@ private fun Context.getActivity(): Activity {
 @Composable
 fun ChannelDetailScreen(
     viewModel: ChannelViewModel = hiltViewModel(),
+    channelId: LiveChannel.Id,
     pageFactory: IdBaseClassMap<ChannelDetailPageComposableFactory> = requireChannelDetailPageComposableFactory(),
 ) {
     AppLogger.logD("ChannelDetail") { "start:" }
@@ -89,7 +90,7 @@ fun ChannelDetailScreen(
     val scope = remember(viewModel.pagerContent, dialog) {
         ChannelDetailPageScope.create(viewModel.pagerContent, dialog)
     }
-    val composableFactory = checkNotNull(pageFactory[viewModel.channelId.type.java])
+    val composableFactory = checkNotNull(pageFactory[channelId.type.java])
     ChannelDetailScreen(
         channelDetail = { detail.value },
         pages = viewModel.tabs.associateWith { composableFactory.create(it) },

@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import kotlinx.serialization.Serializable
 import java.math.BigInteger
 import java.text.NumberFormat
 import java.util.Locale
@@ -14,6 +15,7 @@ interface LiveChannel {
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
 
+    @Serializable(with = LiveChannelIdSerializer::class)
     data class Id(
         override val value: String,
         override val type: KClass<out IdBase>,

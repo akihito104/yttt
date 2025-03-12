@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import kotlinx.serialization.Serializable
 import java.math.BigInteger
 import java.time.Instant
 import kotlin.reflect.KClass
@@ -32,6 +33,7 @@ interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
 
+    @Serializable(with = LiveVideoIdSerializer::class)
     data class Id(
         override val value: String,
         override val type: KClass<out IdBase>,

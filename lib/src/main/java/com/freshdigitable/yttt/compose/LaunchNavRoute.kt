@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -10,25 +9,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavBackStackEntry
+import com.freshdigitable.yttt.compose.navigation.NavAnimatedScopedComposable
+import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import com.freshdigitable.yttt.compose.navigation.NavRoute
-import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
+import com.freshdigitable.yttt.compose.navigation.ScopedNavContent
 import com.freshdigitable.yttt.lib.R
 
-sealed class LaunchNavRoute(path: String) : NavRoute(path) {
+sealed class LaunchNavRoute(override val root: String) : NavRoute {
     companion object {
         val routes: Collection<NavRoute> get() = setOf(Splash, Main, Auth)
     }
 
-    object Splash : LaunchNavRoute("splash") {
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
-            screenStateHolder.topAppBarStateHolder?.update(null)
-            val navController = screenStateHolder.navController
+    object Splash : LaunchNavRoute("splash"), NavAnimatedScopedComposable {
+        override fun body(): ScopedNavContent = {
+            topAppBarState?.update(null)
             LaunchScreen(
                 onTransition = { canLoadList ->
                     val route = if (canLoadList) Main.route else Auth.route
@@ -45,17 +39,12 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
         }
     }
 
-    object Auth : LaunchNavRoute("init_auth") {
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
-            screenStateHolder.topAppBarStateHolder?.update(null)
+    object Auth : LaunchNavRoute("init_auth"), NavAnimatedScopedComposable {
+        override fun body(): ScopedNavContent = {
+            topAppBarState?.update(null)
             InitialAccountSettingScreen(
                 onComplete = {
-                    screenStateHolder.navController.navigate(Main.route) {
+                    navController.navigate(Main.route) {
                         popUpTo(route) {
                             inclusive = true
                         }
@@ -66,14 +55,9 @@ sealed class LaunchNavRoute(path: String) : NavRoute(path) {
         }
     }
 
-    object Main : LaunchNavRoute("main") {
-        @Composable
-        override fun Content(
-            screenStateHolder: ScreenStateHolder,
-            animatedContentScope: AnimatedContentScope,
-            backStackEntry: NavBackStackEntry
-        ) {
-            screenStateHolder.topAppBarStateHolder?.update(null)
+    object Main : LaunchNavRoute("main"), NavAnimatedScopedComposable {
+        override fun body(): ScopedNavContent = {
+            topAppBarState?.update(null)
             MainScreen()
         }
     }
