@@ -3,8 +3,8 @@ package com.freshdigitable.yttt.feature.video
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.freshdigitable.yttt.compose.LiveVideoSharedTransitionRoute.VideoDetail.toLiveVideoRoute
 import com.freshdigitable.yttt.compose.TopAppBarMenuItem
-import com.freshdigitable.yttt.compose.navigation.NavTypedComposable.Companion.toLiveVideoRoute
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
 import dagger.hilt.android.lifecycle.HiltViewModel

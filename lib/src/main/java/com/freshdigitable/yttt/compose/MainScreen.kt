@@ -31,7 +31,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.freshdigitable.yttt.compose.DrawerMenuListItem.Companion.toListItem
 import com.freshdigitable.yttt.compose.navigation.NavActivity
@@ -65,7 +64,7 @@ fun MainScreen(
     val drawerMenuItems = viewModel.drawerMenuItems.collectAsState()
     MainScreen(
         navController = navController,
-        navigation = viewModel.navigation,
+        navigation = viewModel.routes,
         startDestination = viewModel.startDestination,
         showMenuBadge = { showMenuBadge.value },
         drawerItems = { drawerMenuItems.value },
@@ -122,16 +121,15 @@ private fun MainScreen(
             )
         },
     ) {
-        val backStack = navController.currentBackStackEntryAsState()
+        val backStack = navController.currentBackStackEntryFlow
+            .map { it.destination.route == startDestination }
+            .collectAsState(initial = true)
         val topAppBarStateHolder = remember {
             val navIconState = NavigationIconStateImpl(
-                isRoot = {
-                    val route = backStack.value?.destination?.route
-                    route == null || route == LiveVideoSharedTransitionRoute.TimetableTab.route
-                },
+                isRoot = { backStack.value },
                 isBadgeShown = showMenuBadge,
-                onMenuIconClicked = { drawerState.open() },
-                onUpClicked = { navController.navigateUp() },
+                onMenuIconClicked = drawerState::open,
+                onUpClicked = navController::navigateUp,
             )
             TopAppBarStateHolder(navIconState)
         }
@@ -145,14 +143,13 @@ private fun MainScreen(
                     navController = navController,
                     startDestination = startDestination,
                 ) {
-                    val screenStateHolder = ScreenStateHolder(
-                        navController,
-                        topAppBarStateHolder,
-                        this@SharedTransitionLayout,
-                    )
                     composableWith(
-                        screenStateHolder,
-                        navRoutes = navigation + LiveVideoSharedTransitionRoute.routes
+                        screenStateHolder = ScreenStateHolder(
+                            navController,
+                            topAppBarStateHolder,
+                            this@SharedTransitionLayout,
+                        ),
+                        navRoutes = navigation
                     )
                 }
             }
@@ -230,8 +227,8 @@ class MainViewModel @Inject constructor(
     @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
     accountRepository: TwitchAccountRepository,
 ) : ViewModel() {
-    val navigation: Set<NavRoute> = (MainNavRoute.routes + ossLicensePage).toSet()
-    val startDestination = LiveVideoSharedTransitionRoute.TimetableTab.route
+    val routes: Set<NavRoute> = (MainNavRoute.routes + ossLicensePage).toSet()
+    val startDestination = MainNavRoute.startDestination
     internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
         listOf(
             flowOf(DrawerMenuItem.SUBSCRIPTION.toListItem()),

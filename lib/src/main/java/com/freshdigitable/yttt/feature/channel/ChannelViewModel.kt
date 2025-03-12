@@ -3,7 +3,7 @@ package com.freshdigitable.yttt.feature.channel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.freshdigitable.yttt.compose.navigation.NavTypedComposable.Companion.toLiveChannelRoute
+import com.freshdigitable.yttt.compose.MainNavRoute.ChannelDetail.toLiveChannelRoute
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel

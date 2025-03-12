@@ -8,7 +8,6 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
 import androidx.navigation.NavGraphBuilder
@@ -16,12 +15,9 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.activity
 import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
 import com.freshdigitable.yttt.compose.TopAppBarStateHolder
 import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import com.freshdigitable.yttt.data.model.IdBase
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveVideo
 import kotlin.reflect.KClass
 import kotlin.reflect.typeOf
 
@@ -52,8 +48,6 @@ interface NavTypedComposable : NavContent {
 
     companion object {
         val liveIdTypeMap = mapOf(typeOf<KClass<out IdBase>>() to KClassNavType)
-        val SavedStateHandle.toLiveVideoRoute: LiveVideo.Id get() = toRoute(liveIdTypeMap)
-        val SavedStateHandle.toLiveChannelRoute: LiveChannel.Id get() = toRoute(liveIdTypeMap)
     }
 
     object KClassNavType : NavType<KClass<out IdBase>>(isNullableAllowed = false) {
