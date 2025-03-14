@@ -33,12 +33,12 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
         response.raw().request.url.toString()
     }
 
-    private suspend fun <T> fetch(task: suspend TwitchHelixService.() -> T): T =
+    private suspend inline fun <T> fetch(crossinline task: TwitchHelixService.() -> T): T =
         withContext(ioDispatcher) { helix.task() }
 
-    private suspend fun <E, P : Pageable<E>> fetchAll(
+    private suspend inline fun <E, P : Pageable<E>> fetchAll(
         maxCount: Int? = null,
-        call: TwitchHelixService.(String?) -> Call<P>,
+        crossinline call: TwitchHelixService.(String?) -> Call<P>,
     ): List<E> = fetch {
         var cursor: String? = null
         val items = mutableListOf<E>()
