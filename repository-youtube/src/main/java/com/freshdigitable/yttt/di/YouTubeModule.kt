@@ -24,42 +24,39 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal object YouTubeModule {
-    @Provides
-    @Singleton
-    fun provideCredential(@ApplicationContext context: Context): GoogleAccountCredential {
-        return GoogleAccountCredential.usingOAuth2(context, listOf(YouTubeScopes.YOUTUBE_READONLY))
-            .setBackOff(ExponentialBackOff())
+internal interface YouTubeModule {
+    companion object {
+        @Provides
+        @Singleton
+        fun provideCredential(@ApplicationContext context: Context): GoogleAccountCredential =
+            GoogleAccountCredential.usingOAuth2(context, listOf(YouTubeScopes.YOUTUBE_READONLY))
+                .setBackOff(ExponentialBackOff())
+
+        @Provides
+        @Singleton
+        fun provideHttpRequestInitializer(
+            credential: GoogleAccountCredential,
+            dataStore: YouTubeAccountDataStore.Local,
+        ): HttpRequestInitializer = HttpRequestInitializerImpl(credential, dataStore)
+
+        @Provides
+        @Singleton
+        fun provideYouTubeClient(httpRequestInitializer: HttpRequestInitializer): YouTube =
+            YouTube.Builder(
+                NetHttpTransport(),
+                GsonFactory.getDefaultInstance(),
+                httpRequestInitializer,
+            ).build()
+
+        @Provides
+        @Singleton
+        fun provideNewChooseAccountIntentProvider(
+            credential: GoogleAccountCredential,
+        ): NewChooseAccountIntentProvider = object : NewChooseAccountIntentProvider {
+            override fun invoke(): Intent = credential.newChooseAccountIntent()
+        }
     }
 
-    @Provides
-    @Singleton
-    fun provideHttpRequestInitializer(
-        credential: GoogleAccountCredential,
-        dataStore: YouTubeAccountDataStore.Local,
-    ): HttpRequestInitializer = HttpRequestInitializerImpl(credential, dataStore)
-
-    @Provides
-    @Singleton
-    fun provideYouTubeClient(httpRequestInitializer: HttpRequestInitializer): YouTube =
-        YouTube.Builder(
-            NetHttpTransport(),
-            GsonFactory.getDefaultInstance(),
-            httpRequestInitializer,
-        ).build()
-
-    @Provides
-    @Singleton
-    fun provideNewChooseAccountIntentProvider(
-        credential: GoogleAccountCredential,
-    ): NewChooseAccountIntentProvider = object : NewChooseAccountIntentProvider {
-        override fun invoke(): Intent = credential.newChooseAccountIntent()
-    }
-
-    @Module
-    @InstallIn(SingletonComponent::class)
-    internal interface Bind {
-        @Binds
-        fun bindYoutubeDataSourceRemote(dataSource: YouTubeRemoteDataSource): YoutubeDataSource.Remote
-    }
+    @Binds
+    fun bindYoutubeDataSourceRemote(dataSource: YouTubeRemoteDataSource): YoutubeDataSource.Remote
 }
