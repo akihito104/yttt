@@ -1,0 +1,2 @@
+-keep public class * implements com.freshdigitable.yttt.data.model.LiveId { *; }
+-keep public class * implements com.freshdigitable.yttt.data.model.IdBase

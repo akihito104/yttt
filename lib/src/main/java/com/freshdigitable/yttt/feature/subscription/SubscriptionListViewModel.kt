@@ -19,7 +19,7 @@ class SubscriptionListViewModel @Inject constructor(
     private val pagingDataUseCase: ClassMap<LivePlatform, WatchSubscriptionPagingDataUseCase>,
     platformMap: ClassMap<LivePlatform, LivePlatform>,
 ) : ViewModel() {
-    val platform: List<LivePlatform> = platformMap.values.sortedBy { it.name }
+    private val platform: List<LivePlatform> = platformMap.values.sortedBy { it.name } // TODO: check account
     val tabCount: Int = platform.size
     val pagingData: List<Flow<PagingData<LiveSubscription>>>
 
