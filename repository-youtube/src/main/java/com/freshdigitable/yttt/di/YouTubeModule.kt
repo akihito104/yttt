@@ -9,7 +9,10 @@ import com.freshdigitable.yttt.data.source.remote.HttpRequestInitializerImpl
 import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.http.HttpRequestInitializer
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.ExponentialBackOff
+import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.YouTubeScopes
 import dagger.Binds
 import dagger.Module
@@ -35,6 +38,15 @@ internal object YouTubeModule {
         credential: GoogleAccountCredential,
         dataStore: YouTubeAccountDataStore.Local,
     ): HttpRequestInitializer = HttpRequestInitializerImpl(credential, dataStore)
+
+    @Provides
+    @Singleton
+    fun provideYouTubeClient(httpRequestInitializer: HttpRequestInitializer): YouTube =
+        YouTube.Builder(
+            NetHttpTransport(),
+            GsonFactory.getDefaultInstance(),
+            httpRequestInitializer,
+        ).build()
 
     @Provides
     @Singleton

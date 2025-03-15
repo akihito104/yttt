@@ -14,9 +14,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
-import com.google.api.client.http.HttpRequestInitializer
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Activity
@@ -43,13 +40,9 @@ import javax.inject.Singleton
 
 @Singleton
 internal class YouTubeRemoteDataSource @Inject constructor(
-    httpRequestInitializer: HttpRequestInitializer,
+    private val youtube: YouTube,
     private val ioDispatcher: CoroutineDispatcher,
 ) : YoutubeDataSource.Remote {
-    private val youtube = YouTube.Builder(
-        NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
-    ).build()
-
     override suspend fun fetchAllSubscribePaged(pageSize: Int): Flow<List<YouTubeSubscription>> =
         flow {
             var t: String? = null
