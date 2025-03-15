@@ -1,4 +1,2 @@
 -keepattributes Signature
 -keepclasseswithmembers,allowobfuscation class * { @com.google.gson.annotations.SerializedName <fields>; }
--keep class com.freshdigitable.yttt.data.source.remote.Pageable
--keep,allowobfuscation class * implements com.freshdigitable.yttt.data.source.remote.Pageable { *; }
