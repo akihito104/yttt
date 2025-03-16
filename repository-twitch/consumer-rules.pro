@@ -1,0 +1,2 @@
+-keepattributes Signature
+-keepclasseswithmembers,allowobfuscation class * { @com.google.gson.annotations.SerializedName <fields>; }

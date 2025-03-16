@@ -14,9 +14,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
-import com.google.api.client.http.HttpRequestInitializer
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.json.gson.GsonFactory
 import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Activity
@@ -34,6 +31,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.math.BigInteger
@@ -43,32 +41,26 @@ import javax.inject.Singleton
 
 @Singleton
 internal class YouTubeRemoteDataSource @Inject constructor(
-    httpRequestInitializer: HttpRequestInitializer,
+    private val youtube: YouTube,
     private val ioDispatcher: CoroutineDispatcher,
 ) : YoutubeDataSource.Remote {
-    private val youtube = YouTube.Builder(
-        NetHttpTransport(), GsonFactory.getDefaultInstance(), httpRequestInitializer,
-    ).build()
-
     override suspend fun fetchAllSubscribePaged(pageSize: Int): Flow<List<YouTubeSubscription>> =
         flow {
             var t: String? = null
-            val subs = mutableListOf<YouTubeSubscription>()
+            var subs = emptyList<YouTubeSubscription>()
             do {
-                val res = fetch {
-                    subscriptions()
-                        .list(listOf(PART_SNIPPET))
-                        .setMine(true)
-                        .setMaxResults(pageSize.toLong())
-                        .setPageToken(t)
-                }
+                val res = youtube.subscriptions()
+                    .list(listOf(PART_SNIPPET))
+                    .setMine(true)
+                    .setMaxResults(pageSize.toLong())
+                    .setPageToken(t)
+                    .execute()
                 val offset = subs.size
-                val s = res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
-                emit(subs + s)
-                subs.addAll(s)
+                subs = subs + res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
+                emit(subs)
                 t = res.nextPageToken
             } while (t != null)
-        }
+        }.flowOn(ioDispatcher)
 
     override suspend fun fetchAllSubscribe(
         maxResult: Long,
@@ -162,19 +154,19 @@ internal class YouTubeRemoteDataSource @Inject constructor(
             .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
     }.map { it.toLivePlaylist() }
 
-    private suspend fun <T, E> fetchAllItems(
-        requestParams: YouTube.(String?) -> AbstractGoogleClientRequest<T>,
-        getItems: T.() -> List<E>,
-        getNextToken: T.() -> String?,
-    ): List<E> {
-        var token: String? = null
-        val res = mutableListOf<E>()
-        do {
-            val response = fetch { requestParams(token) }
-            res.addAll(response.getItems())
-            token = response.getNextToken()
-        } while (token != null)
-        return res
+    private suspend inline fun <T, E> fetchAllItems(
+        crossinline requestParams: YouTube.(String?) -> AbstractGoogleClientRequest<T>,
+        crossinline getItems: T.() -> List<E>,
+        crossinline getNextToken: T.() -> String?,
+    ): List<E> = withContext(ioDispatcher) {
+        buildList {
+            var token: String? = null
+            do {
+                val response = youtube.requestParams(token).execute()
+                addAll(response.getItems())
+                token = response.getNextToken()
+            } while (token != null)
+        }
     }
 
     private suspend inline fun <T, E> fetchList(
