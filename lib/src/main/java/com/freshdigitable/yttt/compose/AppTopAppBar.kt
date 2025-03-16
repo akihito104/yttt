@@ -4,8 +4,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
@@ -23,6 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.lib.R
@@ -66,24 +69,40 @@ internal fun RowScope.TopAppBarActionMenu(
     menuItemProvider: () -> List<TopAppBarMenuItem>,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    IconButton(onClick = { menuExpanded = true }) {
-        Icon(imageVector = Icons.Default.MoreVert, contentDescription = null)
-    }
-    DropdownMenu(
-        expanded = menuExpanded,
-        onDismissRequest = { menuExpanded = false },
-    ) {
+    val menuItems = menuItemProvider()
+    val onAppBar = menuItems.filterIsInstance<OnAppBar>()
+    if (onAppBar.isNotEmpty()) {
         val coroutineScope = rememberCoroutineScope()
-        menuItemProvider().forEach {
-            DropdownMenuItem(
-                text = { Text(text = it.text) },
-                onClick = {
-                    coroutineScope.launch {
-                        it.consumeMenuItem()
-                    }
-                    menuExpanded = false
-                },
-            )
+        onAppBar.forEach {
+            IconButton(
+                enabled = it.enabled(),
+                onClick = { coroutineScope.launch { it.consumeMenuItem() } },
+            ) {
+                Icon(imageVector = it.icon, contentDescription = it.text)
+            }
+        }
+    }
+    val inOthers = menuItems.filterIsInstance<InOthers>()
+    if (inOthers.isNotEmpty()) {
+        IconButton(onClick = { menuExpanded = true }) {
+            Icon(imageVector = Icons.Default.MoreVert, contentDescription = null)
+        }
+        DropdownMenu(
+            expanded = menuExpanded,
+            onDismissRequest = { menuExpanded = false },
+        ) {
+            val coroutineScope = rememberCoroutineScope()
+            inOthers.forEach {
+                DropdownMenuItem(
+                    text = { Text(text = it.text) },
+                    onClick = {
+                        coroutineScope.launch {
+                            it.consumeMenuItem()
+                        }
+                        menuExpanded = false
+                    },
+                )
+            }
         }
     }
 }
@@ -159,11 +178,27 @@ sealed interface TopAppBarMenuItem {
     companion object {
         fun inOthers(text: String, consume: suspend () -> Unit): TopAppBarMenuItem =
             InOthers(text, consume)
+
+        fun onAppBar(
+            text: String,
+            icon: ImageVector,
+            enabled: () -> Boolean = { true },
+            consume: suspend () -> Unit,
+        ): TopAppBarMenuItem = OnAppBar(text, icon, enabled, consume)
     }
 }
 
 private class InOthers(
     override val text: String,
+    private val consume: suspend () -> Unit,
+) : TopAppBarMenuItem {
+    override suspend fun consumeMenuItem() = consume()
+}
+
+private class OnAppBar(
+    override val text: String,
+    val icon: ImageVector,
+    val enabled: () -> Boolean,
     private val consume: suspend () -> Unit,
 ) : TopAppBarMenuItem {
     override suspend fun consumeMenuItem() = consume()
@@ -183,7 +218,16 @@ private fun AppTopAppBarPreview() {
                     override val onUpClicked: () -> Unit = {}
                 }
             ).apply {
-                update(title = title)
+                update(
+                    title = title,
+                    menuItems = listOf(
+                        TopAppBarMenuItem.onAppBar("menu1", Icons.Default.Refresh) { },
+                        TopAppBarMenuItem.onAppBar("menu2", Icons.Default.Add, { false }) { },
+                        TopAppBarMenuItem.inOthers("menu1") { },
+                        TopAppBarMenuItem.inOthers("menu2") { },
+                        TopAppBarMenuItem.inOthers("menu3") { },
+                    ),
+                )
             },
         )
     }

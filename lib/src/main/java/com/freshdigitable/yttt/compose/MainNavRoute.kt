@@ -103,7 +103,6 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
 
     object TimetableTab : LiveVideoSharedTransitionRoute("ttt"), NavAnimatedScopedComposable {
         override fun body(): ScopedNavContent = {
-            topAppBarState?.update(title = stringResource(id = R.string.title_timetable))
             asAnimatedSharedTransitionScope {
                 TimetableTabScreen(
                     onListItemClicked = navController::navigate,
@@ -115,6 +114,9 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
                         ),
                     thumbnailModifier = thumbnailModifier,
                     titleModifier = titleModifier,
+                    topAppBarState = checkNotNull(topAppBarState).also {
+                        it.update(title = stringResource(id = R.string.title_timetable))
+                    }
                 )
             }
         }
