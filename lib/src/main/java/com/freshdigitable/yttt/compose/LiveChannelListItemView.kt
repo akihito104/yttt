@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.YouTube
 
+/**
+ * for list item content. to click whole of the composable, use `Modifier.clickable()`.
+ */
 @Composable
 fun LiveChannelListItemView(
     modifier: Modifier = Modifier,
@@ -30,14 +33,13 @@ fun LiveChannelListItemView(
     iconSize: Dp = 40.dp,
     textOffset: Dp = 16.dp,
     textSize: TextUnit = 16.sp,
-    onClick: () -> Unit,
 ) {
     LiveChannelContentView(
         iconUrl = iconUrl,
         title = title,
         platformColor = platformColor,
-        modifier = modifier
-            .clickable(onClick = onClick)
+        modifier = Modifier
+            .then(modifier)
             .padding(vertical = 8.dp)
             .padding(start = 16.dp, end = 24.dp),
         iconSize = iconSize,
@@ -46,6 +48,9 @@ fun LiveChannelListItemView(
     )
 }
 
+/**
+ * for simple item content. to click only icon or title, use `onClick`.
+ */
 @Composable
 fun LiveChannelContentView(
     modifier: Modifier = Modifier,
@@ -56,23 +61,30 @@ fun LiveChannelContentView(
     textOffset: Dp = 8.dp,
     textSize: TextUnit = 14.sp,
     lineHeight: TextUnit = TextUnit.Unspecified,
+    onClick: (() -> Unit)? = null,
 ) {
     Row(
-        modifier = modifier
+        modifier = Modifier
+            .then(modifier)
             .fillMaxWidth()
             .wrapContentHeight(),
     ) {
+        val clickable = if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
         LiveChannelIcon(
             iconUrl = iconUrl,
             iconSize = iconSize,
             platformColor = platformColor,
-            modifier = Modifier.align(Alignment.Top),
+            modifier = Modifier
+                .align(Alignment.Top)
+                .then(clickable),
         )
         Spacer(modifier = Modifier.size(textOffset))
         Text(
             text = title,
             fontSize = textSize,
-            modifier = Modifier.align(Alignment.CenterVertically),
+            modifier = Modifier
+                .align(Alignment.CenterVertically)
+                .then(clickable),
             lineHeight = lineHeight,
         )
     }
@@ -114,7 +126,7 @@ private fun LiveChannelListItemViewPreview() {
             iconUrl = "",
             title = "title",
             platformColor = Color(YouTube.color),
-        ) {}
+        )
     }
 }
 

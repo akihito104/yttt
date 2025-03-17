@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
+import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailItem
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
@@ -29,6 +30,7 @@ fun VideoDetailScreen(
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
     topAppBarStateHolder: TopAppBarStateHolder,
+    onChannelClicked: (LiveChannel.Id) -> Unit,
 ) {
     val menuItems = viewModel.contextMenuItems.collectAsState(initial = emptyList())
     topAppBarStateHolder.updateMenuItems(menuItems.value)
@@ -37,6 +39,7 @@ fun VideoDetailScreen(
         videoProvider = { item.value },
         thumbnailModifier = thumbnailModifier,
         titleModifier = titleModifier,
+        onChannelClicked = onChannelClicked,
     )
 }
 
@@ -45,6 +48,7 @@ private fun VideoDetailScreen(
     videoProvider: () -> LiveVideoDetailItem?,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
+    onChannelClicked: (LiveChannel.Id) -> Unit = {},
 ) {
     val dialog = remember { LinkAnnotationDialogState() }
     Column(
@@ -81,7 +85,8 @@ private fun VideoDetailScreen(
             LiveChannelContentView(
                 iconUrl = video.channel.iconUrl,
                 title = video.channel.title,
-                platformColor = Color(video.channel.platform.color)
+                platformColor = Color(video.channel.platform.color),
+                onClick = { onChannelClicked(video.channel.id) },
             )
             AnnotatableText(
                 annotatableString = video.annotatableDescription,

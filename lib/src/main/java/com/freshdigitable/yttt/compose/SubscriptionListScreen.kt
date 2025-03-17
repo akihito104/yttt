@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.compose
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,9 +80,10 @@ private fun SubscriptionListContent(
             ) {
                 val channel = remember { item[it]?.channel }
                 LiveChannelListItemView(
+                    modifier = channel?.let { Modifier.clickable { onListItemClicked(it.id) } }
+                        ?: Modifier,
                     iconUrl = channel?.iconUrl ?: "",
                     title = channel?.title ?: "",
-                    onClick = channel?.let { { onListItemClicked(it.id) } } ?: {},
                 )
             }
         }
