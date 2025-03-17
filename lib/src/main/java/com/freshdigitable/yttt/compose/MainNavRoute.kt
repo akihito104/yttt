@@ -142,6 +142,7 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
                     thumbnailModifier = thumbnailModifier(id),
                     titleModifier = titleModifier(id).skipToLookaheadSize(),
                     topAppBarStateHolder = topAppBar,
+                    onChannelClicked = navController::navigate,
                 )
             }
         }
