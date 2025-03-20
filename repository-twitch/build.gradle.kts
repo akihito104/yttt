@@ -16,7 +16,7 @@ android {
     defaultConfig {
         minSdk = 26
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.freshdigitable.yttt.data.CustomTestRunner"
         consumerProguardFiles("consumer-rules.pro")
 
         val twitchPFile = rootProject.file("twitch.properties")
@@ -71,6 +71,14 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+
+    androidTestImplementation(project(":repository-appuser"))
+    androidTestImplementation(project(":image-loadable-coil"))
+    androidTestImplementation(libs.androidx.room.runtime)
+    androidTestImplementation(libs.assertj.core)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation("com.google.dagger:hilt-android-testing:2.52")
+    kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.espresso.core)
 }

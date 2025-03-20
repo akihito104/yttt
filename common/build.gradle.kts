@@ -48,6 +48,10 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.runtime.android)
 
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
+
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.assertj.core)
