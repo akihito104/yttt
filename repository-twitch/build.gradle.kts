@@ -78,7 +78,8 @@ dependencies {
     androidTestImplementation(libs.assertj.core)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.52")
+    androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
+    androidTestImplementation(libs.androidx.paging.testing)
     androidTestImplementation(libs.androidx.espresso.core)
 }

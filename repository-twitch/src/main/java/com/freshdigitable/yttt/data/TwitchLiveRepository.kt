@@ -39,7 +39,7 @@ class TwitchLiveRepository @Inject constructor(
             return listOf(me)
         }
         val cache = localDataSource.findUsersById(ids)
-        val remoteIds = ids - cache.map { it.id }.toSet()
+        val remoteIds = ids - cache.filter { it.profileImageUrl.isNotEmpty() }.map { it.id }.toSet()
         if (remoteIds.isEmpty()) {
             return cache
         }
