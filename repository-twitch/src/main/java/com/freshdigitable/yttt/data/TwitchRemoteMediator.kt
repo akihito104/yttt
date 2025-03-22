@@ -33,7 +33,7 @@ class TwitchRemoteMediator @Inject constructor(
     }.flow.map { p -> p.map { it } }
 
     override suspend fun initialize(): InitializeAction {
-        if (pagingSource.isExpired(dateTimeProvider.now())) {
+        if (pagingSource.isUpdatable(dateTimeProvider.now())) {
             return InitializeAction.LAUNCH_INITIAL_REFRESH
         }
         return InitializeAction.SKIP_INITIAL_REFRESH

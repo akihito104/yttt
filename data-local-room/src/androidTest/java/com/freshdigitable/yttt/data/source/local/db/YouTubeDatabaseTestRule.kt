@@ -8,7 +8,7 @@ import java.time.Instant
 
 internal class YouTubeDatabaseTestRule(
     baseTime: Instant = Instant.EPOCH,
-) : DatabaseTestRule<YouTubeDao, YouTubeLocalDataSource>(baseTime) {
+) : DataSourceTestRule<YouTubeDao, YouTubeLocalDataSource>(baseTime) {
     override fun createDao(database: AppDatabase): YouTubeDao = YouTubeDao(
         database,
         videoDao = YouTubeVideoDaoImpl(database),

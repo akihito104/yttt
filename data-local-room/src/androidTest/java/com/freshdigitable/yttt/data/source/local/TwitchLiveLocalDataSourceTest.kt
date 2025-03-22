@@ -5,7 +5,7 @@ import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.source.local.db.DatabaseTestRule
+import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.db.DateTimeProviderFake
 import com.freshdigitable.yttt.data.source.local.db.NopImageDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
@@ -26,7 +26,7 @@ import java.time.Instant
 class TwitchLiveLocalDataSourceTest {
     class SingleAccount {
         @get:Rule
-        internal val rule = TwitchDatabaseTestRule()
+        internal val rule = TwitchDataSourceTestRule()
         private val me = userDetail(id = "user_me")
         private val broadcaster = userDetail(id = "broadcaster")
         private val streamSchedule = streamSchedule("stream_id")
@@ -71,7 +71,7 @@ class TwitchLiveLocalDataSourceTest {
 
     class MultiAccount {
         @get:Rule
-        internal val rule = TwitchDatabaseTestRule()
+        internal val rule = TwitchDataSourceTestRule()
         private val me1 = userDetail(id = "user_me")
         private val me2 = userDetail(id = "user_me2")
         private val broadcaster = userDetail(id = "broadcaster")
@@ -138,9 +138,9 @@ class TwitchLiveLocalDataSourceTest {
     }
 }
 
-internal class TwitchDatabaseTestRule(
+internal class TwitchDataSourceTestRule(
     baseTime: Instant = Instant.EPOCH,
-) : DatabaseTestRule<TwitchDao, TwitchLiveLocalDataSource>(baseTime) {
+) : DataSourceTestRule<TwitchDao, TwitchLiveLocalDataSource>(baseTime) {
     override fun createDao(database: AppDatabase): TwitchDao = TwitchDao(
         database,
         TwitchUserDaoImpl(database),
@@ -152,14 +152,14 @@ internal class TwitchDatabaseTestRule(
         val dataSource = TwitchLiveLocalDataSource(dao, dateTimeProvider, NopImageDataSource)
         return object : DatabaseTestScope<TwitchDao, TwitchLiveLocalDataSource> {
             override val testScope: TestScope get() = testScope
-            override val dateTimeProvider: DateTimeProviderFake get() = this@TwitchDatabaseTestRule.dateTimeProvider
-            override val dao: TwitchDao get() = this@TwitchDatabaseTestRule.dao
+            override val dateTimeProvider: DateTimeProviderFake get() = this@TwitchDataSourceTestRule.dateTimeProvider
+            override val dao: TwitchDao get() = this@TwitchDataSourceTestRule.dao
             override val dataSource: TwitchLiveLocalDataSource get() = dataSource
         }
     }
 }
 
-private fun userDetail(
+internal fun userDetail(
     id: String,
 ): TwitchUserDetail = object : TwitchUserDetail {
     override val id: TwitchUser.Id get() = TwitchUser.Id(id)
@@ -194,7 +194,7 @@ private fun streamSchedule(
     override val isRecurring: Boolean get() = true
 }
 
-private fun followings(
+internal fun followings(
     followerId: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
     fetchedAt: Instant = Instant.EPOCH,
