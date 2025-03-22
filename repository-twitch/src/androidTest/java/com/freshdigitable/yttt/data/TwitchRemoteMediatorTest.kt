@@ -48,6 +48,9 @@ class TwitchRemoteMediatorTest {
 
     @Inject
     lateinit var db: AppDatabase
+    private val broadcaster = broadcaster(100)
+    private val followings =
+        TwitchFollowings.createAtFetched(authUser.id, broadcaster, Instant.ofEpochMilli(20))
 
     @Before
     fun setup() = runTest {
@@ -55,13 +58,9 @@ class TwitchRemoteMediatorTest {
 
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(10)
         localSource.setMe(authUser)
-        val broadcaster = broadcaster(100)
         val stream = broadcaster.take(10).map { stream(it) }
         localSource.addFollowedStreams(stream)
-        localSource.replaceAllFollowings(
-            TwitchFollowings.createAtFetched(authUser.id, broadcaster, Instant.ofEpochMilli(20))
-        )
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(30)
+        localSource.replaceAllFollowings(followings)
         FakeRemoteSourceModule.userDetails = broadcaster.map { it.toUserDetail() }
     }
 
@@ -74,6 +73,22 @@ class TwitchRemoteMediatorTest {
 
     @Test
     fun firstTimeToLoadSubscriptionPage() = runTest {
+        // setup
+        FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
+        // exercise
+        val actual = sut.pager.asSnapshot()
+        // verify
+        assertThat(actual).hasSize(60) // PagingConfig.pageSize = 20, default initialLoadSize is 60 = (20 * 3)
+            .allMatch { it.channel.iconUrl.isNotEmpty() }
+    }
+
+    @Test
+    fun firstTimeToLoadSubscriptionPage_needsRefresh() = runTest {
+        // setup
+        val base = followings.updatableAt
+        FakeDateTimeProviderModule.instant = base
+        FakeRemoteSourceModule.allFollowings =
+            TwitchFollowings.createAtFetched(authUser.id, broadcaster(100), base.plusMillis(10))
         // exercise
         val actual = sut.pager.asSnapshot()
         // verify
@@ -83,6 +98,8 @@ class TwitchRemoteMediatorTest {
 
     @Test
     fun firstTimeToLoadSubscriptionPage_scrollToLastItem() = runTest {
+        // setup
+        FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
         // exercise
         val actual = sut.pager.asSnapshot {
             appendScrollWhile { it.channel.id.value != "user99" } // footer
@@ -164,6 +181,7 @@ interface FakeDateTimeProviderModule {
 interface FakeRemoteSourceModule {
     companion object {
         var userDetails: List<TwitchUserDetail> = emptyList()
+        internal var allFollowings: TwitchFollowings? = null
 
         @Singleton
         @Provides
@@ -174,13 +192,16 @@ interface FakeRemoteSourceModule {
                 return checkNotNull(ids).mapNotNull { table[it] }
             }
 
+            override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings {
+                val f = checkNotNull(allFollowings)
+                return if (f.followerId == userId) f else throw IllegalStateException("not found: $userId")
+            }
+
             override suspend fun getAuthorizeUrl(state: String): String =
                 throw NotImplementedError()
 
             override suspend fun fetchMe(): TwitchUserDetail = throw NotImplementedError()
 
-            override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings =
-                throw NotImplementedError()
 
             override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> =
                 throw NotImplementedError()
