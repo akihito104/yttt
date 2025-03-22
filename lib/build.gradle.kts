@@ -86,10 +86,6 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
-    implementation(platform(libs.okhttp.bom))
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging.interceptor)
-
     testImplementation(libs.junit)
     testImplementation(libs.assertj.core)
     testImplementation(libs.mockk)

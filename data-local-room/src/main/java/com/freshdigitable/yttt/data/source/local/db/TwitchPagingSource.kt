@@ -70,7 +70,7 @@ internal class TwitchPageSourceDaoImpl @Inject constructor(
 
 interface TwitchPagingSource {
     fun getTwitchLiveSubscriptionPagingSource(): PagingSource<Int, TwitchLiveSubscription>
-    suspend fun isExpired(current: Instant): Boolean
+    suspend fun isUpdatable(current: Instant): Boolean
 }
 
 @Singleton
@@ -80,12 +80,12 @@ internal class TwitchPagingSourceImpl @Inject constructor(
     override fun getTwitchLiveSubscriptionPagingSource(): PagingSource<Int, TwitchLiveSubscription> =
         db.twitchLiveSubscription.getTwitchLiveSubscriptionPagingSource()
 
-    override suspend fun isExpired(current: Instant): Boolean = db.withTransaction {
+    override suspend fun isUpdatable(current: Instant): Boolean = db.withTransaction {
         val users = db.twitchAuthUserDao.fetchAllUsers()
         for (u in users) {
-            val expire = db.twitchStreamExpireDao.findStreamExpire(u.userId)
+            val expire = db.twitchBroadcasterExpireDao.findByFollowerUserId(u.userId)
                 ?: return@withTransaction true
-            if (expire.expiredAt <= current) return@withTransaction true
+            if (expire.expireAt <= current) return@withTransaction true
         }
         return@withTransaction false
     }

@@ -11,15 +11,31 @@ import com.freshdigitable.yttt.data.source.local.AppDatabase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import org.junit.rules.RuleChain
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import org.junit.runners.model.Statement
 import java.time.Duration
 import java.time.Instant
 import kotlin.coroutines.CoroutineContext
 
-internal abstract class DatabaseTestRule<Dao, Source>(baseTime: Instant) : TestWatcher() {
-    protected lateinit var database: AppDatabase
+internal class DatabaseTestRule : TestWatcher() {
+    internal lateinit var database: AppDatabase
         private set
+
+    override fun starting(description: Description?) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+    }
+
+    override fun finished(description: Description?) {
+        database.close()
+    }
+}
+
+internal abstract class DataSourceTestRule<Dao, Source>(baseTime: Instant) : TestWatcher() {
+    private val databaseRule = DatabaseTestRule()
+    internal val database: AppDatabase get() = databaseRule.database
     private var _dao: Dao? = null
     protected val dao: Dao get() = checkNotNull(_dao)
     val dateTimeProvider: DateTimeProviderFake = DateTimeProviderFake(baseTime)
@@ -32,15 +48,16 @@ internal abstract class DatabaseTestRule<Dao, Source>(baseTime: Instant) : TestW
     abstract fun createTestScope(testScope: TestScope): DatabaseTestScope<Dao, Source>
 
     override fun starting(description: Description?) {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
         _dao = createDao(database)
     }
 
     override fun finished(description: Description?) {
-        database.close()
         _dao = null
     }
+
+    override fun apply(base: Statement?, description: Description?): Statement =
+        RuleChain.outerRule(databaseRule)
+            .apply(super.apply(base, description), description)
 
     fun <E> query(stmt: String, res: (Cursor) -> E): E = database.query(stmt, null).useCursor(res)
 

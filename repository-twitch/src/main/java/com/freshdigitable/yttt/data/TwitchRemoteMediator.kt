@@ -10,6 +10,8 @@ import androidx.paging.RemoteMediator
 import androidx.paging.map
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
+import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.source.local.db.TwitchLiveSubscription
 import com.freshdigitable.yttt.data.source.local.db.TwitchPagingSource
 import com.freshdigitable.yttt.logD
@@ -31,7 +33,7 @@ class TwitchRemoteMediator @Inject constructor(
     }.flow.map { p -> p.map { it } }
 
     override suspend fun initialize(): InitializeAction {
-        if (pagingSource.isExpired(dateTimeProvider.now())) {
+        if (pagingSource.isUpdatable(dateTimeProvider.now())) {
             return InitializeAction.LAUNCH_INITIAL_REFRESH
         }
         return InitializeAction.SKIP_INITIAL_REFRESH
@@ -52,7 +54,13 @@ class TwitchRemoteMediator @Inject constructor(
                 MediatorResult.Success(true)
             }
 
-            LoadType.PREPEND, LoadType.APPEND -> MediatorResult.Success(true)
+            LoadType.PREPEND, LoadType.APPEND -> {
+                val items: List<TwitchUser.Id> = state.pages.map { it.data }.flatten()
+                    .filter { it.channel.iconUrl.isEmpty() }
+                    .map { it.channel.id.mapTo() }
+                repository.findUsersById(items.toSet())
+                MediatorResult.Success(true)
+            }
         }
     }
 }
