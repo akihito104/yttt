@@ -3,6 +3,9 @@ package com.freshdigitable.yttt.di
 import android.content.Context
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
+import com.freshdigitable.yttt.data.YouTubeRemoteMediatorFactory
+import com.freshdigitable.yttt.data.model.LiveSubscription
+import com.freshdigitable.yttt.data.source.RemoteMediatorFactory
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.remote.HttpRequestInitializerImpl
@@ -20,6 +23,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoMap
 import javax.inject.Singleton
 
 @Module
@@ -59,4 +63,9 @@ internal interface YouTubeModule {
 
     @Binds
     fun bindYoutubeDataSourceRemote(dataSource: YouTubeRemoteDataSource): YoutubeDataSource.Remote
+
+    @Binds
+    @IntoMap
+    @LivePlatformKey(com.freshdigitable.yttt.data.model.YouTube::class)
+    fun bindRemoteMediatorFactory(factory: YouTubeRemoteMediatorFactory): RemoteMediatorFactory<LiveSubscription>
 }
