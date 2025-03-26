@@ -1,10 +1,8 @@
 package com.freshdigitable.yttt.data
 
 import android.content.Context
-import androidx.paging.ExperimentalPagingApi
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
-import androidx.paging.PagingSource
 import androidx.paging.testing.asSnapshot
 import com.freshdigitable.yttt.data.model.Broadcaster
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -49,7 +47,7 @@ class TwitchRemoteMediatorTest {
     lateinit var localSource: TwitchLiveDataSource.Local
 
     @Inject
-    internal lateinit var remoteMediatorFactory: TwitchSubscriptionRemoteMediator
+    internal lateinit var pagerFactory: TwitchSubscriptionPagerFactory
 
     @Inject
     lateinit var db: AppDatabase
@@ -76,17 +74,8 @@ class TwitchRemoteMediatorTest {
         db.close()
     }
 
-    @OptIn(ExperimentalPagingApi::class)
     private val sut: Pager<Int, LiveSubscription> by lazy {
-        Pager(
-            config = PagingConfig(pageSize = 20),
-            remoteMediator = remoteMediatorFactory.create(),
-            pagingSourceFactory = {
-                @Suppress("UNCHECKED_CAST")
-                db.twitchLiveSubscription.getTwitchLiveSubscriptionPagingSource()
-                    as PagingSource<Int, LiveSubscription>
-            }
-        )
+        pagerFactory.create(config = PagingConfig(pageSize = 20))
     }
 
     @Test

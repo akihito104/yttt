@@ -13,12 +13,11 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import com.freshdigitable.yttt.di.LivePlatformKey
+import com.freshdigitable.yttt.di.LivePlatformQualifier
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dagger.multibindings.IntoMap
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -89,7 +88,7 @@ internal class TwitchPagingSourceImpl @Inject constructor(
         return@withTransaction false
     }
 
-    override fun create(): PagingSource<Int, LiveSubscription> {
+    override fun invoke(): PagingSource<Int, LiveSubscription> {
         @Suppress("UNCHECKED_CAST")
         return db.twitchLiveSubscription.getTwitchLiveSubscriptionPagingSource() as PagingSource<Int, LiveSubscription>
     }
@@ -101,9 +100,7 @@ internal interface TwitchPagingSourceModule {
     @Binds
     fun bindTwitchPagingSource(impl: TwitchPagingSourceImpl): TwitchPagingSource
 
-    @Singleton
     @Binds
-    @IntoMap
-    @LivePlatformKey(Twitch::class)
+    @LivePlatformQualifier(Twitch::class)
     fun bindTwitchPagingSourceFunction(function: TwitchPagingSourceImpl): PagingSourceFunction<LiveSubscription>
 }

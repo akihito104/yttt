@@ -12,12 +12,11 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import com.freshdigitable.yttt.di.LivePlatformKey
+import com.freshdigitable.yttt.di.LivePlatformQualifier
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import dagger.multibindings.IntoMap
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -72,7 +71,7 @@ internal class YouTubePagingSourceImpl @Inject constructor(
     private val db: AppDatabase,
 ) : PagingSourceFunction<LiveSubscription> {
     @Suppress("UNCHECKED_CAST")
-    override fun create(): PagingSource<Int, LiveSubscription> {
+    override fun invoke(): PagingSource<Int, LiveSubscription> {
         return db.youtubeLiveSubscription.getSubscriptionPagingSource() as PagingSource<Int, LiveSubscription>
     }
 }
@@ -80,9 +79,7 @@ internal class YouTubePagingSourceImpl @Inject constructor(
 @Module
 @InstallIn(SingletonComponent::class)
 internal interface YouTubePagingSourceModule {
-    @Singleton
     @Binds
-    @IntoMap
-    @LivePlatformKey(YouTube::class)
+    @LivePlatformQualifier(YouTube::class)
     fun bindPagingSourceFunction(function: YouTubePagingSourceImpl): PagingSourceFunction<LiveSubscription>
 }

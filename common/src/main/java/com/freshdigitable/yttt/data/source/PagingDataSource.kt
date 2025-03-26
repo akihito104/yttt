@@ -5,25 +5,38 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.paging.RemoteMediator
+import com.freshdigitable.yttt.data.model.LivePlatform
+import com.freshdigitable.yttt.di.ClassMap
 
-interface PagerFactory<Q, T : Any> {
-    fun create(query: Q, config: PagingConfig): Pager<Int, T>
-}
+@OptIn(ExperimentalPagingApi::class)
+interface PagerFactory<T : Any> {
+    fun create(config: PagingConfig): Pager<Int, T>
 
-interface RemoteMediatorFactory<T : Any> {
-    @OptIn(ExperimentalPagingApi::class)
-    fun create(): RemoteMediator<Int, T>
-}
+    companion object {
+        fun <T : Any> newInstance(
+            remoteMediator: RemoteMediator<Int, T>,
+            pagingSourceFunction: PagingSourceFunction<T>,
+        ): PagerFactory<T> = Impl(remoteMediator, pagingSourceFunction)
+    }
 
-interface RemoteMediatorFactoryWithQuery<Q, T : Any> {
-    @OptIn(ExperimentalPagingApi::class)
-    fun create(query: Q): RemoteMediator<Int, T>
+    private class Impl<T : Any>(
+        private val remoteMediator: RemoteMediator<Int, T>,
+        private val pagingSourceFunction: PagingSourceFunction<T>,
+    ) : PagerFactory<T> {
+        @OptIn(ExperimentalPagingApi::class)
+        override fun create(config: PagingConfig): Pager<Int, T> = Pager(
+            config = config,
+            remoteMediator = remoteMediator,
+            pagingSourceFactory = pagingSourceFunction::invoke,
+        )
+    }
 }
 
 interface PagingSourceFunction<T : Any> {
-    fun create(): PagingSource<Int, T>
+    operator fun invoke(): PagingSource<Int, T>
 }
 
-interface PagingSourceFunctionWithQuery<Q, T : Any> {
-    fun create(query: Q): PagingSource<Int, T>
-}
+fun <T : Any> ClassMap<LivePlatform, PagerFactory<T>>.create(
+    platform: LivePlatform,
+    config: PagingConfig,
+): Pager<Int, T> = checkNotNull(this[platform::class.java]).create(config)

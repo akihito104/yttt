@@ -1,13 +1,13 @@
 package com.freshdigitable.yttt.di
 
-import com.freshdigitable.yttt.data.TwitchSubscriptionRemoteMediator
+import com.freshdigitable.yttt.data.TwitchSubscriptionPagerFactory
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchVideo
-import com.freshdigitable.yttt.data.source.RemoteMediatorFactory
+import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
 import com.freshdigitable.yttt.data.source.remote.TwitchLiveRemoteDataSource
@@ -162,5 +162,5 @@ internal interface TwitchModule {
     @Binds
     @IntoMap
     @LivePlatformKey(Twitch::class)
-    fun bindRemoteMediatorFactory(factory: TwitchSubscriptionRemoteMediator): RemoteMediatorFactory<LiveSubscription>
+    fun bindRemoteMediatorFactory(factory: TwitchSubscriptionPagerFactory): PagerFactory<LiveSubscription>
 }

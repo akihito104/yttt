@@ -3,9 +3,9 @@ package com.freshdigitable.yttt.di
 import android.content.Context
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
-import com.freshdigitable.yttt.data.YouTubeRemoteMediatorFactory
+import com.freshdigitable.yttt.data.YouTubeSubscriptionPagerFactory
 import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.source.RemoteMediatorFactory
+import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.remote.HttpRequestInitializerImpl
@@ -67,5 +67,5 @@ internal interface YouTubeModule {
     @Binds
     @IntoMap
     @LivePlatformKey(com.freshdigitable.yttt.data.model.YouTube::class)
-    fun bindRemoteMediatorFactory(factory: YouTubeRemoteMediatorFactory): RemoteMediatorFactory<LiveSubscription>
+    fun bindPagerFactory(factory: YouTubeSubscriptionPagerFactory): PagerFactory<LiveSubscription>
 }

@@ -6,23 +6,18 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
+import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.mapTo
-import com.freshdigitable.yttt.data.source.RemoteMediatorFactory
+import com.freshdigitable.yttt.data.source.PagerFactory
+import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.db.TwitchPagingSource
+import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
-import dagger.assisted.AssistedFactory
-import dagger.assisted.AssistedInject
-
-@AssistedFactory
-internal interface TwitchSubscriptionRemoteMediator :
-    RemoteMediatorFactory<LiveSubscription> {
-    @ExperimentalPagingApi
-    override fun create(): TwitchRemoteMediator
-}
+import javax.inject.Inject
 
 @OptIn(ExperimentalPagingApi::class)
-internal class TwitchRemoteMediator @AssistedInject constructor(
+internal class TwitchRemoteMediator @Inject constructor(
     private val pagingSource: TwitchPagingSource,
     private val repository: TwitchLiveRepository,
     private val dateTimeProvider: DateTimeProvider,
@@ -59,3 +54,9 @@ internal class TwitchRemoteMediator @AssistedInject constructor(
         }
     }
 }
+
+@OptIn(ExperimentalPagingApi::class)
+internal class TwitchSubscriptionPagerFactory @Inject constructor(
+    remoteMediator: TwitchRemoteMediator,
+    @LivePlatformQualifier(Twitch::class) function: PagingSourceFunction<LiveSubscription>,
+) : PagerFactory<LiveSubscription> by PagerFactory.newInstance(remoteMediator, function)
