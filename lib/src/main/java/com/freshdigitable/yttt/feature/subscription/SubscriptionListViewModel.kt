@@ -12,30 +12,22 @@ import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.PagerFactory
-import com.freshdigitable.yttt.data.source.create
-import com.freshdigitable.yttt.di.ClassMap
+import com.freshdigitable.yttt.di.LivePlatformMap
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 @HiltViewModel
 class SubscriptionListViewModel @Inject constructor(
-    private val pagerFactory: ClassMap<LivePlatform, PagerFactory<LiveSubscription>>,
-    private val accountRepository: ClassMap<LivePlatform, AccountRepository>,
-    platformMap: ClassMap<LivePlatform, LivePlatform>,
+    accountRepository: LivePlatformMap<AccountRepository>,
+    pagerFactory: LivePlatformMap<PagerFactory<LiveSubscription>>,
 ) : ViewModel() {
-    private val platform: List<LivePlatform> = platformMap
-        .map { it.value to checkNotNull(accountRepository[it.key]).hasAccount() }
-        .filter { it.second }.map { it.first }
+    private val platform: List<LivePlatform> = accountRepository.filter { it.value.hasAccount() }
+        .map { it.key }
         .sortedBy { it.name }
     val tabCount: Int = platform.size
-    val pagingData: List<Flow<PagingData<LiveSubscription>>>
-
-    init {
-        val p = platformMap.map { (_, p) ->
-            p to pagerFactory.create(p, pagingConfig).flow.cachedIn(viewModelScope)
-        }.toMap()
-        pagingData = platform.map { checkNotNull(p[it]) }
+    val pagingData: List<Flow<PagingData<LiveSubscription>>> = platform.map {
+        checkNotNull(pagerFactory[it]).create(pagingConfig).flow.cachedIn(viewModelScope)
     }
 
     fun tabText(index: Int, count: Int): String =
@@ -47,7 +39,7 @@ class SubscriptionListViewModel @Inject constructor(
 }
 
 @Immutable
-class SubscriptionTabData(
+internal class SubscriptionTabData(
     internal val platform: LivePlatform,
     private val count: Int,
 ) : TabData<SubscriptionTabData> {

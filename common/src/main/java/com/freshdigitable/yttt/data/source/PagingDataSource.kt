@@ -5,8 +5,6 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.paging.RemoteMediator
-import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.di.ClassMap
 
 @OptIn(ExperimentalPagingApi::class)
 interface PagerFactory<T : Any> {
@@ -35,8 +33,3 @@ interface PagerFactory<T : Any> {
 interface PagingSourceFunction<T : Any> {
     operator fun invoke(): PagingSource<Int, T>
 }
-
-fun <T : Any> ClassMap<LivePlatform, PagerFactory<T>>.create(
-    platform: LivePlatform,
-    config: PagingConfig,
-): Pager<Int, T> = checkNotNull(this[platform::class.java]).create(config)
