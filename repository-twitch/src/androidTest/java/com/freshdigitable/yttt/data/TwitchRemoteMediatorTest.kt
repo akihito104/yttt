@@ -1,10 +1,13 @@
 package com.freshdigitable.yttt.data
 
 import android.content.Context
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
 import androidx.paging.testing.asSnapshot
 import com.freshdigitable.yttt.data.model.Broadcaster
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.FollowingStream
+import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -44,7 +47,7 @@ class TwitchRemoteMediatorTest {
     lateinit var localSource: TwitchLiveDataSource.Local
 
     @Inject
-    lateinit var sut: TwitchRemoteMediator
+    internal lateinit var pagerFactory: TwitchSubscriptionPagerFactory
 
     @Inject
     lateinit var db: AppDatabase
@@ -71,12 +74,16 @@ class TwitchRemoteMediatorTest {
         db.close()
     }
 
+    private val sut: Pager<Int, LiveSubscription> by lazy {
+        pagerFactory.create(config = PagingConfig(pageSize = 20))
+    }
+
     @Test
     fun firstTimeToLoadSubscriptionPage() = runTest {
         // setup
         FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
         // exercise
-        val actual = sut.pager.asSnapshot()
+        val actual = sut.flow.asSnapshot()
         // verify
         assertThat(actual).hasSize(60) // PagingConfig.pageSize = 20, default initialLoadSize is 60 = (20 * 3)
             .allMatch { it.channel.iconUrl.isNotEmpty() }
@@ -90,7 +97,7 @@ class TwitchRemoteMediatorTest {
         FakeRemoteSourceModule.allFollowings =
             TwitchFollowings.createAtFetched(authUser.id, broadcaster(100), base.plusMillis(10))
         // exercise
-        val actual = sut.pager.asSnapshot()
+        val actual = sut.flow.asSnapshot()
         // verify
         assertThat(actual).hasSize(60) // PagingConfig.pageSize = 20, default initialLoadSize is 60 = (20 * 3)
             .allMatch { it.channel.iconUrl.isNotEmpty() }
@@ -101,7 +108,7 @@ class TwitchRemoteMediatorTest {
         // setup
         FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
         // exercise
-        val actual = sut.pager.asSnapshot {
+        val actual = sut.flow.asSnapshot {
             appendScrollWhile { it.channel.id.value != "user99" } // footer
         }
         // verify
@@ -176,7 +183,7 @@ interface FakeDateTimeProviderModule {
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
-    replaces = [TwitchModule.Bind::class],
+    replaces = [TwitchModule::class],
 )
 interface FakeRemoteSourceModule {
     companion object {

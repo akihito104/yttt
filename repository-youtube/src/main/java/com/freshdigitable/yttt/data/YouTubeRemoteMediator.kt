@@ -2,36 +2,25 @@ package com.freshdigitable.yttt.data
 
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.LoadType
-import androidx.paging.Pager
-import androidx.paging.PagingConfig
-import androidx.paging.PagingData
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
-import androidx.paging.map
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
-import com.freshdigitable.yttt.data.source.local.db.YouTubeLiveSubscription
-import com.freshdigitable.yttt.data.source.local.db.YouTubePagingSource
+import com.freshdigitable.yttt.data.model.YouTube
+import com.freshdigitable.yttt.data.source.PagerFactory
+import com.freshdigitable.yttt.data.source.PagingSourceFunction
+import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
 @OptIn(ExperimentalPagingApi::class)
-class YouTubeRemoteMediator @Inject constructor(
-    private val pagingSource: YouTubePagingSource,
+internal class YouTubeRemoteMediator @Inject constructor(
     private val repository: YouTubeRepository,
+    private val accountRepository: YouTubeAccountRepository,
     private val dateTimeProvider: DateTimeProvider,
-) : RemoteMediator<Int, YouTubeLiveSubscription>() {
-    val page: Flow<PagingData<LiveSubscription>> = Pager(
-        config = PagingConfig(pageSize = 20),
-        remoteMediator = this,
-    ) {
-        pagingSource.getYouTubeLiveSubscriptionPageSource()
-    }.flow.map { i -> i.map { it } }
-
+) : RemoteMediator<Int, LiveSubscription>() {
     override suspend fun initialize(): InitializeAction {
         val subscriptionFetchedAt = repository.subscriptionFetchedAt ?: Instant.EPOCH
         if (subscriptionFetchedAt + Duration.ofMinutes(30) <= dateTimeProvider.now()) {
@@ -42,9 +31,12 @@ class YouTubeRemoteMediator @Inject constructor(
 
     override suspend fun load(
         loadType: LoadType,
-        state: PagingState<Int, YouTubeLiveSubscription>,
+        state: PagingState<Int, LiveSubscription>,
     ): MediatorResult {
         logD { "load: $loadType, $state" }
+        if (!accountRepository.hasAccount()) {
+            return MediatorResult.Success(endOfPaginationReached = true)
+        }
         return when (loadType) {
             LoadType.REFRESH -> {
                 repository.fetchAllSubscribe(50)
@@ -55,3 +47,9 @@ class YouTubeRemoteMediator @Inject constructor(
         }
     }
 }
+
+@OptIn(ExperimentalPagingApi::class)
+internal class YouTubeSubscriptionPagerFactory @Inject constructor(
+    remoteMediator: YouTubeRemoteMediator,
+    @LivePlatformQualifier(YouTube::class) function: PagingSourceFunction<LiveSubscription>,
+) : PagerFactory<LiveSubscription> by PagerFactory.newInstance(remoteMediator, function)

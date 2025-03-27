@@ -11,7 +11,9 @@ import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.AppDatabase
+import com.freshdigitable.yttt.di.LivePlatformQualifier
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -69,17 +71,13 @@ internal class TwitchPageSourceDaoImpl @Inject constructor(
 ) : TwitchPageSourceDao, TwitchLiveSubscription.Dao by db.twitchLiveSubscription
 
 interface TwitchPagingSource {
-    fun getTwitchLiveSubscriptionPagingSource(): PagingSource<Int, TwitchLiveSubscription>
     suspend fun isUpdatable(current: Instant): Boolean
 }
 
 @Singleton
 internal class TwitchPagingSourceImpl @Inject constructor(
     private val db: AppDatabase,
-) : TwitchPagingSource {
-    override fun getTwitchLiveSubscriptionPagingSource(): PagingSource<Int, TwitchLiveSubscription> =
-        db.twitchLiveSubscription.getTwitchLiveSubscriptionPagingSource()
-
+) : TwitchPagingSource, PagingSourceFunction<LiveSubscription> {
     override suspend fun isUpdatable(current: Instant): Boolean = db.withTransaction {
         val users = db.twitchAuthUserDao.fetchAllUsers()
         for (u in users) {
@@ -89,6 +87,11 @@ internal class TwitchPagingSourceImpl @Inject constructor(
         }
         return@withTransaction false
     }
+
+    override fun invoke(): PagingSource<Int, LiveSubscription> {
+        @Suppress("UNCHECKED_CAST")
+        return db.twitchLiveSubscription.getTwitchLiveSubscriptionPagingSource() as PagingSource<Int, LiveSubscription>
+    }
 }
 
 @InstallIn(SingletonComponent::class)
@@ -96,4 +99,8 @@ internal class TwitchPagingSourceImpl @Inject constructor(
 internal interface TwitchPagingSourceModule {
     @Binds
     fun bindTwitchPagingSource(impl: TwitchPagingSourceImpl): TwitchPagingSource
+
+    @Binds
+    @LivePlatformQualifier(Twitch::class)
+    fun bindTwitchPagingSourceFunction(function: TwitchPagingSourceImpl): PagingSourceFunction<LiveSubscription>
 }

@@ -1,9 +1,13 @@
 package com.freshdigitable.yttt.di
 
+import com.freshdigitable.yttt.data.TwitchSubscriptionPagerFactory
+import com.freshdigitable.yttt.data.model.LiveSubscription
+import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchVideo
+import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
 import com.freshdigitable.yttt.data.source.remote.TwitchLiveRemoteDataSource
@@ -25,6 +29,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import dagger.multibindings.IntoMap
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -34,124 +39,128 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal object TwitchModule {
-    @Provides
-    @Singleton
-    fun provideGson(): Gson = GsonBuilder()
-        .registerTypeAdapter<Instant, String>(
-            deserialize = { it?.let { s -> Instant.parse(s) } },
-            serialize = { it?.toString() },
-        )
-        .registerTypeAdapter<TwitchUser.Id, String>(
-            deserialize = { it?.let { s -> TwitchUser.Id(s) } },
-            serialize = { it?.value },
-        )
-        .registerJsonDeserializer<TwitchStream.Id, String> { it?.let { s -> TwitchStream.Id(s) } }
-        .registerJsonDeserializer<TwitchVideo.Id, String> { it?.let { s -> TwitchVideo.Id(s) } }
-        .registerTypeAdapter<TwitchChannelSchedule.Stream.Id, String>(
-            deserialize = { it?.let { s -> TwitchChannelSchedule.Stream.Id(s) } },
-            serialize = { it?.value },
-        )
-        .create()
+internal interface TwitchModule {
+    companion object {
+        @Provides
+        @Singleton
+        fun provideGson(): Gson = GsonBuilder()
+            .registerTypeAdapter<Instant, String>(
+                deserialize = { it?.let { s -> Instant.parse(s) } },
+                serialize = { it?.toString() },
+            )
+            .registerTypeAdapter<TwitchUser.Id, String>(
+                deserialize = { it?.let { s -> TwitchUser.Id(s) } },
+                serialize = { it?.value },
+            )
+            .registerJsonDeserializer<TwitchStream.Id, String> { it?.let { s -> TwitchStream.Id(s) } }
+            .registerJsonDeserializer<TwitchVideo.Id, String> { it?.let { s -> TwitchVideo.Id(s) } }
+            .registerTypeAdapter<TwitchChannelSchedule.Stream.Id, String>(
+                deserialize = { it?.let { s -> TwitchChannelSchedule.Stream.Id(s) } },
+                serialize = { it?.value },
+            )
+            .create()
 
-    @Provides
-    @Singleton
-    fun provideTwitchApiRetrofit(
-        gson: Gson,
-        okhttp: OkHttpClient,
-        interceptor: TwitchTokenInterceptor,
-    ): Retrofit {
-        val client = okhttp.newBuilder()
-            .addInterceptor(interceptor)
-            .build()
-        return Retrofit.Builder()
-            .baseUrl("https://api.twitch.tv/")
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .client(client)
-            .build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideTwitchHelixService(retrofit: Retrofit): TwitchHelixService =
-        retrofit.create(TwitchHelixService::class.java)
-
-    @Provides
-    @Singleton
-    fun provideTwitchOauthService(): TwitchOauthService {
-        val retrofit = Retrofit.Builder()
-            .baseUrl("https://id.twitch.tv/")
-            .build()
-        return retrofit.create(TwitchOauthService::class.java)
-    }
-
-    private inline fun <reified O, reified S> GsonBuilder.registerJsonDeserializer(
-        crossinline deserialize: (S?) -> O?,
-    ): GsonBuilder = registerTypeAdapter(O::class.java, object : JsonDeserializer<O?> {
-        override fun deserialize(
-            json: JsonElement?,
-            typeOfT: Type,
-            context: JsonDeserializationContext,
-        ): O? {
-            val v = when (S::class) {
-                String::class -> json?.asString
-                Boolean::class -> json?.asBoolean
-                Int::class -> json?.asInt
-                Long::class -> json?.asLong
-                Double::class -> json?.asDouble
-                else -> throw IllegalStateException()
-            }
-            return deserialize(v as S?)
-        }
-    })
-
-    private inline fun <reified O, reified S> GsonBuilder.registerJsonSerializer(
-        crossinline serialize: (O?) -> S?,
-    ): GsonBuilder = registerTypeAdapter(O::class.java, object : JsonSerializer<O?> {
-        override fun serialize(
-            src: O?,
-            typeOfSrc: Type,
-            context: JsonSerializationContext,
-        ): JsonElement = context.serialize(serialize(src), S::class.java)
-    })
-
-    private inline fun <reified O, reified S> GsonBuilder.registerTypeAdapter(
-        crossinline deserialize: (S?) -> O?,
-        crossinline serialize: (O?) -> S?,
-    ): GsonBuilder = registerTypeAdapter(O::class.java, object : TypeAdapter<O?>() {
-        override fun write(out: JsonWriter?, value: O?) {
-            when (val v = serialize(value)) {
-                is String -> out?.value(v)
-                is Boolean -> out?.value(v)
-                is Long -> out?.value(v)
-                is Double -> out?.value(v)
-                is Number -> out?.value(v)
-                else -> throw AssertionError("unsupported type: $v")
-            }
+        @Provides
+        @Singleton
+        fun provideTwitchApiRetrofit(
+            gson: Gson,
+            okhttp: OkHttpClient,
+            interceptor: TwitchTokenInterceptor,
+        ): Retrofit {
+            val client = okhttp.newBuilder()
+                .addInterceptor(interceptor)
+                .build()
+            return Retrofit.Builder()
+                .baseUrl("https://api.twitch.tv/")
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .client(client)
+                .build()
         }
 
-        override fun read(`in`: JsonReader?): O? {
-            val peek = `in`?.peek()
-            if (peek == JsonToken.NULL) {
-                `in`.nextNull()
-                return null
-            }
-            val v: S? = when (S::class) {
-                String::class -> `in`?.nextString() as S?
-                Boolean::class -> `in`?.nextBoolean() as S?
-                Int::class -> `in`?.nextInt() as S?
-                Long::class -> `in`?.nextLong() as S?
-                Double::class -> `in`?.nextDouble() as S?
-                else -> throw AssertionError("unsupported type: ${S::class}")
-            }
-            return deserialize(v)
-        }
-    })
+        @Provides
+        @Singleton
+        fun provideTwitchHelixService(retrofit: Retrofit): TwitchHelixService =
+            retrofit.create(TwitchHelixService::class.java)
 
-    @Module
-    @InstallIn(SingletonComponent::class)
-    interface Bind {
-        @Binds
-        fun bindTwitchDataSourceRemote(dataSource: TwitchLiveRemoteDataSource): TwitchLiveDataSource.Remote
+        @Provides
+        @Singleton
+        fun provideTwitchOauthService(): TwitchOauthService {
+            val retrofit = Retrofit.Builder()
+                .baseUrl("https://id.twitch.tv/")
+                .build()
+            return retrofit.create(TwitchOauthService::class.java)
+        }
+
+        private inline fun <reified O, reified S> GsonBuilder.registerJsonDeserializer(
+            crossinline deserialize: (S?) -> O?,
+        ): GsonBuilder = registerTypeAdapter(O::class.java, object : JsonDeserializer<O?> {
+            override fun deserialize(
+                json: JsonElement?,
+                typeOfT: Type,
+                context: JsonDeserializationContext,
+            ): O? {
+                val v = when (S::class) {
+                    String::class -> json?.asString
+                    Boolean::class -> json?.asBoolean
+                    Int::class -> json?.asInt
+                    Long::class -> json?.asLong
+                    Double::class -> json?.asDouble
+                    else -> throw IllegalStateException()
+                }
+                return deserialize(v as S?)
+            }
+        })
+
+        private inline fun <reified O, reified S> GsonBuilder.registerJsonSerializer(
+            crossinline serialize: (O?) -> S?,
+        ): GsonBuilder = registerTypeAdapter(O::class.java, object : JsonSerializer<O?> {
+            override fun serialize(
+                src: O?,
+                typeOfSrc: Type,
+                context: JsonSerializationContext,
+            ): JsonElement = context.serialize(serialize(src), S::class.java)
+        })
+
+        private inline fun <reified O, reified S> GsonBuilder.registerTypeAdapter(
+            crossinline deserialize: (S?) -> O?,
+            crossinline serialize: (O?) -> S?,
+        ): GsonBuilder = registerTypeAdapter(O::class.java, object : TypeAdapter<O?>() {
+            override fun write(out: JsonWriter?, value: O?) {
+                when (val v = serialize(value)) {
+                    is String -> out?.value(v)
+                    is Boolean -> out?.value(v)
+                    is Long -> out?.value(v)
+                    is Double -> out?.value(v)
+                    is Number -> out?.value(v)
+                    else -> throw AssertionError("unsupported type: $v")
+                }
+            }
+
+            override fun read(`in`: JsonReader?): O? {
+                val peek = `in`?.peek()
+                if (peek == JsonToken.NULL) {
+                    `in`.nextNull()
+                    return null
+                }
+                val v: S? = when (S::class) {
+                    String::class -> `in`?.nextString() as S?
+                    Boolean::class -> `in`?.nextBoolean() as S?
+                    Int::class -> `in`?.nextInt() as S?
+                    Long::class -> `in`?.nextLong() as S?
+                    Double::class -> `in`?.nextDouble() as S?
+                    else -> throw AssertionError("unsupported type: ${S::class}")
+                }
+                return deserialize(v)
+            }
+        })
     }
+
+    @Binds
+    fun bindTwitchDataSourceRemote(dataSource: TwitchLiveRemoteDataSource): TwitchLiveDataSource.Remote
+
+    @Singleton
+    @Binds
+    @IntoMap
+    @LivePlatformKey(Twitch::class)
+    fun bindRemoteMediatorFactory(factory: TwitchSubscriptionPagerFactory): PagerFactory<LiveSubscription>
 }
