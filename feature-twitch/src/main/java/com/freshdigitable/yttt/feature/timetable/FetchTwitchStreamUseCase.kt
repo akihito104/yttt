@@ -5,6 +5,7 @@ import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.logI
 import kotlinx.coroutines.async
@@ -45,21 +46,14 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
     }
 
     private suspend fun updateOnAirStreams(me: TwitchUserDetail): List<TwitchStream> {
-        val old = twitchRepository.onAir.value.associateBy { it.id }
-        val new = twitchRepository.fetchFollowedStreams(me.id)
-        val url = new.filter { n ->
-            val o = old[n.id] ?: return@filter true
-            n.mayUpdateThumbnail(o)
-        }.map { it.getThumbnailUrl() }
-        if (url.isNotEmpty()) {
-            twitchRepository.removeImageByUrl(url)
+        val new = checkNotNull(twitchRepository.fetchFollowedStreams(me.id))
+        if (new is TwitchStreams.Updated) {
+            val updatableThumbnails = new.updatableThumbnails
+            if (updatableThumbnails.isNotEmpty()) {
+                twitchRepository.removeImageByUrl(updatableThumbnails)
+            }
+            twitchRepository.replaceFollowedStreams(new)
         }
-        twitchRepository.addFollowedStreams(new)
-        return new
-    }
-
-    companion object {
-        private fun TwitchStream.mayUpdateThumbnail(other: TwitchStream): Boolean =
-            other.startedAt != startedAt || other.title != title || other.gameId != gameId
+        return new.streams
     }
 }

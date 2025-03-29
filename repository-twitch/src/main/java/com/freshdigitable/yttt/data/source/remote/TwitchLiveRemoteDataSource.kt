@@ -4,7 +4,7 @@ import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
@@ -70,9 +70,10 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
         return TwitchFollowings.createAtFetched(userId, items, fetchedAt)
     }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
-        val id = me ?: fetchMe()?.id ?: return emptyList()
-        return fetchAll { getFollowedStreams(id.value, cursor = it) }
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
+        val id = me ?: fetchMe()?.id ?: return null
+        val s = fetchAll { getFollowedStreams(id.value, cursor = it) }
+        return TwitchStreams.createAtFetched(id, s, dateTimeProvider.now())
     }
 
     override suspend fun fetchFollowedStreamSchedule(

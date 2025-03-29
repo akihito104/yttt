@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchUserDetailRemote
@@ -62,7 +63,14 @@ class TwitchRemoteMediatorTest {
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(10)
         localSource.setMe(authUser)
         val stream = broadcaster.take(10).map { stream(it) }
-        localSource.addFollowedStreams(stream)
+        val streams = object : TwitchStreams.Updated {
+            override val followerId: TwitchUser.Id get() = authUser.id
+            override val streams: List<TwitchStream> get() = stream
+            override val updatableAt: Instant get() = Instant.EPOCH
+            override val updatableThumbnails: Set<String> get() = emptySet()
+            override val deletedThumbnails: Set<String> get() = emptySet()
+        }
+        localSource.replaceFollowedStreams(streams)
         localSource.replaceAllFollowings(followings)
         FakeRemoteSourceModule.userDetails = broadcaster.map { it.toUserDetail() }
     }
@@ -210,7 +218,7 @@ interface FakeRemoteSourceModule {
             override suspend fun fetchMe(): TwitchUserDetail = throw NotImplementedError()
 
 
-            override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> =
+            override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams =
                 throw NotImplementedError()
 
             override suspend fun fetchFollowedStreamSchedule(

@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
@@ -16,8 +17,8 @@ interface TwitchLiveDataSource {
     suspend fun findUsersById(ids: Set<TwitchUser.Id>? = null): List<TwitchUserDetail>
     suspend fun fetchMe(): TwitchUserDetail?
     suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings
-    suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): List<TwitchStream>
-    suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>)
+    suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): TwitchStreams?
+    suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated)
     suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int = 10,
@@ -50,7 +51,7 @@ interface TwitchLiveDataSource {
         override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchVideo<TwitchVideo.TwitchVideoId> =
             throw NotImplementedError()
 
-        override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) =
+        override suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated) =
             throw NotImplementedError()
 
         override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>): Unit =

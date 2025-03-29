@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
@@ -49,26 +50,14 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         dao.replaceAllBroadcasters(followings)
     }
 
-    override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) {
-        val me = fetchMe() ?: return
-        val cache = dao.findAllStreams().associateBy { it.id }
-        val deletedId = cache.keys - followedStreams.map { it.id }.toSet()
-        val img = deletedId.mapNotNull { cache[it]?.getThumbnailUrl() }
-        dao.replaceAllStreams(
-            me.id,
-            followedStreams,
-            expiredAt = dateTimeProvider.now() + MAX_AGE_STREAM,
-        )
-        removeImageByUrl(img)
+    override suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated) {
+        dao.replaceAllStreams(followedStreams)
+        removeImageByUrl(followedStreams.deletedThumbnails)
     }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
-        val id = me ?: fetchMe()?.id ?: return emptyList()
-        val expiredAt = dao.findStreamExpire(id)?.expiredAt
-        if (expiredAt?.isBefore(dateTimeProvider.now()) == true) {
-            return emptyList()
-        }
-        return dao.findAllStreams()
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
+        val id = me ?: fetchMe()?.id ?: return null
+        return dao.findStreamByMe(id)
     }
 
     override suspend fun fetchFollowedStreamSchedule(
@@ -123,7 +112,6 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
 
     companion object {
         private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
-        private val MAX_AGE_STREAM = Duration.ofMinutes(10)
         private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
     }
 }

@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import java.time.Duration
 import java.time.Instant
 
 interface TwitchVideo<T : TwitchVideo.TwitchVideoId> {
@@ -94,4 +95,60 @@ data class TwitchStreamSchedule(
 fun TwitchChannelSchedule.toTwitchVideoList(): List<TwitchStreamSchedule> {
     return segments?.map { s -> TwitchStreamSchedule(user = broadcaster, schedule = s) }
         ?: emptyList()
+}
+
+interface TwitchStreams {
+    val followerId: TwitchUser.Id
+    val streams: List<TwitchStream>
+    val updatableAt: Instant
+
+    companion object {
+        fun create(
+            followerId: TwitchUser.Id,
+            streams: List<TwitchStream>,
+            updatableAt: Instant,
+        ): TwitchStreams = Impl(followerId, streams, updatableAt)
+
+        private val MAX_AGE_STREAM = Duration.ofMinutes(10)
+
+        fun createAtFetched(
+            followerId: TwitchUser.Id,
+            streams: List<TwitchStream>,
+            updated: Instant,
+        ): TwitchStreams = Impl(followerId, streams, updated + MAX_AGE_STREAM)
+
+        fun TwitchStreams.update(new: TwitchStreams): TwitchStreams {
+            require(this.followerId == new.followerId)
+            require(this.updatableAt < new.updatableAt)
+            val map = this.streams.associateBy { it.id }
+            return object : Updated, TwitchStreams by new {
+                override val updatableThumbnails: Set<String>
+                    get() {
+                        return new.streams.filter { n ->
+                            val o = map[n.id] ?: return@filter true
+                            n.mayUpdateThumbnail(o)
+                        }.map { it.getThumbnailUrl() }.toSet()
+                    }
+                override val deletedThumbnails: Set<String>
+                    get() {
+                        val deleted = map.keys - new.streams.map { it.id }.toSet()
+                        return deleted.mapNotNull { map[it]?.getThumbnailUrl() }.toSet()
+                    }
+            }
+        }
+
+        private fun TwitchStream.mayUpdateThumbnail(other: TwitchStream): Boolean =
+            other.startedAt != startedAt || other.title != title || other.gameId != gameId
+    }
+
+    private class Impl(
+        override val followerId: TwitchUser.Id,
+        override val streams: List<TwitchStream>,
+        override val updatableAt: Instant,
+    ) : TwitchStreams
+
+    interface Updated : TwitchStreams {
+        val updatableThumbnails: Set<String>
+        val deletedThumbnails: Set<String>
+    }
 }
