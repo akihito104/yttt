@@ -4,7 +4,9 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
-import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveStream
+import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchStreams.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchUser
@@ -23,8 +25,8 @@ class TwitchLiveRepository @Inject constructor(
     private val localDataSource: TwitchLiveDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
 ) : TwitchLiveDataSource, ImageDataSource by localDataSource {
-    override val onAir: Flow<List<TwitchStream>> = localDataSource.onAir
-    override val upcoming: Flow<List<TwitchChannelSchedule>> = localDataSource.upcoming
+    override val onAir: Flow<List<TwitchLiveStream>> = localDataSource.onAir
+    override val upcoming: Flow<List<TwitchLiveChannelSchedule>> = localDataSource.upcoming
 
     override suspend fun getAuthorizeUrl(state: String): String =
         remoteDataSource.getAuthorizeUrl(state)
@@ -91,7 +93,7 @@ class TwitchLiveRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchVideo<out TwitchVideo.TwitchVideoId>? {
+    override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>? {
         return localDataSource.fetchStreamDetail(id)
     }
 

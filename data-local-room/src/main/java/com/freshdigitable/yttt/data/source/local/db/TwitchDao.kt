@@ -4,12 +4,12 @@ import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
+import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
-import com.freshdigitable.yttt.data.model.TwitchStreamSchedule
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import java.time.Instant
@@ -102,10 +102,10 @@ internal class TwitchDao @Inject constructor(
 
     suspend fun findStreamSchedule(
         id: TwitchChannelSchedule.Stream.Id
-    ): TwitchVideo<TwitchChannelSchedule.Stream.Id>? = db.withTransaction {
+    ): TwitchLiveVideo<TwitchChannelSchedule.Stream.Id>? = db.withTransaction {
         val schedule = findStreamScheduleEntity(id) ?: return@withTransaction null
         val user = findUserDetail(setOf(schedule.userId), Instant.EPOCH).first()
-        TwitchStreamSchedule(user, schedule)
+        TwitchLiveSchedule.create(user, schedule)
     }
 
     suspend fun findStreamByMe(me: TwitchUser.Id): TwitchStreams = db.withTransaction {

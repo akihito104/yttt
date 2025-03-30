@@ -2,7 +2,9 @@ package com.freshdigitable.yttt.data.source
 
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveStream
+import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -11,8 +13,8 @@ import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import kotlinx.coroutines.flow.Flow
 
 interface TwitchLiveDataSource {
-    val onAir: Flow<List<TwitchStream>>
-    val upcoming: Flow<List<TwitchChannelSchedule>>
+    val onAir: Flow<List<TwitchLiveStream>>
+    val upcoming: Flow<List<TwitchLiveChannelSchedule>>
     suspend fun getAuthorizeUrl(state: String): String
     suspend fun findUsersById(ids: Set<TwitchUser.Id>? = null): List<TwitchUserDetail>
     suspend fun fetchMe(): TwitchUserDetail?
@@ -24,7 +26,7 @@ interface TwitchLiveDataSource {
         maxCount: Int = 10,
     ): List<TwitchChannelSchedule>
 
-    suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchVideo<out TwitchVideo.TwitchVideoId>?
+    suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>?
     suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int = 20,
@@ -46,9 +48,9 @@ interface TwitchLiveDataSource {
     }
 
     interface Remote : TwitchLiveDataSource {
-        override val onAir: Flow<List<TwitchStream>> get() = throw NotImplementedError()
-        override val upcoming: Flow<List<TwitchChannelSchedule>> get() = throw NotImplementedError()
-        override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchVideo<TwitchVideo.TwitchVideoId> =
+        override val onAir: Flow<List<TwitchLiveStream>> get() = throw NotImplementedError()
+        override val upcoming: Flow<List<TwitchLiveChannelSchedule>> get() = throw NotImplementedError()
+        override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<TwitchVideo.TwitchVideoId> =
             throw NotImplementedError()
 
         override suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated) =

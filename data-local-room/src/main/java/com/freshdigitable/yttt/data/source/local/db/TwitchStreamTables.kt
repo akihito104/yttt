@@ -8,6 +8,7 @@ import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.local.TableDeletable
@@ -83,7 +84,7 @@ internal data class TwitchStreamDbView(
     override val user: TwitchUserDetailDbView,
     @ColumnInfo("u_views_count")
     private val viewsCount: Int,
-) : TwitchStream {
+) : TwitchLiveStream {
     override val gameId: String get() = streamEntity.gameId
     override val gameName: String get() = streamEntity.gameName
     override val type: String get() = streamEntity.type

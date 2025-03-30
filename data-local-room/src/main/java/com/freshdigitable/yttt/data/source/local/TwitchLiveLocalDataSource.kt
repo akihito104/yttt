@@ -3,6 +3,9 @@ package com.freshdigitable.yttt.data.source.local
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
+import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveStream
+import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
@@ -23,8 +26,8 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
     imageDataSource: ImageDataSource,
 ) : TwitchLiveDataSource.Local, ImageDataSource by imageDataSource {
-    override val onAir: Flow<List<TwitchStream>> = dao.watchStream()
-    override val upcoming: Flow<List<TwitchChannelSchedule>> = dao.watchChannelSchedule()
+    override val onAir: Flow<List<TwitchLiveStream>> = dao.watchStream()
+    override val upcoming: Flow<List<TwitchLiveChannelSchedule>> = dao.watchChannelSchedule()
 
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
         if (ids == null) {
@@ -89,7 +92,7 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
 
     override suspend fun fetchStreamDetail(
         id: TwitchVideo.TwitchVideoId,
-    ): TwitchVideo<out TwitchVideo.TwitchVideoId>? {
+    ): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>? {
         return when (id) {
             is TwitchStream.Id -> dao.findStream(id)
             is TwitchChannelSchedule.Stream.Id -> dao.findStreamSchedule(id)
