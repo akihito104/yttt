@@ -140,7 +140,7 @@ class TwitchLiveLocalDataSourceTest {
 
 internal class TwitchDataSourceTestRule(
     baseTime: Instant = Instant.EPOCH,
-) : DataSourceTestRule<TwitchDao, TwitchLiveLocalDataSource>(baseTime) {
+) : DataSourceTestRule<TwitchDao, TwitchLocalDataSource>(baseTime) {
     override fun createDao(database: AppDatabase): TwitchDao = TwitchDao(
         database,
         TwitchUserDaoImpl(database),
@@ -148,13 +148,13 @@ internal class TwitchDataSourceTestRule(
         TwitchStreamDaoImpl(database),
     )
 
-    override fun createTestScope(testScope: TestScope): DatabaseTestScope<TwitchDao, TwitchLiveLocalDataSource> {
-        val dataSource = TwitchLiveLocalDataSource(dao, dateTimeProvider, NopImageDataSource)
-        return object : DatabaseTestScope<TwitchDao, TwitchLiveLocalDataSource> {
+    override fun createTestScope(testScope: TestScope): DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
+        val dataSource = TwitchLocalDataSource(dao, dateTimeProvider, NopImageDataSource)
+        return object : DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
             override val testScope: TestScope get() = testScope
             override val dateTimeProvider: DateTimeProviderFake get() = this@TwitchDataSourceTestRule.dateTimeProvider
             override val dao: TwitchDao get() = this@TwitchDataSourceTestRule.dao
-            override val dataSource: TwitchLiveLocalDataSource get() = dataSource
+            override val dataSource: TwitchLocalDataSource get() = dataSource
         }
     }
 }

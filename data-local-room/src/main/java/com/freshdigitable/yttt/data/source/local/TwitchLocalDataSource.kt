@@ -13,7 +13,7 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.ImageDataSource
-import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
+import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
 import java.time.Duration
@@ -21,14 +21,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-internal class TwitchLiveLocalDataSource @Inject constructor(
+internal class TwitchLocalDataSource @Inject constructor(
     private val dao: TwitchDao,
     private val dateTimeProvider: DateTimeProvider,
     imageDataSource: ImageDataSource,
-) : TwitchLiveDataSource.Local, ImageDataSource by imageDataSource {
-    override val onAir: Flow<List<TwitchLiveStream>> = dao.watchStream()
-    override val upcoming: Flow<List<TwitchLiveChannelSchedule>> = dao.watchChannelSchedule()
-
+) : TwitchDataSource.Local, ImageDataSource by imageDataSource {
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
         if (ids == null) {
             return listOfNotNull(fetchMe())
@@ -90,16 +87,6 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun fetchStreamDetail(
-        id: TwitchVideo.TwitchVideoId,
-    ): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>? {
-        return when (id) {
-            is TwitchStream.Id -> dao.findStream(id)
-            is TwitchChannelSchedule.Stream.Id -> dao.findStreamSchedule(id)
-            else -> throw AssertionError("unsupported id type: $id")
-        }
-    }
-
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
@@ -111,6 +98,17 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
 
     override suspend fun deleteAllTables() {
         dao.deleteTable()
+    }
+
+    override val onAir: Flow<List<TwitchLiveStream>> = dao.watchStream()
+    override val upcoming: Flow<List<TwitchLiveChannelSchedule>> = dao.watchChannelSchedule()
+
+    override suspend fun fetchStreamDetail(
+        id: TwitchVideo.TwitchVideoId,
+    ): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>? = when (id) {
+        is TwitchStream.Id -> dao.findStream(id)
+        is TwitchChannelSchedule.Stream.Id -> dao.findStreamSchedule(id)
+        else -> throw AssertionError("unsupported id type: $id")
     }
 
     companion object {

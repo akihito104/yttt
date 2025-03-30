@@ -12,9 +12,7 @@ import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import kotlinx.coroutines.flow.Flow
 
-interface TwitchLiveDataSource {
-    val onAir: Flow<List<TwitchLiveStream>>
-    val upcoming: Flow<List<TwitchLiveChannelSchedule>>
+interface TwitchDataSource {
     suspend fun getAuthorizeUrl(state: String): String
     suspend fun findUsersById(ids: Set<TwitchUser.Id>? = null): List<TwitchUserDetail>
     suspend fun fetchMe(): TwitchUserDetail?
@@ -26,7 +24,6 @@ interface TwitchLiveDataSource {
         maxCount: Int = 10,
     ): List<TwitchChannelSchedule>
 
-    suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>?
     suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int = 20,
@@ -34,7 +31,7 @@ interface TwitchLiveDataSource {
 
     suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>)
 
-    interface Local : TwitchLiveDataSource, ImageDataSource {
+    interface Local : TwitchDataSource, TwitchLiveDataSource.Local, ImageDataSource {
         suspend fun addUsers(users: Collection<TwitchUserDetail>)
         suspend fun setMe(me: TwitchUserDetail)
         suspend fun replaceAllFollowings(followings: TwitchFollowings)
@@ -47,16 +44,18 @@ interface TwitchLiveDataSource {
         override suspend fun getAuthorizeUrl(state: String): String = throw NotImplementedError()
     }
 
-    interface Remote : TwitchLiveDataSource {
-        override val onAir: Flow<List<TwitchLiveStream>> get() = throw NotImplementedError()
-        override val upcoming: Flow<List<TwitchLiveChannelSchedule>> get() = throw NotImplementedError()
-        override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<TwitchVideo.TwitchVideoId> =
-            throw NotImplementedError()
-
+    interface Remote : TwitchDataSource {
         override suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated) =
             throw NotImplementedError()
 
         override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>): Unit =
             throw NotImplementedError()
     }
+}
+
+interface TwitchLiveDataSource {
+    val onAir: Flow<List<TwitchLiveStream>>
+    val upcoming: Flow<List<TwitchLiveChannelSchedule>>
+    suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>?
+    interface Local : TwitchLiveDataSource
 }

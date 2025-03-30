@@ -4,30 +4,23 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
-import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
-import com.freshdigitable.yttt.data.model.TwitchLiveStream
-import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchStreams.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.ImageDataSource
+import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TwitchLiveRepository @Inject constructor(
-    private val remoteDataSource: TwitchLiveDataSource.Remote,
-    private val localDataSource: TwitchLiveDataSource.Local,
+class TwitchRepository @Inject constructor(
+    private val remoteDataSource: TwitchDataSource.Remote,
+    private val localDataSource: TwitchDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
-) : TwitchLiveDataSource, ImageDataSource by localDataSource {
-    override val onAir: Flow<List<TwitchLiveStream>> = localDataSource.onAir
-    override val upcoming: Flow<List<TwitchLiveChannelSchedule>> = localDataSource.upcoming
-
+) : TwitchDataSource, ImageDataSource by localDataSource {
     override suspend fun getAuthorizeUrl(state: String): String =
         remoteDataSource.getAuthorizeUrl(state)
 
@@ -93,10 +86,6 @@ class TwitchLiveRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>? {
-        return localDataSource.fetchStreamDetail(id)
-    }
-
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
@@ -112,6 +101,10 @@ class TwitchLiveRepository @Inject constructor(
 
     companion object {
         @Suppress("unused")
-        private val TAG = TwitchLiveRepository::class.simpleName
+        private val TAG = TwitchRepository::class.simpleName
     }
 }
+
+@Singleton
+class TwitchLiveRepository @Inject constructor(localSource: TwitchLiveDataSource.Local) :
+    TwitchLiveDataSource by localSource

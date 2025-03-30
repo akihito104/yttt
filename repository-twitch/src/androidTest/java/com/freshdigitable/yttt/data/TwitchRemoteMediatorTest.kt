@@ -16,7 +16,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchUserDetailRemote
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
-import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
+import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.di.DbModule
 import com.freshdigitable.yttt.di.DateTimeModule
@@ -45,7 +45,7 @@ class TwitchRemoteMediatorTest {
     var hiltRule = HiltAndroidRule(this)
 
     @Inject
-    lateinit var localSource: TwitchLiveDataSource.Local
+    lateinit var localSource: TwitchDataSource.Local
 
     @Inject
     internal lateinit var pagerFactory: TwitchSubscriptionPagerFactory
@@ -200,7 +200,7 @@ interface FakeRemoteSourceModule {
 
         @Singleton
         @Provides
-        fun provide(): TwitchLiveDataSource.Remote = object : TwitchLiveDataSource.Remote {
+        fun provide(): TwitchDataSource.Remote = object : TwitchDataSource.Remote {
             override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
                 logD(tag = "FakeTwitchRemoteSource") { "findUsersById: $ids" }
                 val table = userDetails.associateBy { it.id }

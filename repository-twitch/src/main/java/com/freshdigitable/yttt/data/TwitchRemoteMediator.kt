@@ -19,7 +19,7 @@ import javax.inject.Inject
 @OptIn(ExperimentalPagingApi::class)
 internal class TwitchRemoteMediator @Inject constructor(
     private val pagingSource: TwitchPagingSource,
-    private val repository: TwitchLiveRepository,
+    private val repository: TwitchRepository,
     private val dateTimeProvider: DateTimeProvider,
 ) : RemoteMediator<Int, LiveSubscription>() {
     override suspend fun initialize(): InitializeAction {

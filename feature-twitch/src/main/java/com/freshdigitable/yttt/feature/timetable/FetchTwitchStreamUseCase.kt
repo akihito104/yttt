@@ -2,7 +2,7 @@ package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.data.TwitchAccountRepository
-import com.freshdigitable.yttt.data.TwitchLiveRepository
+import com.freshdigitable.yttt.data.TwitchRepository
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
@@ -14,7 +14,7 @@ import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 
 internal class FetchTwitchStreamUseCase @Inject constructor(
-    private val twitchRepository: TwitchLiveRepository,
+    private val twitchRepository: TwitchRepository,
     private val accountRepository: TwitchAccountRepository,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke() {
