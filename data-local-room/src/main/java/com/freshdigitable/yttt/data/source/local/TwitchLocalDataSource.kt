@@ -3,13 +3,17 @@ package com.freshdigitable.yttt.data.source.local
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
+import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveStream
+import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.ImageDataSource
-import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
+import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
 import java.time.Duration
@@ -17,14 +21,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-internal class TwitchLiveLocalDataSource @Inject constructor(
+internal class TwitchLocalDataSource @Inject constructor(
     private val dao: TwitchDao,
     private val dateTimeProvider: DateTimeProvider,
     imageDataSource: ImageDataSource,
-) : TwitchLiveDataSource.Local, ImageDataSource by imageDataSource {
-    override val onAir: Flow<List<TwitchStream>> = dao.watchStream()
-    override val upcoming: Flow<List<TwitchChannelSchedule>> = dao.watchChannelSchedule()
-
+) : TwitchDataSource.Local, ImageDataSource by imageDataSource {
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
         if (ids == null) {
             return listOfNotNull(fetchMe())
@@ -49,26 +50,14 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         dao.replaceAllBroadcasters(followings)
     }
 
-    override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) {
-        val me = fetchMe() ?: return
-        val cache = dao.findAllStreams().associateBy { it.id }
-        val deletedId = cache.keys - followedStreams.map { it.id }.toSet()
-        val img = deletedId.mapNotNull { cache[it]?.getThumbnailUrl() }
-        dao.replaceAllStreams(
-            me.id,
-            followedStreams,
-            expiredAt = dateTimeProvider.now() + MAX_AGE_STREAM,
-        )
-        removeImageByUrl(img)
+    override suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated) {
+        dao.replaceAllStreams(followedStreams)
+        removeImageByUrl(followedStreams.deletedThumbnails)
     }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
-        val id = me ?: fetchMe()?.id ?: return emptyList()
-        val expiredAt = dao.findStreamExpire(id)?.expiredAt
-        if (expiredAt?.isBefore(dateTimeProvider.now()) == true) {
-            return emptyList()
-        }
-        return dao.findAllStreams()
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
+        val id = me ?: fetchMe()?.id ?: return null
+        return dao.findStreamByMe(id)
     }
 
     override suspend fun fetchFollowedStreamSchedule(
@@ -98,16 +87,6 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun fetchStreamDetail(
-        id: TwitchVideo.TwitchVideoId,
-    ): TwitchVideo<out TwitchVideo.TwitchVideoId>? {
-        return when (id) {
-            is TwitchStream.Id -> dao.findStream(id)
-            is TwitchChannelSchedule.Stream.Id -> dao.findStreamSchedule(id)
-            else -> throw AssertionError("unsupported id type: $id")
-        }
-    }
-
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
@@ -121,9 +100,19 @@ internal class TwitchLiveLocalDataSource @Inject constructor(
         dao.deleteTable()
     }
 
+    override val onAir: Flow<List<TwitchLiveStream>> = dao.watchStream()
+    override val upcoming: Flow<List<TwitchLiveChannelSchedule>> = dao.watchChannelSchedule()
+
+    override suspend fun fetchStreamDetail(
+        id: TwitchVideo.TwitchVideoId,
+    ): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>? = when (id) {
+        is TwitchStream.Id -> dao.findStream(id)
+        is TwitchChannelSchedule.Stream.Id -> dao.findStreamSchedule(id)
+        else -> throw AssertionError("unsupported id type: $id")
+    }
+
     companion object {
         private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
-        private val MAX_AGE_STREAM = Duration.ofMinutes(10)
         private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
     }
 }

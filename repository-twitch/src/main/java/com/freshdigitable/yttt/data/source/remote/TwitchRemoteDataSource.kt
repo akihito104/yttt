@@ -4,11 +4,11 @@ import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
-import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
+import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -17,12 +17,12 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-internal class TwitchLiveRemoteDataSource @Inject constructor(
+internal class TwitchRemoteDataSource @Inject constructor(
     private val oauth: TwitchOauthService,
     private val helix: TwitchHelixService,
     private val ioDispatcher: CoroutineDispatcher,
     private val dateTimeProvider: DateTimeProvider,
-) : TwitchLiveDataSource.Remote {
+) : TwitchDataSource.Remote {
     override suspend fun getAuthorizeUrl(state: String): String = withContext(ioDispatcher) {
         val response = oauth.authorizeImplicitly(
             clientId = BuildConfig.TWITCH_CLIENT_ID,
@@ -70,9 +70,10 @@ internal class TwitchLiveRemoteDataSource @Inject constructor(
         return TwitchFollowings.createAtFetched(userId, items, fetchedAt)
     }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
-        val id = me ?: fetchMe()?.id ?: return emptyList()
-        return fetchAll { getFollowedStreams(id.value, cursor = it) }
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
+        val id = me ?: fetchMe()?.id ?: return null
+        val s = fetchAll { getFollowedStreams(id.value, cursor = it) }
+        return TwitchStreams.createAtFetched(id, s, dateTimeProvider.now())
     }
 
     override suspend fun fetchFollowedStreamSchedule(

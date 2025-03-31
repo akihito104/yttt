@@ -3,10 +3,11 @@ package com.freshdigitable.yttt.data.source.local.di
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.room.Room
+import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import com.freshdigitable.yttt.data.source.local.TwitchLiveLocalDataSource
+import com.freshdigitable.yttt.data.source.local.TwitchLocalDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoProviders
@@ -44,7 +45,10 @@ internal interface LocalModule {
     fun bindYoutubeDataSourceLocal(dataSource: YouTubeLocalDataSource): YoutubeDataSource.Local
 
     @Binds
-    fun bindTwitchDataSourceLocal(dataSource: TwitchLiveLocalDataSource): TwitchLiveDataSource.Local
+    fun bindTwitchDataSourceLocal(dataSource: TwitchLocalDataSource): TwitchDataSource.Local
+
+    @Binds
+    fun bindTwitchLiveDataSourceLocal(dataSource: TwitchLocalDataSource): TwitchLiveDataSource.Local
 }
 
 @Module

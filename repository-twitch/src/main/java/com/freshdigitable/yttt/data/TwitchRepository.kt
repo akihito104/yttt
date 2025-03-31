@@ -4,32 +4,23 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
-import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
+import com.freshdigitable.yttt.data.model.TwitchStreams.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.ImageDataSource
+import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TwitchLiveRepository @Inject constructor(
-    private val remoteDataSource: TwitchLiveDataSource.Remote,
-    private val localDataSource: TwitchLiveDataSource.Local,
+class TwitchRepository @Inject constructor(
+    private val remoteDataSource: TwitchDataSource.Remote,
+    private val localDataSource: TwitchDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
-    coroutineScope: CoroutineScope,
-) : TwitchLiveDataSource, ImageDataSource by localDataSource {
-    override val onAir: StateFlow<List<TwitchStream>> = localDataSource.onAir
-        .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
-    override val upcoming: Flow<List<TwitchChannelSchedule>> = localDataSource.upcoming
-
+) : TwitchDataSource, ImageDataSource by localDataSource {
     override suspend fun getAuthorizeUrl(state: String): String =
         remoteDataSource.getAuthorizeUrl(state)
 
@@ -68,18 +59,18 @@ class TwitchLiveRepository @Inject constructor(
         return cache.update(remote)
     }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): List<TwitchStream> {
-        val id = me ?: fetchMe()?.id ?: return emptyList()
-        val cache = localDataSource.fetchFollowedStreams()
-        if (cache.isNotEmpty()) {
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
+        val id = me ?: fetchMe()?.id ?: return null
+        val cache = checkNotNull(localDataSource.fetchFollowedStreams(id))
+        if (dateTimeProvider.now() < cache.updatableAt) {
             return cache
         }
-        val res = remoteDataSource.fetchFollowedStreams(id)
-        return res
+        val res = checkNotNull(remoteDataSource.fetchFollowedStreams(id))
+        return cache.update(res)
     }
 
-    override suspend fun addFollowedStreams(followedStreams: Collection<TwitchStream>) {
-        localDataSource.addFollowedStreams(followedStreams)
+    override suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated) {
+        localDataSource.replaceFollowedStreams(followedStreams)
     }
 
     override suspend fun fetchFollowedStreamSchedule(
@@ -93,10 +84,6 @@ class TwitchLiveRepository @Inject constructor(
         val res = remoteDataSource.fetchFollowedStreamSchedule(id, maxCount)
         localDataSource.setFollowedStreamSchedule(id, res)
         return res
-    }
-
-    override suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchVideo<out TwitchVideo.TwitchVideoId>? {
-        return localDataSource.fetchStreamDetail(id)
     }
 
     override suspend fun fetchVideosByUserId(
@@ -114,6 +101,10 @@ class TwitchLiveRepository @Inject constructor(
 
     companion object {
         @Suppress("unused")
-        private val TAG = TwitchLiveRepository::class.simpleName
+        private val TAG = TwitchRepository::class.simpleName
     }
 }
+
+@Singleton
+class TwitchLiveRepository @Inject constructor(localSource: TwitchLiveDataSource.Local) :
+    TwitchLiveDataSource by localSource

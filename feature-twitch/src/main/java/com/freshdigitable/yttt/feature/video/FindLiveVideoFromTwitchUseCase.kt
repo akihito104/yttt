@@ -5,7 +5,6 @@ import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
-import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.feature.create
 import javax.inject.Inject
@@ -20,8 +19,7 @@ internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
             else -> throw AssertionError("unsupported type: ${id.type}")
         }
         val d = repository.fetchStreamDetail(twitchVideoId) ?: return null
-        val u = (d.user as? TwitchUserDetail) ?: repository.findUsersById(setOf(d.user.id)).first()
-        return LiveVideo.create(d, u)
+        return LiveVideo.create(d)
     }
 }
 

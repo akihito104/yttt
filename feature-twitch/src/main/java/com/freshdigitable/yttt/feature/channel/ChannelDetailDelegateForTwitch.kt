@@ -2,7 +2,7 @@ package com.freshdigitable.yttt.feature.channel
 
 import androidx.compose.runtime.Composable
 import com.freshdigitable.yttt.data.BuildConfig
-import com.freshdigitable.yttt.data.TwitchLiveRepository
+import com.freshdigitable.yttt.data.TwitchRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.stateIn
 import java.time.ZoneId
 
 internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
-    private val repository: TwitchLiveRepository,
+    private val repository: TwitchRepository,
     @Assisted id: LiveChannel.Id,
     @Assisted coroutineScope: CoroutineScope,
 ) : ChannelDetailDelegate, TwitchChannelDetailPagerContent {

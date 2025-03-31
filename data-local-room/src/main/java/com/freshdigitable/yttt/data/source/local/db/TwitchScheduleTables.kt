@@ -10,6 +10,7 @@ import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_ALIAS
@@ -114,7 +115,7 @@ internal class TwitchChannelScheduleDb(
     override val broadcaster: TwitchUserDetailDbView,
     @Embedded
     override val vacation: TwitchChannelVacationSchedule?,
-) : TwitchChannelSchedule {
+) : TwitchLiveChannelSchedule {
     @androidx.room.Dao
     internal interface Dao {
         @Transaction
