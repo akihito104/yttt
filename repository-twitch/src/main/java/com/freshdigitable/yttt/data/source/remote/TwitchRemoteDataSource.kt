@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.model.DateTimeProvider
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStreams
@@ -81,6 +82,11 @@ internal class TwitchRemoteDataSource @Inject constructor(
         maxCount: Int,
     ): List<TwitchChannelSchedule> = fetchAll(maxCount) {
         getChannelStreamSchedule(broadcasterId = id.value, cursor = it)
+    }
+
+    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> {
+        val res = fetch { getGame(id).execute() }
+        return res.body()?.data?.toList() ?: emptyList()
     }
 
     override suspend fun fetchVideosByUserId(

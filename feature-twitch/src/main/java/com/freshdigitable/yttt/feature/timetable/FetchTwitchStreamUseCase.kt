@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.data.TwitchRepository
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
@@ -36,6 +37,11 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         val schedules = tasks.awaitAll().flatten()
         t.putMetric("schedule_tasks", tasks.size.toLong())
         t.putMetric("schedule", schedules.size.toLong())
+
+        val categoryId = schedules
+            .flatMap { s -> s.segments?.mapNotNull { it.category?.id } ?: emptyList() }
+        fetchCategoryArt(categoryId)
+
         val users = streams.map { it.user.id } + schedules.map { it.broadcaster.id }
         twitchRepository.findUsersById(users.toSet())
         if (followings is TwitchFollowings.Updated) {
@@ -55,5 +61,9 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
             twitchRepository.replaceFollowedStreams(new)
         }
         return new.streams
+    }
+
+    private suspend fun fetchCategoryArt(id: Collection<TwitchCategory.Id>) {
+        twitchRepository.fetchCategory(id.toSet())
     }
 }

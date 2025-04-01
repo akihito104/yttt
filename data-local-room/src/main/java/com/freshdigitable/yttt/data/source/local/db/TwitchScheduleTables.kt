@@ -9,6 +9,7 @@ import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
@@ -175,10 +176,10 @@ internal class TwitchChannelScheduleExpireTable(
 
 internal class TwitchStreamCategory(
     @ColumnInfo(name = "category_id")
-    override val id: String,
+    override val id: TwitchCategory.Id,
     @ColumnInfo(name = "category_name")
     override val name: String,
-) : TwitchChannelSchedule.StreamCategory
+) : TwitchCategory
 
 internal interface TwitchScheduleDaoProviders {
     val twitchChannelScheduleVacationDao: TwitchChannelVacationScheduleTable.Dao

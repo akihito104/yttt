@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.source.local.db.InstantConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchAuthorizedUserTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchCategoryIdConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchChannelScheduleExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchChannelVacationScheduleTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchDaoProviders
@@ -106,6 +107,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     TwitchUserIdConverter::class,
     TwitchStreamScheduleIdConverter::class,
     TwitchStreamIdConverter::class,
+    TwitchCategoryIdConverter::class,
     CsvConverter::class,
 )
 abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProviders {

@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
@@ -12,6 +13,9 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import java.time.Instant
 import javax.inject.Inject
 
@@ -105,7 +109,17 @@ internal class TwitchDao @Inject constructor(
     ): TwitchLiveVideo<TwitchChannelSchedule.Stream.Id>? = db.withTransaction {
         val schedule = findStreamScheduleEntity(id) ?: return@withTransaction null
         val user = findUserDetail(setOf(schedule.userId), Instant.EPOCH).first()
-        TwitchLiveSchedule.create(user, schedule)
+        val category = schedule.category?.let { _categories.value[it.id] }
+        TwitchLiveSchedule.create(user, schedule, category?.artUrlBase)
+    }
+
+    private val _categories = MutableStateFlow<Map<TwitchCategory.Id, TwitchCategory>>(emptyMap())
+    val categories: Flow<Map<TwitchCategory.Id, TwitchCategory>> get() = _categories
+    suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
+        id.mapNotNull { _categories.value[it] }
+
+    suspend fun addCategory(category: Collection<TwitchCategory>) {
+        _categories.update { c -> c + category.associateBy { it.id } }
     }
 
     suspend fun findStreamByMe(me: TwitchUser.Id): TwitchStreams = db.withTransaction {
@@ -153,8 +167,7 @@ private fun TwitchChannelSchedule.toStreamScheduleTable(): List<TwitchStreamSche
         )
     } ?: emptyList()
 
-private fun TwitchChannelSchedule.StreamCategory.toTable(): TwitchStreamCategory =
-    TwitchStreamCategory(id, name)
+private fun TwitchCategory.toTable(): TwitchStreamCategory = TwitchStreamCategory(id, name)
 
 private fun TwitchChannelSchedule.toVacationScheduleTable(): TwitchChannelVacationScheduleTable =
     TwitchChannelVacationScheduleTable(

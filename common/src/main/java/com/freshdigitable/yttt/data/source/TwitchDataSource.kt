@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source
 
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
@@ -24,6 +25,8 @@ interface TwitchDataSource {
         maxCount: Int = 10,
     ): List<TwitchChannelSchedule>
 
+    suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory>
+
     suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int = 20,
@@ -42,6 +45,7 @@ interface TwitchDataSource {
 
         suspend fun deleteAllTables()
         override suspend fun getAuthorizeUrl(state: String): String = throw NotImplementedError()
+        suspend fun addCategory(category: Collection<TwitchCategory>)
     }
 
     interface Remote : TwitchDataSource {

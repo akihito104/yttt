@@ -108,10 +108,10 @@ internal class ChannelStreamSchedule(
 
     class StreamCategoryRemote(
         @SerializedName("id")
-        override val id: String,
+        override val id: TwitchCategory.Id,
         @SerializedName("name")
         override val name: String,
-    ) : TwitchChannelSchedule.StreamCategory
+    ) : TwitchCategory
 
     class VacationRemote(
         @SerializedName("start_time")
@@ -180,3 +180,10 @@ internal data class TwitchVideoRemote(
         override val offset: Int, // [sec.]
     ) : TwitchVideoDetail.MutedSegment
 }
+
+internal class TwitchGameRemote(
+    @SerializedName("id") override val id: TwitchCategory.Id,
+    @SerializedName("name") override val name: String,
+    @SerializedName("box_art_url") override val artUrlBase: String?,
+    @SerializedName("igdb_id") override val igdbId: String?,
+) : TwitchCategory

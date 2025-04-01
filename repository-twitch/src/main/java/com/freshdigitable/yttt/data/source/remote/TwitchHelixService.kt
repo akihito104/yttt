@@ -3,6 +3,8 @@ package com.freshdigitable.yttt.data.source.remote
 import com.freshdigitable.yttt.data.model.Broadcaster
 import com.freshdigitable.yttt.data.model.ChannelStreamSchedule
 import com.freshdigitable.yttt.data.model.FollowingStream
+import com.freshdigitable.yttt.data.model.TwitchCategory
+import com.freshdigitable.yttt.data.model.TwitchGameRemote
 import com.freshdigitable.yttt.data.model.TwitchUserDetailRemote
 import com.freshdigitable.yttt.data.model.TwitchVideoRemote
 import com.google.gson.annotations.SerializedName
@@ -67,6 +69,10 @@ internal interface TwitchHelixService {
         @Query("after") nextCursor: String? = null,
         @Query("before") prevCursor: String? = null,
     ): Call<TwitchVideosResponse>
+
+    // https://dev.twitch.tv/docs/api/reference/#get-games
+    @GET("helix/games")
+    fun getGame(@Query("id") id: Set<TwitchCategory.Id>): Call<TwitchGameResponse>
 }
 
 internal class TwitchUserResponse(@SerializedName("data") val data: List<TwitchUserDetailRemote>)
@@ -112,3 +118,5 @@ internal class TwitchVideosResponse(
     @SerializedName("pagination")
     val pagination: Pagination,
 )
+
+internal class TwitchGameResponse(@SerializedName("data") val data: Array<TwitchGameRemote>)
