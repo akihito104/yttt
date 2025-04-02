@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,6 +61,7 @@ private fun VideoDetailScreen(
         val video = videoProvider() ?: return
         ImageLoadableView.Thumbnail(
             url = video.thumbnail.thumbnailUrl,
+            contentScale = if (video.thumbnail.isLandscape) ContentScale.FillWidth else ContentScale.FillHeight,
             modifier = Modifier
                 .then(thumbnailModifier)
                 .fillMaxWidth()

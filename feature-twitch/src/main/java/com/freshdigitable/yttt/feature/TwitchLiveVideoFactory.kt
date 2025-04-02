@@ -46,6 +46,7 @@ internal data class TwitchUpcomingLiveVideo(
     override val url: String get() = schedule.url
     override val title: String get() = schedule.title
     override val thumbnailUrl: String get() = schedule.getThumbnailUrl(width = 240, height = 360)
+    override val isLandscape: Boolean get() = false
     override val description: String get() = ""
     override val viewerCount: BigInteger? get() = null
 }

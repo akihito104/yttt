@@ -9,6 +9,7 @@ interface LiveVideoThumbnail {
     val id: LiveVideo.Id
     val title: String
     val thumbnailUrl: String
+    val isLandscape: Boolean get() = true
 
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
