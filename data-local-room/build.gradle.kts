@@ -28,6 +28,10 @@ android {
         }
     }
 
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
+
     room {
         schemaDirectory("$projectDir/schemas")
     }
@@ -56,5 +60,6 @@ dependencies {
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.assertj.core)
     androidTestImplementation(libs.turbine)
+    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)
 }

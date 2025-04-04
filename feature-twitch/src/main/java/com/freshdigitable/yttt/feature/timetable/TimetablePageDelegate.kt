@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.feature.create
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -28,10 +27,6 @@ internal class FetchTwitchUpcomingItemSourceUseCase @Inject constructor(
 
     override fun invoke(): Flow<List<LiveVideo<*>>> = repository.upcoming.map { upcoming ->
         val week = dateTimeProvider.now() + UPCOMING_LIMIT
-        upcoming.filter { it.segments != null }.flatMap { u ->
-            checkNotNull(u.segments).filter { it.startTime.isBefore(week) }
-                .map { TwitchLiveSchedule.create(u.broadcaster, it) }
-                .map { LiveVideo.create(it) }
-        }
+        upcoming.filter { it.schedule.startTime.isBefore(week) }.map { LiveVideo.create(it) }
     }
 }

@@ -88,7 +88,7 @@ class TwitchRepository @Inject constructor(
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> {
-        val cache = localDataSource.fetchCategory(id)
+        val cache = localDataSource.fetchCategory(id).filter { it.artUrlBase != null }
         val remoteIds = id - cache.map { it.id }.toSet()
         if (remoteIds.isEmpty()) {
             return cache

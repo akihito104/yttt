@@ -4,7 +4,7 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -17,7 +17,6 @@ import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
 import java.time.Duration
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -66,7 +65,7 @@ internal class TwitchLocalDataSource @Inject constructor(
         id: TwitchUser.Id,
         maxCount: Int
     ): List<TwitchChannelSchedule> {
-        val schedule = dao.findChannelSchedule(id, current = dateTimeProvider.now())
+        val schedule = dao.findChannelSchedule(id)
         val current = dateTimeProvider.now()
         val finished = schedule.mapNotNull { it.segments }.flatten()
             .filter { it.endTime == null || current.isAfter(it.endTime) }
@@ -74,7 +73,7 @@ internal class TwitchLocalDataSource @Inject constructor(
             return schedule
         }
         dao.removeChannelStreamSchedulesByIds(finished.map { it.id })
-        return dao.findChannelSchedule(id, current = dateTimeProvider.now())
+        return dao.findChannelSchedule(id)
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
@@ -110,27 +109,7 @@ internal class TwitchLocalDataSource @Inject constructor(
     }
 
     override val onAir: Flow<List<TwitchLiveStream>> = dao.watchStream()
-    override val upcoming: Flow<List<TwitchLiveChannelSchedule>> =
-        combine(dao.watchChannelSchedule(), dao.categories) { schedule, category -> // FIXME
-            if (category.isEmpty()) {
-                return@combine schedule
-            }
-            schedule.map { sc ->
-                val seg = sc.segments?.map { s ->
-                    val cat = s.category?.let { category[it.id] } ?: s.category
-                    if (cat != null && cat != s.category) {
-                        object : TwitchChannelSchedule.Stream by s {
-                            override val category: TwitchCategory get() = cat
-                        }
-                    } else {
-                        s
-                    }
-                }
-                object : TwitchLiveChannelSchedule by sc {
-                    override val segments: List<TwitchChannelSchedule.Stream>? get() = seg
-                }
-            }
-        }
+    override val upcoming: Flow<List<TwitchLiveSchedule>> = dao.watchLiveSchedule()
 
     override suspend fun fetchStreamDetail(
         id: TwitchVideo.TwitchVideoId,

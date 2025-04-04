@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.Broadcaster
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.FollowingStream
 import com.freshdigitable.yttt.data.model.LiveSubscription
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -226,6 +227,9 @@ interface FakeRemoteSourceModule {
                 maxCount: Int,
             ): List<TwitchChannelSchedule> = throw NotImplementedError()
 
+            override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
+                throw NotImplementedError()
+
             override suspend fun fetchVideosByUserId(
                 id: TwitchUser.Id,
                 itemCount: Int,
@@ -244,6 +248,6 @@ interface InMemoryDbModule {
         @Provides
         @Singleton
         fun provideInMemoryDb(@ApplicationContext context: Context): AppDatabase =
-            DbModule.provideInMemoryDb(context)
+            AppDatabase.createInMemory(context)
     }
 }

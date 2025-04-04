@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local
 
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
@@ -190,7 +191,7 @@ private fun streamSchedule(
     override val endTime: Instant? get() = startTime + duration
     override val title: String get() = "title"
     override val canceledUntil: String? get() = null
-    override val category: TwitchChannelSchedule.StreamCategory? get() = null
+    override val category: TwitchCategory? get() = null
     override val isRecurring: Boolean get() = true
 }
 

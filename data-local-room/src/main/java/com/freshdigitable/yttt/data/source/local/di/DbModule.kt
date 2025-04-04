@@ -1,8 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.di
 
 import android.content.Context
-import androidx.annotation.VisibleForTesting
-import androidx.room.Room
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
@@ -30,12 +28,7 @@ object DbModule {
     @Singleton
     @Provides
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        Room.databaseBuilder(context, AppDatabase::class.java, "ytttdb")
-            .build()
-
-    @VisibleForTesting
-    fun provideInMemoryDb(context: Context): AppDatabase =
-        Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        AppDatabase.create(context)
 }
 
 @Module
