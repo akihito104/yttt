@@ -78,6 +78,7 @@ androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room-ktx
 androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "room-ktx" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room-ktx" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room-ktx" }
+androidx-room-testing = { module = "androidx.room:room-testing", version.ref = "room-ktx" }
 androidx-work-runtime-ktx = { module = "androidx.work:work-runtime-ktx", version.ref = "work-runtime-ktx" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertjCore" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }

@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment.Companion.Top
 import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
@@ -141,8 +142,10 @@ private fun RowScope.ThumbnailView(
 ) {
     ImageLoadableView.Thumbnail(
         url = video.thumbnailUrl,
-        modifier = modifier
-            .then(Modifier.fillMaxWidth(fraction = 0.55f))
+        contentScale = if (video.isLandscape) ContentScale.FillWidth else ContentScale.FillHeight,
+        modifier = Modifier
+            .then(modifier)
+            .fillMaxWidth(fraction = 0.55f)
             .align(Top),
     )
 }
@@ -224,7 +227,7 @@ private data class LiveVideoEntity(
     override val id: LiveVideo.Id,
     override val channel: LiveChannel,
     override val title: String,
-    override val scheduledStartDateTime: Instant? = null,
+    override val scheduledStartDateTime: Instant = Instant.EPOCH,
     override val scheduledEndDateTime: Instant? = null,
     override val actualStartDateTime: Instant? = null,
     override val actualEndDateTime: Instant? = null,
@@ -232,4 +235,4 @@ private data class LiveVideoEntity(
     override val url: String,
     override val description: String,
     override val viewerCount: BigInteger?,
-) : LiveVideo<LiveVideoEntity>
+) : LiveVideo.Upcoming

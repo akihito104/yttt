@@ -6,16 +6,12 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import androidx.room.Query
-import androidx.room.Relation
-import androidx.room.Transaction
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
-import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_ALIAS
-import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_PREFIX
-import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_USER_DETAIL
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
@@ -42,6 +38,9 @@ internal class TwitchChannelVacationScheduleTable(
         @Upsert
         suspend fun addChannelVacationSchedules(streams: Collection<TwitchChannelVacationScheduleTable>)
 
+        @Query("SELECT * FROM twitch_channel_schedule_vacation WHERE user_id = :userId")
+        suspend fun findVacationById(userId: TwitchUser.Id): TwitchChannelVacationScheduleTable?
+
         @Query("DELETE FROM twitch_channel_schedule_vacation WHERE user_id IN (:ids)")
         suspend fun removeChannelVacationSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
 
@@ -65,34 +64,36 @@ internal class TwitchChannelVacationSchedule(
             parentColumns = ["id"],
             childColumns = ["user_id"],
         ),
+        ForeignKey(
+            entity = TwitchCategoryTable::class,
+            parentColumns = ["id"],
+            childColumns = ["category_id"],
+        ),
     ],
 )
 internal class TwitchStreamScheduleTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
-    override val id: TwitchChannelSchedule.Stream.Id,
+    val id: TwitchChannelSchedule.Stream.Id,
     @ColumnInfo(name = "start_time")
-    override val startTime: Instant,
+    val startTime: Instant,
     @ColumnInfo(name = "end_time")
-    override val endTime: Instant?,
+    val endTime: Instant?,
     @ColumnInfo(name = "title")
-    override val title: String,
+    val title: String,
     @ColumnInfo(name = "canceled_until")
-    override val canceledUntil: String?,
-    @Embedded
-    override val category: TwitchStreamCategory?,
+    val canceledUntil: String?,
+    @ColumnInfo(name = "category_id", index = true)
+    val categoryId: TwitchCategory.Id?,
     @ColumnInfo(name = "is_recurring")
-    override val isRecurring: Boolean,
+    val isRecurring: Boolean,
     @ColumnInfo(name = "user_id", index = true)
     val userId: TwitchUser.Id,
-) : TwitchChannelSchedule.Stream {
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addChannelStreamSchedules(streams: Collection<TwitchStreamScheduleTable>)
-
-        @Query("SELECT * FROM twitch_channel_schedule_stream AS s WHERE s.id = :id")
-        suspend fun findStreamScheduleEntity(id: TwitchChannelSchedule.Stream.Id): TwitchStreamScheduleTable?
 
         @Query("DELETE FROM twitch_channel_schedule_stream WHERE user_id IN (:ids)")
         suspend fun removeChannelStreamSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
@@ -105,41 +106,38 @@ internal class TwitchStreamScheduleTable(
     }
 }
 
-internal class TwitchChannelScheduleDb(
-    @Relation(
-        parentColumn = "${SQL_EMBED_PREFIX}id",
-        entityColumn = "user_id"
-    )
-    override val segments: List<TwitchStreamScheduleTable>?,
-    @Embedded(SQL_EMBED_PREFIX)
-    override val broadcaster: TwitchUserDetailDbView,
-    @Embedded
-    override val vacation: TwitchChannelVacationSchedule?,
-) : TwitchLiveChannelSchedule {
-    @androidx.room.Dao
-    internal interface Dao {
-        @Transaction
-        @Query(
-            "SELECT s.vacation_start, s.vacation_end, $SQL_EMBED_ALIAS " +
-                "FROM (SELECT ss.* FROM twitch_channel_schedule_vacation AS ss " +
-                " INNER JOIN twitch_channel_schedule_expire AS e ON ss.user_id = e.user_id " +
-                " WHERE :current < e.expired_at " +
-                ") AS s " +
-                "INNER JOIN ($SQL_USER_DETAIL) AS u ON s.user_id = u.id " +
-                "WHERE u.id = :id"
-        )
-        suspend fun findChannelSchedule(
-            id: TwitchUser.Id,
-            current: Instant,
-        ): List<TwitchChannelScheduleDb>
+internal class TwitchChannelScheduleStream(
+    @Embedded private val schedule: TwitchStreamScheduleTable,
+    @ColumnInfo(name = "category_name") private val categoryName: String?,
+    @ColumnInfo(name = "category_art_url_base") private val categoryArtUrlBase: String?,
+    @ColumnInfo(name = "category_igdb_id") private val categoryIgdbId: String?,
+) : TwitchChannelSchedule.Stream {
+    override val id: TwitchChannelSchedule.Stream.Id get() = schedule.id
+    override val startTime: Instant get() = schedule.startTime
+    override val endTime: Instant? get() = schedule.endTime
+    override val title: String get() = schedule.title
+    override val canceledUntil: String? get() = schedule.canceledUntil
+    override val isRecurring: Boolean get() = schedule.isRecurring
+    val userId: TwitchUser.Id get() = schedule.userId
+    override val category: TwitchCategory?
+        get() = schedule.categoryId?.let {
+            TwitchCategoryTable(it, categoryName ?: "", categoryArtUrlBase, categoryIgdbId)
+        }
 
-        @Transaction
-        @Query(
-            "SELECT s.vacation_start, s.vacation_end, $SQL_EMBED_ALIAS " +
-                "FROM twitch_channel_schedule_vacation AS s " +
-                "INNER JOIN ($SQL_USER_DETAIL) AS u ON s.user_id = u.id"
-        )
-        fun watchChannelSchedule(): Flow<List<TwitchChannelScheduleDb>>
+    @androidx.room.Dao
+    interface Dao {
+        companion object {
+            internal const val SQL_STREAM_SCHEDULE =
+                "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base, c.igdb_id AS category_igdb_id " +
+                    "FROM twitch_channel_schedule_stream AS s " +
+                    "LEFT OUTER JOIN twitch_category AS c ON s.category_id = c.id"
+        }
+
+        @Query("$SQL_STREAM_SCHEDULE WHERE s.id = :id")
+        suspend fun findStreamScheduleEntity(id: TwitchChannelSchedule.Stream.Id): TwitchChannelScheduleStream?
+
+        @Query("$SQL_STREAM_SCHEDULE WHERE s.user_id = :id")
+        suspend fun findStreamScheduleByUserId(id: TwitchUser.Id): List<TwitchChannelScheduleStream>
     }
 }
 
@@ -173,22 +171,64 @@ internal class TwitchChannelScheduleExpireTable(
     }
 }
 
-internal class TwitchStreamCategory(
-    @ColumnInfo(name = "category_id")
-    override val id: String,
-    @ColumnInfo(name = "category_name")
+@Entity(tableName = "twitch_category")
+internal class TwitchCategoryTable(
+    @PrimaryKey
+    @ColumnInfo(name = "id")
+    override val id: TwitchCategory.Id,
+    @ColumnInfo(name = "name")
     override val name: String,
-) : TwitchChannelSchedule.StreamCategory
+    @ColumnInfo(name = "art_url_base")
+    override val artUrlBase: String? = null,
+    @ColumnInfo(name = "igdb_id")
+    override val igdbId: String? = null,
+) : TwitchCategory {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Query("SELECT * FROM twitch_category WHERE id IN (:id)")
+        suspend fun findCategoryById(id: Set<TwitchCategory.Id>): List<TwitchCategoryTable>
+
+        @Upsert
+        suspend fun addCategories(categories: Collection<TwitchCategoryTable>)
+
+        @Query("DELETE FROM twitch_category")
+        override suspend fun deleteTable()
+    }
+}
+
+internal class TwitchLiveScheduleDb(
+    @Embedded(prefix = TwitchUserDetailDbView.SQL_EMBED_PREFIX)
+    override val user: TwitchUserDetailDbView,
+    @Embedded
+    override val schedule: TwitchChannelScheduleStream,
+) : TwitchLiveSchedule {
+    override val thumbnailUrlBase: String get() = schedule.category?.artUrlBase ?: ""
+
+    @androidx.room.Dao
+    interface Dao {
+        @Query(
+            "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base, " +
+                "c.igdb_id AS category_igdb_id, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
+                "FROM twitch_channel_schedule_stream AS s " +
+                "INNER JOIN twitch_category AS c ON s.category_id = c.id " +
+                "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id"
+        )
+        fun watchLiveSchedule(): Flow<List<TwitchLiveScheduleDb>>
+    }
+}
 
 internal interface TwitchScheduleDaoProviders {
     val twitchChannelScheduleVacationDao: TwitchChannelVacationScheduleTable.Dao
     val twitchChannelScheduleStreamDao: TwitchStreamScheduleTable.Dao
     val twitchChannelScheduleExpireDao: TwitchChannelScheduleExpireTable.Dao
-    val twitchScheduleDbDao: TwitchChannelScheduleDb.Dao
+    val twitchScheduleStreamDao: TwitchChannelScheduleStream.Dao
+    val twitchCategoryDao: TwitchCategoryTable.Dao
+    val twitchLiveScheduleDao: TwitchLiveScheduleDb.Dao
 }
 
 internal interface TwitchScheduleDao : TwitchChannelVacationScheduleTable.Dao,
-    TwitchStreamScheduleTable.Dao, TwitchChannelScheduleExpireTable.Dao, TwitchChannelScheduleDb.Dao
+    TwitchStreamScheduleTable.Dao, TwitchChannelScheduleExpireTable.Dao,
+    TwitchCategoryTable.Dao, TwitchChannelScheduleStream.Dao, TwitchLiveScheduleDb.Dao
 
 internal class TwitchScheduleDaoImpl @Inject constructor(
     private val db: TwitchScheduleDaoProviders,
@@ -196,12 +236,15 @@ internal class TwitchScheduleDaoImpl @Inject constructor(
     TwitchChannelVacationScheduleTable.Dao by db.twitchChannelScheduleVacationDao,
     TwitchStreamScheduleTable.Dao by db.twitchChannelScheduleStreamDao,
     TwitchChannelScheduleExpireTable.Dao by db.twitchChannelScheduleExpireDao,
-    TwitchChannelScheduleDb.Dao by db.twitchScheduleDbDao {
+    TwitchChannelScheduleStream.Dao by db.twitchScheduleStreamDao,
+    TwitchCategoryTable.Dao by db.twitchCategoryDao,
+    TwitchLiveScheduleDb.Dao by db.twitchLiveScheduleDao {
     override suspend fun deleteTable() {
         listOf(
             db.twitchChannelScheduleStreamDao,
             db.twitchChannelScheduleVacationDao,
             db.twitchChannelScheduleExpireDao,
+            db.twitchCategoryDao,
         ).forEach { it.deleteTable() }
     }
 }

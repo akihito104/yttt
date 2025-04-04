@@ -29,7 +29,7 @@ internal data class TwitchOnAirLiveVideo(
     override val url: String get() = stream.url
     override val id: LiveVideo.Id get() = stream.id.mapTo()
     override val title: String get() = stream.title
-    override val thumbnailUrl: String get() = stream.getThumbnailUrl()
+    override val thumbnailUrl: String get() = stream.getThumbnailUrl(width = 640, height = 360)
     override val description: String get() = "${stream.gameName} tag: ${stream.tags.joinToString()}"
     override val viewerCount: BigInteger? get() = BigInteger.valueOf(stream.viewCount.toLong())
 }
@@ -45,7 +45,8 @@ internal data class TwitchUpcomingLiveVideo(
     override val actualEndDateTime: Instant? get() = null
     override val url: String get() = schedule.url
     override val title: String get() = schedule.title
-    override val thumbnailUrl: String get() = schedule.getThumbnailUrl()
+    override val thumbnailUrl: String get() = schedule.getThumbnailUrl(width = 240, height = 360)
+    override val isLandscape: Boolean get() = false
     override val description: String get() = ""
     override val viewerCount: BigInteger? get() = null
 }

@@ -3,7 +3,9 @@ package com.freshdigitable.yttt.di
 import com.freshdigitable.yttt.data.TwitchSubscriptionPagerFactory
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.Twitch
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchId
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchVideo
@@ -18,8 +20,6 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
-import com.google.gson.JsonSerializationContext
-import com.google.gson.JsonSerializer
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
@@ -31,6 +31,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
 import okhttp3.OkHttpClient
+import retrofit2.Converter
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.lang.reflect.Type
@@ -48,16 +49,11 @@ internal interface TwitchModule {
                 deserialize = { it?.let { s -> Instant.parse(s) } },
                 serialize = { it?.toString() },
             )
-            .registerTypeAdapter<TwitchUser.Id, String>(
-                deserialize = { it?.let { s -> TwitchUser.Id(s) } },
-                serialize = { it?.value },
-            )
-            .registerJsonDeserializer<TwitchStream.Id, String> { it?.let { s -> TwitchStream.Id(s) } }
-            .registerJsonDeserializer<TwitchVideo.Id, String> { it?.let { s -> TwitchVideo.Id(s) } }
-            .registerTypeAdapter<TwitchChannelSchedule.Stream.Id, String>(
-                deserialize = { it?.let { s -> TwitchChannelSchedule.Stream.Id(s) } },
-                serialize = { it?.value },
-            )
+            .registerIdJsonDeserializer { it?.let { s -> TwitchUser.Id(s) } }
+            .registerIdJsonDeserializer { it?.let { s -> TwitchStream.Id(s) } }
+            .registerIdJsonDeserializer { it?.let { s -> TwitchVideo.Id(s) } }
+            .registerIdJsonDeserializer { it?.let { s -> TwitchChannelSchedule.Stream.Id(s) } }
+            .registerIdJsonDeserializer { it?.let { s -> TwitchCategory.Id(s) } }
             .create()
 
         @Provides
@@ -73,6 +69,18 @@ internal interface TwitchModule {
             return Retrofit.Builder()
                 .baseUrl("https://api.twitch.tv/")
                 .addConverterFactory(GsonConverterFactory.create(gson))
+                .addConverterFactory(object : Converter.Factory() {
+                    override fun stringConverter(
+                        type: Type,
+                        annotations: Array<out Annotation>,
+                        retrofit: Retrofit
+                    ): Converter<*, String>? {
+                        if (type == TwitchCategory.Id::class.java) {
+                            return Converter<TwitchId, String> { it.value }
+                        }
+                        return null
+                    }
+                })
                 .client(client)
                 .build()
         }
@@ -90,6 +98,10 @@ internal interface TwitchModule {
                 .build()
             return retrofit.create(TwitchOauthService::class.java)
         }
+
+        private inline fun <reified O : TwitchId> GsonBuilder.registerIdJsonDeserializer(
+            crossinline deserialize: (String?) -> O?,
+        ): GsonBuilder = registerJsonDeserializer<O, String>(deserialize)
 
         private inline fun <reified O, reified S> GsonBuilder.registerJsonDeserializer(
             crossinline deserialize: (S?) -> O?,
@@ -109,16 +121,6 @@ internal interface TwitchModule {
                 }
                 return deserialize(v as S?)
             }
-        })
-
-        private inline fun <reified O, reified S> GsonBuilder.registerJsonSerializer(
-            crossinline serialize: (O?) -> S?,
-        ): GsonBuilder = registerTypeAdapter(O::class.java, object : JsonSerializer<O?> {
-            override fun serialize(
-                src: O?,
-                typeOfSrc: Type,
-                context: JsonSerializationContext,
-            ): JsonElement = context.serialize(serialize(src), S::class.java)
         })
 
         private inline fun <reified O, reified S> GsonBuilder.registerTypeAdapter(

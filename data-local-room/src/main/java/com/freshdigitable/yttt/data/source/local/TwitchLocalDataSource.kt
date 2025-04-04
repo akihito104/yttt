@@ -1,9 +1,10 @@
 package com.freshdigitable.yttt.data.source.local
 
 import com.freshdigitable.yttt.data.model.DateTimeProvider
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
@@ -64,7 +65,7 @@ internal class TwitchLocalDataSource @Inject constructor(
         id: TwitchUser.Id,
         maxCount: Int
     ): List<TwitchChannelSchedule> {
-        val schedule = dao.findChannelSchedule(id, current = dateTimeProvider.now())
+        val schedule = dao.findChannelSchedule(id)
         val current = dateTimeProvider.now()
         val finished = schedule.mapNotNull { it.segments }.flatten()
             .filter { it.endTime == null || current.isAfter(it.endTime) }
@@ -72,7 +73,14 @@ internal class TwitchLocalDataSource @Inject constructor(
             return schedule
         }
         dao.removeChannelStreamSchedulesByIds(finished.map { it.id })
-        return dao.findChannelSchedule(id, current = dateTimeProvider.now())
+        return dao.findChannelSchedule(id)
+    }
+
+    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
+        dao.fetchCategory(id)
+
+    override suspend fun addCategory(category: Collection<TwitchCategory>) {
+        dao.addCategory(category)
     }
 
     override suspend fun setFollowedStreamSchedule(
@@ -101,7 +109,7 @@ internal class TwitchLocalDataSource @Inject constructor(
     }
 
     override val onAir: Flow<List<TwitchLiveStream>> = dao.watchStream()
-    override val upcoming: Flow<List<TwitchLiveChannelSchedule>> = dao.watchChannelSchedule()
+    override val upcoming: Flow<List<TwitchLiveSchedule>> = dao.watchLiveSchedule()
 
     override suspend fun fetchStreamDetail(
         id: TwitchVideo.TwitchVideoId,

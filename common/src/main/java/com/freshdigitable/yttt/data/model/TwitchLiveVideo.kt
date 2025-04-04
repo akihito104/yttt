@@ -7,27 +7,32 @@ interface TwitchLiveVideo<T : TwitchVideo.TwitchVideoId> : TwitchVideo<T> {
 interface TwitchLiveStream : TwitchStream, TwitchLiveVideo<TwitchStream.Id>
 interface TwitchLiveSchedule : TwitchLiveVideo<TwitchChannelSchedule.Stream.Id> {
     val schedule: TwitchChannelSchedule.Stream
+    override val id: TwitchChannelSchedule.Stream.Id get() = schedule.id
+    override val title: String get() = schedule.title
+    override val url: String get() = "https://twitch.tv/${user.loginName}/schedule?seriesID=${id.value}"
+    override val viewCount: Int get() = 0
+    override val language: String get() = ""
+    override fun getThumbnailUrl(width: Int, height: Int): String {
+        return if (thumbnailUrlBase.isEmpty()) {
+            ""
+        } else {
+            super.getThumbnailUrl(width, height)
+        }
+    }
 
     companion object {
         fun create(
             user: TwitchUserDetail,
             schedule: TwitchChannelSchedule.Stream,
-        ): TwitchLiveSchedule = Impl(user, schedule)
+            thumbnailUrlBase: String? = schedule.category?.artUrlBase,
+        ): TwitchLiveSchedule = Impl(user, schedule, thumbnailUrlBase ?: "")
     }
 
     private data class Impl(
         override val user: TwitchUserDetail,
         override val schedule: TwitchChannelSchedule.Stream,
-    ) : TwitchLiveSchedule {
-        override val id: TwitchChannelSchedule.Stream.Id get() = schedule.id
-        override val title: String get() = schedule.title
-        override val url: String get() = "https://twitch.tv/${user.loginName}/schedule?seriesID=${id.value}"
-        override val thumbnailUrlBase: String = ""
-        override val viewCount: Int = 0
-        override val language: String = ""
-
-        override fun getThumbnailUrl(width: Int, height: Int): String = ""
-    }
+        override val thumbnailUrlBase: String = "",
+    ) : TwitchLiveSchedule
 }
 
 interface TwitchLiveChannelSchedule : TwitchChannelSchedule {

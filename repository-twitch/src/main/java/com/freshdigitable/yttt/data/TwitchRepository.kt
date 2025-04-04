@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.DateTimeProvider
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
@@ -84,6 +85,17 @@ class TwitchRepository @Inject constructor(
         val res = remoteDataSource.fetchFollowedStreamSchedule(id, maxCount)
         localDataSource.setFollowedStreamSchedule(id, res)
         return res
+    }
+
+    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> {
+        val cache = localDataSource.fetchCategory(id).filter { it.artUrlBase != null }
+        val remoteIds = id - cache.map { it.id }.toSet()
+        if (remoteIds.isEmpty()) {
+            return cache
+        }
+        val remote = remoteDataSource.fetchCategory(remoteIds)
+        localDataSource.addCategory(remote)
+        return cache + remote
     }
 
     override suspend fun fetchVideosByUserId(
