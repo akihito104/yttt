@@ -55,7 +55,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
 
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> =
         fetch {
-            val response = getUser(id = ids?.map { it.value }).execute()
+            val response = getUser(id = ids).execute()
             response.body()?.data ?: return@fetch emptyList()
         }
 
@@ -66,14 +66,14 @@ internal class TwitchRemoteDataSource @Inject constructor(
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings {
         val items =
-            fetchAll { getFollowing(userId = userId.value, itemsPerPage = 100, cursor = it) }
+            fetchAll { getFollowing(userId = userId, itemsPerPage = 100, cursor = it) }
         val fetchedAt = dateTimeProvider.now()
         return TwitchFollowings.createAtFetched(userId, items, fetchedAt)
     }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
         val id = me ?: fetchMe()?.id ?: return null
-        val s = fetchAll { getFollowedStreams(id.value, cursor = it) }
+        val s = fetchAll { getFollowedStreams(id, cursor = it) }
         return TwitchStreams.createAtFetched(id, s, dateTimeProvider.now())
     }
 
@@ -81,7 +81,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
         id: TwitchUser.Id,
         maxCount: Int,
     ): List<TwitchChannelSchedule> = fetchAll(maxCount) {
-        getChannelStreamSchedule(broadcasterId = id.value, cursor = it)
+        getChannelStreamSchedule(broadcasterId = id, cursor = it)
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> {
@@ -93,7 +93,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
         id: TwitchUser.Id,
         itemCount: Int
     ): List<TwitchVideoDetail> {
-        val resp = fetch { getVideoByUserId(userId = id.value, itemsPerPage = itemCount).execute() }
+        val resp = fetch { getVideoByUserId(userId = id, itemsPerPage = itemCount).execute() }
         return resp.body()?.data?.toList() ?: emptyList()
     }
 }

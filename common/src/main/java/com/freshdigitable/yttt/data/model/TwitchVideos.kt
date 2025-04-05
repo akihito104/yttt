@@ -36,7 +36,7 @@ interface TwitchVideoDetail : TwitchVideo<TwitchVideo.Id> {
 }
 
 interface TwitchStream : TwitchVideo<TwitchStream.Id> {
-    val gameId: String
+    val gameId: TwitchCategory.Id
     val gameName: String
     val type: String
     val startedAt: Instant

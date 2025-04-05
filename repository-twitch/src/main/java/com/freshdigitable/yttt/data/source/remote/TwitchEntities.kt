@@ -1,6 +1,21 @@
-package com.freshdigitable.yttt.data.model
+package com.freshdigitable.yttt.data.source.remote
 
+import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.TwitchCategory
+import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchId
+import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchVideo
+import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
+import java.lang.reflect.Type
 import java.time.Instant
 
 internal class TwitchUserDetailRemote(
@@ -51,7 +66,7 @@ internal data class FollowingStream(
     @SerializedName("user_name")
     val displayName: String,
     @SerializedName("game_id")
-    override val gameId: String,
+    override val gameId: TwitchCategory.Id,
     @SerializedName("game_name")
     override val gameName: String,
     @SerializedName("type")
@@ -187,3 +202,42 @@ internal class TwitchGameRemote(
     @SerializedName("box_art_url") override val artUrlBase: String?,
     @SerializedName("igdb_id") override val igdbId: String?,
 ) : TwitchCategory
+
+// gson just only deserializes in this project
+internal fun createGson(): Gson = GsonBuilder()
+    .registerJsonDeserializer { Instant.parse(it.asString) }
+    .registerTypeHierarchyDeserializer<TwitchId>(
+        mapOf(
+            deserializerWithType { TwitchUser.Id(it.asString) },
+            deserializerWithType { TwitchStream.Id(it.asString) },
+            deserializerWithType { TwitchCategory.Id(it.asString) },
+            deserializerWithType { TwitchChannelSchedule.Stream.Id(it.asString) },
+            deserializerWithType { TwitchVideo.Id(it.asString) },
+        )
+    )
+    .create()
+
+typealias Deserializer<T> = (JsonElement) -> T
+
+private inline fun <reified T> deserializerWithType(noinline deserialize: Deserializer<T>): Pair<Class<T>, (JsonElement) -> T> =
+    T::class.java to deserialize
+
+private inline fun <reified T> GsonBuilder.registerTypeHierarchyDeserializer(
+    table: Map<Type, Deserializer<T>>,
+): GsonBuilder = registerTypeHierarchyAdapter(T::class.java, object : JsonDeserializer<T> {
+    override fun deserialize(
+        json: JsonElement,
+        typeOfT: Type,
+        context: JsonDeserializationContext,
+    ): T = checkNotNull(table[typeOfT]?.invoke(json)) { "unsupported type: $typeOfT" }
+})
+
+private inline fun <reified O> GsonBuilder.registerJsonDeserializer(
+    crossinline deserialize: Deserializer<O>,
+): GsonBuilder = registerTypeAdapter(O::class.java, object : JsonDeserializer<O> {
+    override fun deserialize(
+        json: JsonElement,
+        typeOfT: Type,
+        context: JsonDeserializationContext,
+    ): O = deserialize(json)
+})

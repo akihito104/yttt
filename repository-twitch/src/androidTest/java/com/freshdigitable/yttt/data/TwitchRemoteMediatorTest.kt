@@ -4,9 +4,7 @@ import android.content.Context
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.testing.asSnapshot
-import com.freshdigitable.yttt.data.model.Broadcaster
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.FollowingStream
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -15,11 +13,13 @@ import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.model.TwitchUserDetailRemote
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.di.DbModule
+import com.freshdigitable.yttt.data.source.remote.Broadcaster
+import com.freshdigitable.yttt.data.source.remote.FollowingStream
+import com.freshdigitable.yttt.data.source.remote.TwitchUserDetailRemote
 import com.freshdigitable.yttt.di.DateTimeModule
 import com.freshdigitable.yttt.di.TwitchModule
 import com.freshdigitable.yttt.logD
@@ -149,7 +149,7 @@ class TwitchRemoteMediatorTest {
             userId = broadcaster.id.value,
             loginName = broadcaster.loginName,
             displayName = broadcaster.displayName,
-            gameId = "game",
+            gameId = TwitchCategory.Id("game"),
             gameName = "gameName",
             type = "type",
             title = "title",
