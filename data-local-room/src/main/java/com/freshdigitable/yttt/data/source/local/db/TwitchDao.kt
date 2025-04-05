@@ -6,7 +6,6 @@ import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
-import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
@@ -107,11 +106,7 @@ internal class TwitchDao @Inject constructor(
 
     suspend fun findStreamSchedule(
         id: TwitchChannelSchedule.Stream.Id
-    ): TwitchLiveVideo<TwitchChannelSchedule.Stream.Id>? = db.withTransaction {
-        val schedule = findStreamScheduleEntity(id) ?: return@withTransaction null
-        val user = findUserDetail(setOf(schedule.userId), Instant.EPOCH).first()
-        TwitchLiveSchedule.create(user, schedule, schedule.category?.artUrlBase)
-    }
+    ): TwitchLiveVideo<TwitchChannelSchedule.Stream.Id>? = findLiveSchedule(id)
 
     suspend fun findChannelSchedule(
         userId: TwitchUser.Id,

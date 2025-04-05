@@ -206,14 +206,20 @@ internal class TwitchLiveScheduleDb(
 
     @androidx.room.Dao
     interface Dao {
-        @Query(
-            "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base, " +
-                "c.igdb_id AS category_igdb_id, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
-                "FROM twitch_channel_schedule_stream AS s " +
-                "INNER JOIN twitch_category AS c ON s.category_id = c.id " +
-                "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id"
-        )
+        companion object {
+            internal const val SQL_LIVE_SCHEDULE =
+                "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base, " +
+                    "c.igdb_id AS category_igdb_id, ${TwitchUserDetailDbView.SQL_EMBED_ALIAS} " +
+                    "FROM twitch_channel_schedule_stream AS s " +
+                    "INNER JOIN twitch_category AS c ON s.category_id = c.id " +
+                    "INNER JOIN (${TwitchUserDetailDbView.SQL_USER_DETAIL}) AS u ON s.user_id = u.id"
+        }
+
+        @Query(SQL_LIVE_SCHEDULE)
         fun watchLiveSchedule(): Flow<List<TwitchLiveScheduleDb>>
+
+        @Query("$SQL_LIVE_SCHEDULE WHERE s.id = :id")
+        suspend fun findLiveSchedule(id: TwitchChannelSchedule.Stream.Id): TwitchLiveScheduleDb?
     }
 }
 
