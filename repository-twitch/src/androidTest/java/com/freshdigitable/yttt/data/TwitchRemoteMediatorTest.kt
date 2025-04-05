@@ -225,7 +225,7 @@ interface FakeRemoteSourceModule {
             override suspend fun fetchFollowedStreamSchedule(
                 id: TwitchUser.Id,
                 maxCount: Int,
-            ): List<TwitchChannelSchedule> = throw NotImplementedError()
+            ): TwitchChannelSchedule = throw NotImplementedError()
 
             override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
                 throw NotImplementedError()

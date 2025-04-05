@@ -77,9 +77,9 @@ class TwitchRepository @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
-    ): List<TwitchChannelSchedule> {
+    ): TwitchChannelSchedule? {
         val cache = localDataSource.fetchFollowedStreamSchedule(id)
-        if (cache.isNotEmpty()) {
+        if (cache != null) {
             return cache
         }
         val res = remoteDataSource.fetchFollowedStreamSchedule(id, maxCount)

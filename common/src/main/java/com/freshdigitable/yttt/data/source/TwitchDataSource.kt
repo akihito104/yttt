@@ -23,7 +23,7 @@ interface TwitchDataSource {
     suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int = 10,
-    ): List<TwitchChannelSchedule>
+    ): TwitchChannelSchedule?
 
     suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory>
 
@@ -40,7 +40,7 @@ interface TwitchDataSource {
         suspend fun replaceAllFollowings(followings: TwitchFollowings)
         suspend fun setFollowedStreamSchedule(
             userId: TwitchUser.Id,
-            schedule: Collection<TwitchChannelSchedule>,
+            schedule: TwitchChannelSchedule?,
         )
 
         suspend fun deleteAllTables()

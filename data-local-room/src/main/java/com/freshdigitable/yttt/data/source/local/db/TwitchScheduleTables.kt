@@ -136,8 +136,11 @@ internal class TwitchChannelScheduleStream(
         @Query("$SQL_STREAM_SCHEDULE WHERE s.id = :id")
         suspend fun findStreamScheduleEntity(id: TwitchChannelSchedule.Stream.Id): TwitchChannelScheduleStream?
 
-        @Query("$SQL_STREAM_SCHEDULE WHERE s.user_id = :id")
-        suspend fun findStreamScheduleByUserId(id: TwitchUser.Id): List<TwitchChannelScheduleStream>
+        @Query("$SQL_STREAM_SCHEDULE WHERE s.user_id = :id AND (s.end_time IS NOT NULL AND :current < s.end_time)")
+        suspend fun findStreamScheduleByUserId(
+            id: TwitchUser.Id,
+            current: Instant,
+        ): List<TwitchChannelScheduleStream>
     }
 }
 
@@ -162,6 +165,9 @@ internal class TwitchChannelScheduleExpireTable(
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addChannelScheduleExpireEntity(schedule: Collection<TwitchChannelScheduleExpireTable>)
+
+        @Query("SELECT * FROM twitch_channel_schedule_expire WHERE user_id = :userId")
+        suspend fun findChannelScheduleExpire(userId: TwitchUser.Id): TwitchChannelScheduleExpireTable?
 
         @Query("DELETE FROM twitch_channel_schedule_expire WHERE user_id IN (:id)")
         suspend fun removeChannelScheduleExpireEntity(id: Collection<TwitchUser.Id>)

@@ -67,20 +67,19 @@ internal class TwitchDao @Inject constructor(
     }
 
     suspend fun replaceChannelSchedules(
-        schedule: Collection<TwitchChannelSchedule>,
+        schedule: TwitchChannelSchedule,
         expiredAt: Instant,
     ) = db.withTransaction {
-        val userIds = schedule.map { it.broadcaster.id }.toSet()
-        val streams = schedule.map { it.toStreamScheduleTable() }.flatten()
-        val category = schedule.mapNotNull { it.segments }
-            .flatMap { s -> s.mapNotNull { it.category?.toTable() } }
-        val vacations = schedule.map { it.toVacationScheduleTable() }
-        val expire = userIds.map { TwitchChannelScheduleExpireTable(it, expiredAt) }
-        removeChannelSchedules(userIds)
-        addCategories(category)
-        addChannelStreamSchedules(streams)
-        addChannelVacationSchedules(vacations)
-        addChannelScheduleExpireEntity(expire)
+        val userIds = schedule.broadcaster.id
+        val streams = schedule.toStreamScheduleTable()
+        val category = schedule.segments?.mapNotNull { it.category?.toTable() }
+        val vacations = schedule.toVacationScheduleTable()
+        val expire = TwitchChannelScheduleExpireTable(userIds, expiredAt)
+        removeChannelSchedules(setOf(userIds))
+        if (!category.isNullOrEmpty()) addCategory(category)
+        if (streams.isNotEmpty()) addChannelStreamSchedules(streams)
+        addChannelVacationSchedules(setOf(vacations))
+        addChannelScheduleExpireEntity(setOf(expire))
     }
 
     suspend fun removeChannelSchedulesByBroadcasterId(id: Collection<TwitchUser.Id>) =
@@ -110,16 +109,15 @@ internal class TwitchDao @Inject constructor(
 
     suspend fun findChannelSchedule(
         userId: TwitchUser.Id,
-    ): List<TwitchChannelSchedule> = db.withTransaction {
+        current: Instant,
+    ): TwitchChannelSchedule = db.withTransaction {
         val vacation = findVacationById(userId)
-        val schedule = findStreamScheduleByUserId(userId)
+        val schedule = findStreamScheduleByUserId(userId, current)
         val user = findUserDetail(setOf(userId), Instant.EPOCH).first()
-        listOf(
-            TwitchChannelScheduleDb(
-                segments = schedule,
-                broadcaster = user,
-                vacation = vacation?.vacation,
-            )
+        TwitchChannelScheduleDb(
+            segments = schedule,
+            broadcaster = user,
+            vacation = vacation?.vacation,
         )
     }
 

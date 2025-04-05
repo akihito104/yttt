@@ -63,17 +63,14 @@ internal class TwitchLocalDataSource @Inject constructor(
 
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
-        maxCount: Int
-    ): List<TwitchChannelSchedule> {
-        val schedule = dao.findChannelSchedule(id)
+        maxCount: Int, // ignore
+    ): TwitchChannelSchedule? {
+        val expire = dao.findChannelScheduleExpire(id)
         val current = dateTimeProvider.now()
-        val finished = schedule.mapNotNull { it.segments }.flatten()
-            .filter { it.endTime == null || current.isAfter(it.endTime) }
-        if (finished.isEmpty()) {
-            return schedule
+        if (expire != null && expire.expiredAt <= current) {
+            return null
         }
-        dao.removeChannelStreamSchedulesByIds(finished.map { it.id })
-        return dao.findChannelSchedule(id)
+        return dao.findChannelSchedule(id, current)
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
@@ -85,13 +82,13 @@ internal class TwitchLocalDataSource @Inject constructor(
 
     override suspend fun setFollowedStreamSchedule(
         userId: TwitchUser.Id,
-        schedule: Collection<TwitchChannelSchedule>,
+        schedule: TwitchChannelSchedule?
     ) {
-        val expiredAt = dateTimeProvider.now() + MAX_AGE_CHANNEL_SCHEDULE
-        if (schedule.isEmpty()) {
-            dao.updateChannelScheduleExpireEntity(userId, expiredAt)
+        val updatableAt = dateTimeProvider.now() + MAX_AGE_CHANNEL_SCHEDULE
+        if (schedule == null) {
+            dao.updateChannelScheduleExpireEntity(userId, updatableAt)
         } else {
-            dao.replaceChannelSchedules(schedule, expiredAt = expiredAt)
+            dao.replaceChannelSchedules(schedule, expiredAt = updatableAt)
         }
     }
 

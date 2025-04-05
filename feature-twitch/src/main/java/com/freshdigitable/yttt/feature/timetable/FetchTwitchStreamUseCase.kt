@@ -34,7 +34,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         val tasks = coroutineScope {
             following.map { async { twitchRepository.fetchFollowedStreamSchedule(it.id) } }
         }
-        val schedules = tasks.awaitAll().flatten()
+        val schedules = tasks.awaitAll().filterNotNull()
         t.putMetric("schedule_tasks", tasks.size.toLong())
         t.putMetric("schedule", schedules.size.toLong())
 

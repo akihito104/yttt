@@ -42,15 +42,14 @@ internal class TwitchRemoteDataSource @Inject constructor(
         crossinline call: TwitchHelixService.(String?) -> Call<P>,
     ): List<E> = fetch {
         var cursor: String? = null
-        val items = mutableListOf<E>()
-        do {
-            val response = helix.call(cursor).execute()
-            val body = response.body() ?: break
-            items.addAll(body.getItems())
-            cursor = body.pagination.cursor
-
-        } while (cursor != null && (maxCount == null || maxCount < items.size))
-        items
+        buildList {
+            do {
+                val response = helix.call(cursor).execute()
+                val body = response.body() ?: break
+                addAll(body.getItems())
+                cursor = body.pagination.cursor
+            } while (cursor != null && (maxCount == null || maxCount < size))
+        }
     }
 
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> =
@@ -80,8 +79,18 @@ internal class TwitchRemoteDataSource @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
-    ): List<TwitchChannelSchedule> = fetchAll(maxCount) {
-        getChannelStreamSchedule(broadcasterId = id, cursor = it)
+    ): TwitchChannelSchedule? {
+        val res = fetchAll(maxCount) { getChannelStreamSchedule(broadcasterId = id, cursor = it) }
+        if (res.isEmpty()) {
+            return null
+        }
+        return ChannelStreamSchedule(
+            segments = res.mapNotNull { it.segments }.flatten(),
+            broadcasterId = res.first().broadcasterId,
+            broadcasterName = res.first().broadcasterName,
+            broadcasterLogin = res.first().broadcasterLogin,
+            vacation = res.first().vacation,
+        )
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> {
