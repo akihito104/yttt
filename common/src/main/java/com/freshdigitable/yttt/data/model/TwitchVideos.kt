@@ -29,6 +29,12 @@ interface TwitchVideoDetail : TwitchVideo<TwitchVideo.Id> {
     val duration: String
     val mutedSegments: List<MutedSegment>
 
+    // A URL to a thumbnail image of the video. Before using the URL, you must replace the
+    // %{width} and %{height} placeholders with the width and height of the thumbnail you want returned.
+    // Due to current limitations, ${width} must be 320 and ${height} must be 180.
+    override fun getThumbnailUrl(width: Int, height: Int): String =
+        thumbnailUrlBase.replace("%{width}", "320").replace("%{height}", "180")
+
     interface MutedSegment {
         val duration: Int // [sec.]
         val offset: Int // [sec.]
