@@ -25,12 +25,12 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchCategoryTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchChannelScheduleExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchChannelVacationScheduleTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchDaoProviders
-import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDbView
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamIdConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamScheduleIdConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamScheduleTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserIdConverter
@@ -83,9 +83,9 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     ],
     views = [
         YouTubePlaylistItemSummaryDb::class,
-        TwitchStreamDbView::class,
+        TwitchUserDetailDbView::class,
     ],
-    version = 14,
+    version = 15,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -99,6 +99,11 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 10, to = 11),
         AutoMigration(from = 11, to = 12),
         AutoMigration(from = 12, to = 13),
+        AutoMigration(
+            from = 14,
+            to = 15,
+            spec = AppDatabase.MigrateRemoveTwitchUserDetailViewsCount::class,
+        ),
     ]
 )
 @TypeConverters(
@@ -121,6 +126,15 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
 abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProviders {
     @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
     internal class MigrateRemoveVideoVisible : AutoMigrationSpec
+
+    @DeleteColumn.Entries(
+        DeleteColumn(
+            tableName = "twitch_user_detail",
+            columnName = "views_count",
+        ),
+    )
+    internal class MigrateRemoveTwitchUserDetailViewsCount : AutoMigrationSpec
+
     companion object {
         private const val DATABASE_NAME = "ytttdb"
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =
