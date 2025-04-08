@@ -24,6 +24,11 @@ import javax.inject.Inject
             parentColumns = ["id"],
             childColumns = ["user_id"],
         ),
+        ForeignKey(
+            entity = TwitchCategoryTable::class,
+            parentColumns = ["id"],
+            childColumns = ["game_id"],
+        ),
     ],
 )
 internal class TwitchStreamTable(
@@ -40,10 +45,8 @@ internal class TwitchStreamTable(
     val viewCount: Int,
     @ColumnInfo(name = "language")
     val language: String,
-    @ColumnInfo(name = "game_id")
+    @ColumnInfo(name = "game_id", index = true)
     val gameId: TwitchCategory.Id,
-    @ColumnInfo(name = "game_name")
-    val gameName: String,
     @ColumnInfo(name = "type")
     val type: String,
     @ColumnInfo(name = "started_at")
@@ -81,8 +84,10 @@ internal data class TwitchStreamDbView(
     internal interface Dao {
         companion object {
             private const val SQL_STREAM =
-                "SELECT s.*, u.created_at, u.description, u.display_name, u.login_name, u.profile_image_url " +
-                    "FROM twitch_stream AS s INNER JOIN twitch_user_detail_view AS u ON u.user_id = s.user_id"
+                "SELECT s.*, u.created_at, u.description, u.display_name, u.login_name, u.profile_image_url, " +
+                    "c.name AS game_name FROM twitch_stream AS s " +
+                    "INNER JOIN twitch_user_detail_view AS u ON u.user_id = s.user_id " +
+                    "INNER JOIN twitch_category AS c ON c.id = s.game_id"
         }
 
         @Query("$SQL_STREAM WHERE s.id = :id")

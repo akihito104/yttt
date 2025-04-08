@@ -110,10 +110,11 @@ internal class TwitchDao @Inject constructor(
     suspend fun findChannelSchedule(
         userId: TwitchUser.Id,
         current: Instant,
-    ): TwitchChannelSchedule = db.withTransaction {
+    ): TwitchChannelSchedule? = db.withTransaction {
+        val user = findUserDetail(setOf(userId), Instant.EPOCH).firstOrNull()
+            ?: return@withTransaction null
         val vacation = findVacationById(userId)
         val schedule = findStreamScheduleByUserId(userId, current)
-        val user = findUserDetail(setOf(userId), Instant.EPOCH).first()
         TwitchChannelScheduleDb(
             segments = schedule,
             broadcaster = user,
@@ -138,6 +139,7 @@ internal class TwitchDao @Inject constructor(
         db.twitchStreamDao.deleteTable()
         setStreamExpire(TwitchStreamExpireTable(streams.followerId, streams.updatableAt))
         addUsers(streams.streams.map { it.user.toTable() })
+        addCategories(streams.streams.map { TwitchCategoryTable(it.gameId, it.gameName) })
         addStreams(streams.streams.map { it.toTable() })
     }
 
@@ -197,7 +199,6 @@ private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
     title = title,
     id = id,
     gameId = gameId,
-    gameName = gameName,
     isMature = isMature,
     language = language,
     startedAt = startedAt,
