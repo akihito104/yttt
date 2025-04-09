@@ -20,6 +20,7 @@ interface TwitchDataSource {
     suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings
     suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): TwitchStreams?
     suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated)
+    suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>)
     suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int = 10,
@@ -45,11 +46,14 @@ interface TwitchDataSource {
 
         suspend fun deleteAllTables()
         override suspend fun getAuthorizeUrl(state: String): String = throw NotImplementedError()
-        suspend fun addCategory(category: Collection<TwitchCategory>)
+        suspend fun upsertCategory(category: Collection<TwitchCategory>)
     }
 
     interface Remote : TwitchDataSource {
         override suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated) =
+            throw NotImplementedError()
+
+        override suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>) =
             throw NotImplementedError()
 
         override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>): Unit =

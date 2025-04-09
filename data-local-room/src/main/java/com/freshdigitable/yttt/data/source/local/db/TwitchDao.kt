@@ -76,7 +76,7 @@ internal class TwitchDao @Inject constructor(
         val vacations = schedule.toVacationScheduleTable()
         val expire = TwitchChannelScheduleExpireTable(userIds, expiredAt)
         removeChannelSchedules(setOf(userIds))
-        if (!category.isNullOrEmpty()) addCategory(category)
+        if (!category.isNullOrEmpty()) addCategories(category)
         if (streams.isNotEmpty()) addChannelStreamSchedules(streams)
         addChannelVacationSchedules(setOf(vacations))
         addChannelScheduleExpireEntity(setOf(expire))
@@ -109,12 +109,11 @@ internal class TwitchDao @Inject constructor(
 
     suspend fun findChannelSchedule(
         userId: TwitchUser.Id,
-        current: Instant,
     ): TwitchChannelSchedule? = db.withTransaction {
         val user = findUserDetail(setOf(userId), Instant.EPOCH).firstOrNull()
             ?: return@withTransaction null
         val vacation = findVacationById(userId)
-        val schedule = findStreamScheduleByUserId(userId, current)
+        val schedule = findStreamScheduleByUserId(userId)
         TwitchChannelScheduleDb(
             segments = schedule,
             broadcaster = user,
@@ -125,8 +124,8 @@ internal class TwitchDao @Inject constructor(
     suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
         findCategoryById(id)
 
-    suspend fun addCategory(category: Collection<TwitchCategory>) {
-        addCategories(category.map(TwitchCategory::toTable))
+    suspend fun upsertCategory(category: Collection<TwitchCategory>) {
+        upsertCategories(category.map(TwitchCategory::toTable))
     }
 
     suspend fun findStreamByMe(me: TwitchUser.Id): TwitchStreams = db.withTransaction {

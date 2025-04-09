@@ -4,6 +4,8 @@ import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
@@ -128,11 +130,8 @@ internal class TwitchChannelScheduleStream(
         @Query("$SQL_STREAM_SCHEDULE WHERE s.id = :id")
         suspend fun findStreamScheduleEntity(id: TwitchChannelSchedule.Stream.Id): TwitchChannelScheduleStream?
 
-        @Query("$SQL_STREAM_SCHEDULE WHERE s.user_id = :id AND (s.end_time IS NOT NULL AND :current < s.end_time)")
-        suspend fun findStreamScheduleByUserId(
-            id: TwitchUser.Id,
-            current: Instant,
-        ): List<TwitchChannelScheduleStream>
+        @Query("$SQL_STREAM_SCHEDULE WHERE s.user_id = :id")
+        suspend fun findStreamScheduleByUserId(id: TwitchUser.Id): List<TwitchChannelScheduleStream>
     }
 }
 
@@ -187,6 +186,9 @@ internal class TwitchCategoryTable(
         suspend fun findCategoryById(id: Set<TwitchCategory.Id>): List<TwitchCategoryTable>
 
         @Upsert
+        suspend fun upsertCategories(categories: Collection<TwitchCategoryTable>)
+
+        @Insert(onConflict = OnConflictStrategy.IGNORE)
         suspend fun addCategories(categories: Collection<TwitchCategoryTable>)
 
         @Query("DELETE FROM twitch_category")
@@ -209,7 +211,7 @@ internal class TwitchLiveScheduleDb(
                 "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base, " +
                     "c.igdb_id AS category_igdb_id, u.* " +
                     "FROM twitch_channel_schedule_stream AS s " +
-                    "INNER JOIN twitch_category AS c ON s.category_id = c.id " +
+                    "LEFT OUTER JOIN twitch_category AS c ON s.category_id = c.id " +
                     "INNER JOIN twitch_user_detail_view AS u ON s.user_id = u.user_id"
         }
 

@@ -56,6 +56,10 @@ internal class TwitchLocalDataSource @Inject constructor(
         removeImageByUrl(followedStreams.deletedThumbnails)
     }
 
+    override suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>) {
+        dao.removeChannelStreamSchedulesByIds(id)
+    }
+
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
         val id = me ?: fetchMe()?.id ?: return null
         return dao.findStreamByMe(id)
@@ -70,14 +74,14 @@ internal class TwitchLocalDataSource @Inject constructor(
         if (expire != null && expire.expiredAt <= current) {
             return null
         }
-        return dao.findChannelSchedule(id, current)
+        return dao.findChannelSchedule(id)
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
         dao.fetchCategory(id)
 
-    override suspend fun addCategory(category: Collection<TwitchCategory>) {
-        dao.addCategory(category)
+    override suspend fun upsertCategory(category: Collection<TwitchCategory>) {
+        dao.upsertCategory(category)
     }
 
     override suspend fun setFollowedStreamSchedule(
