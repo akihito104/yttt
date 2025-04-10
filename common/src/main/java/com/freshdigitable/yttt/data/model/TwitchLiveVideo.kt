@@ -19,20 +19,6 @@ interface TwitchLiveSchedule : TwitchLiveVideo<TwitchChannelSchedule.Stream.Id> 
             super.getThumbnailUrl(width, height)
         }
     }
-
-    companion object {
-        fun create(
-            user: TwitchUserDetail,
-            schedule: TwitchChannelSchedule.Stream,
-            thumbnailUrlBase: String? = schedule.category?.artUrlBase,
-        ): TwitchLiveSchedule = Impl(user, schedule, thumbnailUrlBase ?: "")
-    }
-
-    private data class Impl(
-        override val user: TwitchUserDetail,
-        override val schedule: TwitchChannelSchedule.Stream,
-        override val thumbnailUrlBase: String = "",
-    ) : TwitchLiveSchedule
 }
 
 interface TwitchLiveChannelSchedule : TwitchChannelSchedule {

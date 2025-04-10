@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
+import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -62,8 +63,6 @@ internal class TwitchUserDetailTable(
     val createdAt: Instant,
     @ColumnInfo("description")
     val description: String,
-    @ColumnInfo(name = "views_count")
-    val viewsCount: Int = 0,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -78,37 +77,29 @@ internal class TwitchUserDetailTable(
     }
 }
 
+@DatabaseView(
+    value = "SELECT u.login_name, u.display_name, d.* FROM twitch_user_detail AS d " +
+        "INNER JOIN twitch_user AS u ON d.user_id = u.id",
+    viewName = "twitch_user_detail_view",
+)
 internal data class TwitchUserDetailDbView(
-    @Embedded
-    private val user: TwitchUserTable,
-    @ColumnInfo("description")
-    override val description: String,
-    @ColumnInfo("profile_image_url")
-    override val profileImageUrl: String,
-    @ColumnInfo("created_at")
-    override val createdAt: Instant,
-) : TwitchUserDetail, TwitchUser by user {
-    companion object {
-        internal const val SQL_USER_DETAIL = "SELECT u.*, d.profile_image_url, d.created_at, " +
-            "d.description FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
-        internal const val SQL_EMBED_PREFIX = "u_"
-        internal const val SQL_EMBED_ALIAS = "u.id AS ${SQL_EMBED_PREFIX}id, " +
-            "u.display_name AS ${SQL_EMBED_PREFIX}display_name, u.login_name AS ${SQL_EMBED_PREFIX}login_name, " +
-            "u.description AS ${SQL_EMBED_PREFIX}description, u.created_at AS ${SQL_EMBED_PREFIX}created_at, " +
-            "u.profile_image_url AS ${SQL_EMBED_PREFIX}profile_image_url"
-    }
+    @Embedded private val detail: TwitchUserDetailTable,
+    @ColumnInfo("login_name") override val loginName: String,
+    @ColumnInfo("display_name") override val displayName: String,
+) : TwitchUserDetail {
+    override val id: TwitchUser.Id get() = detail.id
+    override val profileImageUrl: String get() = detail.profileImageUrl
+    override val createdAt: Instant get() = detail.createdAt
+    override val description: String get() = detail.description
 
     @androidx.room.Dao
     internal interface Dao {
-        @Query(
-            "SELECT u.* FROM twitch_auth_user AS a " +
-                "INNER JOIN ($SQL_USER_DETAIL) AS u ON a.user_id = u.id LIMIT 1"
-        )
+        @Query("SELECT u.* FROM twitch_auth_user AS a INNER JOIN twitch_user_detail_view AS u ON a.user_id = u.user_id LIMIT 1")
         suspend fun findMe(): TwitchUserDetailDbView?
 
         @Query(
-            "SELECT v.* FROM (SELECT * FROM ($SQL_USER_DETAIL) WHERE id IN (:ids)) AS v " +
-                "INNER JOIN (SELECT * FROM twitch_user_detail_expire WHERE :current < expired_at) AS e ON v.id = e.user_id"
+            "SELECT v.* FROM (SELECT * FROM twitch_user_detail_view WHERE user_id IN (:ids)) AS v " +
+                "INNER JOIN (SELECT * FROM twitch_user_detail_expire WHERE :current < expired_at) AS e ON v.user_id = e.user_id"
         )
         suspend fun findUserDetail(
             ids: Collection<TwitchUser.Id>,

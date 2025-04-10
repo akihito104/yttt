@@ -74,12 +74,16 @@ class TwitchRepository @Inject constructor(
         localDataSource.replaceFollowedStreams(followedStreams)
     }
 
+    override suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>) {
+        localDataSource.removeStreamScheduleById(id)
+    }
+
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
-    ): List<TwitchChannelSchedule> {
+    ): TwitchChannelSchedule? {
         val cache = localDataSource.fetchFollowedStreamSchedule(id)
-        if (cache.isNotEmpty()) {
+        if (cache != null) {
             return cache
         }
         val res = remoteDataSource.fetchFollowedStreamSchedule(id, maxCount)
@@ -94,7 +98,7 @@ class TwitchRepository @Inject constructor(
             return cache
         }
         val remote = remoteDataSource.fetchCategory(remoteIds)
-        localDataSource.addCategory(remote)
+        localDataSource.upsertCategory(remote)
         return cache + remote
     }
 

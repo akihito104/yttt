@@ -25,12 +25,12 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchCategoryTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchChannelScheduleExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchChannelVacationScheduleTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchDaoProviders
-import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDbView
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamIdConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamScheduleIdConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamScheduleTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamTable
+import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserIdConverter
@@ -83,9 +83,9 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     ],
     views = [
         YouTubePlaylistItemSummaryDb::class,
-        TwitchStreamDbView::class,
+        TwitchUserDetailDbView::class,
     ],
-    version = 14,
+    version = 16,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -99,6 +99,11 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 10, to = 11),
         AutoMigration(from = 11, to = 12),
         AutoMigration(from = 12, to = 13),
+        AutoMigration(
+            from = 14,
+            to = 15,
+            spec = AppDatabase.MigrateRemoveTwitchUserDetailViewsCount::class,
+        ),
     ]
 )
 @TypeConverters(
@@ -121,11 +126,20 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
 abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProviders {
     @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
     internal class MigrateRemoveVideoVisible : AutoMigrationSpec
+
+    @DeleteColumn.Entries(
+        DeleteColumn(
+            tableName = "twitch_user_detail",
+            columnName = "views_count",
+        ),
+    )
+    internal class MigrateRemoveTwitchUserDetailViewsCount : AutoMigrationSpec
+
     companion object {
         private const val DATABASE_NAME = "ytttdb"
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name)
-                .addMigrations(MIGRATION_13_14)
+                .addMigrations(MIGRATION_13_14, MIGRATION_15_16)
                 .build()
 
         @VisibleForTesting
@@ -170,6 +184,34 @@ internal val MIGRATION_13_14 = object : Migration(13, 14) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_twitch_channel_schedule_stream_category_id` ON `twitch_channel_schedule_stream` (`category_id`)")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_twitch_channel_schedule_stream_user_id` ON `twitch_channel_schedule_stream` (`user_id`)")
         db.foreignKeyCheck("twitch_channel_schedule_stream")
+    }
+}
+
+internal val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "INSERT OR IGNORE INTO twitch_category (id, name) SELECT game_id AS id, game_name AS name " +
+                "FROM twitch_stream WHERE game_id IS NOT NULL GROUP BY game_id"
+        )
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `__twitch_stream` (`id` TEXT NOT NULL, `user_id` TEXT NOT NULL, " +
+                "`title` TEXT NOT NULL, `thumbnail_url_base` TEXT NOT NULL, `view_count` INTEGER NOT NULL, " +
+                "`language` TEXT NOT NULL, `game_id` TEXT NOT NULL, `type` TEXT NOT NULL, `started_at` INTEGER NOT NULL, " +
+                "`tags` TEXT NOT NULL, `is_mature` INTEGER NOT NULL, PRIMARY KEY(`id`), " +
+                "FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, " +
+                "FOREIGN KEY(`game_id`) REFERENCES `twitch_category`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+        )
+        db.execSQL(
+            "INSERT INTO __twitch_stream (id, user_id, title, thumbnail_url_base, view_count, " +
+                "language, game_id, type, started_at, tags, is_mature) SELECT id, user_id, title, " +
+                "thumbnail_url_base, view_count, language, game_id, type, started_at, tags, is_mature FROM twitch_stream"
+        )
+        db.execSQL("DROP TABLE twitch_stream")
+        db.execSQL("ALTER TABLE __twitch_stream RENAME TO twitch_stream")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_twitch_stream_user_id` ON `twitch_stream` (`user_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_twitch_stream_game_id` ON `twitch_stream` (`game_id`)")
+        db.foreignKeyCheck("twitch_stream")
     }
 }
 

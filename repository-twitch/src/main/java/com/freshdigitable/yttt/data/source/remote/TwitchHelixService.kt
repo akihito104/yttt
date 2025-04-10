@@ -1,40 +1,41 @@
 package com.freshdigitable.yttt.data.source.remote
 
-import com.freshdigitable.yttt.data.model.Broadcaster
-import com.freshdigitable.yttt.data.model.ChannelStreamSchedule
-import com.freshdigitable.yttt.data.model.FollowingStream
 import com.freshdigitable.yttt.data.model.TwitchCategory
-import com.freshdigitable.yttt.data.model.TwitchGameRemote
-import com.freshdigitable.yttt.data.model.TwitchUserDetailRemote
-import com.freshdigitable.yttt.data.model.TwitchVideoRemote
+import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchId
+import com.freshdigitable.yttt.data.model.TwitchUser
 import com.google.gson.annotations.SerializedName
 import retrofit2.Call
+import retrofit2.Converter
+import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.Query
+import java.lang.reflect.Type
 import java.time.Instant
 
 internal interface TwitchHelixService {
     companion object {
+        internal const val BASE_URL = "https://api.twitch.tv/"
         fun TwitchHelixService.getMe(): Call<TwitchUserResponse> = getUser()
     }
 
     @GET("helix/users")
     fun getUser(
-        @Query("id") id: Collection<String>? = null,
+        @Query("id") id: Collection<TwitchUser.Id>? = null,
         @Query("login") loginName: Collection<String>? = null,
     ): Call<TwitchUserResponse>
 
     @GET("helix/channels/followed")
     fun getFollowing(
-        @Query("user_id") userId: String,
-        @Query("broadcaster_id") broadcasterId: String? = null,
+        @Query("user_id") userId: TwitchUser.Id,
+        @Query("broadcaster_id") broadcasterId: TwitchUser.Id? = null,
         @Query("first") itemsPerPage: Int? = null,
         @Query("after") cursor: String? = null,
     ): Call<FollowedChannelsResponse>
 
     @GET("helix/streams/followed")
     fun getFollowedStreams(
-        @Query("user_id") userId: String,
+        @Query("user_id") userId: TwitchUser.Id,
         @Query("first") itemsPerPage: Int? = null,
         @Query("after") cursor: String? = null,
     ): Call<FollowingStreamsResponse>
@@ -42,8 +43,8 @@ internal interface TwitchHelixService {
     /// https://dev.twitch.tv/docs/api/reference/#get-channel-stream-schedule
     @GET("helix/schedule")
     fun getChannelStreamSchedule(
-        @Query("broadcaster_id") broadcasterId: String,
-        @Query("id") segmentId: String? = null,
+        @Query("broadcaster_id") broadcasterId: TwitchUser.Id,
+        @Query("id") segmentId: TwitchChannelSchedule.Stream.Id? = null,
         // The UTC date and time
         // If not specified, the request returns segments starting after the current UTC date and time.
         // Specify the date and time in RFC3339 format (for example, 2022-09-01T00:00:00Z).
@@ -58,7 +59,7 @@ internal interface TwitchHelixService {
     // https://dev.twitch.tv/docs/api/reference/#get-videos
     @GET("helix/videos")
     fun getVideoByUserId(
-        @Query("user_id") userId: String,
+        @Query("user_id") userId: TwitchUser.Id,
         @Query("language") language: String? = null,
         @Query("period") period: String? = null,
         @Query("sort") sort: String? = null,
@@ -120,3 +121,25 @@ internal class TwitchVideosResponse(
 )
 
 internal class TwitchGameResponse(@SerializedName("data") val data: Array<TwitchGameRemote>)
+
+internal class IdConverterFactory : Converter.Factory() {
+    companion object {
+        private val twitchIdConverter = Converter<TwitchId, String> { it.value }
+        private val twitchIdTypes = setOf(
+            TwitchUser.Id::class.java,
+            TwitchCategory.Id::class.java,
+            TwitchChannelSchedule.Stream.Id::class.java,
+        )
+    }
+
+    override fun stringConverter(
+        type: Type,
+        annotations: Array<out Annotation>,
+        retrofit: Retrofit,
+    ): Converter<*, String>? {
+        if (twitchIdTypes.any { it == type }) {
+            return twitchIdConverter
+        }
+        return null
+    }
+}

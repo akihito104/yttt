@@ -7,6 +7,9 @@ import retrofit2.http.Query
 import java.util.UUID
 
 internal interface TwitchOauthService {
+    companion object {
+        internal const val BASE_URL = "https://id.twitch.tv/"
+    }
     /// https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
     @GET("oauth2/authorize?response_type=token")
     fun authorizeImplicitly(

@@ -6,7 +6,6 @@ import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
-import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
@@ -68,20 +67,19 @@ internal class TwitchDao @Inject constructor(
     }
 
     suspend fun replaceChannelSchedules(
-        schedule: Collection<TwitchChannelSchedule>,
+        schedule: TwitchChannelSchedule,
         expiredAt: Instant,
     ) = db.withTransaction {
-        val userIds = schedule.map { it.broadcaster.id }.toSet()
-        val streams = schedule.map { it.toStreamScheduleTable() }.flatten()
-        val category = schedule.mapNotNull { it.segments }
-            .flatMap { s -> s.mapNotNull { it.category?.toTable() } }
-        val vacations = schedule.map { it.toVacationScheduleTable() }
-        val expire = userIds.map { TwitchChannelScheduleExpireTable(it, expiredAt) }
-        removeChannelSchedules(userIds)
-        addCategories(category)
-        addChannelStreamSchedules(streams)
-        addChannelVacationSchedules(vacations)
-        addChannelScheduleExpireEntity(expire)
+        val userIds = schedule.broadcaster.id
+        val streams = schedule.toStreamScheduleTable()
+        val category = schedule.segments?.mapNotNull { it.category?.toTable() }
+        val vacations = schedule.toVacationScheduleTable()
+        val expire = TwitchChannelScheduleExpireTable(userIds, expiredAt)
+        removeChannelSchedules(setOf(userIds))
+        if (!category.isNullOrEmpty()) addCategories(category)
+        if (streams.isNotEmpty()) addChannelStreamSchedules(streams)
+        addChannelVacationSchedules(setOf(vacations))
+        addChannelScheduleExpireEntity(setOf(expire))
     }
 
     suspend fun removeChannelSchedulesByBroadcasterId(id: Collection<TwitchUser.Id>) =
@@ -107,32 +105,27 @@ internal class TwitchDao @Inject constructor(
 
     suspend fun findStreamSchedule(
         id: TwitchChannelSchedule.Stream.Id
-    ): TwitchLiveVideo<TwitchChannelSchedule.Stream.Id>? = db.withTransaction {
-        val schedule = findStreamScheduleEntity(id) ?: return@withTransaction null
-        val user = findUserDetail(setOf(schedule.userId), Instant.EPOCH).first()
-        TwitchLiveSchedule.create(user, schedule, schedule.category?.artUrlBase)
-    }
+    ): TwitchLiveVideo<TwitchChannelSchedule.Stream.Id>? = findLiveSchedule(id)
 
     suspend fun findChannelSchedule(
         userId: TwitchUser.Id,
-    ): List<TwitchChannelSchedule> = db.withTransaction {
+    ): TwitchChannelSchedule? = db.withTransaction {
+        val user = findUserDetail(setOf(userId), Instant.EPOCH).firstOrNull()
+            ?: return@withTransaction null
         val vacation = findVacationById(userId)
         val schedule = findStreamScheduleByUserId(userId)
-        val user = findUserDetail(setOf(userId), Instant.EPOCH).first()
-        listOf(
-            TwitchChannelScheduleDb(
-                segments = schedule,
-                broadcaster = user,
-                vacation = vacation?.vacation,
-            )
+        TwitchChannelScheduleDb(
+            segments = schedule,
+            broadcaster = user,
+            vacation = vacation?.vacation,
         )
     }
 
     suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
         findCategoryById(id)
 
-    suspend fun addCategory(category: Collection<TwitchCategory>) {
-        addCategories(category.map(TwitchCategory::toTable))
+    suspend fun upsertCategory(category: Collection<TwitchCategory>) {
+        upsertCategories(category.map(TwitchCategory::toTable))
     }
 
     suspend fun findStreamByMe(me: TwitchUser.Id): TwitchStreams = db.withTransaction {
@@ -145,6 +138,7 @@ internal class TwitchDao @Inject constructor(
         db.twitchStreamDao.deleteTable()
         setStreamExpire(TwitchStreamExpireTable(streams.followerId, streams.updatableAt))
         addUsers(streams.streams.map { it.user.toTable() })
+        addCategories(streams.streams.map { TwitchCategoryTable(it.gameId, it.gameName) })
         addStreams(streams.streams.map { it.toTable() })
     }
 
@@ -204,7 +198,6 @@ private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
     title = title,
     id = id,
     gameId = gameId,
-    gameName = gameName,
     isMature = isMature,
     language = language,
     startedAt = startedAt,

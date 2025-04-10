@@ -37,7 +37,7 @@ class TwitchLiveLocalDataSourceTest {
             dataSource.setMe(me)
             dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            dao.replaceChannelSchedules(listOf(schedule), Instant.EPOCH)
+            dao.replaceChannelSchedules(schedule, Instant.EPOCH)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             assertThat(entity?.id).isEqualTo(streamSchedule.id)
@@ -88,7 +88,7 @@ class TwitchLiveLocalDataSourceTest {
                 dataSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            dao.replaceChannelSchedules(listOf(schedule), Instant.EPOCH)
+            dao.replaceChannelSchedules(schedule, Instant.EPOCH)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             assertThat(entity?.id).isEqualTo(streamSchedule.id)

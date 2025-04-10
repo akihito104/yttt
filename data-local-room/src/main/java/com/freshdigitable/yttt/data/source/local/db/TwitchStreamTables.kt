@@ -1,18 +1,17 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
-import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import com.freshdigitable.yttt.data.source.local.db.TwitchUserDetailDbView.Companion.SQL_EMBED_PREFIX
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
@@ -24,6 +23,11 @@ import javax.inject.Inject
             entity = TwitchUserTable::class,
             parentColumns = ["id"],
             childColumns = ["user_id"],
+        ),
+        ForeignKey(
+            entity = TwitchCategoryTable::class,
+            parentColumns = ["id"],
+            childColumns = ["game_id"],
         ),
     ],
 )
@@ -41,10 +45,8 @@ internal class TwitchStreamTable(
     val viewCount: Int,
     @ColumnInfo(name = "language")
     val language: String,
-    @ColumnInfo(name = "game_id")
-    val gameId: String,
-    @ColumnInfo(name = "game_name")
-    val gameName: String,
+    @ColumnInfo(name = "game_id", index = true)
+    val gameId: TwitchCategory.Id,
     @ColumnInfo(name = "type")
     val type: String,
     @ColumnInfo(name = "started_at")
@@ -64,48 +66,37 @@ internal class TwitchStreamTable(
     }
 }
 
-private const val SQL_USER_DETAIL_ = "SELECT u.*, d.profile_image_url, d.views_count, " +
-    "d.created_at, d.description FROM twitch_user_detail AS d " +
-    "INNER JOIN twitch_user AS u ON d.user_id = u.id"
-private const val SQL_EMBED_ALIAS_ = "u.id AS ${SQL_EMBED_PREFIX}id, " +
-    "u.display_name AS ${SQL_EMBED_PREFIX}display_name, u.login_name AS ${SQL_EMBED_PREFIX}login_name, " +
-    "u.description AS ${SQL_EMBED_PREFIX}description, u.created_at AS ${SQL_EMBED_PREFIX}created_at, " +
-    "u.views_count AS ${SQL_EMBED_PREFIX}views_count, u.profile_image_url AS ${SQL_EMBED_PREFIX}profile_image_url"
-
-@DatabaseView(
-    viewName = "twitch_stream_view",
-    value = "SELECT s.*, $SQL_EMBED_ALIAS_ FROM twitch_stream AS s " +
-        "INNER JOIN ($SQL_USER_DETAIL_) AS u ON u.id = s.user_id",
-)
 internal data class TwitchStreamDbView(
-    @Embedded
-    private val streamEntity: TwitchStreamTable,
-    @Embedded(SQL_EMBED_PREFIX)
-    override val user: TwitchUserDetailDbView,
-    @ColumnInfo("u_views_count")
-    private val viewsCount: Int,
+    @ColumnInfo(name = "id") override val id: TwitchStream.Id,
+    @ColumnInfo(name = "title") override val title: String,
+    @ColumnInfo(name = "thumbnail_url_base") override val thumbnailUrlBase: String,
+    @ColumnInfo(name = "view_count") override val viewCount: Int,
+    @ColumnInfo(name = "language") override val language: String,
+    @ColumnInfo(name = "game_id") override val gameId: TwitchCategory.Id,
+    @ColumnInfo(name = "game_name") override val gameName: String,
+    @ColumnInfo(name = "type") override val type: String,
+    @ColumnInfo(name = "started_at") override val startedAt: Instant,
+    @ColumnInfo(name = "tags") override val tags: List<String>,
+    @ColumnInfo(name = "is_mature") override val isMature: Boolean,
+    @Embedded override val user: TwitchUserDetailDbView,
 ) : TwitchLiveStream {
-    override val gameId: String get() = streamEntity.gameId
-    override val gameName: String get() = streamEntity.gameName
-    override val type: String get() = streamEntity.type
-    override val startedAt: Instant get() = streamEntity.startedAt
-    override val tags: List<String> get() = streamEntity.tags
-    override val isMature: Boolean get() = streamEntity.isMature
-    override val id: TwitchStream.Id get() = streamEntity.id
-    override val title: String get() = streamEntity.title
-    override val thumbnailUrlBase: String get() = streamEntity.thumbnailUrlBase
-    override val viewCount: Int get() = streamEntity.viewCount
-    override val language: String get() = streamEntity.language
-
     @androidx.room.Dao
     internal interface Dao {
-        @Query("SELECT * FROM twitch_stream_view AS v WHERE v.id = :id")
+        companion object {
+            private const val SQL_STREAM =
+                "SELECT s.*, u.created_at, u.description, u.display_name, u.login_name, u.profile_image_url, " +
+                    "c.name AS game_name FROM twitch_stream AS s " +
+                    "INNER JOIN twitch_user_detail_view AS u ON u.user_id = s.user_id " +
+                    "INNER JOIN twitch_category AS c ON c.id = s.game_id"
+        }
+
+        @Query("$SQL_STREAM WHERE s.id = :id")
         suspend fun findStream(id: TwitchStream.Id): TwitchStreamDbView
 
-        @Query("SELECT * FROM twitch_stream_view AS v ORDER BY v.started_at DESC")
+        @Query("$SQL_STREAM ORDER BY s.started_at DESC")
         fun watchStream(): Flow<List<TwitchStreamDbView>>
 
-        @Query("SELECT * FROM twitch_stream_view AS v ORDER BY v.started_at DESC")
+        @Query("$SQL_STREAM ORDER BY s.started_at DESC")
         suspend fun findAllStreams(): List<TwitchStreamDbView>
     }
 }
