@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
         val startDestination = if (isOauthEvent()) LaunchNavRoute.Auth else LaunchNavRoute.Splash
         handleFreeTalkIntent()
         setContent {
-            AppTheme {
+            AppTheme(dynamicColor = true) {
                 val navController = rememberNavController()
                 NavHost(navController = navController, startDestination = startDestination.route) {
                     composableWith(
