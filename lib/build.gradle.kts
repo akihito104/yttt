@@ -65,7 +65,6 @@ dependencies {
 
     // Choose one of the following:
     // Material Design
-    implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.material3)
 
     // Android Studio Preview support
