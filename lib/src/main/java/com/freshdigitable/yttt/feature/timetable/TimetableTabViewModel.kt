@@ -50,6 +50,7 @@ internal class TimetableTabViewModel @Inject constructor(
                 trace.start()
                 fetchStreamTasks.map { async { it() } }.awaitAll()
                 trace.stop()
+                settingRepository.lastUpdateDatetime = dateTimeProvider.now()
                 _isLoading.postValue(false)
             }
         }
