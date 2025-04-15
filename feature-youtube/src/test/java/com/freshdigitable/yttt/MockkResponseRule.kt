@@ -6,9 +6,13 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.confirmVerified
 import io.mockk.every
+import io.mockk.junit4.MockKRule
+import org.junit.rules.RuleChain
 import org.junit.rules.Verifier
+import org.junit.runner.Description
+import org.junit.runners.model.Statement
 
-class MockkResponseRule : Verifier() {
+class MockkResponseRule(testSubject: Any) : Verifier() {
     private val registered = mutableListOf<MockKMatcherScope.() -> Any>()
     private val coRegistered = mutableListOf<suspend MockKMatcherScope.() -> Any>()
     private val mocks = mutableListOf<Any>()
@@ -29,8 +33,11 @@ class MockkResponseRule : Verifier() {
         return coEvery { func() }
     }
 
+    private val mockk = MockKRule(testSubject)
+    override fun apply(base: Statement?, description: Description?): Statement =
+        RuleChain.outerRule(mockk).apply(super.apply(base, description), description)
+
     override fun verify() {
-        super.verify()
         registered.forEach { io.mockk.verify { it() } }
         coRegistered.forEach { coVerify { it() } }
         confirmVerified(*(mocks.toTypedArray()))

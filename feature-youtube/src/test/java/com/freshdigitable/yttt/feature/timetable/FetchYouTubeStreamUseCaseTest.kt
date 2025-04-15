@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.MockkResponseRule
-import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -9,26 +8,19 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import io.mockk.called
 import io.mockk.coVerify
 import io.mockk.impl.annotations.MockK
-import io.mockk.junit4.MockKRule
 import io.mockk.just
 import io.mockk.runs
-import io.mockk.verify
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.RuleChain
 import java.time.Instant
 
 class FetchYouTubeStreamUseCaseTest {
-    private val responseRule = MockkResponseRule()
-
     @get:Rule
-    val chain: RuleChain = RuleChain.outerRule(MockKRule(this))
-        .around(responseRule)
+    val responseRule = MockkResponseRule(this)
 
     @MockK
     lateinit var liveRepository: YouTubeRepository
@@ -37,25 +29,17 @@ class FetchYouTubeStreamUseCaseTest {
     lateinit var accountRepository: YouTubeAccountRepository
 
     @MockK
-    lateinit var settingRepository: SettingRepository
-
-    @MockK
     lateinit var dateTimeProvider: DateTimeProvider
 
-    private val CoroutineScope.sut: FetchYouTubeStreamUseCase
-        get() = FetchYouTubeStreamUseCase(
-            liveRepository,
-            accountRepository,
-            settingRepository,
-            dateTimeProvider,
-            this,
-        )
+    private val sut: FetchYouTubeStreamUseCase by lazy {
+        FetchYouTubeStreamUseCase(liveRepository, accountRepository, dateTimeProvider)
+    }
 
     @Test
     fun testInvokeWithEmptyItems() = runTest {
         // setup
         responseRule.apply {
-            addMocks(liveRepository, accountRepository, settingRepository, dateTimeProvider)
+            addMocks(liveRepository, accountRepository, dateTimeProvider)
             liveRepository.apply {
                 coRegister { videos } answers {
                     emptyFlow<List<YouTubeVideoExtended>>()
@@ -67,9 +51,6 @@ class FetchYouTubeStreamUseCaseTest {
             accountRepository.apply {
                 register { hasAccount() } returns true
             }
-            settingRepository.apply {
-                register { lastUpdateDatetime = any() } just runs
-            }
             dateTimeProvider.apply {
                 register { now() } returns Instant.parse("2023-12-12T18:00:00.000Z")
             }
@@ -79,9 +60,6 @@ class FetchYouTubeStreamUseCaseTest {
         sut.invoke()
 
         // verify
-        verify {
-            settingRepository.lastUpdateDatetime = eq(Instant.parse("2023-12-12T18:00:00.000Z"))
-        }
         coVerify(exactly = 0) {
             liveRepository.fetchPlaylistWithItems(any(), any(), any())?.wasNot(called)
         }
@@ -91,7 +69,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun testInvokeNopWhenNoAccount() = runTest {
         // setup
         responseRule.apply {
-            addMocks(liveRepository, accountRepository, settingRepository, dateTimeProvider)
+            addMocks(liveRepository, accountRepository, dateTimeProvider)
             register { accountRepository.hasAccount() } returns false
         }
 
@@ -99,8 +77,8 @@ class FetchYouTubeStreamUseCaseTest {
         sut.invoke()
 
         // verify
-        verify(exactly = 0) {
-            settingRepository.lastUpdateDatetime = any()
+        coVerify(exactly = 0) {
+            liveRepository.fetchPlaylistWithItems(any(), any(), any())?.wasNot(called)
         }
     }
 }
