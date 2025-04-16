@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
@@ -26,13 +27,10 @@ import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
 import com.google.api.services.youtube.model.VideoLiveStreamingDetails
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.last
 import java.io.IOException
 import java.math.BigInteger
 import java.time.Instant
@@ -42,10 +40,10 @@ import javax.inject.Singleton
 @Singleton
 internal class YouTubeRemoteDataSource @Inject constructor(
     private val youtube: YouTube,
-    private val ioDispatcher: CoroutineDispatcher,
+    private val ioScope: IoScope,
 ) : YoutubeDataSource.Remote {
-    override suspend fun fetchAllSubscribePaged(pageSize: Int): Flow<List<YouTubeSubscription>> =
-        flow {
+    override suspend fun fetchAllSubscribePaged(pageSize: Int): Flow<Result<List<YouTubeSubscription>>> =
+        ioScope.asResultFlow {
             var t: String? = null
             var subs = emptyList<YouTubeSubscription>()
             do {
@@ -57,24 +55,13 @@ internal class YouTubeRemoteDataSource @Inject constructor(
                     .execute()
                 val offset = subs.size
                 subs = subs + res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
-                emit(subs)
+                emit(Result.success(subs))
                 t = res.nextPageToken
             } while (t != null)
-        }.flowOn(ioDispatcher)
+        }
 
-    override suspend fun fetchAllSubscribe(
-        maxResult: Long,
-    ): List<YouTubeSubscription> = fetchAllItems(
-        requestParams = { token ->
-            subscriptions()
-                .list(listOf(PART_SNIPPET))
-                .setMine(true)
-                .setMaxResults(maxResult)
-                .setPageToken(token)
-        },
-        getItems = { items },
-        getNextToken = { nextPageToken },
-    ).mapIndexed { i, s -> s.toLiveSubscription(i) }
+    override suspend fun fetchAllSubscribe(maxResult: Long): Result<List<YouTubeSubscription>> =
+        fetchAllSubscribePaged(50).last()
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -98,22 +85,22 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         getNextToken = { nextPageToken },
     ).map { YouTubeChannelLogEntity(activity = it) }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo> =
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideo>> =
         fetchList(ids, getItems = { items }) { chunked ->
             videos()
                 .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
                 .setId(chunked.map { it.value })
                 .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-        }.map { YouTubeVideoRemote(it) }
+        }.map { v -> v.map { YouTubeVideoRemote(it) } }
 
     override suspend fun fetchChannelList(
         ids: Set<YouTubeChannel.Id>,
-    ): List<YouTubeChannelDetail> = fetchList(ids, getItems = { items }) { chunked ->
+    ): Result<List<YouTubeChannelDetail>> = fetchList(ids, getItems = { items }) { chunked ->
         channels()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
             .setId(chunked.map { it.value })
             .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-    }.map { YouTubeChannelImpl(it) }
+    }.map { c -> c.map { YouTubeChannelImpl(it) } }
 
     override suspend fun fetchChannelSection(
         id: YouTubeChannel.Id,
@@ -121,29 +108,25 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         channelSections()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
             .setChannelId(id.value)
-    }.items.map { YouTubeChannelSectionImpl(it) }
+    }.getOrNull()!!.items.map { YouTubeChannelSectionImpl(it) } // TODO
 
     override suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         pageToken: String?,
-    ): List<YouTubePlaylistItem>? {
-        return try {
-            fetch {
-                playlistItems()
-                    .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-                    .setPlaylistId(id.value)
-                    .setMaxResults(maxResult)
-                    .setPageToken(pageToken)
-            }.items.map { it.toLivePlaylistItem() }
-        } catch (e: Exception) {
-            if ((e as? GoogleJsonResponseException)?.statusCode == 404) {
-                null
-            } else {
-                throw IOException(e)
-            }
-        }
-    }
+    ): List<YouTubePlaylistItem>? = fetch {
+        playlistItems()
+            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setPlaylistId(id.value)
+            .setMaxResults(maxResult)
+            .setPageToken(pageToken)
+    }.fold(
+        onSuccess = { res -> res.items.map { it.toLivePlaylistItem() } },
+        onFailure = {
+            if (it is GoogleJsonResponseException && it.statusCode == 404) null
+            else throw IOException(it)
+        },
+    )
 
     override suspend fun fetchPlaylist(
         ids: Set<YouTubePlaylist.Id>,
@@ -152,13 +135,13 @@ internal class YouTubeRemoteDataSource @Inject constructor(
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
             .setId(chunked.map { it.value })
             .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
-    }.map { it.toLivePlaylist() }
+    }.getOrNull()!!.map { it.toLivePlaylist() } // TODO
 
     private suspend inline fun <T, E> fetchAllItems(
         crossinline requestParams: YouTube.(String?) -> AbstractGoogleClientRequest<T>,
         crossinline getItems: T.() -> List<E>,
         crossinline getNextToken: T.() -> String?,
-    ): List<E> = withContext(ioDispatcher) {
+    ): List<E> = ioScope.asResult {
         buildList {
             var token: String? = null
             do {
@@ -167,30 +150,28 @@ internal class YouTubeRemoteDataSource @Inject constructor(
                 token = response.getNextToken()
             } while (token != null)
         }
-    }
+    }.getOrNull()!! // TODO
 
     private suspend inline fun <T, E> fetchList(
         ids: Set<IdBase>,
         crossinline getItems: T.() -> List<E>,
         crossinline requestParams: YouTube.(Set<IdBase>) -> AbstractGoogleClientRequest<T>,
-    ): List<E> = withContext(ioDispatcher) {
+    ): Result<List<E>> = ioScope.asResult {
         if (ids.isEmpty()) {
-            return@withContext emptyList()
+            emptyList()
+        } else if (ids.size <= VIDEO_MAX_FETCH_SIZE) {
+            youtube.requestParams(ids).execute().getItems()
+        } else {
+            ids.chunked(VIDEO_MAX_FETCH_SIZE)
+                .map { async { youtube.requestParams(it.toSet()).execute().getItems() } }
+                .awaitAll()
+                .flatten()
         }
-        if (ids.size <= VIDEO_MAX_FETCH_SIZE) {
-            return@withContext fetch { requestParams(ids) }.getItems()
-        }
-        ids.chunked(VIDEO_MAX_FETCH_SIZE)
-            .map { async { fetch { requestParams(it.toSet()) }.getItems() } }
-            .awaitAll()
-            .flatten()
     }
 
     private suspend inline fun <T> fetch(
         crossinline requestParams: YouTube.() -> AbstractGoogleClientRequest<T>,
-    ): T = withContext(ioDispatcher) {
-        requestParams(youtube).execute()
-    }
+    ): Result<T> = ioScope.asResult { youtube.requestParams().execute() }
 
     companion object {
         @Suppress("unused")

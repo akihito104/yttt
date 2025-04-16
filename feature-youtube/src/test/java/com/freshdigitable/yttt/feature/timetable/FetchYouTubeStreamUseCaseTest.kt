@@ -5,7 +5,6 @@ import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import io.mockk.called
 import io.mockk.coVerify
 import io.mockk.impl.annotations.MockK
 import io.mockk.just
@@ -61,7 +60,7 @@ class FetchYouTubeStreamUseCaseTest {
 
         // verify
         coVerify(exactly = 0) {
-            liveRepository.fetchPlaylistWithItems(any(), any(), any())?.wasNot(called)
+            liveRepository.fetchPlaylistWithItems(any(), any(), any())
         }
     }
 
@@ -78,7 +77,7 @@ class FetchYouTubeStreamUseCaseTest {
 
         // verify
         coVerify(exactly = 0) {
-            liveRepository.fetchPlaylistWithItems(any(), any(), any())?.wasNot(called)
+            liveRepository.fetchPlaylistWithItems(any(), any(), any())
         }
     }
 }

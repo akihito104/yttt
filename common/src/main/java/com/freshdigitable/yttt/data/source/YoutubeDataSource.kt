@@ -13,22 +13,30 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import java.time.Instant
+import javax.inject.Inject
+import javax.inject.Singleton
 
 interface YoutubeDataSource {
-    suspend fun fetchAllSubscribe(maxResult: Long = 30): List<YouTubeSubscription>
+    suspend fun fetchAllSubscribe(maxResult: Long = 30): Result<List<YouTubeSubscription>>
     suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant? = null,
         maxResult: Long? = null,
     ): List<YouTubeChannelLog>
 
-    suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideo>
+    suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideo>>
     suspend fun addVideo(video: Collection<YouTubeVideoExtended>)
     suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
-    suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail>
+    suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>>
     suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection>
     suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist>
 
@@ -49,7 +57,7 @@ interface YoutubeDataSource {
         ): List<YouTubePlaylistItemSummary>
 
         suspend fun cleanUp()
-        override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended>
+        override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideoExtended>>
         suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
         suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>)
         suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>)
@@ -57,7 +65,7 @@ interface YoutubeDataSource {
     }
 
     interface Remote : YoutubeDataSource {
-        suspend fun fetchAllSubscribePaged(pageSize: Int = 50): Flow<List<YouTubeSubscription>>
+        suspend fun fetchAllSubscribePaged(pageSize: Int = 50): Flow<Result<List<YouTubeSubscription>>>
 
         suspend fun fetchPlaylistItems(
             id: YouTubePlaylist.Id,
@@ -74,4 +82,17 @@ interface YoutubeDataSource {
         override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) =
             throw UnsupportedOperationException()
     }
+}
+
+@Singleton
+class IoScope @Inject constructor(
+    private val ioDispatcher: CoroutineDispatcher,
+) {
+    suspend fun <T> asResult(block: suspend CoroutineScope.() -> T): Result<T> =
+        withContext(ioDispatcher) { runCatching { block(this) } }
+
+    fun <T> asResultFlow(block: suspend FlowCollector<Result<T>>.() -> Unit): Flow<Result<T>> =
+        flow {
+            runCatching { block(this) }.onFailure { emit(Result.failure<T>(it)) }
+        }.flowOn(ioDispatcher)
 }

@@ -58,7 +58,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             videoUpdateTaskChannel.consumeAsFlow()
                 .flatMapConcat { it.asFlow() }
                 .chunked(50).collect { ids ->
-                    val v = liveRepository.fetchVideoList(ids.toSet())
+                    val v = liveRepository.fetchVideoList(ids.toSet<YouTubeVideo.Id>())
+                        .onFailure { logE(throwable = it) { "ids: $ids" } }
+                        .getOrNull() ?: return@collect
 
                     val archived = v.filter { it.isArchived }.map { it.id }.toSet()
                     val removed = ids - v.map { it.id }.toSet()
@@ -101,8 +103,10 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     ) {
         val playlistUpdateTaskCache = liveRepository.fetchPagedSubscriptionSummary()
             .fold(PlaylistUpdateTaskCache()) { acc, value ->
+                val s = value.onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
+                    .getOrNull() ?: return@fold acc
                 acc.updateSubscriptionSummary(
-                    summary = value,
+                    summary = s,
                     current = dateTimeProvider.now(),
                     task = {
                         coroutineScope.async(start = CoroutineStart.LAZY) {
@@ -132,7 +136,8 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             subscriptionSummary
         } else {
             val channel = liveRepository.fetchChannelList(setOf(subscriptionSummary.channelId))
-                .first()
+                .onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: " } }
+                .map { it.first() }.getOrNull() ?: return emptyList()
             if (channel.uploadedPlayList == null) {
                 return emptyList()
             }
@@ -142,21 +147,17 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             }
         }
         val id = checkNotNull(summary.uploadedPlaylistId)
-        try {
-            val playlistWithItems = liveRepository.fetchPlaylistWithItems(
-                summary,
-                current,
-                maxResult = 10,
-            )
-            val itemIds = checkNotNull(playlistWithItems).addedItems.map { it.videoId }
-            if (itemIds.isNotEmpty()) {
-                logD { "fetchVideoByPlaylistIdTask: playlistId> $id,count>${itemIds.size}" }
-            }
-            return itemIds
-        } catch (e: Exception) {
-            logE(throwable = e) { "fetchVideoByPlaylistIdTask: playlist>$id" }
+        val playlistWithItems = liveRepository.fetchPlaylistWithItems(
+            summary,
+            current,
+            maxResult = 10,
+        ).onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" } }
+            .getOrNull() ?: return emptyList()
+        val itemIds = playlistWithItems.addedItems.map { it.videoId }
+        if (itemIds.isNotEmpty()) {
+            logD { "fetchVideoByPlaylistIdTask: playlistId> $id,count>${itemIds.size}" }
         }
-        return emptyList()
+        return itemIds
     }
 
     private suspend inline fun fetchAsync(

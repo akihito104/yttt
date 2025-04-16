@@ -17,12 +17,11 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.ImageDataSource
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YoutubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -34,24 +33,24 @@ internal class YouTubeLocalDataSource @Inject constructor(
     private val dao: YouTubeDao,
     imageDataSource: ImageDataSource,
     private val dateTimeProvider: DateTimeProvider,
-    private val ioDispatcher: CoroutineDispatcher,
+    private val ioScope: IoScope,
 ) : YoutubeDataSource.Local, ImageDataSource by imageDataSource {
     override val videos: Flow<List<YouTubeVideoExtended>> = dao.watchAllUnfinishedVideos()
     override suspend fun findSubscriptionSummaries(
         ids: Collection<YouTubeSubscription.Id>,
-    ): List<YouTubeSubscriptionSummary> = withContext(ioDispatcher) {
+    ): List<YouTubeSubscriptionSummary> = ioScope.asResult {
         dao.findSubscriptionSummaries(ids)
-    }
+    }.getOrNull()!!  // FIXME
 
-    override suspend fun fetchAllSubscribe(maxResult: Long): List<YouTubeSubscription> =
-        withContext(ioDispatcher) {
+    override suspend fun fetchAllSubscribe(maxResult: Long): Result<List<YouTubeSubscription>> =
+        ioScope.asResult {
             dao.findAllSubscriptions()
         }
 
     override suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>) =
-        withContext(ioDispatcher) {
+        ioScope.asResult {
             dao.addSubscriptions(subscriptions)
-        }
+        }.getOrNull()!! // FIXME
 
     override suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>) {
         dao.removeSubscriptions(subscriptions)
@@ -99,9 +98,10 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.updatePlaylistWithItems(updatable)
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<YouTubeVideoExtended> {
-        return fetchByIds(ids) { findVideosById(it) }.flatten()
-    }
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideoExtended>> =
+        ioScope.asResult {
+            fetchByIds(ids) { findVideosById(it) }.flatten()
+        }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         val updatableAt =
@@ -116,9 +116,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun addVideo(
         video: Collection<YouTubeVideoExtended>,
-    ) = withContext(ioDispatcher) {
+    ) = ioScope.asResult {
         dao.addVideos(video)
-    }
+    }.getOrNull()!! // FIXME
 
     override suspend fun cleanUp() {
         database.youTubeChannelLogDao.deleteTable()
@@ -138,7 +138,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = withContext(ioDispatcher) {
+    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
         fetchByIds(ids) { i ->
             val items = i.map { YouTubeVideoIsArchivedTable(it, true) }
             addVideoIsArchivedEntities(items)
@@ -146,11 +146,12 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val thumbs = dao.findThumbnailUrlByIds(ids)
         fetchByIds(ids) { removeVideos(it) }
         removeImageByUrl(thumbs)
-    }
+    }.getOrNull()!! // FIXME
 
-    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelDetail> {
-        return dao.findChannelDetail(ids, current = dateTimeProvider.now())
-    }
+    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>> =
+        ioScope.asResult {
+            dao.findChannelDetail(ids, current = dateTimeProvider.now())
+        }
 
     override suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>) {
         dao.addChannelDetails(channelDetail, dateTimeProvider.now() + Duration.ofDays(1))

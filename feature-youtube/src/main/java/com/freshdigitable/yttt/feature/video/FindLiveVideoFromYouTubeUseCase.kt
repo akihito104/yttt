@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.feature.create
+import com.freshdigitable.yttt.logE
 import javax.inject.Inject
 
 internal class FindLiveVideoFromYouTubeUseCase @Inject constructor(
@@ -13,7 +14,10 @@ internal class FindLiveVideoFromYouTubeUseCase @Inject constructor(
 ) : FindLiveVideoUseCase {
     override suspend fun invoke(id: LiveVideo.Id): LiveVideo<*>? {
         check(id.type == YouTubeVideo.Id::class)
-        val v = repository.fetchVideoList(setOf(id.mapTo())).firstOrNull() ?: return null
+        val v = repository.fetchVideoList(setOf(id.mapTo()))
+            .onFailure { logE(throwable = it) { "invoke: $id" } }
+            .map { it.firstOrNull() }.getOrNull()
+            ?: return null
         return LiveVideo.create(v)
     }
 }
