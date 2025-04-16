@@ -12,7 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.IoScope
-import com.freshdigitable.yttt.data.source.YoutubeDataSource
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.google.api.client.googleapis.json.GoogleJsonResponseException
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.util.DateTime
@@ -41,8 +41,8 @@ import javax.inject.Singleton
 internal class YouTubeRemoteDataSource @Inject constructor(
     private val youtube: YouTube,
     private val ioScope: IoScope,
-) : YoutubeDataSource.Remote {
-    override suspend fun fetchAllSubscribePaged(pageSize: Int): Flow<Result<List<YouTubeSubscription>>> =
+) : YouTubeDataSource.Remote {
+    override fun fetchAllSubscribePaged(pageSize: Long): Flow<Result<List<YouTubeSubscription>>> =
         ioScope.asResultFlow {
             var t: String? = null
             var subs = emptyList<YouTubeSubscription>()
@@ -50,7 +50,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
                 val res = youtube.subscriptions()
                     .list(listOf(PART_SNIPPET))
                     .setMine(true)
-                    .setMaxResults(pageSize.toLong())
+                    .setMaxResults(pageSize)
                     .setPageToken(t)
                     .execute()
                 val offset = subs.size
@@ -60,8 +60,8 @@ internal class YouTubeRemoteDataSource @Inject constructor(
             } while (t != null)
         }
 
-    override suspend fun fetchAllSubscribe(maxResult: Long): Result<List<YouTubeSubscription>> =
-        fetchAllSubscribePaged(50).last()
+    override suspend fun fetchAllSubscribe(pageSize: Long): Result<List<YouTubeSubscription>> =
+        fetchAllSubscribePaged(pageSize).last()
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -90,7 +90,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
             videos()
                 .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
                 .setId(chunked.map { it.value })
-                .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
+                .setMaxResults(chunked.size.toLong())
         }.map { v -> v.map { YouTubeVideoRemote(it) } }
 
     override suspend fun fetchChannelList(
@@ -99,7 +99,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         channels()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
             .setId(chunked.map { it.value })
-            .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
+            .setMaxResults(chunked.size.toLong())
     }.map { c -> c.map { YouTubeChannelImpl(it) } }
 
     override suspend fun fetchChannelSection(
@@ -134,7 +134,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         playlists()
             .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
             .setId(chunked.map { it.value })
-            .setMaxResults(VIDEO_MAX_FETCH_SIZE.toLong())
+            .setMaxResults(chunked.size.toLong())
     }.getOrNull()!!.map { it.toLivePlaylist() } // TODO
 
     private suspend inline fun <T, E> fetchAllItems(
@@ -159,10 +159,10 @@ internal class YouTubeRemoteDataSource @Inject constructor(
     ): Result<List<E>> = ioScope.asResult {
         if (ids.isEmpty()) {
             emptyList()
-        } else if (ids.size <= VIDEO_MAX_FETCH_SIZE) {
+        } else if (ids.size <= YouTubeDataSource.MAX_BATCH_SIZE) {
             youtube.requestParams(ids).execute().getItems()
         } else {
-            ids.chunked(VIDEO_MAX_FETCH_SIZE)
+            ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE)
                 .map { async { youtube.requestParams(it.toSet()).execute().getItems() } }
                 .awaitAll()
                 .flatten()
@@ -179,9 +179,6 @@ internal class YouTubeRemoteDataSource @Inject constructor(
         private const val PART_SNIPPET = "snippet"
         private const val PART_CONTENT_DETAILS = "contentDetails"
         private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
-
-        // https://developers.google.com/youtube/v3/docs/videos/list#parameters
-        private const val VIDEO_MAX_FETCH_SIZE = 50
     }
 }
 

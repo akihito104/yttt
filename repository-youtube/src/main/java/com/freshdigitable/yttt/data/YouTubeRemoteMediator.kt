@@ -9,6 +9,7 @@ import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
 import java.time.Duration
@@ -39,7 +40,7 @@ internal class YouTubeRemoteMediator @Inject constructor(
         }
         return when (loadType) {
             LoadType.REFRESH -> {
-                repository.fetchAllSubscribe(50)
+                repository.fetchAllSubscribe(YouTubeDataSource.MAX_PAGE_SIZE)
                 MediatorResult.Success(true)
             }
 

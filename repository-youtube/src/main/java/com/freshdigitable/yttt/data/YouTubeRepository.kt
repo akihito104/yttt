@@ -17,7 +17,8 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.n
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.source.YoutubeDataSource
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
+import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import com.freshdigitable.yttt.logE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -35,21 +36,19 @@ import javax.inject.Singleton
 
 @Singleton
 class YouTubeRepository @Inject constructor(
-    private val remoteSource: YoutubeDataSource.Remote,
-    private val localSource: YoutubeDataSource.Local,
+    private val remoteSource: YouTubeDataSource.Remote,
+    private val localSource: YouTubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
     coroutineScope: CoroutineScope,
-) : YoutubeDataSource {
-    val videos: StateFlow<List<YouTubeVideoExtended>> = localSource.videos
-        .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
+) : YouTubeDataSource, YouTubeLiveDataSource {
     internal var subscriptionFetchedAt: Instant? = null
 
-    override suspend fun fetchAllSubscribe(maxResult: Long): Result<List<YouTubeSubscription>> {
+    override suspend fun fetchAllSubscribe(pageSize: Long): Result<List<YouTubeSubscription>> {
         val cache = localSource.fetchAllSubscribe()
         if (cache.isFailure) {
             return cache
         }
-        val res = remoteSource.fetchAllSubscribePaged(maxResult.toInt()).reduce { _, v ->
+        val res = remoteSource.fetchAllSubscribePaged(pageSize).reduce { _, v ->
             v.onSuccess { localSource.addSubscribes(it) }
         }.onSuccess { r ->
             subscriptionFetchedAt = dateTimeProvider.now()
@@ -104,35 +103,6 @@ class YouTubeRepository @Inject constructor(
         return res
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideoExtended>> {
-        if (ids.isEmpty()) {
-            return Result.success(emptyList())
-        }
-        val videoCache = localSource.fetchVideoList(ids)
-        if (videoCache.isFailure) {
-            return Result.failure(videoCache.exceptionOrNull()!!)
-        }
-        val cache = checkNotNull(videoCache.getOrNull()).associateBy { it.id }
-        val current = dateTimeProvider.now()
-        val notCached = ids - cache.keys
-        val updatable = cache.values.filter { it.isUpdatable(current) }.map { it.id }.toSet()
-        val needed = notCached + updatable
-        if (needed.isEmpty()) {
-            return Result.success(cache.values.toList())
-        }
-        val videoRes = remoteSource.fetchVideoList(needed)
-        if (videoRes.isFailure) {
-            return Result.failure(videoRes.exceptionOrNull()!!)
-        }
-        return videoRes.map { v ->
-            v.map { it.extend(old = cache[it.id], fetchedAt = dateTimeProvider.now()) } +
-                (ids - needed).mapNotNull { cache[it] }
-        }
-    }
-
-    override suspend fun addVideo(video: Collection<YouTubeVideoExtended>) {
-        localSource.addVideo(video)
-    }
 
     fun removeImageByUrl(url: Collection<String>) {
         localSource.removeImageByUrl(url)
@@ -203,17 +173,6 @@ class YouTubeRepository @Inject constructor(
             )
     }
 
-    suspend fun cleanUp() {
-        localSource.cleanUp()
-    }
-
-    suspend fun removeVideo(removed: Set<YouTubeVideo.Id>) {
-        if (removed.isEmpty()) {
-            return
-        }
-        localSource.removeVideo(removed)
-    }
-
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>> {
         if (ids.isEmpty()) {
             return Result.success(emptyList())
@@ -245,6 +204,47 @@ class YouTubeRepository @Inject constructor(
         return remote
     }
 
+    companion object {
+        private val activityMaxPeriod = Period.ofDays(7)
+    }
+
+    override val videos: StateFlow<List<YouTubeVideoExtended>> = localSource.videos
+        .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
+
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideoExtended>> {
+        if (ids.isEmpty()) {
+            return Result.success(emptyList())
+        }
+        val videoCache = localSource.fetchVideoList(ids)
+        if (videoCache.isFailure) {
+            return Result.failure(videoCache.exceptionOrNull()!!)
+        }
+        val cache = checkNotNull(videoCache.getOrNull()).associateBy { it.id }
+        val current = dateTimeProvider.now()
+        val notCached = ids - cache.keys
+        val updatable = cache.values.filter { it.isUpdatable(current) }.map { it.id }.toSet()
+        val needed = notCached + updatable
+        if (needed.isEmpty()) {
+            return Result.success(cache.values.toList())
+        }
+        val videoRes = remoteSource.fetchVideoList(needed)
+        return videoRes.map { v ->
+            v.map { it.extend(old = cache[it.id], fetchedAt = dateTimeProvider.now()) } +
+                (ids - needed).mapNotNull { cache[it] }
+        }
+    }
+
+    override suspend fun addVideo(video: Collection<YouTubeVideoExtended>) {
+        localSource.addVideo(video)
+    }
+
+    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>) {
+        if (ids.isEmpty()) {
+            return
+        }
+        localSource.removeVideo(ids)
+    }
+
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         localSource.addFreeChatItems(ids)
     }
@@ -253,11 +253,11 @@ class YouTubeRepository @Inject constructor(
         localSource.removeFreeChatItems(ids)
     }
 
-    suspend fun deleteAllTables() {
-        localSource.deleteAllTables()
+    override suspend fun cleanUp() {
+        localSource.cleanUp()
     }
 
-    companion object {
-        private val activityMaxPeriod = Period.ofDays(7)
+    override suspend fun deleteAllTables() {
+        localSource.deleteAllTables()
     }
 }

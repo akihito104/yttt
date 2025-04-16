@@ -18,7 +18,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
-import com.freshdigitable.yttt.data.source.YoutubeDataSource
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import kotlinx.coroutines.flow.Flow
@@ -34,7 +34,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     imageDataSource: ImageDataSource,
     private val dateTimeProvider: DateTimeProvider,
     private val ioScope: IoScope,
-) : YoutubeDataSource.Local, ImageDataSource by imageDataSource {
+) : YouTubeDataSource.Local, ImageDataSource by imageDataSource {
     override val videos: Flow<List<YouTubeVideoExtended>> = dao.watchAllUnfinishedVideos()
     override suspend fun findSubscriptionSummaries(
         ids: Collection<YouTubeSubscription.Id>,
@@ -42,7 +42,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.findSubscriptionSummaries(ids)
     }.getOrNull()!!  // FIXME
 
-    override suspend fun fetchAllSubscribe(maxResult: Long): Result<List<YouTubeSubscription>> =
+    override suspend fun fetchAllSubscribe(pageSize: Long): Result<List<YouTubeSubscription>> =
         ioScope.asResult {
             dao.findAllSubscriptions()
         }
@@ -179,11 +179,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
     ): List<O> {
         return if (ids.isEmpty()) {
             emptyList()
-        } else if (ids.size < 50) {
+        } else if (ids.size < YouTubeDataSource.MAX_BATCH_SIZE) {
             listOf(dao.query(ids))
         } else {
             val a = database.withTransaction {
-                ids.chunked(50).map { dao.query(it.toSet()) }
+                ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE).map { dao.query(it.toSet()) }
             }
             listOf(a).flatten()
         }

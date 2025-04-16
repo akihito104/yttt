@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.logE
 import com.freshdigitable.yttt.logI
@@ -57,7 +58,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         ) { videoUpdateTaskChannel ->
             videoUpdateTaskChannel.consumeAsFlow()
                 .flatMapConcat { it.asFlow() }
-                .chunked(50).collect { ids ->
+                .chunked(YouTubeDataSource.MAX_BATCH_SIZE).collect { ids ->
                     val v = liveRepository.fetchVideoList(ids.toSet<YouTubeVideo.Id>())
                         .onFailure { logE(throwable = it) { "ids: $ids" } }
                         .getOrNull() ?: return@collect
