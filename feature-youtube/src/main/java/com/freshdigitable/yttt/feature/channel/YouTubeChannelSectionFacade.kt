@@ -20,7 +20,7 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
     private val repository: YouTubeRepository,
 ) {
     suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> =
-        runCatching { repository.fetchChannelSection(id) }
+        repository.fetchChannelSection(id)
 
     fun watchTasks(task: FetchTaskItems): Flow<FetchTaskResult> = combine(
         watchPlaylist(task).onStart { emit(Result.success(emptyMap())) },
@@ -36,7 +36,7 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
             return emptyFlow()
         }
         return flowOf(item).map { p ->
-            runCatching { repository.fetchPlaylist(p).associateBy { it.id } }
+            repository.fetchPlaylist(p).map { r -> r.associateBy { it.id } }
         }
     }
 

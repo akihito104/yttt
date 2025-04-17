@@ -201,7 +201,7 @@ class YouTubePlaylistWithItemsTest {
             }.values
             // exercise
             val sut = playlistWithItems(maxAge).update(
-                newItems = newItems,
+                newItems = newItems.toList(),
                 fetchedAt = updatedLatest + Duration.ofDays(3).minusMillis(1),
             )
             // verify
@@ -223,7 +223,7 @@ class YouTubePlaylistWithItemsTest {
             }.values
             // exercise
             val sut = playlistWithItems(maxAge).update(
-                newItems = newItems,
+                newItems = newItems.toList(),
                 fetchedAt = updatedLatest + Duration.ofDays(3),
             )
             // verify

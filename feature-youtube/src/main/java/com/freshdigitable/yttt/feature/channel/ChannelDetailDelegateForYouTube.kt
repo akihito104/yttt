@@ -112,7 +112,8 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             channelId = i.mapTo(),
             publishedAfter = dateTimeProvider.now() - Duration.ofDays(7),
             maxResult = 20,
-        )
+        ).onFailure { logE(throwable = it) { "fetchLiveChannelLogs:$i" } }
+            .getOrDefault(emptyList())
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     override suspend fun clearForDetail() {

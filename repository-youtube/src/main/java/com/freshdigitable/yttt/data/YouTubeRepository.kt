@@ -17,9 +17,9 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.n
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
-import com.freshdigitable.yttt.logE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -62,7 +62,6 @@ class YouTubeRepository @Inject constructor(
     suspend fun fetchPagedSubscriptionSummary(): Flow<Result<List<YouTubeSubscriptionSummary>>> {
         val cache = localSource.fetchAllSubscribe()
         if (cache.isFailure) {
-            logE(throwable = cache.exceptionOrNull()) { "fetchPagedSubscriptionSummary" }
             return flowOf(Result.failure(cache.exceptionOrNull()!!))
         }
         return flow {
@@ -91,16 +90,20 @@ class YouTubeRepository @Inject constructor(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
         maxResult: Long?,
-    ): List<YouTubeChannelLog> {
+    ): Result<List<YouTubeChannelLog>> {
         val pa = if (publishedAfter != null) {
             publishedAfter
         } else {
-            val cache = localSource.fetchLiveChannelLogs(channelId, maxResult = 1).firstOrNull()
+            val cacheRes = localSource.fetchLiveChannelLogs(channelId, maxResult = 1)
+            if (cacheRes.isFailure) {
+                return cacheRes
+            }
+            val cache = cacheRes.getOrNull()?.firstOrNull()
             cache?.dateTime?.plusSeconds(1) ?: dateTimeProvider.now().minus(activityMaxPeriod)
         }
-        val res = remoteSource.fetchLiveChannelLogs(channelId, pa, maxResult)
-        localSource.addLiveChannelLogs(res)
-        return res
+        return remoteSource.fetchLiveChannelLogs(channelId, pa, maxResult).onSuccess {
+            localSource.addLiveChannelLogs(it)
+        }
     }
 
 
@@ -108,15 +111,23 @@ class YouTubeRepository @Inject constructor(
         localSource.removeImageByUrl(url)
     }
 
-    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist> {
-        val cache = localSource.fetchPlaylist(ids)
+    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>> {
+        val cacheRes = localSource.fetchPlaylist(ids)
+        if (cacheRes.isFailure) {
+            return cacheRes
+        }
+        val cache = checkNotNull(cacheRes.getOrNull())
         val needed = ids - cache.map { it.id }.toSet()
         if (needed.isEmpty()) {
-            return cache
+            return cacheRes
         }
-        val remote = remoteSource.fetchPlaylist(needed)
-        localSource.addPlaylist(remote)
-        return cache + remote
+        val remoteRes = remoteSource.fetchPlaylist(needed).onSuccess {
+            localSource.addPlaylist(it)
+        }
+        if (remoteRes.isFailure) {
+            return remoteRes
+        }
+        return remoteRes.map { it + cache }
     }
 
     suspend fun fetchPlaylistItems(
@@ -125,9 +136,9 @@ class YouTubeRepository @Inject constructor(
     ): List<YouTubePlaylistItem> {
         val cache = localSource.fetchPlaylistWithItems(id)
         if (cache?.isUpdatable(dateTimeProvider.now()) == false) {
-            return cache.items.toList()
+            return cache.items
         }
-        val updatable = fetchPlaylistWithItemsUpdatable(id, maxResult, cache).onSuccess { u ->
+        return fetchPlaylistWithItemsUpdatable(id, maxResult, cache).onSuccess { u ->
             val uploadedAtAnotherChannel = u.items
                 .filter { it.channel.id != it.videoOwnerChannelId }
                 .mapNotNull { it.videoOwnerChannelId }
@@ -135,8 +146,7 @@ class YouTubeRepository @Inject constructor(
                 fetchChannelList(uploadedAtAnotherChannel.toSet())
             }
             localSource.updatePlaylistWithItems(u)
-        }
-        return updatable.getOrNull()?.items?.toList() ?: emptyList()
+        }.map { it.items }.getOrDefault(emptyList())
     }
 
     suspend fun fetchPlaylistWithItems(
@@ -148,29 +158,44 @@ class YouTubeRepository @Inject constructor(
         if (!summary.needsUpdatePlaylist(current)) {
             return Result.success(null)
         }
-        val updatable = fetchPlaylistWithItemsUpdatable(
-            playlistId,
-            maxResult,
-            localSource.fetchPlaylistWithItemSummaries(playlistId),
-        ).onSuccess {
-            localSource.updatePlaylistWithItems(it)
-        }
-        return updatable
+        val cache = localSource.fetchPlaylistWithItemSummaries(playlistId)
+        return fetchPlaylistWithItemsUpdatable(playlistId, maxResult, cache)
+            .recoverCatching {
+                if (cache != null && (it as? IoScope.NetworkException)?.statusCode == 404) {
+                    cache.update(emptyList(), current)
+                } else {
+                    throw it
+                }
+            }
+            .onSuccess { localSource.updatePlaylistWithItems(it) }
     }
 
     private suspend fun fetchPlaylistWithItemsUpdatable(
         playlistId: YouTubePlaylist.Id,
         maxResult: Long = 10,
         cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?
-    ): Result<YouTubePlaylistWithItems> = kotlin.runCatching {
-        val newItems = remoteSource.fetchPlaylistItems(playlistId, maxResult = maxResult)
+    ): Result<YouTubePlaylistWithItems> {
+        val itemRes = remoteSource.fetchPlaylistItems(playlistId, maxResult = maxResult)
+        if (itemRes.isFailure) {
+            return Result.failure(checkNotNull(itemRes.exceptionOrNull()))
+        }
         val fetchedAt = dateTimeProvider.now()
-        cache?.update(newItems, fetchedAt)
-            ?: YouTubePlaylistWithItems.newPlaylist(
-                playlist = remoteSource.fetchPlaylist(setOf(playlistId)).first(),
-                items = newItems,
-                fetchedAt = fetchedAt,
-            )
+        val newItems = checkNotNull(itemRes.getOrNull())
+        if (cache != null) {
+            return Result.success(cache.update(newItems, fetchedAt))
+        } else {
+            val playlist = remoteSource.fetchPlaylist(setOf(playlistId)).map { it.first() }
+            if (playlist.isFailure) {
+                return Result.failure(checkNotNull(playlist.exceptionOrNull()))
+            }
+            return playlist.map {
+                YouTubePlaylistWithItems.newPlaylist(
+                    playlist = it,
+                    items = newItems,
+                    fetchedAt = fetchedAt,
+                )
+            }
+        }
     }
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>> {
@@ -186,22 +211,23 @@ class YouTubeRepository @Inject constructor(
         if (needed.isEmpty()) {
             return cacheRes
         }
-        val remoteRes = remoteSource.fetchChannelList(needed)
+        return remoteSource.fetchChannelList(needed)
             .onSuccess { localSource.addChannelList(it) }
-        if (remoteRes.isFailure) {
-            return remoteRes
-        }
-        return remoteRes.map { it + cache }
+            .map { it + cache }
     }
 
-    override suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
-        val cache = localSource.fetchChannelSection(id)
-        if (cache.isNotEmpty()) { // TODO: updatable
-            return cache
+    override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> {
+        val cacheRes = localSource.fetchChannelSection(id)
+        if (cacheRes.isFailure) {
+            return cacheRes
         }
-        val remote = remoteSource.fetchChannelSection(id)
-        localSource.addChannelSection(remote)
-        return remote
+        val cache = checkNotNull(cacheRes.getOrNull())
+        if (cache.isNotEmpty()) { // TODO: updatable
+            return cacheRes
+        }
+        return remoteSource.fetchChannelSection(id).onSuccess {
+            localSource.addChannelSection(it)
+        }
     }
 
     companion object {

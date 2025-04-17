@@ -60,11 +60,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
         maxResult: Long?,
-    ): List<YouTubeChannelLog> {
+    ): Result<List<YouTubeChannelLog>> = runCatching {
         if (publishedAfter != null) {
-            return dao.findChannelLogs(channelId, publishedAfter, maxResult)
+            dao.findChannelLogs(channelId, publishedAfter, maxResult)
         }
-        return dao.findChannelLogs(channelId, maxResult)
+        dao.findChannelLogs(channelId, maxResult)
     }
 
     override suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>) {
@@ -77,8 +77,8 @@ internal class YouTubeLocalDataSource @Inject constructor(
     ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(playlistId, maxResult)
 
     private val playlist = mutableMapOf<YouTubePlaylist.Id, YouTubePlaylist>()
-    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<YouTubePlaylist> =
-        ids.mapNotNull { playlist[it] }
+    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>> =
+        Result.success(ids.mapNotNull { playlist[it] })
 
     override suspend fun addPlaylist(playlist: Collection<YouTubePlaylist>) {
         this.playlist.putAll(playlist.associateBy { it.id })
@@ -158,8 +158,8 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     private val channelSections = mutableMapOf<YouTubeChannel.Id, List<YouTubeChannelSection>>()
-    override suspend fun fetchChannelSection(id: YouTubeChannel.Id): List<YouTubeChannelSection> {
-        return channelSections[id] ?: emptyList()
+    override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> {
+        return Result.success(channelSections[id] ?: emptyList())
     }
 
     override suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>) {
