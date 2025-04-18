@@ -3,7 +3,7 @@ package com.freshdigitable.yttt.data.source.local.di
 import android.content.Context
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
-import com.freshdigitable.yttt.data.source.YoutubeDataSource
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TwitchLocalDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
@@ -35,7 +35,7 @@ object DbModule {
 @InstallIn(SingletonComponent::class)
 internal interface LocalModule {
     @Binds
-    fun bindYoutubeDataSourceLocal(dataSource: YouTubeLocalDataSource): YoutubeDataSource.Local
+    fun bindYouTubeDataSourceLocal(dataSource: YouTubeLocalDataSource): YouTubeDataSource.Local
 
     @Binds
     fun bindTwitchDataSourceLocal(dataSource: TwitchLocalDataSource): TwitchDataSource.Local

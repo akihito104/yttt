@@ -5,14 +5,14 @@ import java.time.Instant
 import kotlin.math.pow
 
 interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id> {
-    val items: Collection<YouTubePlaylistItem>
-    val addedItems: Collection<YouTubePlaylistItem>
+    val items: List<YouTubePlaylistItem>
+    val addedItems: List<YouTubePlaylistItem>
     override val itemId: List<YouTubePlaylistItem.Id>
         get() = items.map { it.id }
 
     companion object {
         fun YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>.update(
-            newItems: Collection<YouTubePlaylistItem>?,
+            newItems: List<YouTubePlaylistItem>?,
             fetchedAt: Instant,
         ): YouTubePlaylistWithItems = ForUpdate(
             newItems = newItems,
@@ -22,7 +22,7 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
         fun newPlaylist(
             playlist: YouTubePlaylist,
-            items: Collection<YouTubePlaylistItem>?,
+            items: List<YouTubePlaylistItem>?,
             fetchedAt: Instant,
         ): YouTubePlaylistWithItems = NewPlaylist(
             playlist = playlist,
@@ -32,7 +32,7 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
         fun create(
             playlist: YouTubePlaylistUpdatable,
-            items: Collection<YouTubePlaylistItem>
+            items: List<YouTubePlaylistItem>
         ): YouTubePlaylistWithItems = CachedPlaylist(playlist, items)
 
         internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
@@ -41,12 +41,12 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
     private class ForUpdate(
         private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
-        private val newItems: Collection<YouTubePlaylistItem>?,
+        private val newItems: List<YouTubePlaylistItem>?,
         override val fetchedAt: Instant,
     ) : YouTubePlaylistWithItems {
         override val playlist: YouTubePlaylist
             get() = cachedPlaylistWithItems.playlist
-        override val items: Collection<YouTubePlaylistItem>
+        override val items: List<YouTubePlaylistItem>
             get() = newItems ?: emptyList()
         override val maxAge: Duration
             get() = if (items.isEmpty()) {
@@ -64,7 +64,7 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
                     MAX_AGE_DEFAULT
                 }
             }
-        override val addedItems: Collection<YouTubePlaylistItem>
+        override val addedItems: List<YouTubePlaylistItem>
             get() {
                 val i = items.associateBy { it.id }
                 val addedId = i.keys - cachedPlaylistWithItems.itemId.toSet()
@@ -74,22 +74,22 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
     private class NewPlaylist(
         override val playlist: YouTubePlaylist,
-        private val newItems: Collection<YouTubePlaylistItem>?,
+        private val newItems: List<YouTubePlaylistItem>?,
         override val fetchedAt: Instant,
     ) : YouTubePlaylistWithItems {
-        override val items: Collection<YouTubePlaylistItem>
+        override val items: List<YouTubePlaylistItem>
             get() = newItems ?: emptyList()
         override val maxAge: Duration
             get() = if (items.isEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT
-        override val addedItems: Collection<YouTubePlaylistItem>
+        override val addedItems: List<YouTubePlaylistItem>
             get() = items
     }
 
     private class CachedPlaylist(
         override val playlist: YouTubePlaylistUpdatable,
-        override val items: Collection<YouTubePlaylistItem>,
+        override val items: List<YouTubePlaylistItem>,
     ) : YouTubePlaylistWithItems, Updatable by playlist {
-        override val addedItems: Collection<YouTubePlaylistItem>
+        override val addedItems: List<YouTubePlaylistItem>
             get() = emptyList()
     }
 }

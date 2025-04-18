@@ -7,7 +7,7 @@ import com.freshdigitable.yttt.data.YouTubeSubscriptionPagerFactory
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
-import com.freshdigitable.yttt.data.source.YoutubeDataSource
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.HttpRequestInitializerImpl
 import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
@@ -62,7 +62,7 @@ internal interface YouTubeModule {
     }
 
     @Binds
-    fun bindYoutubeDataSourceRemote(dataSource: YouTubeRemoteDataSource): YoutubeDataSource.Remote
+    fun bindYouTubeDataSourceRemote(dataSource: YouTubeRemoteDataSource): YouTubeDataSource.Remote
 
     @Binds
     @IntoMap

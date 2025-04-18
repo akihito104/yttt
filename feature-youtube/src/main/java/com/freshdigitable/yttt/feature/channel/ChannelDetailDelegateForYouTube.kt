@@ -68,8 +68,10 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         YouTubeChannelDetailTab.Actions,
         if (BuildConfig.DEBUG) YouTubeChannelDetailTab.Debug else null
     )
-    private val detail: Flow<YouTubeChannelDetail?> = flowOf(id).map {
-        repository.fetchChannelList(setOf(it.mapTo())).firstOrNull()
+    private val detail: Flow<YouTubeChannelDetail?> = flowOf(id).map { i ->
+        repository.fetchChannelList(setOf(i.mapTo())).map { it.firstOrNull() }
+            .onFailure { logE(throwable = it) { "detail:$i" } }
+            .getOrNull()
     }
     override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
         d?.let { LiveChannelDetailYouTube(it) }
@@ -110,7 +112,8 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             channelId = i.mapTo(),
             publishedAfter = dateTimeProvider.now() - Duration.ofDays(7),
             maxResult = 20,
-        )
+        ).onFailure { logE(throwable = it) { "fetchLiveChannelLogs:$i" } }
+            .getOrDefault(emptyList())
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     override suspend fun clearForDetail() {
