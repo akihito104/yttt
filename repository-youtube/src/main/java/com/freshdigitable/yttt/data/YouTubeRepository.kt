@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.upd
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -24,10 +25,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.fold
-import kotlinx.coroutines.flow.reduce
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 import java.time.Period
@@ -41,48 +40,27 @@ class YouTubeRepository @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
     coroutineScope: CoroutineScope,
 ) : YouTubeDataSource, YouTubeLiveDataSource {
-    internal var subscriptionFetchedAt: Instant? = null
-
-    override suspend fun fetchAllSubscribe(pageSize: Long): Result<List<YouTubeSubscription>> {
+    override suspend fun fetchAllSubscribe(pageSize: Long): Result<YouTubeSubscriptions> {
         val cache = localSource.fetchAllSubscribe()
         if (cache.isFailure) {
             return cache
         }
-        val res = remoteSource.fetchAllSubscribePaged(pageSize).reduce { _, v ->
-            v.onSuccess { localSource.addSubscribes(it) }
-        }.onSuccess { r ->
-            subscriptionFetchedAt = dateTimeProvider.now()
-            val c = cache.getOrNull() ?: emptyList()
-            val deleted = c.map { it.id }.toSet() - r.map { it.id }.toSet()
-            localSource.removeSubscribes(deleted)
-        }
-        return res
+        val c = checkNotNull(cache.getOrNull())
+        return remoteSource.fetchAllSubscribe(pageSize)
+            .map { YouTubeSubscriptions.Updated(c, it) }
     }
 
-    suspend fun fetchPagedSubscriptionSummary(): Flow<Result<List<YouTubeSubscriptionSummary>>> {
-        val cache = localSource.fetchAllSubscribe()
-        if (cache.isFailure) {
-            return flowOf(Result.failure(cache.exceptionOrNull()!!))
+    suspend fun fetchPagedSubscription(): Flow<Result<YouTubeSubscriptions>> {
+        val cacheRes = localSource.fetchAllSubscribe()
+        if (cacheRes.isFailure) {
+            return flowOf(cacheRes)
         }
-        return flow {
-            val res = mutableListOf<YouTubeSubscriptionSummary>()
-            remoteSource.fetchAllSubscribePaged()
-                .fold(Result.success(emptyList<YouTubeSubscription>())) { acc, value ->
-                    value.onSuccess { v ->
-                        val page = v - checkNotNull(acc.getOrNull()).toSet()
-                        localSource.addSubscribes(page)
-                        val summary = localSource.findSubscriptionSummaries(page.map { it.id })
-                        emit(Result.success(res + summary))
-                        res.addAll(summary)
-                    }.onFailure {
-                        emit(Result.failure(it))
-                    }
-                }.onSuccess { s ->
-                    subscriptionFetchedAt = dateTimeProvider.now()
-                    val c = cache.getOrNull() ?: emptyList()
-                    val deleted = c.map { it.id } - s.map { it.id }.toSet()
-                    localSource.removeSubscribes(deleted.toSet())
-                }
+        val cache = checkNotNull(cacheRes.getOrNull())
+        return remoteSource.fetchAllSubscribePaged().map { r ->
+            r.map {
+                if (it.hasNextPage) it
+                else YouTubeSubscriptions.Updated(cache, it)
+            }
         }
     }
 
@@ -277,6 +255,19 @@ class YouTubeRepository @Inject constructor(
 
     override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         localSource.removeFreeChatItems(ids)
+    }
+
+    override val subscriptionsFetchedAt: Instant get() = localSource.subscriptionsFetchedAt
+
+    override suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary> =
+        localSource.findSubscriptionSummaries(ids)
+
+    override suspend fun addSubscribes(subscriptions: YouTubeSubscriptions) {
+        localSource.addSubscribes(subscriptions)
+    }
+
+    override suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>) {
+        localSource.removeSubscribes(subscriptions)
     }
 
     override suspend fun cleanUp() {

@@ -7,13 +7,13 @@ import androidx.paging.RemoteMediator
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.YouTube
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
 import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 
 @OptIn(ExperimentalPagingApi::class)
@@ -23,7 +23,7 @@ internal class YouTubeRemoteMediator @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
 ) : RemoteMediator<Int, LiveSubscription>() {
     override suspend fun initialize(): InitializeAction {
-        val subscriptionFetchedAt = repository.subscriptionFetchedAt ?: Instant.EPOCH
+        val subscriptionFetchedAt = repository.subscriptionsFetchedAt
         if (subscriptionFetchedAt + Duration.ofMinutes(30) <= dateTimeProvider.now()) {
             return InitializeAction.LAUNCH_INITIAL_REFRESH
         }
@@ -40,8 +40,15 @@ internal class YouTubeRemoteMediator @Inject constructor(
         }
         return when (loadType) {
             LoadType.REFRESH -> {
-                repository.fetchAllSubscribe(YouTubeDataSource.MAX_PAGE_SIZE)
-                MediatorResult.Success(true)
+                val res = repository.fetchAllSubscribe(YouTubeDataSource.MAX_PAGE_SIZE)
+                    .onSuccess { s ->
+                        (s as? YouTubeSubscriptions.Updated)?.let {
+                            repository.addSubscribes(it)
+                            repository.removeSubscribes(it.deleted)
+                        }
+                    }
+                if (res.isSuccess) MediatorResult.Success(true)
+                else MediatorResult.Error(res.exceptionOrNull()!!)
             }
 
             LoadType.PREPEND, LoadType.APPEND -> MediatorResult.Success(true)

@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
@@ -102,31 +103,42 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         coroutineScope: CoroutineScope,
         videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>,
     ) {
-        val playlistUpdateTaskCache = liveRepository.fetchPagedSubscriptionSummary()
+        val playlistUpdateTaskCache = liveRepository.fetchPagedSubscription()
             .fold(PlaylistUpdateTaskCache()) { acc, value ->
                 val s = value.onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
                     .getOrNull() ?: return@fold acc
-                acc.updateSubscriptionSummary(
-                    summary = s,
-                    current = dateTimeProvider.now(),
-                    task = {
-                        coroutineScope.async(start = CoroutineStart.LAZY) {
-                            val v = fetchVideoByPlaylistIdTask(it, dateTimeProvider.now())
-                            if (v.isNotEmpty()) {
-                                videoUpdateTaskChannel.send(v)
-                            }
+                val added = if (s is YouTubeSubscriptions.Paged) {
+                    s.lastPage.map { it.id }
+                } else {
+                    s.items.map { it.id }
+                }
+                trace?.incrementMetric("subs", added.size.toLong())
+                val current = dateTimeProvider.now()
+                val summary = liveRepository.findSubscriptionSummaries(added)
+                    .filter { it.needsUpdatePlaylist(current) }
+                if (summary.isEmpty()) {
+                    return@fold acc.update(s, emptyList(), null)
+                }
+                val tasks = summary.map {
+                    coroutineScope.async(start = CoroutineStart.LAZY) {
+                        val v = fetchVideoByPlaylistIdTask(it, dateTimeProvider.now())
+                        if (v.isNotEmpty()) {
+                            videoUpdateTaskChannel.send(v)
                         }
-                    },
-                    awaitTask = {
-                        coroutineScope.launch {
-                            it.awaitAll()
-                        }
-                    },
-                )
+                    }
+                }
+                trace?.incrementMetric("update_task", tasks.size.toLong())
+                val job = coroutineScope.launch {
+                    tasks.awaitAll()
+                }
+                acc.update(s, tasks, job)
             }
+        val subscriptions = playlistUpdateTaskCache.subscriptions
+        if (subscriptions is YouTubeSubscriptions.Updated) {
+            liveRepository.addSubscribes(subscriptions)
+            liveRepository.removeSubscribes(subscriptions.deleted)
+        }
         playlistUpdateTaskCache.join()
-        trace?.putMetric("update_task", playlistUpdateTaskCache.tasks.size.toLong())
-        trace?.putMetric("subs", playlistUpdateTaskCache.summaries.size.toLong())
     }
 
     private suspend fun fetchVideoByPlaylistIdTask(
@@ -178,31 +190,17 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 }
 
 private class PlaylistUpdateTaskCache {
-    private var summaryCache = emptyList<YouTubeSubscriptionSummary>()
-    val summaries: Set<YouTubeSubscriptionSummary> get() = summaryCache.toSet()
     private val updateTasks = mutableSetOf<Deferred<Unit>>()
-    val tasks: Set<Deferred<Unit>> get() = updateTasks
     private val jobs = mutableListOf<Job>()
-
-    fun updateSubscriptionSummary(
-        summary: List<YouTubeSubscriptionSummary>,
-        current: Instant,
-        task: (YouTubeSubscriptionSummary) -> Deferred<Unit>,
-        awaitTask: (List<Deferred<Unit>>) -> Job,
-    ): PlaylistUpdateTaskCache {
-        val s = summary.associateBy { it.subscriptionId }
-        val c = summaryCache.map { it.subscriptionId }
-        summaryCache = summary
-
-        val newSummary = (s.keys - c.toSet()).mapNotNull { s[it] }
-            .filter { it.needsUpdatePlaylist(current) }
-        if (newSummary.isEmpty()) {
-            return this
-        }
-        val updatePlaylistTask = newSummary.map(task)
-        updateTasks.addAll(updatePlaylistTask)
-        jobs += awaitTask(updatePlaylistTask)
-        return this
+    var subscriptions: YouTubeSubscriptions? = null
+    fun update(
+        subscriptions: YouTubeSubscriptions,
+        tasks: List<Deferred<Unit>>,
+        job: Job?,
+    ): PlaylistUpdateTaskCache = apply {
+        this.subscriptions = subscriptions
+        updateTasks.addAll(tasks)
+        if (job != null) jobs.add(job)
     }
 
     suspend fun join() {

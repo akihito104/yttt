@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import kotlinx.coroutines.flow.Flow
@@ -23,7 +24,7 @@ interface YouTubeDataSource {
         const val MAX_PAGE_SIZE: Long = 50
     }
 
-    suspend fun fetchAllSubscribe(pageSize: Long = MAX_PAGE_SIZE): Result<List<YouTubeSubscription>>
+    suspend fun fetchAllSubscribe(pageSize: Long = MAX_PAGE_SIZE): Result<YouTubeSubscriptions>
     suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant? = null,
@@ -35,10 +36,6 @@ interface YouTubeDataSource {
     suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>>
 
     interface Local : YouTubeDataSource, YouTubeLiveDataSource, ImageDataSource {
-        suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>)
-        suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>)
-        suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
-
         suspend fun addPlaylist(playlist: Collection<YouTubePlaylist>)
         suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems?
         suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems)
@@ -54,7 +51,8 @@ interface YouTubeDataSource {
     }
 
     interface Remote : YouTubeDataSource {
-        fun fetchAllSubscribePaged(pageSize: Long = MAX_PAGE_SIZE): Flow<Result<List<YouTubeSubscription>>>
+        fun fetchAllSubscribePaged(pageSize: Long = MAX_PAGE_SIZE): Flow<Result<YouTubeSubscriptions.Paged>>
+        override suspend fun fetchAllSubscribe(pageSize: Long): Result<YouTubeSubscriptions.Paged>
 
         suspend fun fetchPlaylistItems(
             id: YouTubePlaylist.Id,
@@ -73,6 +71,11 @@ interface YouTubeLiveDataSource {
 
     suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
+
+    val subscriptionsFetchedAt: Instant
+    suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
+    suspend fun addSubscribes(subscriptions: YouTubeSubscriptions)
+    suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>)
 
     suspend fun cleanUp()
     suspend fun deleteAllTables()

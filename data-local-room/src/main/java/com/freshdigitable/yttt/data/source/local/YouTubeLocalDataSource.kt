@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
@@ -42,14 +43,18 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.findSubscriptionSummaries(ids)
     }.getOrNull()!!  // FIXME
 
-    override suspend fun fetchAllSubscribe(pageSize: Long): Result<List<YouTubeSubscription>> =
+    override suspend fun fetchAllSubscribe(pageSize: Long): Result<YouTubeSubscriptions> =
         ioScope.asResult {
-            dao.findAllSubscriptions()
+            YouTubeSubscriptions.create(dao.findAllSubscriptions(), _subscriptionsFetchedAt)
         }
 
-    override suspend fun addSubscribes(subscriptions: Collection<YouTubeSubscription>) =
+    private var _subscriptionsFetchedAt: Instant = Instant.EPOCH
+    override val subscriptionsFetchedAt: Instant get() = _subscriptionsFetchedAt
+
+    override suspend fun addSubscribes(subscriptions: YouTubeSubscriptions) =
         ioScope.asResult {
-            dao.addSubscriptions(subscriptions)
+            dao.addSubscriptions(subscriptions.items)
+            _subscriptionsFetchedAt = subscriptions.lastUpdatedAt
         }.getOrNull()!! // FIXME
 
     override suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>) {

@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.db
 
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -27,7 +28,7 @@ internal class YouTubeDatabaseTestRule(
                 dao,
                 NopImageDataSource,
                 dateTimeProvider,
-                StandardTestDispatcher(testScope.testScheduler)
+                IoScope(StandardTestDispatcher(testScope.testScheduler))
             ),
         )
 

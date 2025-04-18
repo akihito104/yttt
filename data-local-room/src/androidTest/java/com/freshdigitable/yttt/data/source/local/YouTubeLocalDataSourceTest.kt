@@ -38,8 +38,9 @@ class YouTubeLocalDataSourceTest {
 
         @Test
         fun videoIsEmpty() = rule.runWithLocalSource {
-            assertThat(dataSource.fetchVideoList(emptySet())).isEmpty()
-            assertThat(dataSource.fetchVideoList(setOf(YouTubeVideo.Id("test")))).isEmpty()
+            assertThat(dataSource.fetchVideoList(emptySet()).getOrNull()).isEmpty()
+            assertThat(dataSource.fetchVideoList(setOf(YouTubeVideo.Id("test"))).getOrNull())
+                .isEmpty()
         }
 
         @Test
@@ -160,7 +161,8 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_returnsAllItems() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchVideoList(video.map { it.id }.toSet())
+            val actual = dataSource.fetchVideoList(video.map { it.id }.toSet()).getOrNull()
+                ?: throw AssertionError()
             // verify
             actual.containsVideoIdInAnyOrderElementsOf(video)
         }
@@ -168,7 +170,8 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_withUnknownKey_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchVideoList(setOf(YouTubeVideo.Id("unknown_entity")))
+            val actual =
+                dataSource.fetchVideoList(setOf(YouTubeVideo.Id("unknown_entity"))).getOrNull()
             // verify
             assertThat(actual).isEmpty()
         }
@@ -176,7 +179,8 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_withFreeChat_returns1Item() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchVideoList(setOf(freeChat.id))
+            val actual = dataSource.fetchVideoList(setOf(freeChat.id)).getOrNull()
+                ?: throw AssertionError()
             // verify
             assertThat(actual).hasSize(1)
             assertThat(actual.first().isFreeChat).isTrue()

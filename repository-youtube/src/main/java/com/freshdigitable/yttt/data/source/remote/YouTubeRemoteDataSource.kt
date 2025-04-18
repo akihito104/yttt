@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -10,6 +11,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemEntity
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
@@ -41,26 +43,26 @@ import javax.inject.Singleton
 internal class YouTubeRemoteDataSource @Inject constructor(
     private val youtube: YouTube,
     private val ioScope: IoScope,
+    private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource.Remote {
-    override fun fetchAllSubscribePaged(pageSize: Long): Flow<Result<List<YouTubeSubscription>>> =
+    override fun fetchAllSubscribePaged(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>> =
         ioScope.asResultFlow {
-            var t: String? = null
-            var subs = emptyList<YouTubeSubscription>()
+            val paged = PagedSubscription()
             do {
                 val res = youtube.subscriptions()
                     .list(listOf(PART_SNIPPET))
                     .setMine(true)
                     .setMaxResults(pageSize)
-                    .setPageToken(t)
+                    .setPageToken(paged.nextPageToken)
                     .execute()
-                val offset = subs.size
-                subs = subs + res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
-                emit(Result.success(subs))
-                t = res.nextPageToken
-            } while (t != null)
+                val offset = paged.itemSize
+                val subs = res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
+                val value = paged.update(subs, res.nextPageToken, dateTimeProvider.now())
+                emit(Result.success(value))
+            } while (res.nextPageToken != null)
         }.map { res -> res.recoverCatching { throw YouTubeException(it) } }
 
-    override suspend fun fetchAllSubscribe(pageSize: Long): Result<List<YouTubeSubscription>> =
+    override suspend fun fetchAllSubscribe(pageSize: Long): Result<YouTubeSubscriptions.Paged> =
         fetchAllSubscribePaged(pageSize).last()
 
     override suspend fun fetchLiveChannelLogs(
@@ -183,6 +185,27 @@ internal class YouTubeException(
             is HttpResponseException -> throwable.statusCode
             else -> -1
         }
+}
+
+private class PagedSubscription : YouTubeSubscriptions.Paged {
+    private val pages = mutableListOf<List<YouTubeSubscription>>()
+    var nextPageToken: String? = null
+    private var updatedAt: Instant? = null
+    override val items: List<YouTubeSubscription> get() = pages.flatten()
+    override val lastUpdatedAt: Instant get() = updatedAt ?: Instant.EPOCH
+    override val lastPage: List<YouTubeSubscription> get() = pages.last()
+    override val hasNextPage: Boolean get() = nextPageToken != null
+    val itemSize: Int get() = pages.sumOf { it.size }
+    fun update(
+        items: List<YouTubeSubscription>,
+        nextPageToken: String?,
+        updatedAt: Instant? = null,
+    ): PagedSubscription {
+        pages.add(items)
+        this.nextPageToken = nextPageToken
+        this.updatedAt = if (hasNextPage) null else updatedAt
+        return this
+    }
 }
 
 private fun Subscription.toLiveSubscription(order: Int): YouTubeSubscription =
