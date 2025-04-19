@@ -85,7 +85,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     override val uploadedVideo: Flow<List<YouTubePlaylistItem>> = detail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
         try {
-            repository.fetchPlaylistItems(pId, maxResult = 10)
+            repository.fetchPlaylistItems(pId, maxResult = 10).getOrDefault(emptyList())
         } catch (e: Exception) {
             logE(throwable = e) { "detail:$d" }
             emptyList()

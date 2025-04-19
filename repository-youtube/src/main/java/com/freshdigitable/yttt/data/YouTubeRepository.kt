@@ -11,13 +11,10 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -26,6 +23,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.io.IOException
 import java.time.Duration
 import java.time.Instant
 import java.time.Period
@@ -71,7 +69,6 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
-
     fun removeImageByUrl(url: Collection<String>) {
         localSource.removeImageByUrl(url)
     }
@@ -86,24 +83,32 @@ class YouTubeRepository @Inject constructor(
         if (needed.isEmpty()) {
             return cacheRes
         }
-        val remoteRes = remoteSource.fetchPlaylist(needed).onSuccess {
+        return remoteSource.fetchPlaylist(needed).onSuccess {
             localSource.addPlaylist(it)
-        }
-        if (remoteRes.isFailure) {
-            return remoteRes
-        }
-        return remoteRes.map { it + cache }
+        }.map { it + cache }
     }
 
-    suspend fun fetchPlaylistItems(
+    override suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
-        maxResult: Long = 10,
-    ): List<YouTubePlaylistItem> {
-        val cache = localSource.fetchPlaylistWithItems(id)
-        if (cache?.isUpdatable(dateTimeProvider.now()) == false) {
-            return cache.items
+        maxResult: Long,
+    ): Result<List<YouTubePlaylistItem>> {
+        val cacheRes = localSource.fetchPlaylistWithItems(id, maxResult)
+        if (cacheRes.isFailure) {
+            return Result.failure(checkNotNull(cacheRes.exceptionOrNull()))
         }
-        return fetchPlaylistWithItemsUpdatable(id, maxResult, cache).onSuccess { u ->
+        val cache = cacheRes.getOrNull()
+        if (cache?.isUpdatable(dateTimeProvider.now()) == false) {
+            return Result.success(cache.items)
+        }
+        return fetchPlaylistWithItems(id, maxResult, cache).map { it?.items ?: emptyList() }
+    }
+
+    override suspend fun fetchPlaylistWithItems(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?,
+    ): Result<YouTubePlaylistWithItems?> = fetchPlaylistWithItemsFromRemote(id, maxResult, cache)
+        .onSuccess { u ->
             val uploadedAtAnotherChannel = u.items
                 .filter { it.channel.id != it.videoOwnerChannelId }
                 .mapNotNull { it.videoOwnerChannelId }
@@ -111,53 +116,30 @@ class YouTubeRepository @Inject constructor(
                 fetchChannelList(uploadedAtAnotherChannel.toSet())
             }
             localSource.updatePlaylistWithItems(u)
-        }.map { it.items }.getOrDefault(emptyList())
-    }
-
-    suspend fun fetchPlaylistWithItems(
-        summary: YouTubeSubscriptionSummary,
-        current: Instant = dateTimeProvider.now(),
-        maxResult: Long = 10,
-    ): Result<YouTubePlaylistWithItems?> {
-        val playlistId = checkNotNull(summary.uploadedPlaylistId)
-        if (!summary.needsUpdatePlaylist(current)) {
-            return Result.success(null)
         }
-        val cache = localSource.fetchPlaylistWithItemSummaries(playlistId)
-        return fetchPlaylistWithItemsUpdatable(playlistId, maxResult, cache)
-            .recoverCatching {
-                if (cache != null && (it as? IoScope.NetworkException)?.statusCode == 404) {
-                    cache.update(emptyList(), current)
-                } else {
-                    throw it
-                }
-            }
-            .onSuccess { localSource.updatePlaylistWithItems(it) }
-    }
 
-    private suspend fun fetchPlaylistWithItemsUpdatable(
-        playlistId: YouTubePlaylist.Id,
-        maxResult: Long = 10,
-        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?
+    private suspend fun fetchPlaylistWithItemsFromRemote(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?,
     ): Result<YouTubePlaylistWithItems> {
-        val itemRes = remoteSource.fetchPlaylistItems(playlistId, maxResult = maxResult)
-        if (itemRes.isFailure) {
-            return Result.failure(checkNotNull(itemRes.exceptionOrNull()))
-        }
-        val fetchedAt = dateTimeProvider.now()
-        val newItems = checkNotNull(itemRes.getOrNull())
-        if (cache != null) {
-            return Result.success(cache.update(newItems, fetchedAt))
-        } else {
-            val playlist = remoteSource.fetchPlaylist(setOf(playlistId)).map { it.first() }
-            if (playlist.isFailure) {
-                return Result.failure(checkNotNull(playlist.exceptionOrNull()))
+        return if (cache != null) {
+            remoteSource.fetchPlaylistItems(id, maxResult).map {
+                cache.update(it, dateTimeProvider.now())
             }
-            return playlist.map {
+        } else {
+            val playlistRes = remoteSource.fetchPlaylist(setOf(id)).map { it.firstOrNull() }
+            val playlist = if (playlistRes.isFailure) {
+                return Result.failure(checkNotNull(playlistRes.exceptionOrNull()))
+            } else {
+                playlistRes.getOrNull()
+                    ?: return Result.failure(IOException("playlist:${id.value} not found"))
+            }
+            remoteSource.fetchPlaylistItems(id, maxResult).map {
                 YouTubePlaylistWithItems.newPlaylist(
-                    playlist = it,
-                    items = newItems,
-                    fetchedAt = fetchedAt,
+                    playlist = playlist,
+                    items = it,
+                    fetchedAt = dateTimeProvider.now(),
                 )
             }
         }

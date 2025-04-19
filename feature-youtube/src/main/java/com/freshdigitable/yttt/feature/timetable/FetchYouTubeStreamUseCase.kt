@@ -6,11 +6,13 @@ import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.logE
@@ -33,7 +35,6 @@ import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import java.time.Instant
 import javax.inject.Inject
 
 internal class FetchYouTubeStreamUseCase @Inject constructor(
@@ -121,7 +122,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 }
                 val tasks = summary.map {
                     coroutineScope.async(start = CoroutineStart.LAZY) {
-                        val v = fetchVideoByPlaylistIdTask(it, dateTimeProvider.now())
+                        val v = fetchVideoByPlaylistIdTask(it)
                         if (v.isNotEmpty()) {
                             videoUpdateTaskChannel.send(v)
                         }
@@ -143,7 +144,6 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
     private suspend fun fetchVideoByPlaylistIdTask(
         subscriptionSummary: YouTubeSubscriptionSummary,
-        current: Instant,
     ): List<YouTubeVideo.Id> {
         val summary = if (subscriptionSummary.uploadedPlaylistId != null) {
             subscriptionSummary
@@ -160,13 +160,20 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             }
         }
         val id = checkNotNull(summary.uploadedPlaylistId)
-        val playlistWithItems = liveRepository.fetchPlaylistWithItems(
-            summary,
-            current,
-            maxResult = 10,
-        ).onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" } }
-            .getOrNull() ?: return emptyList()
-        val itemIds = playlistWithItems.addedItems.map { it.videoId }
+        val cache = liveRepository.fetchPlaylistWithItemSummaries(id)
+        val itemIds = liveRepository.fetchPlaylistWithItems(id, maxResult = 10, cache)
+            .recoverCatching {
+                if (cache != null && (it as? IoScope.NetworkException)?.statusCode == 404) {
+                    cache.update(emptyList(), dateTimeProvider.now()).also { i ->
+                        liveRepository.updatePlaylistWithItems(i)
+                    }
+                } else {
+                    throw it
+                }
+            }
+            .map { playlist -> checkNotNull(playlist).addedItems.map { it.videoId } }
+            .onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" } }
+            .getOrDefault(emptyList())
         if (itemIds.isNotEmpty()) {
             logD { "fetchVideoByPlaylistIdTask: playlistId> $id,count>${itemIds.size}" }
         }

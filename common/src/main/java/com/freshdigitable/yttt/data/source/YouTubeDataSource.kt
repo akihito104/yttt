@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -33,15 +34,17 @@ interface YouTubeDataSource {
 
     suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>>
     suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>>
+
     suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>>
+    suspend fun fetchPlaylistItems(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): Result<List<YouTubePlaylistItem>>
 
     interface Local : YouTubeDataSource, YouTubeLiveDataSource, ImageDataSource {
         suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id>
 
         suspend fun addPlaylist(playlist: Collection<YouTubePlaylist>)
-        suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems?
-        suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems)
-        suspend fun fetchPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummaries?
         suspend fun fetchPlaylistItemSummary(
             playlistId: YouTubePlaylist.Id,
             maxResult: Long,
@@ -54,11 +57,6 @@ interface YouTubeDataSource {
 
     interface Remote : YouTubeDataSource {
         override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>>
-
-        suspend fun fetchPlaylistItems(
-            id: YouTubePlaylist.Id,
-            maxResult: Long,
-        ): Result<List<YouTubePlaylistItem>>
 
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideo>>
     }
@@ -77,6 +75,14 @@ interface YouTubeLiveDataSource {
     suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
     suspend fun addSubscribes(subscriptions: YouTubeSubscriptions)
     suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>)
+
+    suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems)
+    suspend fun fetchPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummaries?
+    suspend fun fetchPlaylistWithItems(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>? = null,
+    ): Result<YouTubePlaylistWithItems?>
 
     suspend fun cleanUp()
     suspend fun deleteAllTables()
