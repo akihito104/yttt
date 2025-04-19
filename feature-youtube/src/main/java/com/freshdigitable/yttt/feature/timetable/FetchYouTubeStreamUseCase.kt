@@ -103,7 +103,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         coroutineScope: CoroutineScope,
         videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>,
     ) {
-        val playlistUpdateTaskCache = liveRepository.fetchPagedSubscription()
+        val playlistUpdateTaskCache = liveRepository.fetchSubscriptions()
             .fold(PlaylistUpdateTaskCache()) { acc, value ->
                 val s = value.onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
                     .getOrNull() ?: return@fold acc

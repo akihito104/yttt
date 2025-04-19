@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
+import kotlinx.coroutines.flow.last
 import java.time.Duration
 import javax.inject.Inject
 
@@ -40,7 +41,7 @@ internal class YouTubeRemoteMediator @Inject constructor(
         }
         return when (loadType) {
             LoadType.REFRESH -> {
-                val res = repository.fetchAllSubscribe(YouTubeDataSource.MAX_PAGE_SIZE)
+                val res = repository.fetchSubscriptions(YouTubeDataSource.MAX_PAGE_SIZE).last()
                     .onSuccess { s ->
                         (s as? YouTubeSubscriptions.Updated)?.let {
                             repository.addSubscribes(it)

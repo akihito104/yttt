@@ -44,7 +44,7 @@ class FetchYouTubeStreamUseCaseTest {
                     emptyFlow<List<YouTubeVideoExtended>>()
                         .stateIn(this@runTest, SharingStarted.Eagerly, emptyList())
                 }
-                coRegister { fetchPagedSubscription() } returns emptyFlow()
+                coRegister { fetchSubscriptions() } returns emptyFlow()
                 coRegister { cleanUp() } just runs
             }
             accountRepository.apply {

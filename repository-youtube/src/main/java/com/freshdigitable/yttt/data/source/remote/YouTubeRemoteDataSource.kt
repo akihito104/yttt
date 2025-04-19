@@ -32,7 +32,6 @@ import com.google.api.services.youtube.model.VideoLiveStreamingDetails
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.last
 import kotlinx.coroutines.flow.map
 import java.math.BigInteger
 import java.time.Instant
@@ -45,7 +44,7 @@ internal class YouTubeRemoteDataSource @Inject constructor(
     private val ioScope: IoScope,
     private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource.Remote {
-    override fun fetchAllSubscribePaged(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>> =
+    override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>> =
         ioScope.asResultFlow {
             val paged = PagedSubscription()
             do {
@@ -61,9 +60,6 @@ internal class YouTubeRemoteDataSource @Inject constructor(
                 emit(Result.success(value))
             } while (res.nextPageToken != null)
         }.map { res -> res.recoverCatching { throw YouTubeException(it) } }
-
-    override suspend fun fetchAllSubscribe(pageSize: Long): Result<YouTubeSubscriptions.Paged> =
-        fetchAllSubscribePaged(pageSize).last()
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,

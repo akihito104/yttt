@@ -33,10 +33,10 @@ interface YouTubeSubscriptions {
     }
 
     class Updated(
-        private val cache: YouTubeSubscriptions,
+        private val cache: Set<YouTubeSubscription.Id>,
         private val remote: Paged,
     ) : Paged by remote {
         val deleted: Set<YouTubeSubscription.Id>
-            get() = cache.items.map { it.id }.toSet() - remote.items.map { it.id }.toSet()
+            get() = cache - remote.items.map { it.id }.toSet()
     }
 }

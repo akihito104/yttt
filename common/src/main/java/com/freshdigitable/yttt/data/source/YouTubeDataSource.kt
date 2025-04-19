@@ -24,7 +24,7 @@ interface YouTubeDataSource {
         const val MAX_PAGE_SIZE: Long = 50
     }
 
-    suspend fun fetchAllSubscribe(pageSize: Long = MAX_PAGE_SIZE): Result<YouTubeSubscriptions>
+    fun fetchSubscriptions(pageSize: Long = MAX_PAGE_SIZE): Flow<Result<YouTubeSubscriptions>>
     suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant? = null,
@@ -36,6 +36,8 @@ interface YouTubeDataSource {
     suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>>
 
     interface Local : YouTubeDataSource, YouTubeLiveDataSource, ImageDataSource {
+        suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id>
+
         suspend fun addPlaylist(playlist: Collection<YouTubePlaylist>)
         suspend fun fetchPlaylistWithItems(id: YouTubePlaylist.Id): YouTubePlaylistWithItems?
         suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems)
@@ -51,8 +53,7 @@ interface YouTubeDataSource {
     }
 
     interface Remote : YouTubeDataSource {
-        fun fetchAllSubscribePaged(pageSize: Long = MAX_PAGE_SIZE): Flow<Result<YouTubeSubscriptions.Paged>>
-        override suspend fun fetchAllSubscribe(pageSize: Long): Result<YouTubeSubscriptions.Paged>
+        override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>>
 
         suspend fun fetchPlaylistItems(
             id: YouTubePlaylist.Id,

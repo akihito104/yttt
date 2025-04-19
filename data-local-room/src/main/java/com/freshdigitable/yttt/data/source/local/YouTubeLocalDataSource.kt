@@ -43,10 +43,15 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.findSubscriptionSummaries(ids)
     }.getOrNull()!!  // FIXME
 
-    override suspend fun fetchAllSubscribe(pageSize: Long): Result<YouTubeSubscriptions> =
-        ioScope.asResult {
-            YouTubeSubscriptions.create(dao.findAllSubscriptions(), _subscriptionsFetchedAt)
+    override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions>> =
+        ioScope.asResultFlow {
+            val items = dao.findAllSubscriptions()
+            val subs = YouTubeSubscriptions.create(items, _subscriptionsFetchedAt)
+            emit(Result.success(subs))
         }
+
+    override suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id> =
+        dao.fetchAllSubscriptionIds().toSet()
 
     private var _subscriptionsFetchedAt: Instant = Instant.EPOCH
     override val subscriptionsFetchedAt: Instant get() = _subscriptionsFetchedAt
