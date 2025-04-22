@@ -15,7 +15,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpResponseException
 import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.YouTube
@@ -35,142 +34,78 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.math.BigInteger
 import java.time.Instant
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class YouTubeRemoteDataSource @Inject constructor(
-    private val youtube: YouTube,
+internal class YouTubeRemoteDataSource(
+    private val youtube: YouTubeClient,
     private val ioScope: IoScope,
     private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource.Remote {
     override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>> =
         ioScope.asResultFlow {
-            val paged = PagedSubscription()
+            var paged = PagedSubscription()
             do {
-                val res = youtube.subscriptions()
-                    .list(listOf(PART_SNIPPET))
-                    .setMine(true)
-                    .setMaxResults(pageSize)
-                    .setPageToken(paged.nextPageToken)
-                    .execute()
-                val offset = paged.itemSize
-                val subs = res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) }
-                val value = paged.update(subs, res.nextPageToken, dateTimeProvider.now())
-                emit(Result.success(value))
-            } while (res.nextPageToken != null)
+                val res = youtube.fetchSubscription(pageSize, paged.itemSize, paged.nextPageToken)
+                paged = paged.update(res.items, res.nextPageToken, dateTimeProvider.now())
+                emit(Result.success(paged))
+            } while (paged.nextPageToken != null)
         }.map { res -> res.recoverCatching { throw YouTubeException(it) } }
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
-        maxResult: Long?
-    ): Result<List<YouTubeChannelLog>> = fetchAllItems(
-        requestParams = { token ->
-            activities()
-                .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-                .setChannelId(channelId.value).apply {
-                    if (maxResult != null) {
-                        this.maxResults = maxResult
-                    }
-                    if (publishedAfter != null) {
-                        setPublishedAfter(publishedAfter.toString())
-                    }
-                }
-                .setPageToken(token)
-        },
-        getItems = { items },
-        getNextToken = { nextPageToken },
-    ).map { res -> res.map { YouTubeChannelLogEntity(activity = it) } }
+        maxResult: Long?,
+    ): Result<List<YouTubeChannelLog>> = fetchAllItems {
+        fetchLiveChannelLogs(channelId, publishedAfter, maxResult, it)
+    }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideo>> =
-        fetchList(ids, getItems = { items }) { chunked ->
-            videos()
-                .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
-                .setId(chunked.map { it.value })
-                .setMaxResults(chunked.size.toLong())
-        }.map { v -> v.map { YouTubeVideoRemote(it) } }
+        fetchList(ids) { fetchVideoList(it) }
 
-    override suspend fun fetchChannelList(
-        ids: Set<YouTubeChannel.Id>,
-    ): Result<List<YouTubeChannelDetail>> = fetchList(ids, getItems = { items }) { chunked ->
-        channels()
-            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
-            .setId(chunked.map { it.value })
-            .setMaxResults(chunked.size.toLong())
-    }.map { c -> c.map { YouTubeChannelImpl(it) } }
+    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>> =
+        fetchList(ids) { fetchChannelList(it) }
 
-    override suspend fun fetchChannelSection(
-        id: YouTubeChannel.Id,
-    ): Result<List<YouTubeChannelSection>> = fetch {
-        channelSections()
-            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-            .setChannelId(id.value)
-    }.map { res -> res.items.map { YouTubeChannelSectionImpl(it) } }
+    override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> =
+        fetch { fetchChannelSection(id).items }
 
     override suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): Result<List<YouTubePlaylistItem>> = fetch {
-        playlistItems()
-            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-            .setPlaylistId(id.value)
-            .setMaxResults(maxResult)
-    }.map { res -> res.items.map { it.toLivePlaylistItem() } }
+    ): Result<List<YouTubePlaylistItem>> = fetch { fetchPlaylistItems(id, maxResult).items }
 
-    override suspend fun fetchPlaylist(
-        ids: Set<YouTubePlaylist.Id>,
-    ): Result<List<YouTubePlaylist>> = fetchList(ids, getItems = { items }) { chunked ->
-        playlists()
-            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
-            .setId(chunked.map { it.value })
-            .setMaxResults(chunked.size.toLong())
-    }.map { res -> res.map { it.toLivePlaylist() } }
+    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>> =
+        fetchList(ids) { fetchPlaylist(it) }
 
-    private suspend inline fun <T, E> fetchAllItems(
-        crossinline requestParams: YouTube.(String?) -> AbstractGoogleClientRequest<T>,
-        crossinline getItems: T.() -> List<E>,
-        crossinline getNextToken: T.() -> String?,
+    private suspend inline fun <E> fetchAllItems(
+        crossinline request: YouTubeClient.(String?) -> YouTubeClient.Response<E>,
     ): Result<List<E>> = ioScope.asResult {
         buildList {
             var token: String? = null
             do {
-                val response = youtube.requestParams(token).execute()
-                addAll(response.getItems())
-                token = response.getNextToken()
+                val response = youtube.request(token)
+                addAll(response.items)
+                token = response.nextPageToken
             } while (token != null)
         }
     }.recoverCatching { throw YouTubeException(it) }
 
-    private suspend inline fun <T, E> fetchList(
-        ids: Set<IdBase>,
-        crossinline getItems: T.() -> List<E>,
-        crossinline requestParams: YouTube.(Set<IdBase>) -> AbstractGoogleClientRequest<T>,
+    private suspend inline fun <I : IdBase, E> fetchList(
+        ids: Set<I>,
+        crossinline request: YouTubeClient.(Set<I>) -> YouTubeClient.Response<E>,
     ): Result<List<E>> = ioScope.asResult {
         if (ids.isEmpty()) {
             emptyList()
         } else if (ids.size <= YouTubeDataSource.MAX_BATCH_SIZE) {
-            youtube.requestParams(ids).execute().getItems()
+            youtube.request(ids).items
         } else {
             ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE)
-                .map { async { youtube.requestParams(it.toSet()).execute().getItems() } }
+                .map { async { youtube.request(it.toSet()).items } }
                 .awaitAll()
                 .flatten()
         }
     }.recoverCatching { throw YouTubeException(it) }
 
-    private suspend inline fun <T> fetch(
-        crossinline requestParams: YouTube.() -> AbstractGoogleClientRequest<T>,
-    ): Result<T> = ioScope.asResult { youtube.requestParams().execute() }
-        .recoverCatching { throw YouTubeException(it) }
-
-    companion object {
-        @Suppress("unused")
-        private val TAG = YouTubeRemoteDataSource::class.simpleName
-        private const val PART_SNIPPET = "snippet"
-        private const val PART_CONTENT_DETAILS = "contentDetails"
-        private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
-    }
+    private suspend inline fun <T> fetch(crossinline request: YouTubeClient.() -> T): Result<T> =
+        ioScope.asResult { youtube.request() }.recoverCatching { throw YouTubeException(it) }
 }
 
 internal class YouTubeException(
@@ -183,10 +118,11 @@ internal class YouTubeException(
         }
 }
 
-private class PagedSubscription : YouTubeSubscriptions.Paged {
-    private val pages = mutableListOf<List<YouTubeSubscription>>()
-    var nextPageToken: String? = null
-    private var updatedAt: Instant? = null
+private data class PagedSubscription(
+    private val pages: List<List<YouTubeSubscription>> = emptyList(),
+    val nextPageToken: String? = null,
+    private val updatedAt: Instant? = null,
+) : YouTubeSubscriptions.Paged {
     override val items: List<YouTubeSubscription> get() = pages.flatten()
     override val lastUpdatedAt: Instant get() = updatedAt ?: Instant.EPOCH
     override val lastPage: List<YouTubeSubscription> get() = pages.last()
@@ -196,12 +132,11 @@ private class PagedSubscription : YouTubeSubscriptions.Paged {
         items: List<YouTubeSubscription>,
         nextPageToken: String?,
         updatedAt: Instant? = null,
-    ): PagedSubscription {
-        pages.add(items)
-        this.nextPageToken = nextPageToken
-        this.updatedAt = if (hasNextPage) null else updatedAt
-        return this
-    }
+    ): PagedSubscription = copy(
+        pages = pages + listOf(items),
+        nextPageToken = nextPageToken,
+        updatedAt = updatedAt,
+    )
 }
 
 private fun Subscription.toLiveSubscription(order: Int): YouTubeSubscription =
@@ -412,3 +347,139 @@ private fun PlaylistItem.toLivePlaylistItem(): YouTubePlaylistItem =
     ) {
         override fun toString(): String = toPrettyString()
     }
+
+interface YouTubeClient {
+    fun fetchSubscription(
+        pageSize: Long,
+        offset: Int,
+        token: String?,
+    ): Response<YouTubeSubscription>
+
+    fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Response<YouTubeChannelDetail>
+    fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Response<YouTubePlaylist>
+    fun fetchPlaylistItems(id: YouTubePlaylist.Id, maxResult: Long): Response<YouTubePlaylistItem>
+    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Response<YouTubeVideo>
+    fun fetchChannelSection(id: YouTubeChannel.Id): Response<YouTubeChannelSection>
+    fun fetchLiveChannelLogs(
+        channelId: YouTubeChannel.Id,
+        publishedAfter: Instant?,
+        maxResult: Long?,
+        token: String?,
+    ): Response<YouTubeChannelLog>
+
+    class Response<T>(
+        val items: List<T>,
+        val nextPageToken: String? = null,
+    )
+
+    companion object {
+        fun create(youtube: YouTube): YouTubeClient = YouTubeClientImpl(youtube)
+    }
+}
+
+internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
+    override fun fetchSubscription(
+        pageSize: Long,
+        offset: Int,
+        token: String?,
+    ): YouTubeClient.Response<YouTubeSubscription> {
+        val res = youtube.subscriptions()
+            .list(listOf(PART_SNIPPET))
+            .setMine(true)
+            .setMaxResults(pageSize)
+            .setPageToken(token)
+            .execute()
+        return YouTubeClient.Response(
+            items = res.items.mapIndexed { i, s -> s.toLiveSubscription(offset + i) },
+            nextPageToken = res.nextPageToken,
+        )
+    }
+
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): YouTubeClient.Response<YouTubeChannelDetail> {
+        val res = youtube.channels()
+            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
+            .setId(ids.map { it.value })
+            .setMaxResults(ids.size.toLong())
+            .execute()
+        return YouTubeClient.Response(items = res.items.map { YouTubeChannelImpl(it) })
+    }
+
+    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): YouTubeClient.Response<YouTubePlaylist> {
+        val res = youtube.playlists()
+            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setId(ids.map { it.value })
+            .setMaxResults(ids.size.toLong())
+            .execute()
+        return YouTubeClient.Response(
+            items = res.items.map { it.toLivePlaylist() },
+            nextPageToken = res.nextPageToken,
+        )
+    }
+
+    override fun fetchPlaylistItems(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): YouTubeClient.Response<YouTubePlaylistItem> {
+        val res = youtube.playlistItems()
+            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setPlaylistId(id.value)
+            .setMaxResults(maxResult)
+            .execute()
+        return YouTubeClient.Response(
+            items = res.items.map { it.toLivePlaylistItem() },
+        )
+    }
+
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): YouTubeClient.Response<YouTubeVideo> {
+        val res = youtube.videos()
+            .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
+            .setId(ids.map { it.value })
+            .setMaxResults(ids.size.toLong())
+            .execute()
+        return YouTubeClient.Response(
+            items = res.items.map { YouTubeVideoRemote(it) },
+            nextPageToken = res.nextPageToken,
+        )
+    }
+
+    override fun fetchChannelSection(id: YouTubeChannel.Id): YouTubeClient.Response<YouTubeChannelSection> {
+        val res = youtube.channelSections()
+            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setChannelId(id.value)
+            .execute()
+        return YouTubeClient.Response(
+            items = res.items.map { YouTubeChannelSectionImpl(it) },
+        )
+    }
+
+    override fun fetchLiveChannelLogs(
+        channelId: YouTubeChannel.Id,
+        publishedAfter: Instant?,
+        maxResult: Long?,
+        token: String?,
+    ): YouTubeClient.Response<YouTubeChannelLog> {
+        check(publishedAfter != null || maxResult != null) { "publishedAfter or maxResult should not be null" }
+        val res = youtube.activities()
+            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .setChannelId(channelId.value).apply {
+                if (maxResult != null) {
+                    this.maxResults = maxResult
+                }
+                if (publishedAfter != null) {
+                    setPublishedAfter(publishedAfter.toString())
+                }
+            }
+            .setPageToken(token)
+            .execute()
+        return YouTubeClient.Response(
+            items = res.items.map { YouTubeChannelLogEntity(it) },
+            nextPageToken = res.nextPageToken,
+        )
+    }
+
+    companion object {
+        private const val PART_SNIPPET = "snippet"
+        private const val PART_CONTENT_DETAILS = "contentDetails"
+        private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
+    }
+}

@@ -61,7 +61,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
     override suspend fun addSubscribes(subscriptions: YouTubeSubscriptions) =
         ioScope.asResult {
             dao.addSubscriptions(subscriptions.items)
-            _subscriptionsFetchedAt = subscriptions.lastUpdatedAt
+            if (subscriptions is YouTubeSubscriptions.Updated) {
+                _subscriptionsFetchedAt = subscriptions.lastUpdatedAt
+            }
         }.getOrNull()!! // FIXME
 
     override suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>) {

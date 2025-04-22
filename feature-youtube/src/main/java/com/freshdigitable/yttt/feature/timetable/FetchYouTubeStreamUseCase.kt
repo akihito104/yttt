@@ -109,6 +109,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 val s = value.onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
                     .getOrNull() ?: return@fold acc
                 val added = if (s is YouTubeSubscriptions.Paged) {
+                    liveRepository.addSubscribes(s)
                     s.lastPage.map { it.id }
                 } else {
                     s.items.map { it.id }
@@ -136,7 +137,6 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             }
         val subscriptions = playlistUpdateTaskCache.subscriptions
         if (subscriptions is YouTubeSubscriptions.Updated) {
-            liveRepository.addSubscribes(subscriptions)
             liveRepository.removeSubscribes(subscriptions.deleted)
         }
         playlistUpdateTaskCache.join()
