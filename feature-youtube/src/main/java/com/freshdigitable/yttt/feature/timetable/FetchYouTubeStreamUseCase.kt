@@ -172,7 +172,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun updateSummary(summary: Collection<YouTubeSubscriptionSummary>): List<YouTubeSubscriptionSummary> {
         val s = summary.associateBy { it.channelId }
         return liveRepository.fetchChannelList(s.keys)
-            .onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: " } }
+            .onFailure { logE(throwable = it) { "updateSummary: " } }
             .map { c ->
                 c.filter { it.uploadedPlayList != null }
                     .map {
