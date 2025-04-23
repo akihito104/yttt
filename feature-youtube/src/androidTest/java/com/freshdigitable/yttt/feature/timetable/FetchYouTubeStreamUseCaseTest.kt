@@ -45,9 +45,11 @@ import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -63,11 +65,19 @@ class FetchYouTubeStreamUseCaseTest {
 
     @Inject
     internal lateinit var sut: FetchYouTubeStreamUseCase
+    private val current = Instant.parse("2025-04-20T00:00:00Z")
+
+    @Before
+    fun setup() {
+        FakeDateTimeProviderModule.instant = current
+        FakeYouTubeAccountModule.account = null
+        FakeRemoteSourceModule.clean()
+        TestCoroutineScopeModule.testScheduler = null
+    }
 
     @Test
     fun earlyReturn_whenNoAccount() = runTest {
         // setup
-        FakeYouTubeAccountModule.account = null
         TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
         // exercise
@@ -113,7 +123,7 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun videoFromNewPlaylistItem_with2PagesOfSubscription_returns200Videos() = runTest {
+    fun videoFromNewPlaylistItem_fetch2PagesOfSubscription_returns200Videos() = runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         TestCoroutineScopeModule.testScheduler = testScheduler
@@ -126,15 +136,59 @@ class FetchYouTubeStreamUseCaseTest {
         localSource.videos.test {
             assertThat(awaitItem()).hasSize(200)
         }
+        assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T00:00:00Z"))
+    }
+
+    @Test
+    fun videoFromNewPlaylistItem_has1Subscription_fetch2PagesOfSubscription_returns200Videos() =
+        runTest {
+            // setup
+            FakeYouTubeAccountModule.account = "account"
+            TestCoroutineScopeModule.testScheduler = testScheduler
+            FakeRemoteSourceModule.setup(1, 2)
+            hiltRule.inject()
+            sut.invoke()
+            advanceUntilIdle()
+
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeRemoteSourceModule.setup(100, 2)
+            // exercise
+            sut.invoke()
+            advanceUntilIdle()
+            // verify
+            localSource.videos.test {
+                assertThat(awaitItem()).hasSize(200)
+            }
+            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
+        }
+
+    @Test
+    fun videoFromNewPlaylistItem_update10Subscription() = runTest {
+        // setup
+        FakeYouTubeAccountModule.account = "account"
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        FakeRemoteSourceModule.setup(10, 2)
+        hiltRule.inject()
+        sut.invoke()
+        advanceUntilIdle()
+
+        FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+        FakeRemoteSourceModule.setup(10, 3)
+        // exercise
+        sut.invoke()
+        advanceUntilIdle()
+        // verify
+        localSource.videos.test {
+            assertThat(awaitItem()).hasSize(30)
+        }
+        assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
     }
 }
 
 private fun FakeRemoteSourceModule.Companion.setup(subscriptionCount: Int, itemsPerPlaylist: Int) {
     val channelDetail = (1..subscriptionCount).map { channelDetail(it) }
-    val videos = (1..(subscriptionCount * itemsPerPlaylist)).map {
-        video(it, channelDetail[it % channelDetail.size])
-    }
-    channel = channelDetail.associate { setOf(it.id) to listOf(it) }
+    val videos = channelDetail.flatMap { c -> (1..itemsPerPlaylist).map { video(it, c) } }
+    channel = channelDetail
     val chunked = channelDetail.chunked(50)
     subscription = chunked.mapIndexed { i, c ->
         val tokenMatcher = if (i == 0) null else "token$i"
@@ -146,6 +200,13 @@ private fun FakeRemoteSourceModule.Companion.setup(subscriptionCount: Int, items
         c.uploadedPlayList!! to videos.filter { it.channel.id == c.id }
             .mapIndexed { i, v -> playlistItem(i, c, v.id) }
     }
+}
+
+private fun FakeRemoteSourceModule.Companion.clean() {
+    channel = null
+    subscription = null
+    video = null
+    playlistItem = null
 }
 
 private fun channelDetail(id: Int): YouTubeChannelDetail = object : YouTubeChannelDetail {
@@ -166,7 +227,7 @@ private fun channelDetail(id: Int): YouTubeChannelDetail = object : YouTubeChann
 }
 
 private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : YouTubeVideo {
-    override val id: YouTubeVideo.Id = YouTubeVideo.Id("video_$id")
+    override val id: YouTubeVideo.Id = YouTubeVideo.Id("${channel.id.value}-video_$id")
     override val channel: YouTubeChannel = channel
     override val liveBroadcastContent: YouTubeVideo.BroadcastType =
         YouTubeVideo.BroadcastType.UPCOMING
@@ -212,7 +273,7 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
 )
 interface FakeDateTimeProviderModule {
     companion object {
-        var instant: Instant? = Instant.parse("2025-04-20T00:00:00Z")
+        var instant: Instant? = null
 
         @Provides
         @Singleton
@@ -231,7 +292,7 @@ interface FakeRemoteSourceModule {
     companion object {
         var subscription: Map<Pair<Int, String?>, Pair<List<YouTubeSubscription>, String?>>? =
             null
-        var channel: Map<Set<YouTubeChannel.Id>, List<YouTubeChannelDetail>>? = null
+        var channel: List<YouTubeChannelDetail>? = null
         var playlistItem: Map<YouTubePlaylist.Id, List<YouTubePlaylistItem>>? = null
         var video: List<YouTubeVideo>? = null
 
@@ -250,11 +311,13 @@ interface FakeRemoteSourceModule {
 
             override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): YouTubeClient.Response<YouTubeChannelDetail> {
                 logD { "fetchChannelList: $ids" }
-                return YouTubeClient.Response(channel?.get(ids)!!)
+                check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
+                return YouTubeClient.Response(ids.mapNotNull { id -> channel?.find { it.id == id } })
             }
 
             override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): YouTubeClient.Response<YouTubeVideo> {
                 logD { "fetchVideoList: $ids" }
+                check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
                 return YouTubeClient.Response(ids.mapNotNull { id -> video?.find { it.id == id } })
             }
 
