@@ -38,8 +38,9 @@ class YouTubeLocalDataSourceTest {
 
         @Test
         fun videoIsEmpty() = rule.runWithLocalSource {
-            assertThat(dataSource.fetchVideoList(emptySet())).isEmpty()
-            assertThat(dataSource.fetchVideoList(setOf(YouTubeVideo.Id("test")))).isEmpty()
+            assertThat(dataSource.fetchVideoList(emptySet()).getOrNull()).isEmpty()
+            assertThat(dataSource.fetchVideoList(setOf(YouTubeVideo.Id("test"))).getOrNull())
+                .isEmpty()
         }
 
         @Test
@@ -160,7 +161,8 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_returnsAllItems() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchVideoList(video.map { it.id }.toSet())
+            val actual = dataSource.fetchVideoList(video.map { it.id }.toSet()).getOrNull()
+                ?: throw AssertionError()
             // verify
             actual.containsVideoIdInAnyOrderElementsOf(video)
         }
@@ -168,7 +170,8 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_withUnknownKey_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchVideoList(setOf(YouTubeVideo.Id("unknown_entity")))
+            val actual =
+                dataSource.fetchVideoList(setOf(YouTubeVideo.Id("unknown_entity"))).getOrNull()
             // verify
             assertThat(actual).isEmpty()
         }
@@ -176,7 +179,8 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_withFreeChat_returns1Item() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchVideoList(setOf(freeChat.id))
+            val actual = dataSource.fetchVideoList(setOf(freeChat.id)).getOrNull()
+                ?: throw AssertionError()
             // verify
             assertThat(actual).hasSize(1)
             assertThat(actual.first().isFreeChat).isTrue()
@@ -229,7 +233,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistWithItems_simple_returns1Item() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchPlaylistWithItems(simple)
+            val actual = dataSource.fetchPlaylistWithItems(simple, 10).getOrNull()
             // verify
             assertThat(actual?.items).hasSize(1)
         }
@@ -237,11 +241,12 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistWithItems_simple_addSameItem_returns1Item() = rule.runWithLocalSource {
             // setup
-            val updatable = dataSource.fetchPlaylistWithItems(simple)!!
-                .update(checkNotNull(items[simple]!!.items), dateTimeProvider.now())
-            dataSource.updatePlaylistWithItems(updatable)
+            val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
+                it?.update(checkNotNull(items[simple]!!.items), dateTimeProvider.now())
+            }.getOrNull()
+            dataSource.updatePlaylistWithItems(updatable!!)
             // exercise
-            val actual = dataSource.fetchPlaylistWithItems(simple)
+            val actual = dataSource.fetchPlaylistWithItems(simple, 10).getOrNull()
             // verify
             assertThat(actual?.items).hasSize(1)
         }
@@ -256,11 +261,12 @@ class YouTubeLocalDataSourceTest {
                     videoId = YouTubeVideo.Id("video_item2"),
                 )
             ) + checkNotNull(items[simple]!!.items)
-            val updatable = dataSource.fetchPlaylistWithItems(simple)!!
-                .update(newItems, dateTimeProvider.now())
-            dataSource.updatePlaylistWithItems(updatable)
+            val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
+                it?.update(newItems, dateTimeProvider.now())
+            }.getOrNull()
+            dataSource.updatePlaylistWithItems(updatable!!)
             // exercise
-            val actual = dataSource.fetchPlaylistWithItems(simple)
+            val actual = dataSource.fetchPlaylistWithItems(simple, 10).getOrNull()
             // verify
             assertThat(actual?.items).hasSize(2)
         }
@@ -268,7 +274,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistWithItems_private_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchPlaylistWithItems(privatePlaylist)
+            val actual = dataSource.fetchPlaylistWithItems(privatePlaylist, 10).getOrNull()
             // verify
             assertThat(actual?.items).isEmpty()
         }
@@ -276,7 +282,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistWithItems_empty_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchPlaylistWithItems(empty)
+            val actual = dataSource.fetchPlaylistWithItems(empty, 10).getOrNull()
             // verify
             assertThat(actual?.items).isEmpty()
         }

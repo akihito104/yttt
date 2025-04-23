@@ -139,7 +139,7 @@ internal data class YouTubeChannelDetailDb(
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT c.icon, c.title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id " +
+            "SELECT c.icon AS icon, c.title AS title, a.* FROM channel AS c INNER JOIN channel_addition AS a ON c.id = a.id " +
                 "INNER JOIN (SELECT * FROM channel_addition_expire WHERE :current < expired_at) AS e ON c.id = e.channel_id " +
                 "WHERE c.id IN (:id)"
         )

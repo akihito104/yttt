@@ -201,7 +201,7 @@ class YouTubePlaylistWithItemsTest {
             }.values
             // exercise
             val sut = playlistWithItems(maxAge).update(
-                newItems = newItems,
+                newItems = newItems.toList(),
                 fetchedAt = updatedLatest + Duration.ofDays(3).minusMillis(1),
             )
             // verify
@@ -223,7 +223,7 @@ class YouTubePlaylistWithItemsTest {
             }.values
             // exercise
             val sut = playlistWithItems(maxAge).update(
-                newItems = newItems,
+                newItems = newItems.toList(),
                 fetchedAt = updatedLatest + Duration.ofDays(3),
             )
             // verify
@@ -270,3 +270,15 @@ private fun playlistItem(
     videoOwnerChannelId = null,
     publishedAt = publishedAt,
 )
+
+data class YouTubePlaylistItemEntity(
+    override val id: YouTubePlaylistItem.Id,
+    override val playlistId: YouTubePlaylist.Id,
+    override val title: String,
+    override val channel: YouTubeChannel,
+    override val thumbnailUrl: String,
+    override val videoId: YouTubeVideo.Id,
+    override val description: String,
+    override val videoOwnerChannelId: YouTubeChannel.Id?,
+    override val publishedAt: Instant,
+) : YouTubePlaylistItem

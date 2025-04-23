@@ -13,11 +13,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-internal class YouTubeAccountLocalDataSource @Inject constructor(
+internal class YouTubeAccountLocalDataSource(
     private val dataStore: DataStore<Preferences>,
     coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) : YouTubeAccountDataStore.Local {

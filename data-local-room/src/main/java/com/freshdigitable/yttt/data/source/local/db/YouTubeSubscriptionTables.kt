@@ -46,6 +46,9 @@ internal class YouTubeSubscriptionTable(
         @Query("DELETE FROM subscription WHERE id IN (:removed)")
         suspend fun removeSubscriptions(removed: Collection<YouTubeSubscription.Id>)
 
+        @Query("SELECT id FROM subscription ORDER BY subs_order ASC")
+        suspend fun fetchAllSubscriptionIds(): List<YouTubeSubscription.Id>
+
         @Query("DELETE FROM subscription")
         override suspend fun deleteTable()
     }
