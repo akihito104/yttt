@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.db.DateTimeProviderFake
 import com.freshdigitable.yttt.data.source.local.db.NopImageDataSource
@@ -13,6 +14,7 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDaoImpl
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -150,7 +152,10 @@ internal class TwitchDataSourceTestRule(
     )
 
     override fun createTestScope(testScope: TestScope): DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
-        val dataSource = TwitchLocalDataSource(dao, dateTimeProvider, NopImageDataSource)
+        val dataSource = TwitchLocalDataSource(
+            dao, dateTimeProvider,
+            IoScope(StandardTestDispatcher(testScope.testScheduler)), NopImageDataSource
+        )
         return object : DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
             override val testScope: TestScope get() = testScope
             override val dateTimeProvider: DateTimeProviderFake get() = this@TwitchDataSourceTestRule.dateTimeProvider

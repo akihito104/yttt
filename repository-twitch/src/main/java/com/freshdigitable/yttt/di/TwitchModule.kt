@@ -1,9 +1,11 @@
 package com.freshdigitable.yttt.di
 
+import com.freshdigitable.yttt.data.TwitchAccountRemoteDataStoreImpl
 import com.freshdigitable.yttt.data.TwitchSubscriptionPagerFactory
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.source.PagerFactory
+import com.freshdigitable.yttt.data.source.TwitchAccountRemoteDataStore
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.remote.IdConverterFactory
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
@@ -53,7 +55,13 @@ internal interface TwitchModule {
         @Singleton
         fun provideTwitchHelixService(retrofit: Retrofit): TwitchHelixService =
             retrofit.create(TwitchHelixService::class.java)
+    }
+}
 
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface TwitchAccountModule {
+    companion object {
         @Provides
         @Singleton
         fun provideTwitchOauthService(): TwitchOauthService {
@@ -64,6 +72,14 @@ internal interface TwitchModule {
         }
     }
 
+    @Binds
+    @Singleton
+    fun bindTwitchAccountRemoteDataSource(impl: TwitchAccountRemoteDataStoreImpl): TwitchAccountRemoteDataStore
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface TwitchDataSourceModule {
     @Binds
     fun bindTwitchDataSourceRemote(dataSource: TwitchRemoteDataSource): TwitchDataSource.Remote
 

@@ -12,17 +12,23 @@ import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
-import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.di.DbModule
 import com.freshdigitable.yttt.data.source.remote.Broadcaster
+import com.freshdigitable.yttt.data.source.remote.ChannelStreamScheduleResponse
+import com.freshdigitable.yttt.data.source.remote.FollowedChannelsResponse
 import com.freshdigitable.yttt.data.source.remote.FollowingStream
+import com.freshdigitable.yttt.data.source.remote.FollowingStreamsResponse
+import com.freshdigitable.yttt.data.source.remote.Pagination
+import com.freshdigitable.yttt.data.source.remote.TwitchGameResponse
+import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
 import com.freshdigitable.yttt.data.source.remote.TwitchUserDetailRemote
+import com.freshdigitable.yttt.data.source.remote.TwitchUserResponse
+import com.freshdigitable.yttt.data.source.remote.TwitchVideosResponse
+import com.freshdigitable.yttt.di.CoroutineModule
 import com.freshdigitable.yttt.di.DateTimeModule
 import com.freshdigitable.yttt.di.TwitchModule
-import com.freshdigitable.yttt.logD
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,12 +36,20 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runTest
+import okhttp3.Request
+import okio.Timeout
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -57,10 +71,7 @@ class TwitchRemoteMediatorTest {
     private val followings =
         TwitchFollowings.createAtFetched(authUser.id, broadcaster, Instant.ofEpochMilli(20))
 
-    @Before
-    fun setup() = runTest {
-        hiltRule.inject()
-
+    private suspend fun setup() {
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(10)
         localSource.setMe(authUser)
         val stream = broadcaster.take(10).map { stream(it) }
@@ -90,6 +101,9 @@ class TwitchRemoteMediatorTest {
     @Test
     fun firstTimeToLoadSubscriptionPage() = runTest {
         // setup
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        hiltRule.inject()
+        setup()
         FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
         // exercise
         val actual = sut.flow.asSnapshot()
@@ -101,10 +115,12 @@ class TwitchRemoteMediatorTest {
     @Test
     fun firstTimeToLoadSubscriptionPage_needsRefresh() = runTest {
         // setup
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        hiltRule.inject()
+        setup()
         val base = followings.updatableAt
         FakeDateTimeProviderModule.instant = base
-        FakeRemoteSourceModule.allFollowings =
-            TwitchFollowings.createAtFetched(authUser.id, broadcaster(100), base.plusMillis(10))
+        FakeRemoteSourceModule.broadcasters = broadcaster(100).toTypedArray()
         // exercise
         val actual = sut.flow.asSnapshot()
         // verify
@@ -115,6 +131,9 @@ class TwitchRemoteMediatorTest {
     @Test
     fun firstTimeToLoadSubscriptionPage_scrollToLastItem() = runTest {
         // setup
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        hiltRule.inject()
+        setup()
         FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
         // exercise
         val actual = sut.flow.asSnapshot {
@@ -196,45 +215,101 @@ interface FakeDateTimeProviderModule {
 )
 interface FakeRemoteSourceModule {
     companion object {
-        var userDetails: List<TwitchUserDetail> = emptyList()
-        internal var allFollowings: TwitchFollowings? = null
+        internal var userDetails: List<TwitchUserDetailRemote> = emptyList()
+        internal var broadcasters: Array<Broadcaster>? = null
 
-        @Singleton
         @Provides
-        fun provide(): TwitchDataSource.Remote = object : TwitchDataSource.Remote {
-            override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
-                logD(tag = "FakeTwitchRemoteSource") { "findUsersById: $ids" }
-                val table = userDetails.associateBy { it.id }
-                return checkNotNull(ids).mapNotNull { table[it] }
+        internal fun provideHelixService(): TwitchHelixService {
+            return object : TwitchHelixService {
+                override fun getUser(
+                    id: Collection<TwitchUser.Id>?,
+                    loginName: Collection<String>?
+                ): Call<TwitchUserResponse> =
+                    FakeCall(Response.success(TwitchUserResponse(userDetails)))
+
+                override fun getFollowing(
+                    userId: TwitchUser.Id,
+                    broadcasterId: TwitchUser.Id?,
+                    itemsPerPage: Int?,
+                    cursor: String?
+                ): Call<FollowedChannelsResponse> = FakeCall(
+                    Response.success(
+                        FollowedChannelsResponse(
+                            data = broadcasters!!,
+                            pagination = Pagination(null),
+                            total = broadcasters!!.size,
+                        )
+                    )
+                )
+
+                override fun getFollowedStreams(
+                    userId: TwitchUser.Id,
+                    itemsPerPage: Int?,
+                    cursor: String?
+                ): Call<FollowingStreamsResponse> {
+                    TODO("Not yet implemented")
+                }
+
+                override fun getChannelStreamSchedule(
+                    broadcasterId: TwitchUser.Id,
+                    segmentId: TwitchChannelSchedule.Stream.Id?,
+                    startTime: Instant?,
+                    itemsPerPage: Int?,
+                    cursor: String?
+                ): Call<ChannelStreamScheduleResponse> {
+                    TODO("Not yet implemented")
+                }
+
+                override fun getVideoByUserId(
+                    userId: TwitchUser.Id,
+                    language: String?,
+                    period: String?,
+                    sort: String?,
+                    type: String?,
+                    itemsPerPage: Int?,
+                    nextCursor: String?,
+                    prevCursor: String?
+                ): Call<TwitchVideosResponse> {
+                    TODO("Not yet implemented")
+                }
+
+                override fun getGame(id: Set<TwitchCategory.Id>): Call<TwitchGameResponse> {
+                    TODO("Not yet implemented")
+                }
             }
-
-            override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings {
-                val f = checkNotNull(allFollowings)
-                return if (f.followerId == userId) f else throw IllegalStateException("not found: $userId")
-            }
-
-            override suspend fun getAuthorizeUrl(state: String): String =
-                throw NotImplementedError()
-
-            override suspend fun fetchMe(): TwitchUserDetail = throw NotImplementedError()
-
-
-            override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams =
-                throw NotImplementedError()
-
-            override suspend fun fetchFollowedStreamSchedule(
-                id: TwitchUser.Id,
-                maxCount: Int,
-            ): TwitchChannelSchedule = throw NotImplementedError()
-
-            override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
-                throw NotImplementedError()
-
-            override suspend fun fetchVideosByUserId(
-                id: TwitchUser.Id,
-                itemCount: Int,
-            ): List<TwitchVideoDetail> = throw NotImplementedError()
         }
+    }
+}
+
+private class FakeCall<T>(private val response: Response<T>) : Call<T> {
+    override fun execute(): Response<T> = response
+
+    override fun clone(): Call<T> {
+        TODO("Not yet implemented")
+    }
+
+    override fun isExecuted(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun cancel() {
+        TODO("Not yet implemented")
+    }
+
+    override fun isCanceled(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun request(): Request {
+        TODO("Not yet implemented")
+    }
+
+    override fun timeout(): Timeout {
+        TODO("Not yet implemented")
+    }
+
+    override fun enqueue(p0: Callback<T>) {
+        TODO("Not yet implemented")
     }
 }
 
@@ -249,5 +324,25 @@ interface InMemoryDbModule {
         @Singleton
         fun provideInMemoryDb(@ApplicationContext context: Context): AppDatabase =
             AppDatabase.createInMemory(context)
+    }
+}
+
+@Module
+@TestInstallIn(
+    components = [SingletonComponent::class],
+    replaces = [CoroutineModule::class],
+)
+interface TestCoroutineScopeModule {
+    companion object {
+        var testScheduler: TestCoroutineScheduler? = null
+
+        @Provides
+        @Singleton
+        fun provideIoCoroutineScope(): CoroutineScope =
+            CoroutineScope(StandardTestDispatcher(testScheduler))
+
+        @Provides
+        @Singleton
+        fun provideIoDispatcher(): CoroutineDispatcher = StandardTestDispatcher(testScheduler)
     }
 }

@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.ImageDataSource
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
@@ -25,27 +26,30 @@ import javax.inject.Singleton
 internal class TwitchLocalDataSource @Inject constructor(
     private val dao: TwitchDao,
     private val dateTimeProvider: DateTimeProvider,
+    private val ioScope: IoScope,
     imageDataSource: ImageDataSource,
 ) : TwitchDataSource.Local, ImageDataSource by imageDataSource {
-    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
+    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<TwitchUserDetail>> {
         if (ids == null) {
-            return listOfNotNull(fetchMe())
+            return fetchMe().map { listOfNotNull(it) }
         }
-        return dao.findUserDetail(ids, current = dateTimeProvider.now())
+        return ioScope.asResult {
+            dao.findUserDetail(ids, current = dateTimeProvider.now())
+        }
     }
 
     override suspend fun addUsers(users: Collection<TwitchUserDetail>) {
         dao.addUserDetails(users, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
     }
 
-    override suspend fun fetchMe(): TwitchUserDetail? = dao.findMe()
+    override suspend fun fetchMe(): Result<TwitchUserDetail?> = ioScope.asResult { dao.findMe() }
 
     override suspend fun setMe(me: TwitchUserDetail) {
         dao.setMe(me, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings =
-        dao.findFollowingsByFollowerId(userId)
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
+        ioScope.asResult { dao.findFollowingsByFollowerId(userId) }
 
     override suspend fun replaceAllFollowings(followings: TwitchFollowings) {
         dao.replaceAllBroadcasters(followings)
@@ -60,25 +64,26 @@ internal class TwitchLocalDataSource @Inject constructor(
         dao.removeChannelStreamSchedulesByIds(id)
     }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
-        val id = me ?: fetchMe()?.id ?: return null
-        return dao.findStreamByMe(id)
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<TwitchStreams?> {
+        val id = me ?: fetchMe().getOrNull()?.id ?: return Result.success(null)
+        return ioScope.asResult { dao.findStreamByMe(id) }
     }
 
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int, // ignore
-    ): TwitchChannelSchedule? {
+    ): Result<TwitchChannelSchedule?> = ioScope.asResult {
         val expire = dao.findChannelScheduleExpire(id)
         val current = dateTimeProvider.now()
         if (expire != null && expire.expiredAt <= current) {
-            return null
+            null
+        } else {
+            dao.findChannelSchedule(id)
         }
-        return dao.findChannelSchedule(id)
     }
 
-    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
-        dao.fetchCategory(id)
+    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =
+        ioScope.asResult { dao.fetchCategory(id) }
 
     override suspend fun upsertCategory(category: Collection<TwitchCategory>) {
         dao.upsertCategory(category)
@@ -99,7 +104,7 @@ internal class TwitchLocalDataSource @Inject constructor(
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
-    ): List<TwitchVideoDetail> = emptyList()
+    ): Result<List<TwitchVideoDetail>> = Result.success(emptyList())
 
     override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>) {
         dao.cleanUpByUserId(ids)

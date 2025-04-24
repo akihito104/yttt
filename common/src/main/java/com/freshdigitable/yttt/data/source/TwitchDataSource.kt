@@ -14,24 +14,23 @@ import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import kotlinx.coroutines.flow.Flow
 
 interface TwitchDataSource {
-    suspend fun getAuthorizeUrl(state: String): String
-    suspend fun findUsersById(ids: Set<TwitchUser.Id>? = null): List<TwitchUserDetail>
-    suspend fun fetchMe(): TwitchUserDetail?
-    suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings
-    suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): TwitchStreams?
+    suspend fun findUsersById(ids: Set<TwitchUser.Id>? = null): Result<List<TwitchUserDetail>>
+    suspend fun fetchMe(): Result<TwitchUserDetail?>
+    suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings>
+    suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): Result<TwitchStreams?>
     suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated)
     suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>)
     suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int = 10,
-    ): TwitchChannelSchedule?
+    ): Result<TwitchChannelSchedule?>
 
-    suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory>
+    suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>>
 
     suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int = 20,
-    ): List<TwitchVideoDetail>
+    ): Result<List<TwitchVideoDetail>>
 
     suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>)
 
@@ -45,7 +44,6 @@ interface TwitchDataSource {
         )
 
         suspend fun deleteAllTables()
-        override suspend fun getAuthorizeUrl(state: String): String = throw NotImplementedError()
         suspend fun upsertCategory(category: Collection<TwitchCategory>)
     }
 

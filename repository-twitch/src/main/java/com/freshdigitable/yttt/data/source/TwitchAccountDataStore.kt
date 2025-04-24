@@ -2,7 +2,7 @@ package com.freshdigitable.yttt.data.source
 
 import kotlinx.coroutines.flow.Flow
 
-interface TwitchAccountDataStore {
+interface TwitchAccountDataStore : TwitchAccountRemoteDataStore {
     val twitchToken: Flow<String?>
     fun getTwitchToken(): String?
     suspend fun putTwitchToken(token: String)
@@ -18,7 +18,14 @@ interface TwitchAccountDataStore {
     suspend fun putTwitchOauthStatus(value: TwitchOauthStatus)
     suspend fun clearTwitchOauthStatus()
 
-    interface Local : TwitchAccountDataStore
+    interface Local : TwitchAccountDataStore {
+        override suspend fun getAuthorizeUrl(state: String): Result<String> =
+            throw NotImplementedError()
+    }
+}
+
+interface TwitchAccountRemoteDataStore {
+    suspend fun getAuthorizeUrl(state: String): Result<String>
 }
 
 enum class TwitchOauthStatus {

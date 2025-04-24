@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.logE
 import com.freshdigitable.yttt.logI
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -29,7 +30,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         }
         logI { "start" }
         val t = AppPerformance.newTrace("loadList_t")
-        val me = twitchRepository.fetchMe() ?: return
+        val me = twitchRepository.fetchMe().getOrNull() ?: return
         t.start()
         val streams = updateOnAirStreams(me)
         t.putMetric("streaming_channel", streams.size.toLong())
@@ -44,25 +45,30 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
     }
 
     private suspend fun updateOnAirStreams(me: TwitchUserDetail): List<TwitchStream> {
-        val new = checkNotNull(twitchRepository.fetchFollowedStreams(me.id))
-        if (new is TwitchStreams.Updated) {
-            val updatableThumbnails = new.updatableThumbnails
-            if (updatableThumbnails.isNotEmpty()) {
-                twitchRepository.removeImageByUrl(updatableThumbnails)
+        val new = twitchRepository.fetchFollowedStreams(me.id).onSuccess {
+            if (it is TwitchStreams.Updated) {
+                val updatableThumbnails = it.updatableThumbnails
+                if (updatableThumbnails.isNotEmpty()) {
+                    twitchRepository.removeImageByUrl(updatableThumbnails)
+                }
+                twitchRepository.replaceFollowedStreams(it)
             }
-            twitchRepository.replaceFollowedStreams(new)
-        }
-        return new.streams
+        }.onFailure {
+            logE(throwable = it) { "updateOnAirStreams: " }
+        }.map { checkNotNull(it) }
+        return checkNotNull(new.getOrNull()).streams
     }
 
     private suspend fun updateChannelSchedules(
         me: TwitchUserDetail,
         t: AppTrace,
     ): List<TwitchChannelSchedule> {
-        val followings = twitchRepository.fetchAllFollowings(me.id)
-        if (followings is TwitchFollowings.Updated) {
-            twitchRepository.cleanUpByUserId(followings.removed)
-        }
+        val followings = twitchRepository.fetchAllFollowings(me.id).onSuccess {
+            if (it is TwitchFollowings.Updated) {
+                twitchRepository.cleanUpByUserId(it.removed)
+            }
+        }.onFailure { logE(throwable = it) { "" } }
+            .getOrNull() ?: return emptyList()
 
         t.putMetric("subs", followings.followings.size.toLong())
         val schedules = fetchAllSchedule(followings.followings)
@@ -81,16 +87,17 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
     }
 
     private suspend fun updateChannelSchedule(it: TwitchBroadcaster): TwitchChannelSchedule? {
-        val schedule = twitchRepository.fetchFollowedStreamSchedule(it.id)
-        val segments = schedule?.segments ?: return schedule
-        val current = dateTimeProvider.now()
-        val finished = segments.filter {
-            (it.startTime + Duration.ofHours(6)) < current ||
-                (it.endTime != null && checkNotNull(it.endTime) < current)
-        }.map { it.id }
-        if (finished.isNotEmpty()) {
-            twitchRepository.removeStreamScheduleById(finished.toSet())
+        val schedule = twitchRepository.fetchFollowedStreamSchedule(it.id).onSuccess { s ->
+            val segments = s?.segments ?: return s
+            val current = dateTimeProvider.now()
+            val finished = segments.filter {
+                (it.startTime + Duration.ofHours(6)) < current ||
+                    (it.endTime != null && checkNotNull(it.endTime) < current)
+            }.map { it.id }
+            if (finished.isNotEmpty()) {
+                twitchRepository.removeStreamScheduleById(finished.toSet())
+            }
         }
-        return schedule
+        return schedule.getOrNull()
     }
 }

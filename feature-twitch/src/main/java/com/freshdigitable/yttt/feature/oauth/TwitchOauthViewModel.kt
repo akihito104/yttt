@@ -40,7 +40,7 @@ class TwitchOauthViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     private suspend fun getAuthorizeUrl(state: String): String =
-        twitchRepository.getAuthorizeUrl(state)
+        accountRepository.getAuthorizeUrl(state).getOrNull() ?: ""
 
     fun onLogin() {
         viewModelScope.launch {
