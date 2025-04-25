@@ -34,6 +34,6 @@ internal class FetchYouTubeFreeChatItemSourceUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
     override fun invoke(): Flow<List<LiveVideo<*>>> = repository.videos.map { v ->
-        v.filter { it.isFreeChat == true }.map { LiveVideo.create(it) }
+        v.filter { it.isFreeChat == true && !it.isNowOnAir() }.map { LiveVideo.create(it) }
     }
 }
