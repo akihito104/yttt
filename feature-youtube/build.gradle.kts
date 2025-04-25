@@ -13,7 +13,7 @@ android {
     defaultConfig {
         minSdk = 26
 
-        testInstrumentationRunner = "com.freshdigitable.yttt.feature.timetable.CustomTestRunner"
+        testInstrumentationRunner = "com.freshdigitable.yttt.test.CustomTestRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -76,6 +76,7 @@ dependencies {
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(project(":data-local-room"))
     androidTestImplementation(project(":image-loadable-coil"))
+    androidTestImplementation(project(":common-test"))
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.room.runtime)

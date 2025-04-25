@@ -1,10 +1,8 @@
 package com.freshdigitable.yttt.data
 
-import android.content.Context
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.testing.asSnapshot
-import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -14,7 +12,6 @@ import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import com.freshdigitable.yttt.data.source.local.di.DbModule
 import com.freshdigitable.yttt.data.source.remote.Broadcaster
 import com.freshdigitable.yttt.data.source.remote.ChannelStreamScheduleResponse
 import com.freshdigitable.yttt.data.source.remote.FollowedChannelsResponse
@@ -26,20 +23,16 @@ import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
 import com.freshdigitable.yttt.data.source.remote.TwitchUserDetailRemote
 import com.freshdigitable.yttt.data.source.remote.TwitchUserResponse
 import com.freshdigitable.yttt.data.source.remote.TwitchVideosResponse
-import com.freshdigitable.yttt.di.CoroutineModule
-import com.freshdigitable.yttt.di.DateTimeModule
 import com.freshdigitable.yttt.di.TwitchModule
+import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
+import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.runTest
 import okhttp3.Request
 import okio.Timeout
@@ -52,7 +45,6 @@ import retrofit2.Callback
 import retrofit2.Response
 import java.time.Instant
 import javax.inject.Inject
-import javax.inject.Singleton
 
 @HiltAndroidTest
 class TwitchRemoteMediatorTest {
@@ -194,23 +186,6 @@ class TwitchRemoteMediatorTest {
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
-    replaces = [DateTimeModule::class],
-)
-interface FakeDateTimeProviderModule {
-    companion object {
-        var instant: Instant? = null
-
-        @Provides
-        @Singleton
-        fun provideDateTimeProvider(): DateTimeProvider = object : DateTimeProvider {
-            override fun now(): Instant = checkNotNull(instant)
-        }
-    }
-}
-
-@Module
-@TestInstallIn(
-    components = [SingletonComponent::class],
     replaces = [TwitchModule::class],
 )
 interface FakeRemoteSourceModule {
@@ -313,36 +288,6 @@ private class FakeCall<T>(private val response: Response<T>) : Call<T> {
     }
 }
 
-@Module
-@TestInstallIn(
-    components = [SingletonComponent::class],
-    replaces = [DbModule::class],
-)
-interface InMemoryDbModule {
-    companion object {
-        @Provides
-        @Singleton
-        fun provideInMemoryDb(@ApplicationContext context: Context): AppDatabase =
-            AppDatabase.createInMemory(context)
-    }
-}
-
-@Module
-@TestInstallIn(
-    components = [SingletonComponent::class],
-    replaces = [CoroutineModule::class],
-)
-interface TestCoroutineScopeModule {
-    companion object {
-        var testScheduler: TestCoroutineScheduler? = null
-
-        @Provides
-        @Singleton
-        fun provideIoCoroutineScope(): CoroutineScope =
-            CoroutineScope(StandardTestDispatcher(testScheduler))
-
-        @Provides
-        @Singleton
-        fun provideIoDispatcher(): CoroutineDispatcher = StandardTestDispatcher(testScheduler)
-    }
-}
+interface FakeDateTimeProviderModuleImpl : FakeDateTimeProviderModule
+interface TestCoroutineScopeModuleImpl : TestCoroutineScopeModule
+interface InMemoryDbModuleImpl : InMemoryDbModule

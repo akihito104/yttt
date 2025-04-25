@@ -45,6 +45,7 @@ kermit = "2.0.4"
 leakcanaryAndroid = "2.14"
 
 junit = "4.13.2"
+test-runner = "1.6.2"
 mockk = "1.13.8"
 androidx-junit = "1.2.1"
 espresso-core = "3.6.1"
@@ -67,6 +68,7 @@ androidx-hilt-compiler = { module = "androidx.hilt:hilt-compiler", version.ref =
 androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-compose", version.ref = "hilt-work" }
 androidx-hilt-work = { module = "androidx.hilt:hilt-work", version.ref = "hilt-work" }
 androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-junit" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "test-runner" }
 androidx-lifecycle-livedata-ktx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycle-livedata-ktx" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation-compose" }
 androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }

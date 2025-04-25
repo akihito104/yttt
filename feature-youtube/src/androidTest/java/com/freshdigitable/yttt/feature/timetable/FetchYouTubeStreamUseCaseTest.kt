@@ -1,11 +1,9 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import android.content.Context
 import android.content.Intent
 import app.cash.turbine.test
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
-import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -18,30 +16,24 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import com.freshdigitable.yttt.data.source.local.AppDatabase
-import com.freshdigitable.yttt.data.source.local.di.DbModule
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
-import com.freshdigitable.yttt.di.CoroutineModule
-import com.freshdigitable.yttt.di.DateTimeModule
 import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
 import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.logD
+import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
+import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import dagger.multibindings.IntoMap
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.assertj.core.api.Assertions.assertThat
@@ -269,23 +261,6 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
-    replaces = [DateTimeModule::class],
-)
-interface FakeDateTimeProviderModule {
-    companion object {
-        var instant: Instant? = null
-
-        @Provides
-        @Singleton
-        fun provideDateTimeProvider(): DateTimeProvider = object : DateTimeProvider {
-            override fun now(): Instant = checkNotNull(instant)
-        }
-    }
-}
-
-@Module
-@TestInstallIn(
-    components = [SingletonComponent::class],
     replaces = [YouTubeModule::class],
 )
 interface FakeRemoteSourceModule {
@@ -378,36 +353,6 @@ interface FakeYouTubeAccountModule {
     fun bindAccountRepository(repository: YouTubeAccountRepository): AccountRepository
 }
 
-@Module
-@TestInstallIn(
-    components = [SingletonComponent::class],
-    replaces = [DbModule::class],
-)
-interface InMemoryDbModule {
-    companion object {
-        @Provides
-        @Singleton
-        fun provideInMemoryDb(@ApplicationContext context: Context): AppDatabase =
-            AppDatabase.createInMemory(context)
-    }
-}
-
-@Module
-@TestInstallIn(
-    components = [SingletonComponent::class],
-    replaces = [CoroutineModule::class],
-)
-interface TestCoroutineScopeModule {
-    companion object {
-        var testScheduler: TestCoroutineScheduler? = null
-
-        @Provides
-        @Singleton
-        fun provideIoCoroutineScope(): CoroutineScope =
-            CoroutineScope(StandardTestDispatcher(testScheduler))
-
-        @Provides
-        @Singleton
-        fun provideIoDispatcher(): CoroutineDispatcher = StandardTestDispatcher(testScheduler)
-    }
-}
+interface FakeDateTimeProviderModuleImpl : FakeDateTimeProviderModule
+interface TestCoroutineScopeModuleImpl : TestCoroutineScopeModule
+interface InMemoryDbModuleImpl : InMemoryDbModule
