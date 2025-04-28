@@ -5,7 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.freshdigitable.yttt.data.source.TwitchAccountDataStore
+import com.freshdigitable.yttt.data.source.TwitchOauthDataStore
 import com.freshdigitable.yttt.data.source.TwitchOauthStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,12 +22,10 @@ import javax.inject.Singleton
 internal class TwitchAccountLocalDataSource @Inject constructor(
     private val dataStore: DataStore<Preferences>,
     coroutineScope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-) : TwitchAccountDataStore.Local {
+) : TwitchOauthDataStore.Local {
     override val twitchToken: StateFlow<String?> = dataStore.data
         .map { it[DS_TWITCH_TOKEN] }
         .stateIn(coroutineScope, SharingStarted.Eagerly, null)
-
-    override fun getTwitchToken(): String? = twitchToken.value
 
     override suspend fun putTwitchToken(token: String) {
         dataStore.edit {
@@ -42,8 +40,6 @@ internal class TwitchAccountLocalDataSource @Inject constructor(
     override val isTwitchTokenInvalidated: StateFlow<Boolean?> = dataStore.data
         .map { it[DS_TWITCH_TOKEN_INVALIDATED] }
         .stateIn(coroutineScope, SharingStarted.Eagerly, null)
-
-    override fun isTwitchTokenInvalidated(): Boolean = isTwitchTokenInvalidated.value ?: false
 
     override suspend fun invalidateTwitchToken() {
         dataStore.edit { it[DS_TWITCH_TOKEN_INVALIDATED] = true }

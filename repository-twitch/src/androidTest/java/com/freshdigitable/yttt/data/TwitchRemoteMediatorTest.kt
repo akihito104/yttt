@@ -112,7 +112,7 @@ class TwitchRemoteMediatorTest {
         setup()
         val base = followings.updatableAt
         FakeDateTimeProviderModule.instant = base
-        FakeRemoteSourceModule.broadcasters = broadcaster(100).toTypedArray()
+        FakeRemoteSourceModule.broadcasters = broadcaster(100)
         // exercise
         val actual = sut.flow.asSnapshot()
         // verify
@@ -191,7 +191,7 @@ class TwitchRemoteMediatorTest {
 interface FakeRemoteSourceModule {
     companion object {
         internal var userDetails: List<TwitchUserDetailRemote> = emptyList()
-        internal var broadcasters: Array<Broadcaster>? = null
+        internal var broadcasters: List<Broadcaster>? = null
 
         @Provides
         internal fun provideHelixService(): TwitchHelixService {
@@ -210,7 +210,7 @@ interface FakeRemoteSourceModule {
                 ): Call<FollowedChannelsResponse> = FakeCall(
                     Response.success(
                         FollowedChannelsResponse(
-                            data = broadcasters!!,
+                            item = broadcasters!!,
                             pagination = Pagination(null),
                             total = broadcasters!!.size,
                         )

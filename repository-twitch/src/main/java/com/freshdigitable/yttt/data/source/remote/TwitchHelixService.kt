@@ -1,9 +1,13 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchId
+import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.google.gson.annotations.SerializedName
 import retrofit2.Call
 import retrofit2.Converter
@@ -76,51 +80,50 @@ internal interface TwitchHelixService {
     fun getGame(@Query("id") id: Set<TwitchCategory.Id>): Call<TwitchGameResponse>
 }
 
-internal class TwitchUserResponse(@SerializedName("data") val data: List<TwitchUserDetailRemote>)
+internal class TwitchUserResponse(
+    @SerializedName("data") override val item: List<TwitchUserDetailRemote>,
+) : TwitchHelixClient.Response<List<TwitchUserDetail>>
 
 internal class FollowedChannelsResponse(
     @SerializedName("data")
-    val data: Array<Broadcaster>,
+    override val item: List<Broadcaster>,
     @SerializedName("pagination")
     override val pagination: Pagination,
     @SerializedName("total")
     val total: Int,
-) : Pageable<Broadcaster> {
-    override fun getItems(): Array<Broadcaster> = data
-}
+) : Pageable<List<TwitchBroadcaster>>
 
 internal class Pagination(@SerializedName("cursor") val cursor: String?)
-internal interface Pageable<T> {
+internal interface Pageable<T> : TwitchHelixClient.Response<T> {
     val pagination: Pagination
-    fun getItems(): Array<T>
+    override val item: T
+    override val nextPageToken: String? get() = pagination.cursor
 }
 
 internal class FollowingStreamsResponse(
     @SerializedName("data")
-    val data: Array<FollowingStream>,
+    override val item: List<FollowingStream>,
     @SerializedName("pagination")
     override val pagination: Pagination,
-) : Pageable<FollowingStream> {
-    override fun getItems(): Array<FollowingStream> = data
-}
+) : Pageable<List<TwitchStream>>
 
 internal class ChannelStreamScheduleResponse(
     @SerializedName("data")
-    val data: ChannelStreamSchedule,
+    override val item: ChannelStreamSchedule,
     @SerializedName("pagination")
     override val pagination: Pagination,
-) : Pageable<ChannelStreamSchedule> {
-    override fun getItems(): Array<ChannelStreamSchedule> = arrayOf(data)
-}
+) : Pageable<TwitchChannelSchedule>
 
 internal class TwitchVideosResponse(
     @SerializedName("data")
-    val data: Array<TwitchVideoRemote>,
+    override val item: List<TwitchVideoRemote>,
     @SerializedName("pagination")
-    val pagination: Pagination,
-)
+    override val pagination: Pagination,
+) : Pageable<List<TwitchVideoDetail>>
 
-internal class TwitchGameResponse(@SerializedName("data") val data: Array<TwitchGameRemote>)
+internal class TwitchGameResponse(
+    @SerializedName("data") override val item: List<TwitchGameRemote>,
+) : TwitchHelixClient.Response<List<TwitchCategory>>
 
 internal class IdConverterFactory : Converter.Factory() {
     companion object {

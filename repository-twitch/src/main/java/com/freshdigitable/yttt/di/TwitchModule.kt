@@ -1,15 +1,15 @@
 package com.freshdigitable.yttt.di
 
-import com.freshdigitable.yttt.data.TwitchAccountRemoteDataStoreImpl
+import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.data.TwitchSubscriptionPagerFactory
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.Twitch
+import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.PagerFactory
-import com.freshdigitable.yttt.data.source.TwitchAccountRemoteDataStore
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.remote.IdConverterFactory
+import com.freshdigitable.yttt.data.source.remote.TwitchHelixClient
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService
-import com.freshdigitable.yttt.data.source.remote.TwitchOauthService
 import com.freshdigitable.yttt.data.source.remote.TwitchRemoteDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchTokenInterceptor
 import com.freshdigitable.yttt.data.source.remote.createGson
@@ -60,21 +60,17 @@ internal interface TwitchModule {
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal interface TwitchAccountModule {
+interface TwitchHelixClientModule {
     companion object {
-        @Provides
         @Singleton
-        fun provideTwitchOauthService(): TwitchOauthService {
-            val retrofit = Retrofit.Builder()
-                .baseUrl(TwitchOauthService.BASE_URL)
-                .build()
-            return retrofit.create(TwitchOauthService::class.java)
-        }
+        @Provides
+        internal fun provideTwitchHelixClient(service: TwitchHelixService): TwitchHelixClient =
+            TwitchHelixClient.create(service)
     }
 
     @Binds
-    @Singleton
-    fun bindTwitchAccountRemoteDataSource(impl: TwitchAccountRemoteDataStoreImpl): TwitchAccountRemoteDataStore
+    @LivePlatformQualifier(Twitch::class)
+    fun bindAccountRepositoryWithQualifier(repository: TwitchAccountRepository): AccountRepository
 }
 
 @Module

@@ -10,23 +10,19 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.TwitchDataSource
-import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
-import retrofit2.Call
-import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 internal class TwitchRemoteDataSource @Inject constructor(
-    private val helix: TwitchHelixService,
+    private val helix: TwitchHelixClient,
     private val ioScope: IoScope,
     private val dateTimeProvider: DateTimeProvider,
 ) : TwitchDataSource.Remote {
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<TwitchUserDetail>> =
-        fetch { getUser(id = ids) }.map { it.body()?.data ?: emptyList() }
+        fetch { getUser(ids = ids) }
 
     override suspend fun fetchMe(): Result<TwitchUserDetail?> = fetch { getMe() }
-        .map { it.body()?.data?.firstOrNull() }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
         fetchAll { getFollowing(userId = userId, itemsPerPage = 100, cursor = it) }.map {
@@ -44,62 +40,60 @@ internal class TwitchRemoteDataSource @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
-    ): Result<TwitchChannelSchedule?> = fetchAll(maxCount) {
-        getChannelStreamSchedule(broadcasterId = id, cursor = it)
+    ): Result<TwitchChannelSchedule?> = ioScope.asResult {
+        buildList {
+            var cursor: String? = null
+            var count = 0
+            do {
+                val itemsPerPage = (maxCount - count).coerceAtMost(25)
+                val res = helix.getChannelStreamSchedule(
+                    id = id,
+                    itemsPerPage = itemsPerPage,
+                    cursor = cursor,
+                )
+                count += (res.item.segments?.size ?: 0)
+                add(res.item)
+                cursor = res.nextPageToken
+            } while (cursor != null || count < maxCount)
+        }
     }.map { res ->
-        if (res.isEmpty()) {
+        object : TwitchChannelSchedule {
+            override val segments: List<TwitchChannelSchedule.Stream>
+                get() = res.mapNotNull { it.segments }.flatten()
+            override val broadcaster: TwitchUser get() = res.first().broadcaster
+            override val vacation: TwitchChannelSchedule.Vacation? get() = res.first().vacation
+        }
+    }.recoverCatching {
+        if (it is TwitchException && it.statusCode == 404) {
+            // 404 Not Found: The broadcaster has not created a streaming schedule.
             null
         } else {
-            ChannelStreamSchedule(
-                segments = res.mapNotNull { it.segments }.flatten(),
-                broadcasterId = res.first().broadcasterId,
-                broadcasterName = res.first().broadcasterName,
-                broadcasterLogin = res.first().broadcasterLogin,
-                vacation = res.first().vacation,
-            )
+            throw it
         }
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =
-        fetch { getGame(id) }.map { it.body()?.data?.toList() ?: emptyList() }
+        fetch { getGame(id) }
 
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
-        itemCount: Int
-    ): Result<List<TwitchVideoDetail>> = fetch {
-        getVideoByUserId(userId = id, itemsPerPage = itemCount)
-    }.map { it.body()?.data?.toList() ?: emptyList() }
+        itemCount: Int,
+    ): Result<List<TwitchVideoDetail>> = fetch { getVideoByUserId(id = id, itemCount = itemCount) }
 
-    private suspend inline fun <T> fetch(crossinline task: TwitchHelixService.() -> Call<T>): Result<Response<T>> =
-        ioScope.asResult { helix.task().execute() }.mapCatching {
-            if (!it.isSuccessful) {
-                throw TwitchException(it.errorBody()?.string(), it.code())
-            } else {
-                it
-            }
-        }
+    private suspend inline fun <T> fetch(crossinline task: suspend TwitchHelixClient.() -> TwitchHelixClient.Response<T>): Result<T> =
+        ioScope.asResult { helix.task().item }
 
-    private suspend inline fun <E, P : Pageable<E>> fetchAll(
+    private suspend inline fun <E> fetchAll(
         maxCount: Int? = null,
-        crossinline call: TwitchHelixService.(String?) -> Call<P>,
+        crossinline call: suspend TwitchHelixClient.(String?) -> TwitchHelixClient.Response<List<E>>,
     ): Result<List<E>> = ioScope.asResult {
         var cursor: String? = null
         buildList {
             do {
-                val response = helix.call(cursor).execute()
-                val body = if (response.isSuccessful) {
-                    response.body() ?: break
-                } else {
-                    throw TwitchException(response.errorBody()?.string(), response.code())
-                }
-                addAll(body.getItems())
-                cursor = body.pagination.cursor
+                val body = helix.call(cursor)
+                addAll(body.item)
+                cursor = body.nextPageToken
             } while (cursor != null && (maxCount == null || maxCount < size))
         }
     }
 }
-
-internal class TwitchException(
-    override val message: String?,
-    override val statusCode: Int,
-) : IoScope.NetworkException(null)
