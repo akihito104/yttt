@@ -57,7 +57,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
-    testImplementation(libs.assertj.core)
+    testImplementation(libs.truth)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -70,6 +70,6 @@ dependencies {
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(libs.turbine)
-    androidTestImplementation("com.google.truth:truth:1.4.4")
+    androidTestImplementation(libs.truth)
 
 }
