@@ -4,6 +4,7 @@ import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveVideo
@@ -67,41 +68,27 @@ internal class TwitchDao @Inject constructor(
     }
 
     suspend fun replaceChannelSchedules(
-        schedule: TwitchChannelSchedule,
-        expiredAt: Instant,
+        broadcasterId: TwitchUser.Id,
+        updatable: TwitchChannelScheduleUpdatable,
     ) = db.withTransaction {
-        val userIds = schedule.broadcaster.id
-        val streams = schedule.toStreamScheduleTable()
-        val category = schedule.segments?.mapNotNull { it.category?.toTable() }
-        val vacations = schedule.toVacationScheduleTable()
-        val expire = TwitchChannelScheduleExpireTable(userIds, expiredAt)
-        removeChannelSchedules(setOf(userIds))
+        val schedule = updatable.schedule
+        val streams = schedule?.segments?.map { it.toStreamScheduleTable(broadcasterId) }
+        val vacations = schedule?.vacation.toVacationScheduleTable(broadcasterId)
+        val expire = TwitchChannelScheduleExpireTable(broadcasterId, updatable.updatableAt)
+        val category = schedule?.segments?.mapNotNull { it.category?.toTable() }
         if (!category.isNullOrEmpty()) addCategories(category)
-        if (streams.isNotEmpty()) addChannelStreamSchedules(streams)
+
+        removeChannelSchedules(setOf(broadcasterId))
+        if (!streams.isNullOrEmpty()) addChannelStreamSchedules(streams)
         addChannelVacationSchedules(setOf(vacations))
         addChannelScheduleExpireEntity(setOf(expire))
     }
-
-    suspend fun removeChannelSchedulesByBroadcasterId(id: Collection<TwitchUser.Id>) =
-        db.withTransaction {
-            val isFollowed = isBroadcasterFollowed(id.toSet())
-            val removed = id.associateWith { isFollowed[it] ?: false }.filter { !it.value }.keys
-            removeChannelSchedules(removed)
-        }
 
     private suspend fun removeChannelSchedules(id: Collection<TwitchUser.Id>) = db.withTransaction {
         removeChannelStreamSchedulesByUserIds(id)
         removeChannelScheduleExpireEntity(id)
         removeChannelVacationSchedulesByUserIds(id)
     }
-
-    suspend fun updateChannelScheduleExpireEntity(userId: TwitchUser.Id, expiredAt: Instant) =
-        db.withTransaction {
-            val vacations = listOf(TwitchChannelVacationScheduleTable(userId, null))
-            addChannelVacationSchedules(vacations)
-            val entity = listOf(TwitchChannelScheduleExpireTable(userId, expiredAt))
-            addChannelScheduleExpireEntity(entity)
-        }
 
     suspend fun findStreamSchedule(
         id: TwitchChannelSchedule.Stream.Id
@@ -160,31 +147,28 @@ private fun TwitchUser.toTable(): TwitchUserTable = TwitchUserTable(id, loginNam
 private fun TwitchUserDetail.toTable(): TwitchUserDetailTable =
     TwitchUserDetailTable(id, profileImageUrl, createdAt, description)
 
-private fun TwitchChannelSchedule.toStreamScheduleTable(): List<TwitchStreamScheduleTable> =
-    segments?.map {
-        TwitchStreamScheduleTable(
-            id = it.id,
-            title = it.title,
-            startTime = it.startTime,
-            endTime = it.endTime,
-            canceledUntil = it.canceledUntil,
-            categoryId = it.category?.id,
-            isRecurring = it.isRecurring,
-            userId = broadcaster.id,
-        )
-    } ?: emptyList()
+private fun TwitchChannelSchedule.Stream.toStreamScheduleTable(
+    broadcasterId: TwitchUser.Id,
+): TwitchStreamScheduleTable = TwitchStreamScheduleTable(
+    id = id,
+    title = title,
+    startTime = startTime,
+    endTime = endTime,
+    canceledUntil = canceledUntil,
+    categoryId = category?.id,
+    isRecurring = isRecurring,
+    userId = broadcasterId,
+)
 
 private fun TwitchCategory.toTable(): TwitchCategoryTable =
     TwitchCategoryTable(id, name, artUrlBase, igdbId)
 
-private fun TwitchChannelSchedule.toVacationScheduleTable(): TwitchChannelVacationScheduleTable =
-    TwitchChannelVacationScheduleTable(
-        userId = broadcaster.id,
-        vacation = vacation?.toTable(),
-    )
-
-private fun TwitchChannelSchedule.Vacation.toTable(): TwitchChannelVacationSchedule =
-    TwitchChannelVacationSchedule(startTime, endTime)
+private fun TwitchChannelSchedule.Vacation?.toVacationScheduleTable(
+    broadcasterId: TwitchUser.Id,
+): TwitchChannelVacationScheduleTable = TwitchChannelVacationScheduleTable(
+    userId = broadcasterId,
+    vacation = if (this == null) null else TwitchChannelVacationSchedule(startTime, endTime),
+)
 
 private fun TwitchBroadcaster.toTable(followerId: TwitchUser.Id): TwitchBroadcasterTable =
     TwitchBroadcasterTable(

@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.local
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
@@ -39,7 +40,8 @@ class TwitchLiveLocalDataSourceTest {
             dataSource.setMe(me)
             dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            dao.replaceChannelSchedules(schedule, Instant.EPOCH)
+            val updatable = TwitchChannelScheduleUpdatable.createAtFetched(schedule, Instant.EPOCH)
+            dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             assertThat(entity?.id).isEqualTo(streamSchedule.id)
@@ -90,7 +92,8 @@ class TwitchLiveLocalDataSourceTest {
                 dataSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            dao.replaceChannelSchedules(schedule, Instant.EPOCH)
+            val updatable = TwitchChannelScheduleUpdatable.createAtFetched(schedule, Instant.EPOCH)
+            dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             assertThat(entity?.id).isEqualTo(streamSchedule.id)

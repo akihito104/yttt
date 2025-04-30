@@ -16,6 +16,7 @@ import com.freshdigitable.yttt.data.source.remote.TwitchHelixClient
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.di.TwitchHelixClientModule
 import com.freshdigitable.yttt.feature.timetable.ResultSubject.Companion.assertResultThat
+import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
@@ -32,149 +33,260 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.experimental.runners.Enclosed
+import org.junit.runner.RunWith
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@HiltAndroidTest
+@RunWith(Enclosed::class)
 class FetchTwitchStreamUseCaseTest {
-    @get:Rule
-    val rule = HiltAndroidRule(this)
+    @HiltAndroidTest
+    class Init {
+        @get:Rule
+        val rule = HiltAndroidRule(this)
 
-    @Inject
-    internal lateinit var sut: FetchTwitchStreamUseCase
+        @Inject
+        internal lateinit var sut: FetchTwitchStreamUseCase
 
-    @Inject
-    internal lateinit var localSource: TwitchDataSource.Local
+        @Inject
+        internal lateinit var localSource: TwitchDataSource.Local
 
-    @Test
-    fun noAccount_earlyReturn() = runTest {
-        // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        rule.inject()
-        FakeTwitchHelixClient.hasAccount = false
-        // exercise
-        sut.invoke()
-        advanceUntilIdle()
-        // verify
-        localSource.onAir.test {
-            assertThat(awaitItem()).isEmpty()
+        @Before
+        fun setup() {
+            FakeTwitchHelixClient.apply {
+                meResponse = null
+                followingsResponse = null
+                scheduleResponse = null
+                scheduleException = null
+                categoryResponse = null
+                streamResponse = null
+                userResponse = null
+                hasAccount = null
+            }
+            FakeDateTimeProviderModule.instant = null
+            TestCoroutineScopeModule.testScheduler = null
         }
-        localSource.upcoming.test {
-            assertThat(awaitItem()).isEmpty()
+
+        @Test
+        fun noAccount_earlyReturn() = runTest {
+            // setup
+            TestCoroutineScopeModule.testScheduler = testScheduler
+            rule.inject()
+            FakeTwitchHelixClient.hasAccount = false
+            // exercise
+            sut.invoke()
+            advanceUntilIdle()
+            // verify
+            localSource.onAir.test {
+                assertThat(awaitItem()).isEmpty()
+            }
+            localSource.upcoming.test {
+                assertThat(awaitItem()).isEmpty()
+            }
+        }
+
+        @Test
+        fun hasAccount_noFollowing_itemsAreEmpty() = runTest {
+            // setup
+            TestCoroutineScopeModule.testScheduler = testScheduler
+            rule.inject()
+            FakeDateTimeProviderModule.instant = Instant.EPOCH
+            FakeTwitchHelixClient.apply {
+                hasAccount = true
+
+                meResponse = TwitchHelixClient.Response.create(item = me)
+                streamResponse = TwitchHelixClient.Response.create(item = emptyList())
+                followingsResponse = TwitchHelixClient.Response.create(item = emptyList())
+            }
+            // exercise
+            sut.invoke()
+            advanceUntilIdle()
+            // verify
+            assertResultThat(localSource.fetchMe()).apply {
+                isSuccess()
+                value().isNotNull()
+            }
+            localSource.onAir.test {
+                assertThat(awaitItem()).isEmpty()
+            }
+            localSource.upcoming.test {
+                assertThat(awaitItem()).isEmpty()
+            }
+        }
+
+        @Test
+        fun hasAccount_1Following_hasItems() = runTest {
+            // setup
+            TestCoroutineScopeModule.testScheduler = testScheduler
+            rule.inject()
+            FakeDateTimeProviderModule.instant = Instant.EPOCH
+            FakeTwitchHelixClient.apply {
+                hasAccount = true
+
+                val userDetail = userDetail("10")
+                val category = category("1")
+                meResponse = TwitchHelixClient.Response.create(item = me)
+                streamResponse = TwitchHelixClient.Response.create(
+                    item = listOf(stream("1", category, userDetail)),
+                )
+                followingsResponse =
+                    TwitchHelixClient.Response.create(item = listOf(broadcaster(userDetail)))
+                scheduleException = TwitchException("Not found", 404)
+                userResponse = TwitchHelixClient.Response.create(item = listOf(userDetail))
+            }
+            // exercise
+            sut.invoke()
+            advanceUntilIdle()
+            // verify
+            assertResultThat(localSource.fetchMe()).apply {
+                isSuccess()
+                value().isNotNull()
+            }
+            localSource.onAir.test {
+                assertThat(awaitItem()).hasSize(1)
+            }
+            localSource.upcoming.test {
+                assertThat(awaitItem()).isEmpty()
+            }
         }
     }
 
-    @Test
-    fun hasAccount_noFollowing_itemsAreEmpty() = runTest {
-        // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        rule.inject()
-        FakeDateTimeProviderModule.instant = Instant.EPOCH
-        FakeTwitchHelixClient.apply {
-            hasAccount = true
+    @HiltAndroidTest
+    class HasItems {
+        @get:Rule
+        val rule = HiltAndroidRule(this)
 
-            meResponse = TwitchHelixClient.Response.create(item = me)
-            streamResponse = TwitchHelixClient.Response.create(item = emptyList())
-            followingsResponse = TwitchHelixClient.Response.create(item = emptyList())
-        }
-        // exercise
-        sut.invoke()
-        advanceUntilIdle()
-        // verify
-        assertResultThat(localSource.fetchMe()).apply {
-            isSuccess()
-            value().isNotNull()
-        }
-        localSource.onAir.test {
-            assertThat(awaitItem()).isEmpty()
-        }
-        localSource.upcoming.test {
-            assertThat(awaitItem()).isEmpty()
-        }
-    }
+        @Inject
+        internal lateinit var sut: FetchTwitchStreamUseCase
 
-    @Test
-    fun hasAccount_1Following_hasItems() = runTest {
-        // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        rule.inject()
-        FakeDateTimeProviderModule.instant = Instant.EPOCH
-        FakeTwitchHelixClient.apply {
-            hasAccount = true
+        @Inject
+        internal lateinit var localSource: TwitchDataSource.Local
 
-            val userDetail = userDetail("10")
-            val category = category("1")
-            meResponse = TwitchHelixClient.Response.create(item = me)
-            streamResponse = TwitchHelixClient.Response.create(
-                item = listOf(stream("1", category, userDetail)),
-            )
-            followingsResponse =
-                TwitchHelixClient.Response.create(item = listOf(broadcaster(userDetail)))
-            scheduleException = TwitchException("Not found", 404)
-            userResponse = TwitchHelixClient.Response.create(item = listOf(userDetail))
+        @Before
+        fun setup() {
+            FakeTwitchHelixClient.apply {
+                meResponse = null
+                followingsResponse = null
+                scheduleResponse = null
+                scheduleException = null
+                categoryResponse = null
+                streamResponse = null
+                userResponse = null
+                hasAccount = null
+            }
+            FakeDateTimeProviderModule.instant = null
+            TestCoroutineScopeModule.testScheduler = null
         }
-        // exercise
-        sut.invoke()
-        advanceUntilIdle()
-        // verify
-        assertResultThat(localSource.fetchMe()).apply {
-            isSuccess()
-            value().isNotNull()
-        }
-        localSource.onAir.test {
-            assertThat(awaitItem()).hasSize(1)
-        }
-        localSource.upcoming.test {
-            assertThat(awaitItem()).isEmpty()
-        }
-    }
 
-    @Test
-    fun hasAccount_1FollowingAndSchedule_hasItems() = runTest {
-        // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        rule.inject()
-        FakeDateTimeProviderModule.instant = Instant.EPOCH
-        val category = category("1")
-        FakeTwitchHelixClient.apply {
-            hasAccount = true
+        private val current = Instant.parse("2025-04-29T00:00:00Z")
+        private val category = category("1")
+        private val streamUser = userDetail("10")
+        private val scheduleUser = userDetail("11")
+        private val streamSchedule =
+            streamSchedule("1", category, Instant.parse("2025-04-30T00:00:00Z"))
 
-            val streamUser = userDetail("10")
-            val scheduleUser = userDetail("11")
+        private suspend fun TestScope.initialLoad() {
+            TestCoroutineScopeModule.testScheduler = testScheduler
+            rule.inject()
+            localSource.deleteAllTables()
+
+            FakeDateTimeProviderModule.instant = current
             val followings = listOf(streamUser, scheduleUser).map { broadcaster(it) }
-            meResponse = TwitchHelixClient.Response.create(item = me)
-            streamResponse = TwitchHelixClient.Response.create(
-                item = listOf(stream("1", category("2"), streamUser)),
-            )
-            categoryResponse = TwitchHelixClient.Response.create(item = listOf(category))
-            followingsResponse = TwitchHelixClient.Response.create(item = followings)
-            scheduleResponse = TwitchHelixClient.Response.create(
-                item = schedule(listOf(streamSchedule("1", category)), broadcaster(scheduleUser))
-            )
-            userResponse =
-                TwitchHelixClient.Response.create(item = listOf(streamUser, scheduleUser))
+            FakeTwitchHelixClient.apply {
+                hasAccount = true
+
+                meResponse = TwitchHelixClient.Response.create(item = me)
+                streamResponse = TwitchHelixClient.Response.create(
+                    item = listOf(stream("1", category("2"), streamUser)),
+                )
+                categoryResponse = TwitchHelixClient.Response.create(item = listOf(category))
+                followingsResponse = TwitchHelixClient.Response.create(item = followings)
+                scheduleResponse = TwitchHelixClient.Response.create(
+                    item = schedule(listOf(streamSchedule), broadcaster(scheduleUser))
+                )
+                userResponse =
+                    TwitchHelixClient.Response.create(item = listOf(streamUser, scheduleUser))
+            }
+            sut.invoke()
+            advanceUntilIdle()
+            assertResultThat(localSource.fetchMe()).apply {
+                isSuccess()
+                value().isNotNull()
+            }
         }
-        // exercise
-        sut.invoke()
-        advanceUntilIdle()
-        // verify
-        assertResultThat(localSource.fetchMe()).apply {
-            isSuccess()
-            value().isNotNull()
+
+        @Test
+        fun hasOnAirAndUpcomingItems() = runTest {
+            // setup
+            initialLoad()
+            // exercise
+            sut.invoke()
+            advanceUntilIdle()
+            // verify
+            localSource.onAir.test {
+                assertThat(awaitItem()).hasSize(1)
+            }
+            localSource.upcoming.test {
+                val item = awaitItem()
+                assertThat(item).hasSize(1)
+                assertThat(item.first().schedule.category?.id).isEqualTo(category.id)
+            }
         }
-        localSource.onAir.test {
-            assertThat(awaitItem()).hasSize(1)
+
+        @Test
+        fun onAirStreamIsFinished_onAirIsEmpty() = runTest {
+            // setup
+            initialLoad()
+            FakeDateTimeProviderModule.instant = current + Duration.ofMinutes(10)
+            FakeTwitchHelixClient.apply {
+                streamResponse = TwitchHelixClient.Response.create(item = emptyList())
+                meResponse = null
+                categoryResponse = null
+                userResponse = null
+            }
+            // exercise
+            sut.invoke()
+            advanceUntilIdle()
+            // verify
+            localSource.onAir.test {
+                assertThat(awaitItem()).isEmpty()
+            }
+            localSource.upcoming.test {
+                assertThat(awaitItem()).hasSize(1)
+            }
         }
-        localSource.upcoming.test {
-            val item = awaitItem()
-            assertThat(item).hasSize(1)
-            assertThat(item.first().schedule.category?.id).isEqualTo(category.id)
+
+        @Test
+        fun upcomingPublishDeadlineIsOver_upcomingIsEmpty() = runTest {
+            // setup
+            initialLoad()
+            FakeDateTimeProviderModule.instant = streamSchedule.startTime + Duration.ofHours(7)
+            FakeTwitchHelixClient.apply {
+                meResponse = null
+                categoryResponse = null
+                userResponse = null
+                scheduleResponse = null
+                scheduleException = TwitchException("Not found", 404)
+            }
+            // exercise
+            sut.invoke()
+            advanceUntilIdle()
+            // verify
+            localSource.onAir.test {
+                assertThat(awaitItem()).hasSize(1)
+            }
+            localSource.upcoming.test {
+                assertThat(awaitItem()).isEmpty()
+            }
         }
     }
 }
@@ -182,11 +294,10 @@ class FetchTwitchStreamUseCaseTest {
 private fun <T> TwitchHelixClient.Response.Companion.create(
     item: T,
     nextPageToken: String? = null
-) =
-    object : TwitchHelixClient.Response<T> {
-        override val item: T get() = item
-        override val nextPageToken: String? get() = nextPageToken
-    }
+) = object : TwitchHelixClient.Response<T> {
+    override val item: T get() = item
+    override val nextPageToken: String? get() = nextPageToken
+}
 
 private val me = userDetail("1", "me")
 
@@ -233,17 +344,20 @@ private fun stream(
     override val language: String get() = "ja"
 }
 
-private fun streamSchedule(id: String, category: TwitchCategory): TwitchChannelSchedule.Stream =
-    object : TwitchChannelSchedule.Stream {
-        override val id: TwitchChannelSchedule.Stream.Id
-            get() = TwitchChannelSchedule.Stream.Id(id)
-        override val startTime: Instant get() = Instant.EPOCH
-        override val endTime: Instant? get() = null
-        override val title: String get() = "title"
-        override val canceledUntil: String? get() = null
-        override val category: TwitchCategory get() = category
-        override val isRecurring: Boolean get() = false
-    }
+private fun streamSchedule(
+    id: String,
+    category: TwitchCategory,
+    startTime: Instant = Instant.EPOCH,
+): TwitchChannelSchedule.Stream = object : TwitchChannelSchedule.Stream {
+    override val id: TwitchChannelSchedule.Stream.Id
+        get() = TwitchChannelSchedule.Stream.Id(id)
+    override val category: TwitchCategory get() = category
+    override val startTime: Instant get() = startTime
+    override val endTime: Instant? get() = null
+    override val title: String get() = "title"
+    override val canceledUntil: String? get() = null
+    override val isRecurring: Boolean get() = false
+}
 
 private fun schedule(
     streamSchedule: List<TwitchChannelSchedule.Stream>,
@@ -295,6 +409,7 @@ interface FakeTwitchHelixClient {
                 itemsPerPage: Int?,
                 cursor: String?,
             ): TwitchHelixClient.Response<TwitchChannelSchedule> {
+                logD { "getChannelStreamSchedule: $id, $segmentId, $itemsPerPage, $cursor" }
                 check(scheduleResponse != null || scheduleException != null)
                 if (scheduleResponse != null) {
                     return scheduleResponse!!

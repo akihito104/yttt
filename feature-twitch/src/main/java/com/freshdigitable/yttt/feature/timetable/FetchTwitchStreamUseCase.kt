@@ -99,7 +99,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
 
     private suspend fun updateChannelSchedule(it: TwitchBroadcaster): Result<TwitchChannelSchedule?> =
         twitchRepository.fetchFollowedStreamSchedule(it.id).onSuccess { s ->
-            val segments = s?.segments ?: return@onSuccess
+            val segments = s.schedule?.segments ?: return@onSuccess
             val current = dateTimeProvider.now()
             val finished = segments.filter {
                 (it.startTime + Duration.ofHours(6)) < current ||
@@ -108,5 +108,5 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
             if (finished.isNotEmpty()) {
                 twitchRepository.removeStreamScheduleById(finished.toSet())
             }
-        }.onFailure { logE(throwable = it) { "updateChannelSchedule: " } }
+        }.onFailure { logE(throwable = it) { "updateChannelSchedule: " } }.map { it.schedule }
 }

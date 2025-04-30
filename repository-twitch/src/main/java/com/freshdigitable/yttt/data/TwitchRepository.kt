@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchStreams
@@ -89,9 +90,10 @@ class TwitchRepository @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
-    ): Result<TwitchChannelSchedule?> {
+    ): Result<TwitchChannelScheduleUpdatable> {
         val cache = localDataSource.fetchFollowedStreamSchedule(id)
-        if (cache.isSuccess && cache.getOrNull() != null) {
+        val current = dateTimeProvider.now()
+        if (cache.isSuccess && checkNotNull(cache.getOrNull()).updatableAt > current) {
             return cache
         }
         return remoteDataSource.fetchFollowedStreamSchedule(id, maxCount).onSuccess {

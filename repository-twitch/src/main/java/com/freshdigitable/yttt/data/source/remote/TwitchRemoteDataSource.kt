@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.remote
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
@@ -40,7 +41,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
-    ): Result<TwitchChannelSchedule?> = ioScope.asResult {
+    ): Result<TwitchChannelScheduleUpdatable> = ioScope.asResult {
         buildList {
             var cursor: String? = null
             var count = 0
@@ -54,19 +55,26 @@ internal class TwitchRemoteDataSource @Inject constructor(
                 count += (res.item.segments?.size ?: 0)
                 add(res.item)
                 cursor = res.nextPageToken
-            } while (cursor != null || count < maxCount)
+            } while (cursor != null && count < maxCount)
         }
     }.map { res ->
-        object : TwitchChannelSchedule {
+        val schedule = object : TwitchChannelSchedule {
             override val segments: List<TwitchChannelSchedule.Stream>
                 get() = res.mapNotNull { it.segments }.flatten()
             override val broadcaster: TwitchUser get() = res.first().broadcaster
             override val vacation: TwitchChannelSchedule.Vacation? get() = res.first().vacation
         }
+        TwitchChannelScheduleUpdatable.createAtFetched(
+            schedule = schedule,
+            fetchedAt = dateTimeProvider.now(),
+        )
     }.recoverCatching {
         if (it is TwitchException && it.statusCode == 404) {
             // 404 Not Found: The broadcaster has not created a streaming schedule.
-            null
+            TwitchChannelScheduleUpdatable.createAtFetched(
+                schedule = null,
+                fetchedAt = dateTimeProvider.now(),
+            )
         } else {
             throw it
         }

@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.source
 
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
@@ -23,7 +24,7 @@ interface TwitchDataSource {
     suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int = 10,
-    ): Result<TwitchChannelSchedule?>
+    ): Result<TwitchChannelScheduleUpdatable>
 
     suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>>
 
@@ -40,7 +41,7 @@ interface TwitchDataSource {
         suspend fun replaceAllFollowings(followings: TwitchFollowings)
         suspend fun setFollowedStreamSchedule(
             userId: TwitchUser.Id,
-            schedule: TwitchChannelSchedule?,
+            schedule: TwitchChannelScheduleUpdatable,
         )
 
         suspend fun deleteAllTables()

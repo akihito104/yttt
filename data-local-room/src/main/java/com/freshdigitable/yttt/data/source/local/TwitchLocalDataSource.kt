@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.local
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
@@ -19,6 +20,7 @@ import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
 import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -72,13 +74,12 @@ internal class TwitchLocalDataSource @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int, // ignore
-    ): Result<TwitchChannelSchedule?> = ioScope.asResult {
+    ): Result<TwitchChannelScheduleUpdatable> = ioScope.asResult {
         val expire = dao.findChannelScheduleExpire(id)
-        val current = dateTimeProvider.now()
-        if (expire != null && expire.expiredAt <= current) {
-            null
-        } else {
-            dao.findChannelSchedule(id)
+        val schedule = dao.findChannelSchedule(id)
+        object : TwitchChannelScheduleUpdatable {
+            override val schedule: TwitchChannelSchedule? get() = schedule
+            override val updatableAt: Instant get() = expire?.expiredAt ?: Instant.EPOCH
         }
     }
 
@@ -91,14 +92,9 @@ internal class TwitchLocalDataSource @Inject constructor(
 
     override suspend fun setFollowedStreamSchedule(
         userId: TwitchUser.Id,
-        schedule: TwitchChannelSchedule?
+        schedule: TwitchChannelScheduleUpdatable,
     ) {
-        val updatableAt = dateTimeProvider.now() + MAX_AGE_CHANNEL_SCHEDULE
-        if (schedule == null) {
-            dao.updateChannelScheduleExpireEntity(userId, updatableAt)
-        } else {
-            dao.replaceChannelSchedules(schedule, expiredAt = updatableAt)
-        }
+        dao.replaceChannelSchedules(userId, schedule)
     }
 
     override suspend fun fetchVideosByUserId(
@@ -127,6 +123,5 @@ internal class TwitchLocalDataSource @Inject constructor(
 
     companion object {
         private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
-        private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
     }
 }
