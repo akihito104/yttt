@@ -221,9 +221,7 @@ interface FakeRemoteSourceModule {
                     userId: TwitchUser.Id,
                     itemsPerPage: Int?,
                     cursor: String?
-                ): Call<FollowingStreamsResponse> {
-                    TODO("Not yet implemented")
-                }
+                ): Call<FollowingStreamsResponse> = throw NotImplementedError()
 
                 override fun getChannelStreamSchedule(
                     broadcasterId: TwitchUser.Id,
@@ -231,9 +229,7 @@ interface FakeRemoteSourceModule {
                     startTime: Instant?,
                     itemsPerPage: Int?,
                     cursor: String?
-                ): Call<ChannelStreamScheduleResponse> {
-                    TODO("Not yet implemented")
-                }
+                ): Call<ChannelStreamScheduleResponse> = throw NotImplementedError()
 
                 override fun getVideoByUserId(
                     userId: TwitchUser.Id,
@@ -244,13 +240,10 @@ interface FakeRemoteSourceModule {
                     itemsPerPage: Int?,
                     nextCursor: String?,
                     prevCursor: String?
-                ): Call<TwitchVideosResponse> {
-                    TODO("Not yet implemented")
-                }
+                ): Call<TwitchVideosResponse> = throw NotImplementedError()
 
-                override fun getGame(id: Set<TwitchCategory.Id>): Call<TwitchGameResponse> {
-                    TODO("Not yet implemented")
-                }
+                override fun getGame(id: Set<TwitchCategory.Id>): Call<TwitchGameResponse> =
+                    throw NotImplementedError()
             }
         }
     }
@@ -259,33 +252,13 @@ interface FakeRemoteSourceModule {
 private class FakeCall<T>(private val response: Response<T>) : Call<T> {
     override fun execute(): Response<T> = response
 
-    override fun clone(): Call<T> {
-        TODO("Not yet implemented")
-    }
-
-    override fun isExecuted(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun cancel() {
-        TODO("Not yet implemented")
-    }
-
-    override fun isCanceled(): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    override fun request(): Request {
-        TODO("Not yet implemented")
-    }
-
-    override fun timeout(): Timeout {
-        TODO("Not yet implemented")
-    }
-
-    override fun enqueue(p0: Callback<T>) {
-        TODO("Not yet implemented")
-    }
+    override fun clone(): Call<T> = throw NotImplementedError()
+    override fun isExecuted(): Boolean = throw NotImplementedError()
+    override fun cancel() = throw NotImplementedError()
+    override fun isCanceled(): Boolean = throw NotImplementedError()
+    override fun request(): Request = throw NotImplementedError()
+    override fun timeout(): Timeout = throw NotImplementedError()
+    override fun enqueue(p0: Callback<T>) = throw NotImplementedError()
 }
 
 interface FakeDateTimeProviderModuleImpl : FakeDateTimeProviderModule
