@@ -16,7 +16,7 @@ android {
     defaultConfig {
         minSdk = 26
 
-        testInstrumentationRunner = "com.freshdigitable.yttt.data.CustomTestRunner"
+        testInstrumentationRunner = "com.freshdigitable.yttt.test.CustomTestRunner"
         consumerProguardFiles("consumer-rules.pro")
 
         val twitchPFile = rootProject.file("twitch.properties")
@@ -74,6 +74,7 @@ dependencies {
 
     androidTestImplementation(project(":repository-appuser"))
     androidTestImplementation(project(":image-loadable-coil"))
+    androidTestImplementation(project(":common-test"))
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(libs.assertj.core)
     androidTestImplementation(libs.kotlinx.coroutines.test)

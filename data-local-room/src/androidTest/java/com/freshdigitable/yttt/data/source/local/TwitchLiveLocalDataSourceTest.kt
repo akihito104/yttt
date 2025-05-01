@@ -3,9 +3,11 @@ package com.freshdigitable.yttt.data.source.local
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.db.DateTimeProviderFake
 import com.freshdigitable.yttt.data.source.local.db.NopImageDataSource
@@ -13,6 +15,7 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDaoImpl
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -37,7 +40,8 @@ class TwitchLiveLocalDataSourceTest {
             dataSource.setMe(me)
             dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            dao.replaceChannelSchedules(schedule, Instant.EPOCH)
+            val updatable = TwitchChannelScheduleUpdatable.createAtFetched(schedule, Instant.EPOCH)
+            dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             assertThat(entity?.id).isEqualTo(streamSchedule.id)
@@ -88,7 +92,8 @@ class TwitchLiveLocalDataSourceTest {
                 dataSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            dao.replaceChannelSchedules(schedule, Instant.EPOCH)
+            val updatable = TwitchChannelScheduleUpdatable.createAtFetched(schedule, Instant.EPOCH)
+            dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             assertThat(entity?.id).isEqualTo(streamSchedule.id)
@@ -150,7 +155,10 @@ internal class TwitchDataSourceTestRule(
     )
 
     override fun createTestScope(testScope: TestScope): DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
-        val dataSource = TwitchLocalDataSource(dao, dateTimeProvider, NopImageDataSource)
+        val dataSource = TwitchLocalDataSource(
+            dao, dateTimeProvider,
+            IoScope(StandardTestDispatcher(testScope.testScheduler)), NopImageDataSource
+        )
         return object : DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
             override val testScope: TestScope get() = testScope
             override val dateTimeProvider: DateTimeProviderFake get() = this@TwitchDataSourceTestRule.dateTimeProvider

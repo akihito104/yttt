@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.LaunchAppWithUrlUseCase
 import com.freshdigitable.yttt.data.BuildConfig
-import com.freshdigitable.yttt.data.TwitchAccountRepository
+import com.freshdigitable.yttt.data.TwitchOauthRepository
 import com.freshdigitable.yttt.data.TwitchRepository
 import com.freshdigitable.yttt.data.model.TwitchOauthToken
 import com.freshdigitable.yttt.data.source.TwitchOauthStatus
@@ -25,7 +25,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TwitchOauthViewModel @Inject constructor(
     private val twitchRepository: TwitchRepository,
-    private val accountRepository: TwitchAccountRepository,
+    private val accountRepository: TwitchOauthRepository,
     private val launchApp: LaunchAppWithUrlUseCase,
 ) : ViewModel() {
     val hasValidTokenState: StateFlow<Boolean> = combine(
@@ -40,7 +40,7 @@ class TwitchOauthViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
 
     private suspend fun getAuthorizeUrl(state: String): String =
-        twitchRepository.getAuthorizeUrl(state)
+        accountRepository.getAuthorizeUrl(state).getOrNull() ?: ""
 
     fun onLogin() {
         viewModelScope.launch {
@@ -67,15 +67,10 @@ class TwitchOauthViewModel @Inject constructor(
             accountRepository.clearTwitchTokenInvalidated()
         }
     }
-
-    companion object {
-        @Suppress("unused")
-        private val TAG = TwitchOauthViewModel::class.simpleName
-    }
 }
 
 class TwitchOauthParser @Inject constructor(
-    private val accountRepository: TwitchAccountRepository,
+    private val accountRepository: TwitchOauthRepository,
     private val coroutineScope: CoroutineScope,
 ) {
     private val state = accountRepository.twitchOauthState

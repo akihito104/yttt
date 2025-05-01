@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.db.TwitchPagingSource
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
+import com.freshdigitable.yttt.logE
 import javax.inject.Inject
 
 @OptIn(ExperimentalPagingApi::class)
@@ -35,12 +36,14 @@ internal class TwitchRemoteMediator @Inject constructor(
     ): MediatorResult {
         logD { "load: $loadType, $state" }
         val me = repository.fetchMe()
-            ?: return MediatorResult.Success(endOfPaginationReached = true)
+            .onFailure { logE(throwable = it) { "load:" } }
+            .getOrNull() ?: return MediatorResult.Success(endOfPaginationReached = true)
         return when (loadType) {
             LoadType.REFRESH -> {
-                val followings = repository.fetchAllFollowings(me.id)
-                val userId = followings.followings.map { it.id }
-                repository.findUsersById(userId.toSet())
+                repository.fetchAllFollowings(me.id).map { followings ->
+                    val userId = followings.followings.map { it.id }
+                    repository.findUsersById(userId.toSet())
+                }.onFailure { logE(throwable = it) { "load(refresh):" } }
                 MediatorResult.Success(true)
             }
 
@@ -49,6 +52,7 @@ internal class TwitchRemoteMediator @Inject constructor(
                     .filter { it.channel.iconUrl.isEmpty() }
                     .map { it.channel.id.mapTo() }
                 repository.findUsersById(items.toSet())
+                    .onFailure { logE(throwable = it) { "load($loadType):" } }
                 MediatorResult.Success(true)
             }
         }

@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.data.source.local
 
 import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
-import androidx.annotation.VisibleForTesting
 import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.DeleteColumn
@@ -141,10 +140,6 @@ abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProvi
             Room.databaseBuilder(context, AppDatabase::class.java, name)
                 .addMigrations(MIGRATION_13_14, MIGRATION_15_16)
                 .build()
-
-        @VisibleForTesting
-        fun createInMemory(context: Context): AppDatabase =
-            Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
     }
 }
 

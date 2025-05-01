@@ -22,7 +22,7 @@ class IoScope @Inject constructor(
             runCatching { block(this) }.onFailure { emit(Result.failure<T>(it)) }
         }.flowOn(ioDispatcher)
 
-    abstract class NetworkException(throwable: Throwable) : Exception(throwable) {
+    abstract class NetworkException(throwable: Throwable?) : Exception(throwable) {
         abstract val statusCode: Int
     }
 }

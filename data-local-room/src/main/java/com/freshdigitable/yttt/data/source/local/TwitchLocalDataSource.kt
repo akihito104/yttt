@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.local
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
@@ -14,10 +15,12 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.ImageDataSource
+import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
 import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,27 +28,30 @@ import javax.inject.Singleton
 internal class TwitchLocalDataSource @Inject constructor(
     private val dao: TwitchDao,
     private val dateTimeProvider: DateTimeProvider,
+    private val ioScope: IoScope,
     imageDataSource: ImageDataSource,
 ) : TwitchDataSource.Local, ImageDataSource by imageDataSource {
-    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): List<TwitchUserDetail> {
+    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<TwitchUserDetail>> {
         if (ids == null) {
-            return listOfNotNull(fetchMe())
+            return fetchMe().map { listOfNotNull(it) }
         }
-        return dao.findUserDetail(ids, current = dateTimeProvider.now())
+        return ioScope.asResult {
+            dao.findUserDetail(ids, current = dateTimeProvider.now())
+        }
     }
 
     override suspend fun addUsers(users: Collection<TwitchUserDetail>) {
         dao.addUserDetails(users, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
     }
 
-    override suspend fun fetchMe(): TwitchUserDetail? = dao.findMe()
+    override suspend fun fetchMe(): Result<TwitchUserDetail?> = ioScope.asResult { dao.findMe() }
 
     override suspend fun setMe(me: TwitchUserDetail) {
         dao.setMe(me, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): TwitchFollowings =
-        dao.findFollowingsByFollowerId(userId)
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
+        ioScope.asResult { dao.findFollowingsByFollowerId(userId) }
 
     override suspend fun replaceAllFollowings(followings: TwitchFollowings) {
         dao.replaceAllBroadcasters(followings)
@@ -60,25 +66,25 @@ internal class TwitchLocalDataSource @Inject constructor(
         dao.removeChannelStreamSchedulesByIds(id)
     }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): TwitchStreams? {
-        val id = me ?: fetchMe()?.id ?: return null
-        return dao.findStreamByMe(id)
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<TwitchStreams?> {
+        val id = me ?: fetchMe().getOrNull()?.id ?: return Result.success(null)
+        return ioScope.asResult { dao.findStreamByMe(id) }
     }
 
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int, // ignore
-    ): TwitchChannelSchedule? {
+    ): Result<TwitchChannelScheduleUpdatable> = ioScope.asResult {
         val expire = dao.findChannelScheduleExpire(id)
-        val current = dateTimeProvider.now()
-        if (expire != null && expire.expiredAt <= current) {
-            return null
+        val schedule = dao.findChannelSchedule(id)
+        object : TwitchChannelScheduleUpdatable {
+            override val schedule: TwitchChannelSchedule? get() = schedule
+            override val updatableAt: Instant get() = expire?.expiredAt ?: Instant.EPOCH
         }
-        return dao.findChannelSchedule(id)
     }
 
-    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
-        dao.fetchCategory(id)
+    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =
+        ioScope.asResult { dao.fetchCategory(id) }
 
     override suspend fun upsertCategory(category: Collection<TwitchCategory>) {
         dao.upsertCategory(category)
@@ -86,20 +92,15 @@ internal class TwitchLocalDataSource @Inject constructor(
 
     override suspend fun setFollowedStreamSchedule(
         userId: TwitchUser.Id,
-        schedule: TwitchChannelSchedule?
+        schedule: TwitchChannelScheduleUpdatable,
     ) {
-        val updatableAt = dateTimeProvider.now() + MAX_AGE_CHANNEL_SCHEDULE
-        if (schedule == null) {
-            dao.updateChannelScheduleExpireEntity(userId, updatableAt)
-        } else {
-            dao.replaceChannelSchedules(schedule, expiredAt = updatableAt)
-        }
+        dao.replaceChannelSchedules(userId, schedule)
     }
 
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
-    ): List<TwitchVideoDetail> = emptyList()
+    ): Result<List<TwitchVideoDetail>> = Result.success(emptyList())
 
     override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>) {
         dao.cleanUpByUserId(ids)
@@ -122,6 +123,5 @@ internal class TwitchLocalDataSource @Inject constructor(
 
     companion object {
         private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
-        private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
     }
 }

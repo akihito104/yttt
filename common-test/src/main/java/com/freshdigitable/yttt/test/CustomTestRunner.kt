@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt.feature.timetable
+package com.freshdigitable.yttt.test
 
 import android.app.Application
 import android.content.Context

@@ -1,9 +1,9 @@
 package com.freshdigitable.yttt.feature.channel
 
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockk
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import java.time.Instant
 import java.time.ZoneId

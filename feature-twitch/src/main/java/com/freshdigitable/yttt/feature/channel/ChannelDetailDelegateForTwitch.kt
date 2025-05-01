@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import java.time.ZoneId
@@ -52,7 +53,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         if (BuildConfig.DEBUG) TwitchChannelDetailTab.Debug else null
     )
     private val detail: Flow<TwitchUserDetail?> = flowOf(id).map {
-        repository.findUsersById(setOf(it.mapTo())).firstOrNull()
+        repository.findUsersById(setOf(it.mapTo())).getOrNull()?.firstOrNull()
     }
     override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
         d?.let { LiveChannelDetailTwitch(it) }
@@ -63,8 +64,8 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         val desc = d?.description ?: return@map AnnotatableString.empty()
         AnnotatableString.createForTwitch(desc)
     }
-    override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).map { i ->
-        repository.fetchVideosByUserId(i.mapTo())
+    override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).mapNotNull { i ->
+        repository.fetchVideosByUserId(i.mapTo()).getOrNull()
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
     override val debug: Flow<Map<TwitchChannelDetailPagerContent.DebugId, String>> = combine(
         listOf(

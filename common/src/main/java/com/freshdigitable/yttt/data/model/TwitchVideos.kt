@@ -77,6 +77,24 @@ interface TwitchChannelSchedule {
     }
 }
 
+interface TwitchChannelScheduleUpdatable {
+    val schedule: TwitchChannelSchedule?
+    val updatableAt: Instant
+
+    companion object {
+        private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
+        fun createAtFetched(
+            schedule: TwitchChannelSchedule?,
+            fetchedAt: Instant,
+        ): TwitchChannelScheduleUpdatable = Impl(schedule, fetchedAt + MAX_AGE_CHANNEL_SCHEDULE)
+    }
+
+    private class Impl(
+        override val schedule: TwitchChannelSchedule?,
+        override val updatableAt: Instant,
+    ) : TwitchChannelScheduleUpdatable
+}
+
 interface TwitchCategory {
     val id: Id
     val name: String

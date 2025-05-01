@@ -22,7 +22,7 @@ internal class TwitchTokenInterceptor @Inject constructor(
         if (!accountDataSource.hasValidToken()) {
             return chain.proceed(request)
         }
-        val token = accountDataSource.getTwitchToken() ?: return chain.proceed(request)
+        val token = accountDataSource.twitchToken.value ?: return chain.proceed(request)
         val req = request.newBuilder()
             .header(HEADER_AUTHORIZATION, toAuthorizationValue(token))
             .header("Client-Id", BuildConfig.TWITCH_CLIENT_ID)
@@ -42,6 +42,6 @@ internal class TwitchTokenInterceptor @Inject constructor(
         const val HEADER_AUTHORIZATION: String = "Authorization"
         fun toAuthorizationValue(token: String): String = "Bearer $token"
         private fun TwitchAccountDataStore.Local.hasValidToken(): Boolean =
-            getTwitchToken() != null && !isTwitchTokenInvalidated()
+            twitchToken.value != null && !isTwitchTokenInvalidated()
     }
 }
