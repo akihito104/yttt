@@ -45,9 +45,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private var trace: AppTrace? = null
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    override suspend operator fun invoke() {
+    override suspend operator fun invoke(): Result<Unit> {
         if (!accountRepository.hasAccount()) {
-            return
+            return Result.success(Unit)
         }
         logI { "start" }
         val t = AppPerformance.newTrace("loadList_yt")
@@ -88,6 +88,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         t.stop()
         trace = null
         logI { "end" }
+        return Result.success(Unit)
     }
 
     private suspend fun updateCurrentVideos(videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>) {

@@ -48,9 +48,11 @@ internal class TimetableTabViewModel @Inject constructor(
                 _isLoading.postValue(true)
                 val trace = AppPerformance.newTrace("loadList")
                 trace.start()
-                fetchStreamTasks.map { async { it() } }.awaitAll()
+                val tasks = fetchStreamTasks.map { async { it() } }.awaitAll()
                 trace.stop()
-                settingRepository.lastUpdateDatetime = dateTimeProvider.now()
+                if (tasks.isNotEmpty() && tasks.all { it.isSuccess }) {
+                    settingRepository.lastUpdateDatetime = dateTimeProvider.now()
+                }
                 _isLoading.postValue(false)
             }
         }

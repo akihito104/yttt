@@ -54,8 +54,8 @@ interface TwitchHelixClient {
 }
 
 class TwitchException(
-    override val message: String?,
     override val statusCode: Int,
+    override val message: String?,
 ) : IoScope.NetworkException(null)
 
 private class Impl(
@@ -123,7 +123,7 @@ private class Impl(
             if (response.isSuccessful) {
                 return checkNotNull(response.body())
             } else {
-                throw TwitchException(response.errorBody()?.string(), response.code())
+                throw TwitchException(response.code(), response.errorBody()?.string())
             }
         }
     }
