@@ -44,4 +44,5 @@ dependencies {
     implementation(libs.androidx.test.runner)
     implementation(libs.kotlinx.coroutines.test)
     implementation(libs.hilt.android.testing)
+    implementation(libs.truth)
 }

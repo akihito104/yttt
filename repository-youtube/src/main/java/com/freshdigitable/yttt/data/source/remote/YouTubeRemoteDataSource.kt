@@ -13,11 +13,9 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import com.google.api.client.http.HttpResponseException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.time.Instant
 
 internal class YouTubeRemoteDataSource(
@@ -33,7 +31,7 @@ internal class YouTubeRemoteDataSource(
                 paged = paged.update(res.items, res.nextPageToken, dateTimeProvider.now())
                 emit(Result.success(paged))
             } while (paged.nextPageToken != null)
-        }.map { res -> res.recoverCatching { throw YouTubeException(it) } }
+        }
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -71,7 +69,7 @@ internal class YouTubeRemoteDataSource(
                 token = response.nextPageToken
             } while (token != null)
         }
-    }.recoverCatching { throw YouTubeException(it) }
+    }
 
     private suspend inline fun <I : IdBase, E> fetchList(
         ids: Set<I>,
@@ -87,20 +85,10 @@ internal class YouTubeRemoteDataSource(
                 .awaitAll()
                 .flatten()
         }
-    }.recoverCatching { throw YouTubeException(it) }
+    }
 
     private suspend inline fun <T> fetch(crossinline request: YouTubeClient.() -> T): Result<T> =
-        ioScope.asResult { youtube.request() }.recoverCatching { throw YouTubeException(it) }
-}
-
-internal class YouTubeException(
-    private val throwable: Throwable,
-) : IoScope.NetworkException(throwable) {
-    override val statusCode: Int
-        get() = when (throwable) {
-            is HttpResponseException -> throwable.statusCode
-            else -> -1
-        }
+        ioScope.asResult { youtube.request() }
 }
 
 private data class PagedSubscription(

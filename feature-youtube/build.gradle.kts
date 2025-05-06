@@ -80,6 +80,6 @@ dependencies {
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.room.runtime)
-    androidTestImplementation(libs.assertj.core)
+    androidTestImplementation(libs.truth)
     androidTestImplementation(libs.turbine)
 }

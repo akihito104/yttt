@@ -17,13 +17,17 @@ import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
+import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
 import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.logD
+import com.freshdigitable.yttt.test.AppTraceVerifier
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
+import com.google.common.truth.Truth.assertThat
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -36,7 +40,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -49,8 +52,11 @@ import javax.inject.Singleton
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltAndroidTest
 class FetchYouTubeStreamUseCaseTest {
-    @get:Rule
-    var hiltRule = HiltAndroidRule(this)
+    @get:Rule(order = 0)
+    val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
+    val rule = AppTraceVerifier()
 
     @Inject
     lateinit var localSource: YouTubeDataSource.Local
@@ -73,9 +79,10 @@ class FetchYouTubeStreamUseCaseTest {
         TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
         // exercise
-        sut.invoke()
+        val actual = sut.invoke()
         advanceUntilIdle()
         // verify
+        assertResultThat(actual).isSuccess()
         localSource.videos.test {
             assertThat(awaitItem()).isEmpty()
         }
@@ -86,16 +93,43 @@ class FetchYouTubeStreamUseCaseTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         TestCoroutineScopeModule.testScheduler = testScheduler
-        FakeRemoteSourceModule.subscription =
-            mapOf((0 to null) to (emptyList<YouTubeSubscription>() to null))
+        FakeRemoteSourceModule.subscription = { offset, token ->
+            if (offset == 0 && token == null) {
+                YouTubeClient.Response(emptyList())
+            } else {
+                throw AssertionError()
+            }
+        }
         hiltRule.inject()
         // exercise
-        sut.invoke()
+        val actual = sut.invoke()
         advanceUntilIdle()
         // verify
+        assertResultThat(actual).isSuccess()
         localSource.videos.test {
             assertThat(awaitItem()).isEmpty()
         }
+    }
+
+    @Test
+    fun failedToGetSubscription_returnsFailure() = runTest {
+        // setup
+        FakeYouTubeAccountModule.account = "account"
+        FakeRemoteSourceModule.subscription = { _, _ -> throw YouTubeException(500) }
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        hiltRule.inject()
+        // exercise
+        val actual = sut.invoke()
+        advanceUntilIdle()
+        // verify
+        assertResultThat(actual).apply {
+            isFailure()
+            throwable().isInstanceOf(YouTubeException::class.java)
+        }
+        localSource.videos.test {
+            assertThat(awaitItem()).isEmpty()
+        }
+        assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.EPOCH)
     }
 
     @Test
@@ -106,12 +140,77 @@ class FetchYouTubeStreamUseCaseTest {
         FakeRemoteSourceModule.setup(10, 2)
         hiltRule.inject()
         // exercise
-        sut.invoke()
+        val actual = sut.invoke()
         advanceUntilIdle()
         // verify
+        assertResultThat(actual).isSuccess()
         localSource.videos.test {
             assertThat(awaitItem()).hasSize(20)
         }
+    }
+
+    @Test
+    fun failedToGetChannelDetails_returnsFailure() = runTest {
+        // setup
+        FakeYouTubeAccountModule.account = "account"
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        FakeRemoteSourceModule.setup(10, 2)
+        FakeRemoteSourceModule.channel = { throw YouTubeException(500) }
+        hiltRule.inject()
+        // exercise
+        val actual = sut.invoke()
+        advanceUntilIdle()
+        // verify
+        assertResultThat(actual).apply {
+            isFailure()
+            throwable().isInstanceOf(YouTubeException::class.java)
+        }
+        localSource.videos.test {
+            assertThat(awaitItem()).isEmpty()
+        }
+        assertThat(localSource.subscriptionsFetchedAt).isEqualTo(current)
+    }
+
+    @Test
+    fun failedToGetPlaylistItem_returnsFailure() = runTest {
+        // setup
+        FakeYouTubeAccountModule.account = "account"
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        FakeRemoteSourceModule.apply {
+            setup(10, 2)
+            val base = playlistItem!!
+            playlistItem = { id ->
+                if (id.value.contains("1")) throw YouTubeException(500)
+                else base.invoke(id)
+            }
+        }
+        hiltRule.inject()
+        // exercise
+        val actual = sut.invoke()
+        advanceUntilIdle()
+        // verify
+        assertResultThat(actual).isFailure()
+    }
+
+    @Test
+    fun failedToGetVideoDetail_returnsFailure() = runTest {
+        // setup
+        FakeYouTubeAccountModule.account = "account"
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        FakeRemoteSourceModule.apply {
+            setup(10, 2)
+            val base = video!!
+            video = { id ->
+                if (id.any { it.value.contains("1") }) throw YouTubeException(500)
+                else base.invoke(id)
+            }
+        }
+        hiltRule.inject()
+        // exercise
+        val actual = sut.invoke()
+        advanceUntilIdle()
+        // verify
+        assertResultThat(actual).isFailure()
     }
 
     @Test
@@ -122,13 +221,39 @@ class FetchYouTubeStreamUseCaseTest {
         FakeRemoteSourceModule.setup(100, 2)
         hiltRule.inject()
         // exercise
-        sut.invoke()
+        val actual = sut.invoke()
         advanceUntilIdle()
         // verify
+        assertResultThat(actual).isSuccess()
         localSource.videos.test {
             assertThat(awaitItem()).hasSize(200)
         }
-        assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T00:00:00Z"))
+        assertThat(localSource.subscriptionsFetchedAt).isEqualTo(current)
+    }
+
+    @Test
+    fun failedToGetChannelDetailsAt2ndPageOfSubscription_returnsFailure() = runTest {
+        // setup
+        FakeYouTubeAccountModule.account = "account"
+        FakeRemoteSourceModule.setup(100, 2)
+        val channel = FakeRemoteSourceModule.channel
+        var page = 0
+        FakeRemoteSourceModule.channel = {
+            if (page == 0) {
+                page++
+                channel!!.invoke(it)
+            } else throw YouTubeException(500)
+        }
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        hiltRule.inject()
+        // exercise
+        val actual = sut.invoke()
+        advanceUntilIdle()
+        // verify
+        assertResultThat(actual).apply {
+            isFailure()
+            throwable().isInstanceOf(YouTubeException::class.java)
+        }
     }
 
     @Test
@@ -141,13 +266,13 @@ class FetchYouTubeStreamUseCaseTest {
             hiltRule.inject()
             sut.invoke()
             advanceUntilIdle()
-
             FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
             FakeRemoteSourceModule.setup(100, 2)
             // exercise
-            sut.invoke()
+            val actual = sut.invoke()
             advanceUntilIdle()
             // verify
+            assertResultThat(actual).isSuccess()
             localSource.videos.test {
                 assertThat(awaitItem()).hasSize(200)
             }
@@ -167,9 +292,10 @@ class FetchYouTubeStreamUseCaseTest {
         FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
         FakeRemoteSourceModule.setup(10, 3)
         // exercise
-        sut.invoke()
+        val actual = sut.invoke()
         advanceUntilIdle()
         // verify
+        assertResultThat(actual).isSuccess()
         localSource.videos.test {
             assertThat(awaitItem()).hasSize(30)
         }
@@ -177,21 +303,32 @@ class FetchYouTubeStreamUseCaseTest {
     }
 }
 
-private fun FakeRemoteSourceModule.Companion.setup(subscriptionCount: Int, itemsPerPlaylist: Int) {
+private fun FakeRemoteSourceModule.Companion.setup(
+    subscriptionCount: Int,
+    itemsPerPlaylist: Int
+) {
     val channelDetail = (1..subscriptionCount).map { channelDetail(it) }
     val videos = channelDetail.flatMap { c -> (1..itemsPerPlaylist).map { video(it, c) } }
-    channel = channelDetail
+    channel = { id ->
+        val c = channelDetail.associateBy { it.id }
+        id.mapNotNull { c[it] }
+    }
     val chunked = channelDetail.chunked(50)
-    subscription = chunked.mapIndexed { i, c ->
+    val subs = chunked.mapIndexed { i, c ->
         val tokenMatcher = if (i == 0) null else "token$i"
         val nextToken = if (i == chunked.size - 1) null else "token${i + 1}"
-        (i * 50 to tokenMatcher) to (c.mapIndexed { j, s -> subscription(j, s) } to nextToken)
+        (i * 50 to tokenMatcher) to YouTubeClient.Response(
+            c.mapIndexed { j, s -> subscription(j, s) }, nextToken
+        )
     }.toMap()
-    video = videos
-    playlistItem = channelDetail.associate { c ->
+    subscription = { offset, token -> subs[offset to token]!! }
+    val v = videos.associateBy { it.id }
+    video = { id -> id.mapNotNull { v[it] } }
+    val pi = channelDetail.associate { c ->
         c.uploadedPlayList!! to videos.filter { it.channel.id == c.id }
             .mapIndexed { i, v -> playlistItem(i, c, v.id) }
     }
+    playlistItem = { pi[it]!! }
 }
 
 private fun FakeRemoteSourceModule.Companion.clean() {
@@ -265,11 +402,11 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
 )
 interface FakeRemoteSourceModule {
     companion object {
-        var subscription: Map<Pair<Int, String?>, Pair<List<YouTubeSubscription>, String?>>? =
+        var subscription: ((Int, String?) -> YouTubeClient.Response<YouTubeSubscription>)? =
             null
-        var channel: List<YouTubeChannelDetail>? = null
-        var playlistItem: Map<YouTubePlaylist.Id, List<YouTubePlaylistItem>>? = null
-        var video: List<YouTubeVideo>? = null
+        var channel: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null
+        var playlistItem: ((YouTubePlaylist.Id) -> List<YouTubePlaylistItem>)? = null
+        var video: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null
 
         @Singleton
         @Provides
@@ -280,20 +417,19 @@ interface FakeRemoteSourceModule {
                 token: String?,
             ): YouTubeClient.Response<YouTubeSubscription> {
                 logD { "fetchSubscription: $offset, $token" }
-                val res = subscription?.get(offset to token)!!
-                return YouTubeClient.Response(res.first, res.second)
+                return subscription!!.invoke(offset, token)
             }
 
             override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): YouTubeClient.Response<YouTubeChannelDetail> {
                 logD { "fetchChannelList: $ids" }
                 check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-                return YouTubeClient.Response(ids.mapNotNull { id -> channel?.find { it.id == id } })
+                return YouTubeClient.Response(items = channel!!.invoke(ids))
             }
 
             override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): YouTubeClient.Response<YouTubeVideo> {
                 logD { "fetchVideoList: $ids" }
                 check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-                return YouTubeClient.Response(ids.mapNotNull { id -> video?.find { it.id == id } })
+                return YouTubeClient.Response(items = video!!.invoke(ids))
             }
 
             override fun fetchPlaylistItems(
@@ -301,7 +437,7 @@ interface FakeRemoteSourceModule {
                 maxResult: Long,
             ): YouTubeClient.Response<YouTubePlaylistItem> {
                 logD { "fetchPlaylistItems: $id, $maxResult" }
-                return YouTubeClient.Response(playlistItem?.get(id)!!)
+                return YouTubeClient.Response(playlistItem!!.invoke(id))
             }
 
             override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): YouTubeClient.Response<YouTubePlaylist> =

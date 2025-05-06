@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import com.freshdigitable.yttt.AppPerformance
+import com.freshdigitable.yttt.AppPerformance.Companion.trace
 import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.TwitchRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -116,16 +116,4 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
                 twitchRepository.removeStreamScheduleById(finished.toSet())
             }
         }.onFailure { logE(throwable = it) { "updateChannelSchedule: " } }.map { it.schedule }
-
-    companion object {
-        private inline fun <T> trace(name: String, task: AppTrace.() -> T): T {
-            val t = AppPerformance.newTrace(name)
-            t.start()
-            try {
-                return task(t)
-            } finally {
-                t.stop()
-            }
-        }
-    }
 }

@@ -1,8 +1,6 @@
 package com.freshdigitable.yttt.feature.timetable
 
 import app.cash.turbine.test
-import com.freshdigitable.yttt.AppPerformance
-import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
@@ -17,16 +15,12 @@ import com.freshdigitable.yttt.data.source.remote.TwitchException
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixClient
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.di.TwitchHelixClientModule
-import com.freshdigitable.yttt.feature.timetable.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.logD
+import com.freshdigitable.yttt.test.AppTraceVerifier
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
-import com.google.common.truth.FailureMetadata
-import com.google.common.truth.Subject
-import com.google.common.truth.Subject.Factory
-import com.google.common.truth.ThrowableSubject
-import com.google.common.truth.Truth.assertAbout
 import com.google.common.truth.Truth.assertThat
 import dagger.Module
 import dagger.Provides
@@ -43,8 +37,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.rules.TestRule
-import org.junit.rules.TestWatcher
-import org.junit.runner.Description
 import org.junit.runner.RunWith
 import java.time.Duration
 import java.time.Instant
@@ -701,58 +693,3 @@ interface FakeTwitchHelixClient {
 interface FakeDateTimeProviderImpl : FakeDateTimeProviderModule
 interface InMemoryDbModuleImpl : InMemoryDbModule
 interface TestCoroutineScopeModuleImpl : TestCoroutineScopeModule
-
-class ResultSubject<T>(
-    metadata: FailureMetadata,
-    private val actual: Result<T>?,
-) : Subject(metadata, actual) {
-
-    companion object {
-        fun <T> factory(): Factory<ResultSubject<T>, Result<T>> =
-            Factory { metadata, actual -> ResultSubject(metadata, actual) }
-
-        fun <T> assertResultThat(actual: Result<T>): ResultSubject<T> =
-            assertAbout(factory<T>()).that(actual)
-    }
-
-    fun isSuccess() {
-        check("isSuccess").that(actual?.isSuccess).isTrue()
-    }
-
-    fun isFailure() {
-        check("isFailure").that(actual?.isFailure).isTrue()
-    }
-
-    fun value(): Subject = check("value").that(actual?.getOrNull())
-    fun throwable(): ThrowableSubject = check("throwable").that(actual?.exceptionOrNull())
-}
-
-class AppTraceVerifier : TestWatcher() {
-    private var started = false
-    private var stopped = false
-    override fun starting(description: Description?) {
-        AppPerformance.addTraceFactory(factory = object : AppTrace.Factory {
-            override fun newTrace(name: String): AppTrace {
-                return object : AppTrace {
-                    override val name: String get() = name
-
-                    override fun start() {
-                        started = true
-                    }
-
-                    override fun stop() {
-                        stopped = true
-                    }
-
-                    override fun putMetric(name: String, value: Long) {}
-                    override fun incrementMetric(name: String, value: Long) {}
-                }
-            }
-        })
-    }
-
-    override fun finished(description: Description?) {
-        assertThat(started).isTrue()
-        assertThat(stopped).isTrue()
-    }
-}
