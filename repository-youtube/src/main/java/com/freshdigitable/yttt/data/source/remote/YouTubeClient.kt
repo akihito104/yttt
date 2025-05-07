@@ -10,7 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.source.IoScope
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpResponseException
 import com.google.api.client.util.DateTime
@@ -33,24 +33,23 @@ interface YouTubeClient {
         pageSize: Long,
         offset: Int,
         token: String?,
-    ): Response<YouTubeSubscription>
+    ): NetworkResponse<List<YouTubeSubscription>>
 
-    fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Response<YouTubeChannelDetail>
-    fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Response<YouTubePlaylist>
-    fun fetchPlaylistItems(id: YouTubePlaylist.Id, maxResult: Long): Response<YouTubePlaylistItem>
-    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Response<YouTubeVideo>
-    fun fetchChannelSection(id: YouTubeChannel.Id): Response<YouTubeChannelSection>
+    fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>>
+    fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>>
+    fun fetchPlaylistItems(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): NetworkResponse<List<YouTubePlaylistItem>>
+
+    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>>
+    fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>>
     fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
         maxResult: Long?,
         token: String?,
-    ): Response<YouTubeChannelLog>
-
-    class Response<T>(
-        val items: List<T>,
-        val nextPageToken: String? = null,
-    )
+    ): NetworkResponse<List<YouTubeChannelLog>>
 
     companion object {
         fun create(youtube: YouTube): YouTubeClient = YouTubeClientImpl(youtube)
@@ -62,7 +61,7 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
         pageSize: Long,
         offset: Int,
         token: String?,
-    ): YouTubeClient.Response<YouTubeSubscription> {
+    ): NetworkResponse<List<YouTubeSubscription>> {
         val res = youtube.fetch {
             subscriptions()
                 .list(listOf(PART_SNIPPET))
@@ -70,31 +69,31 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
                 .setMaxResults(pageSize)
                 .setPageToken(token)
         }
-        return YouTubeClient.Response(
-            items = res.items.mapIndexed { i, s -> YouTubeSubscriptionRemote(s, offset + i) },
+        return NetworkResponse.create(
+            item = res.items.mapIndexed { i, s -> YouTubeSubscriptionRemote(s, offset + i) },
             nextPageToken = res.nextPageToken,
         )
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): YouTubeClient.Response<YouTubeChannelDetail> {
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
         val res = youtube.fetch {
             channels()
                 .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
-        return YouTubeClient.Response(items = res.items.map { YouTubeChannelImpl(it) })
+        return NetworkResponse.create(item = res.items.map { YouTubeChannelImpl(it) })
     }
 
-    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): YouTubeClient.Response<YouTubePlaylist> {
+    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> {
         val res = youtube.fetch {
             playlists()
                 .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
-        return YouTubeClient.Response(
-            items = res.items.map { YouTubePlaylistRemote(it) },
+        return NetworkResponse.create(
+            item = res.items.map { YouTubePlaylistRemote(it) },
             nextPageToken = res.nextPageToken,
         )
     }
@@ -102,39 +101,39 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): YouTubeClient.Response<YouTubePlaylistItem> {
+    ): NetworkResponse<List<YouTubePlaylistItem>> {
         val res = youtube.fetch {
             playlistItems()
                 .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
                 .setPlaylistId(id.value)
                 .setMaxResults(maxResult)
         }
-        return YouTubeClient.Response(
-            items = res.items.map { PlaylistItemRemote(it) },
+        return NetworkResponse.create(
+            item = res.items.map { PlaylistItemRemote(it) },
         )
     }
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): YouTubeClient.Response<YouTubeVideo> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         val res = youtube.fetch {
             videos()
                 .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
-        return YouTubeClient.Response(
-            items = res.items.map { YouTubeVideoRemote(it) },
+        return NetworkResponse.create(
+            item = res.items.map { YouTubeVideoRemote(it) },
             nextPageToken = res.nextPageToken,
         )
     }
 
-    override fun fetchChannelSection(id: YouTubeChannel.Id): YouTubeClient.Response<YouTubeChannelSection> {
+    override fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>> {
         val res = youtube.fetch {
             channelSections()
                 .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
                 .setChannelId(id.value)
         }
-        return YouTubeClient.Response(
-            items = res.items.map { YouTubeChannelSectionImpl(it) },
+        return NetworkResponse.create(
+            item = res.items.map { YouTubeChannelSectionImpl(it) },
         )
     }
 
@@ -143,7 +142,7 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
         publishedAfter: Instant?,
         maxResult: Long?,
         token: String?,
-    ): YouTubeClient.Response<YouTubeChannelLog> {
+    ): NetworkResponse<List<YouTubeChannelLog>> {
         check(publishedAfter != null || maxResult != null) { "publishedAfter or maxResult should not be null" }
         val res = youtube.fetch {
             activities()
@@ -158,8 +157,8 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
                 }
                 .setPageToken(token)
         }
-        return YouTubeClient.Response(
-            items = res.items.map { YouTubeChannelLogEntity(it) },
+        return NetworkResponse.create(
+            item = res.items.map { YouTubeChannelLogEntity(it) },
             nextPageToken = res.nextPageToken,
         )
     }
@@ -181,7 +180,7 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
 class YouTubeException(
     override val statusCode: Int,
     throwable: Throwable? = null,
-) : IoScope.NetworkException(throwable)
+) : NetworkResponse.Exception(throwable)
 
 private data class YouTubeSubscriptionRemote(
     private val subscription: Subscription,

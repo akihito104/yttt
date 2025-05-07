@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
@@ -95,7 +96,7 @@ class FetchYouTubeStreamUseCaseTest {
         TestCoroutineScopeModule.testScheduler = testScheduler
         FakeRemoteSourceModule.subscription = { offset, token ->
             if (offset == 0 && token == null) {
-                YouTubeClient.Response(emptyList())
+                NetworkResponse.create(emptyList())
             } else {
                 throw AssertionError()
             }
@@ -317,7 +318,7 @@ private fun FakeRemoteSourceModule.Companion.setup(
     val subs = chunked.mapIndexed { i, c ->
         val tokenMatcher = if (i == 0) null else "token$i"
         val nextToken = if (i == chunked.size - 1) null else "token${i + 1}"
-        (i * 50 to tokenMatcher) to YouTubeClient.Response(
+        (i * 50 to tokenMatcher) to NetworkResponse.create(
             c.mapIndexed { j, s -> subscription(j, s) }, nextToken
         )
     }.toMap()
@@ -402,7 +403,7 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
 )
 interface FakeRemoteSourceModule {
     companion object {
-        var subscription: ((Int, String?) -> YouTubeClient.Response<YouTubeSubscription>)? =
+        var subscription: ((Int, String?) -> NetworkResponse<List<YouTubeSubscription>>)? =
             null
         var channel: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null
         var playlistItem: ((YouTubePlaylist.Id) -> List<YouTubePlaylistItem>)? = null
@@ -415,35 +416,35 @@ interface FakeRemoteSourceModule {
                 pageSize: Long,
                 offset: Int,
                 token: String?,
-            ): YouTubeClient.Response<YouTubeSubscription> {
+            ): NetworkResponse<List<YouTubeSubscription>> {
                 logD { "fetchSubscription: $offset, $token" }
                 return subscription!!.invoke(offset, token)
             }
 
-            override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): YouTubeClient.Response<YouTubeChannelDetail> {
+            override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
                 logD { "fetchChannelList: $ids" }
                 check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-                return YouTubeClient.Response(items = channel!!.invoke(ids))
+                return NetworkResponse.create(item = channel!!.invoke(ids))
             }
 
-            override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): YouTubeClient.Response<YouTubeVideo> {
+            override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
                 logD { "fetchVideoList: $ids" }
                 check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-                return YouTubeClient.Response(items = video!!.invoke(ids))
+                return NetworkResponse.create(item = video!!.invoke(ids))
             }
 
             override fun fetchPlaylistItems(
                 id: YouTubePlaylist.Id,
                 maxResult: Long,
-            ): YouTubeClient.Response<YouTubePlaylistItem> {
+            ): NetworkResponse<List<YouTubePlaylistItem>> {
                 logD { "fetchPlaylistItems: $id, $maxResult" }
-                return YouTubeClient.Response(playlistItem!!.invoke(id))
+                return NetworkResponse.create(playlistItem!!.invoke(id))
             }
 
-            override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): YouTubeClient.Response<YouTubePlaylist> =
+            override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
                 throw NotImplementedError()
 
-            override fun fetchChannelSection(id: YouTubeChannel.Id): YouTubeClient.Response<YouTubeChannelSection> =
+            override fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>> =
                 throw NotImplementedError()
 
             override fun fetchLiveChannelLogs(
@@ -451,7 +452,7 @@ interface FakeRemoteSourceModule {
                 publishedAfter: Instant?,
                 maxResult: Long?,
                 token: String?,
-            ): YouTubeClient.Response<YouTubeChannelLog> = throw NotImplementedError()
+            ): NetworkResponse<List<YouTubeChannelLog>> = throw NotImplementedError()
         }
 
         @Singleton

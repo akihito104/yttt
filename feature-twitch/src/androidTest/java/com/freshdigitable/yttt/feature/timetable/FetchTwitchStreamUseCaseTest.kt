@@ -118,9 +118,9 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.apply {
                 hasAccount = true
 
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
-                streamResponse = { TwitchHelixClient.Response.create(item = emptyList()) }
-                followingsResponse = { TwitchHelixClient.Response.create(item = emptyList()) }
+                meResponse = { NetworkResponse.create(item = me) }
+                streamResponse = { NetworkResponse.create(item = emptyList()) }
+                followingsResponse = { NetworkResponse.create(item = emptyList()) }
             }
             // exercise
             val actual = sut.invoke()
@@ -148,8 +148,8 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.apply {
                 hasAccount = true
 
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
-                streamResponse = { TwitchHelixClient.Response.create(item = emptyList()) }
+                meResponse = { NetworkResponse.create(item = me) }
+                streamResponse = { NetworkResponse.create(item = emptyList()) }
                 followingsResponse = { throw TwitchException(400, "Bad request.") }
             }
             // exercise
@@ -179,16 +179,14 @@ class FetchTwitchStreamUseCaseTest {
 
                 val userDetail = userDetail("10")
                 val category = category("1")
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
+                meResponse = { NetworkResponse.create(item = me) }
                 streamResponse = {
-                    TwitchHelixClient.Response.create(
-                        item = listOf(stream("1", category, userDetail)),
-                    )
+                    NetworkResponse.create(item = listOf(stream("1", category, userDetail)))
                 }
                 followingsResponse =
-                    { TwitchHelixClient.Response.create(item = listOf(broadcaster(userDetail))) }
+                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
                 scheduleResponse = { throw TwitchException(404, "Not found") }
-                userResponse = { TwitchHelixClient.Response.create(item = listOf(userDetail)) }
+                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
             }
             // exercise
             val actual = sut.invoke()
@@ -218,20 +216,20 @@ class FetchTwitchStreamUseCaseTest {
 
                 val userDetail = userDetail("10")
                 val category = category("1")
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
-                streamResponse = { TwitchHelixClient.Response.create(item = emptyList()) }
+                meResponse = { NetworkResponse.create(item = me) }
+                streamResponse = { NetworkResponse.create(item = emptyList()) }
                 followingsResponse =
-                    { TwitchHelixClient.Response.create(item = listOf(broadcaster(userDetail))) }
+                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
                 scheduleResponse = {
-                    TwitchHelixClient.Response.create(
+                    NetworkResponse.create(
                         item = schedule(
                             streamSchedule = listOf(streamSchedule("1", category)),
                             broadcaster = broadcaster(userDetail),
                         ),
                     )
                 }
-                categoryResponse = { TwitchHelixClient.Response.create(item = listOf(category)) }
-                userResponse = { TwitchHelixClient.Response.create(item = listOf(userDetail)) }
+                categoryResponse = { NetworkResponse.create(item = listOf(category)) }
+                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
             }
             // exercise
             val actual = sut.invoke()
@@ -260,12 +258,12 @@ class FetchTwitchStreamUseCaseTest {
                 hasAccount = true
 
                 val userDetail = userDetail("10")
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
-                streamResponse = { TwitchHelixClient.Response.create(item = emptyList()) }
+                meResponse = { NetworkResponse.create(item = me) }
+                streamResponse = { NetworkResponse.create(item = emptyList()) }
                 followingsResponse =
-                    { TwitchHelixClient.Response.create(item = listOf(broadcaster(userDetail))) }
+                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
                 scheduleResponse = {
-                    TwitchHelixClient.Response.create(
+                    NetworkResponse.create(
                         item = schedule(
                             streamSchedule = listOf(streamSchedule("1", category("1"))),
                             broadcaster = broadcaster(userDetail),
@@ -273,7 +271,7 @@ class FetchTwitchStreamUseCaseTest {
                     )
                 }
                 categoryResponse = { throw TwitchException(400, "Bad request.") }
-                userResponse = { TwitchHelixClient.Response.create(item = listOf(userDetail)) }
+                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
             }
             // exercise
             val actual = sut.invoke()
@@ -302,12 +300,12 @@ class FetchTwitchStreamUseCaseTest {
                 hasAccount = true
 
                 val userDetail = userDetail("10")
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
-                streamResponse = { TwitchHelixClient.Response.create(item = emptyList()) }
+                meResponse = { NetworkResponse.create(item = me) }
+                streamResponse = { NetworkResponse.create(item = emptyList()) }
                 followingsResponse =
-                    { TwitchHelixClient.Response.create(item = listOf(broadcaster(userDetail))) }
+                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
                 scheduleResponse = { throw TwitchException(400, "Bad request.") }
-                userResponse = { TwitchHelixClient.Response.create(item = listOf(userDetail)) }
+                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
             }
             // exercise
             val actual = sut.invoke()
@@ -337,14 +335,12 @@ class FetchTwitchStreamUseCaseTest {
 
                 val userDetail = userDetail("10")
                 val category = category("1")
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
+                meResponse = { NetworkResponse.create(item = me) }
                 streamResponse = {
-                    TwitchHelixClient.Response.create(
-                        item = listOf(stream("1", category, userDetail)),
-                    )
+                    NetworkResponse.create(item = listOf(stream("1", category, userDetail)))
                 }
                 followingsResponse =
-                    { TwitchHelixClient.Response.create(item = listOf(broadcaster(userDetail))) }
+                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
                 scheduleResponse = { throw TwitchException(404, "Not found") }
                 userResponse = { throw TwitchException(400, "Bad request") }
             }
@@ -378,12 +374,12 @@ class FetchTwitchStreamUseCaseTest {
                 hasAccount = true
 
                 val userDetail = userDetail("10")
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
+                meResponse = { NetworkResponse.create(item = me) }
                 streamResponse = { throw TwitchException(400, "Bad request.") }
                 followingsResponse =
-                    { TwitchHelixClient.Response.create(item = listOf(broadcaster(userDetail))) }
+                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
                 scheduleResponse = { throw TwitchException(404, "Not found") }
-                userResponse = { TwitchHelixClient.Response.create(item = listOf(userDetail)) }
+                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
             }
             // exercise
             val actual = sut.invoke()
@@ -437,21 +433,18 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.apply {
                 hasAccount = true
 
-                meResponse = { TwitchHelixClient.Response.create(item = me) }
+                meResponse = { NetworkResponse.create(item = me) }
                 streamResponse = {
-                    TwitchHelixClient.Response.create(
-                        item = listOf(stream("1", category("2"), streamUser)),
-                    )
+                    NetworkResponse.create(item = listOf(stream("1", category("2"), streamUser)))
                 }
-                categoryResponse = { TwitchHelixClient.Response.create(item = listOf(category)) }
-                followingsResponse = { TwitchHelixClient.Response.create(item = followings) }
+                categoryResponse = { NetworkResponse.create(item = listOf(category)) }
+                followingsResponse = { NetworkResponse.create(item = followings) }
                 scheduleResponse = {
-                    TwitchHelixClient.Response.create(
+                    NetworkResponse.create(
                         item = schedule(listOf(streamSchedule), broadcaster(scheduleUser))
                     )
                 }
-                userResponse =
-                    { TwitchHelixClient.Response.create(item = listOf(streamUser, scheduleUser)) }
+                userResponse = { NetworkResponse.create(item = listOf(streamUser, scheduleUser)) }
             }
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -487,7 +480,7 @@ class FetchTwitchStreamUseCaseTest {
             initialLoad()
             FakeDateTimeProviderModule.instant = current + Duration.ofMinutes(10)
             FakeTwitchHelixClient.apply {
-                streamResponse = { TwitchHelixClient.Response.create(item = emptyList()) }
+                streamResponse = { NetworkResponse.create(item = emptyList()) }
                 meResponse = null
                 categoryResponse = null
             }
@@ -527,14 +520,6 @@ class FetchTwitchStreamUseCaseTest {
             }
         }
     }
-}
-
-private fun <T> TwitchHelixClient.Response.Companion.create(
-    item: T,
-    nextPageToken: String? = null
-) = object : TwitchHelixClient.Response<T> {
-    override val item: T get() = item
-    override val nextPageToken: String? get() = nextPageToken
 }
 
 private val me = userDetail("1", "me")
@@ -618,18 +603,18 @@ private fun schedule(
 )
 interface FakeTwitchHelixClient {
     companion object {
-        var meResponse: (() -> TwitchHelixClient.Response<TwitchUserDetail?>)? = null
-        var followingsResponse: (() -> TwitchHelixClient.Response<List<TwitchBroadcaster>>)? = null
-        var scheduleResponse: ((TwitchUser.Id) -> TwitchHelixClient.Response<TwitchChannelSchedule>)? =
+        var meResponse: (() -> NetworkResponse<TwitchUserDetail?>)? = null
+        var followingsResponse: (() -> NetworkResponse<List<TwitchBroadcaster>>)? = null
+        var scheduleResponse: ((TwitchUser.Id) -> NetworkResponse<TwitchChannelSchedule>)? =
             null
-        var streamResponse: (() -> TwitchHelixClient.Response<List<TwitchStream>>)? = null
-        var categoryResponse: (() -> TwitchHelixClient.Response<List<TwitchCategory>>)? = null
-        var userResponse: (() -> TwitchHelixClient.Response<List<TwitchUserDetail>>)? = null
+        var streamResponse: (() -> NetworkResponse<List<TwitchStream>>)? = null
+        var categoryResponse: (() -> NetworkResponse<List<TwitchCategory>>)? = null
+        var userResponse: (() -> NetworkResponse<List<TwitchUserDetail>>)? = null
 
         @Provides
         @Singleton
         fun provideClient(): TwitchHelixClient = object : TwitchHelixClient {
-            override suspend fun getMe(): TwitchHelixClient.Response<TwitchUserDetail?> =
+            override suspend fun getMe(): NetworkResponse<TwitchUserDetail?> =
                 meResponse!!.invoke()
 
             override suspend fun getFollowing(
@@ -637,36 +622,36 @@ interface FakeTwitchHelixClient {
                 broadcasterId: TwitchUser.Id?,
                 itemsPerPage: Int?,
                 cursor: String?,
-            ): TwitchHelixClient.Response<List<TwitchBroadcaster>> = followingsResponse!!.invoke()
+            ): NetworkResponse<List<TwitchBroadcaster>> = followingsResponse!!.invoke()
 
             override suspend fun getFollowedStreams(
                 me: TwitchUser.Id,
                 itemsPerPage: Int?,
                 cursor: String?,
-            ): TwitchHelixClient.Response<List<TwitchStream>> = streamResponse!!.invoke()
+            ): NetworkResponse<List<TwitchStream>> = streamResponse!!.invoke()
 
             override suspend fun getChannelStreamSchedule(
                 id: TwitchUser.Id,
                 segmentId: TwitchChannelSchedule.Stream.Id?,
                 itemsPerPage: Int?,
                 cursor: String?,
-            ): TwitchHelixClient.Response<TwitchChannelSchedule> {
+            ): NetworkResponse<TwitchChannelSchedule> {
                 logD { "getChannelStreamSchedule: $id, $segmentId, $itemsPerPage, $cursor" }
                 return scheduleResponse!!.invoke(id)
             }
 
-            override suspend fun getGame(id: Set<TwitchCategory.Id>): TwitchHelixClient.Response<List<TwitchCategory>> {
+            override suspend fun getGame(id: Set<TwitchCategory.Id>): NetworkResponse<List<TwitchCategory>> {
                 logD { "getGame: $id" }
                 return categoryResponse!!.invoke()
             }
 
-            override suspend fun getUser(ids: Set<TwitchUser.Id>?): TwitchHelixClient.Response<List<TwitchUserDetail>> =
+            override suspend fun getUser(ids: Set<TwitchUser.Id>?): NetworkResponse<List<TwitchUserDetail>> =
                 userResponse!!.invoke()
 
             override suspend fun getVideoByUserId(
                 id: TwitchUser.Id,
                 itemCount: Int
-            ): TwitchHelixClient.Response<List<TwitchVideoDetail>> = throw NotImplementedError()
+            ): NetworkResponse<List<TwitchVideoDetail>> = throw NotImplementedError()
         }
 
         var hasAccount: Boolean? = null

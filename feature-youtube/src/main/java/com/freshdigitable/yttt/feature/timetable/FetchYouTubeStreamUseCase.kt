@@ -12,7 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.n
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
-import com.freshdigitable.yttt.data.source.IoScope
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource.Companion.MAX_BATCH_SIZE
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.logE
@@ -202,7 +202,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val cache = liveRepository.fetchPlaylistWithItemSummaries(id)
         return liveRepository.fetchPlaylistWithItems(id, maxResult = 10, cache)
             .recoverCatching {
-                if (cache != null && (it as? IoScope.NetworkException)?.statusCode == 404) {
+                if (cache != null && (it as? NetworkResponse.Exception)?.statusCode == 404) {
                     cache.update(emptyList(), dateTimeProvider.now()).also { i ->
                         liveRepository.updatePlaylistWithItems(i)
                     }

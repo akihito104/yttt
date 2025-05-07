@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.IoScope
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -28,7 +29,7 @@ internal class YouTubeRemoteDataSource(
             var paged = PagedSubscription()
             do {
                 val res = youtube.fetchSubscription(pageSize, paged.itemSize, paged.nextPageToken)
-                paged = paged.update(res.items, res.nextPageToken, dateTimeProvider.now())
+                paged = paged.update(res.item, res.nextPageToken, dateTimeProvider.now())
                 emit(Result.success(paged))
             } while (paged.nextPageToken != null)
         }
@@ -48,24 +49,24 @@ internal class YouTubeRemoteDataSource(
         fetchList(ids) { fetchChannelList(it) }
 
     override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> =
-        fetch { fetchChannelSection(id).items }
+        fetch { fetchChannelSection(id).item }
 
     override suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): Result<List<YouTubePlaylistItem>> = fetch { fetchPlaylistItems(id, maxResult).items }
+    ): Result<List<YouTubePlaylistItem>> = fetch { fetchPlaylistItems(id, maxResult).item }
 
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>> =
         fetchList(ids) { fetchPlaylist(it) }
 
     private suspend inline fun <E> fetchAllItems(
-        crossinline request: YouTubeClient.(String?) -> YouTubeClient.Response<E>,
+        crossinline request: YouTubeClient.(String?) -> NetworkResponse<List<E>>,
     ): Result<List<E>> = ioScope.asResult {
         buildList {
             var token: String? = null
             do {
                 val response = youtube.request(token)
-                addAll(response.items)
+                addAll(response.item)
                 token = response.nextPageToken
             } while (token != null)
         }
@@ -73,15 +74,15 @@ internal class YouTubeRemoteDataSource(
 
     private suspend inline fun <I : IdBase, E> fetchList(
         ids: Set<I>,
-        crossinline request: YouTubeClient.(Set<I>) -> YouTubeClient.Response<E>,
+        crossinline request: YouTubeClient.(Set<I>) -> NetworkResponse<List<E>>,
     ): Result<List<E>> = ioScope.asResult {
         if (ids.isEmpty()) {
             emptyList()
         } else if (ids.size <= YouTubeDataSource.MAX_BATCH_SIZE) {
-            youtube.request(ids).items
+            youtube.request(ids).item
         } else {
             ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE)
-                .map { async { youtube.request(it.toSet()).items } }
+                .map { async { youtube.request(it.toSet()).item } }
                 .awaitAll()
                 .flatten()
         }
