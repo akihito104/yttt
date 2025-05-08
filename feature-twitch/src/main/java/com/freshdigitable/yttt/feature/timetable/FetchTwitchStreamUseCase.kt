@@ -25,28 +25,30 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
     @LivePlatformQualifier(Twitch::class) private val accountRepository: AccountRepository,
     private val dateTimeProvider: DateTimeProvider,
 ) : FetchStreamUseCase {
-    override suspend operator fun invoke(): Result<Unit> = trace("loadList_t") {
+    override suspend operator fun invoke(): Result<Unit> {
         if (!accountRepository.hasAccount()) {
             return Result.success(Unit)
         }
-        val meRes = twitchRepository.fetchMe()
-            .mapCatching { it ?: throw IllegalStateException("twitch: me was null.") }
-            .onFailure { return Result.failure(it) }
-        val me = checkNotNull(meRes.getOrNull())
+        trace("loadList_t") {
+            val meRes = twitchRepository.fetchMe()
+                .mapCatching { it ?: throw IllegalStateException("twitch: me was null.") }
+                .onFailure { return Result.failure(it) }
+            val me = checkNotNull(meRes.getOrNull())
 
-        val streams = updateOnAirStreams(me)
-            .onFailure { return Result.failure(it) }
-            .onSuccess { putMetric("streaming_channel", it.size.toLong()) }
-            .getOrDefault(emptyList())
+            val streams = updateOnAirStreams(me)
+                .onFailure { return Result.failure(it) }
+                .onSuccess { putMetric("streaming_channel", it.size.toLong()) }
+                .getOrDefault(emptyList())
 
-        val schedules = updateChannelSchedules(me, this)
-            .onFailure { return Result.failure(it) }
-            .onSuccess { putMetric("schedule", it.size.toLong()) }
-            .getOrDefault(emptyList())
+            val schedules = updateChannelSchedules(me, this)
+                .onFailure { return Result.failure(it) }
+                .onSuccess { putMetric("schedule", it.size.toLong()) }
+                .getOrDefault(emptyList())
 
-        val users = streams.map { it.user.id } + schedules.map { it.broadcaster.id }
-        twitchRepository.findUsersById(users.toSet())
-            .onFailure { return Result.failure(it) }
+            val users = streams.map { it.user.id } + schedules.map { it.broadcaster.id }
+            twitchRepository.findUsersById(users.toSet())
+                .onFailure { return Result.failure(it) }
+        }
         return Result.success(Unit)
     }
 

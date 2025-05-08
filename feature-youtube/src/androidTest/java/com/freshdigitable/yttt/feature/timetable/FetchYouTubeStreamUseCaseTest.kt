@@ -57,7 +57,7 @@ class FetchYouTubeStreamUseCaseTest {
     val hiltRule = HiltAndroidRule(this)
 
     @get:Rule(order = 1)
-    val rule = AppTraceVerifier()
+    val traceRule = AppTraceVerifier()
 
     @Inject
     lateinit var localSource: YouTubeDataSource.Local
@@ -79,6 +79,7 @@ class FetchYouTubeStreamUseCaseTest {
         // setup
         TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
+        traceRule.isTraceable = false
         // exercise
         val actual = sut.invoke()
         advanceUntilIdle()

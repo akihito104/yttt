@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.AccountRepository
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.remote.TwitchException
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixClient
@@ -36,7 +37,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
-import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import java.time.Duration
 import java.time.Instant
@@ -52,7 +52,7 @@ class FetchTwitchStreamUseCaseTest {
         val hilt = HiltAndroidRule(this)
 
         @get:Rule(order = 1)
-        val rule: TestRule = AppTraceVerifier()
+        val traceRule = AppTraceVerifier()
 
         @Inject
         internal lateinit var sut: FetchTwitchStreamUseCase
@@ -73,17 +73,14 @@ class FetchTwitchStreamUseCaseTest {
             TestCoroutineScopeModule.testScheduler = testScheduler
             hilt.inject()
             FakeTwitchHelixClient.hasAccount = false
+            traceRule.isTraceable = false
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
             assertResultThat(actual).isSuccess()
-            localSource.onAir.test {
-                assertThat(awaitItem()).isEmpty()
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).isEmpty()
-            }
+            localSource.onAir.test { assertThat(awaitItem()).isEmpty() }
+            localSource.upcoming.test { assertThat(awaitItem()).isEmpty() }
         }
 
         @Test

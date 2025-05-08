@@ -2,7 +2,7 @@ package com.freshdigitable.yttt.test
 
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.AppTrace
-import com.google.common.truth.Truth
+import com.google.common.truth.Truth.assertThat
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
@@ -30,8 +30,14 @@ class AppTraceVerifier : TestWatcher() {
         })
     }
 
+    var isTraceable: Boolean = true
     override fun finished(description: Description?) {
-        Truth.assertThat(started).isTrue()
-        Truth.assertThat(stopped).isTrue()
+        if (isTraceable) {
+            assertThat(started).isTrue()
+            assertThat(stopped).isTrue()
+        } else {
+            assertThat(started).isFalse()
+            assertThat(stopped).isFalse()
+        }
     }
 }
