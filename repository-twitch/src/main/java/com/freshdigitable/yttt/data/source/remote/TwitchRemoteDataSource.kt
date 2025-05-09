@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.IoScope
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -88,12 +89,12 @@ internal class TwitchRemoteDataSource @Inject constructor(
         itemCount: Int,
     ): Result<List<TwitchVideoDetail>> = fetch { getVideoByUserId(id = id, itemCount = itemCount) }
 
-    private suspend inline fun <T> fetch(crossinline task: suspend TwitchHelixClient.() -> TwitchHelixClient.Response<T>): Result<T> =
+    private suspend inline fun <T> fetch(crossinline task: suspend TwitchHelixClient.() -> NetworkResponse<T>): Result<T> =
         ioScope.asResult { helix.task().item }
 
     private suspend inline fun <E> fetchAll(
         maxCount: Int? = null,
-        crossinline call: suspend TwitchHelixClient.(String?) -> TwitchHelixClient.Response<List<E>>,
+        crossinline call: suspend TwitchHelixClient.(String?) -> NetworkResponse<List<E>>,
     ): Result<List<E>> = ioScope.asResult {
         var cursor: String? = null
         buildList {

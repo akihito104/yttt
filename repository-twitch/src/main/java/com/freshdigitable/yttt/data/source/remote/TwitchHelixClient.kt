@@ -7,7 +7,7 @@ import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
-import com.freshdigitable.yttt.data.source.IoScope
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
 import retrofit2.Call
 
@@ -17,36 +17,29 @@ interface TwitchHelixClient {
         broadcasterId: TwitchUser.Id? = null,
         itemsPerPage: Int? = null,
         cursor: String? = null,
-    ): Response<List<TwitchBroadcaster>>
+    ): NetworkResponse<List<TwitchBroadcaster>>
 
     suspend fun getFollowedStreams(
         me: TwitchUser.Id,
         itemsPerPage: Int? = null,
         cursor: String? = null,
-    ): Response<List<TwitchStream>>
+    ): NetworkResponse<List<TwitchStream>>
 
-    suspend fun getGame(id: Set<TwitchCategory.Id>): Response<List<TwitchCategory>>
+    suspend fun getGame(id: Set<TwitchCategory.Id>): NetworkResponse<List<TwitchCategory>>
     suspend fun getChannelStreamSchedule(
         id: TwitchUser.Id,
         segmentId: TwitchChannelSchedule.Stream.Id? = null,
         itemsPerPage: Int? = null,
         cursor: String? = null,
-    ): Response<TwitchChannelSchedule>
+    ): NetworkResponse<TwitchChannelSchedule>
 
-    suspend fun getMe(): Response<TwitchUserDetail?>
+    suspend fun getMe(): NetworkResponse<TwitchUserDetail?>
     suspend fun getVideoByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
-    ): Response<List<TwitchVideoDetail>>
+    ): NetworkResponse<List<TwitchVideoDetail>>
 
-    suspend fun getUser(ids: Set<TwitchUser.Id>?): Response<List<TwitchUserDetail>>
-
-    interface Response<T> {
-        val item: T
-        val nextPageToken: String? get() = null
-
-        companion object
-    }
+    suspend fun getUser(ids: Set<TwitchUser.Id>?): NetworkResponse<List<TwitchUserDetail>>
 
     companion object {
         internal fun create(service: TwitchHelixService): TwitchHelixClient = Impl(service)
@@ -54,9 +47,9 @@ interface TwitchHelixClient {
 }
 
 class TwitchException(
-    override val message: String?,
     override val statusCode: Int,
-) : IoScope.NetworkException(null)
+    override val message: String?,
+) : NetworkResponse.Exception(null)
 
 private class Impl(
     private val service: TwitchHelixService,
@@ -66,7 +59,7 @@ private class Impl(
         broadcasterId: TwitchUser.Id?,
         itemsPerPage: Int?,
         cursor: String?,
-    ): TwitchHelixClient.Response<List<TwitchBroadcaster>> = service.fetch {
+    ): NetworkResponse<List<TwitchBroadcaster>> = service.fetch {
         getFollowing(
             userId = userId,
             broadcasterId = broadcasterId,
@@ -75,14 +68,14 @@ private class Impl(
         )
     }
 
-    override suspend fun getGame(id: Set<TwitchCategory.Id>): TwitchHelixClient.Response<List<TwitchCategory>> =
+    override suspend fun getGame(id: Set<TwitchCategory.Id>): NetworkResponse<List<TwitchCategory>> =
         service.fetch { getGame(id) }
 
     override suspend fun getFollowedStreams(
         me: TwitchUser.Id,
         itemsPerPage: Int?,
         cursor: String?,
-    ): TwitchHelixClient.Response<List<TwitchStream>> = service.fetch {
+    ): NetworkResponse<List<TwitchStream>> = service.fetch {
         getFollowedStreams(userId = me, itemsPerPage = itemsPerPage, cursor = cursor)
     }
 
@@ -91,7 +84,7 @@ private class Impl(
         segmentId: TwitchChannelSchedule.Stream.Id?,
         itemsPerPage: Int?,
         cursor: String?,
-    ): TwitchHelixClient.Response<TwitchChannelSchedule> = service.fetch {
+    ): NetworkResponse<TwitchChannelSchedule> = service.fetch {
         getChannelStreamSchedule(
             broadcasterId = id,
             segmentId = segmentId,
@@ -100,9 +93,9 @@ private class Impl(
         )
     }
 
-    override suspend fun getMe(): TwitchHelixClient.Response<TwitchUserDetail?> {
+    override suspend fun getMe(): NetworkResponse<TwitchUserDetail?> {
         val res = service.fetch { getMe() }
-        return object : TwitchHelixClient.Response<TwitchUserDetail?> {
+        return object : NetworkResponse<TwitchUserDetail?> {
             override val item: TwitchUserDetail? = res.item.firstOrNull()
         }
     }
@@ -110,11 +103,11 @@ private class Impl(
     override suspend fun getVideoByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
-    ): TwitchHelixClient.Response<List<TwitchVideoDetail>> = service.fetch {
+    ): NetworkResponse<List<TwitchVideoDetail>> = service.fetch {
         getVideoByUserId(userId = id, itemsPerPage = itemCount)
     }
 
-    override suspend fun getUser(ids: Set<TwitchUser.Id>?): TwitchHelixClient.Response<List<TwitchUserDetail>> =
+    override suspend fun getUser(ids: Set<TwitchUser.Id>?): NetworkResponse<List<TwitchUserDetail>> =
         service.fetch { getUser(id = ids) }
 
     companion object {
@@ -123,7 +116,7 @@ private class Impl(
             if (response.isSuccessful) {
                 return checkNotNull(response.body())
             } else {
-                throw TwitchException(response.errorBody()?.string(), response.code())
+                throw TwitchException(response.code(), response.errorBody()?.string())
             }
         }
     }

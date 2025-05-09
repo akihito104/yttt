@@ -46,11 +46,12 @@ internal class TimetableTabViewModel @Inject constructor(
         viewModelScope.launch {
             if (_isLoading.value == false) {
                 _isLoading.postValue(true)
-                val trace = AppPerformance.newTrace("loadList")
-                trace.start()
-                fetchStreamTasks.map { async { it() } }.awaitAll()
-                trace.stop()
-                settingRepository.lastUpdateDatetime = dateTimeProvider.now()
+                AppPerformance.trace("loadList") {
+                    val tasks = fetchStreamTasks.map { async { it() } }.awaitAll()
+                    if (tasks.isNotEmpty() && tasks.all { it.isSuccess }) {
+                        settingRepository.lastUpdateDatetime = dateTimeProvider.now()
+                    }
+                }
                 _isLoading.postValue(false)
             }
         }

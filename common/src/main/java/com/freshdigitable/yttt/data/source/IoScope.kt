@@ -21,8 +21,21 @@ class IoScope @Inject constructor(
         flow {
             runCatching { block(this) }.onFailure { emit(Result.failure<T>(it)) }
         }.flowOn(ioDispatcher)
+}
 
-    abstract class NetworkException(throwable: Throwable?) : Exception(throwable) {
+interface NetworkResponse<T> {
+    val item: T
+    val nextPageToken: String? get() = null
+
+    abstract class Exception(throwable: Throwable?) : kotlin.Exception(throwable) {
         abstract val statusCode: Int
     }
+
+    companion object {
+        fun <T> create(item: T, nextPageToken: String? = null): NetworkResponse<T> =
+            Impl(item, nextPageToken)
+    }
+
+    private data class Impl<T>(override val item: T, override val nextPageToken: String?) :
+        NetworkResponse<T>
 }

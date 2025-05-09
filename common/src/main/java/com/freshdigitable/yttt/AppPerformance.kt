@@ -24,6 +24,16 @@ abstract class AppPerformance(factory: List<AppTrace.Factory>) : AppTrace.Factor
             val t = traceFactory.map { it.newTrace(name) }
             return AppTraceWrapper(name, t)
         }
+
+        inline fun <T> trace(name: String, task: AppTrace.() -> T): T {
+            val t = newTrace(name)
+            t.start()
+            try {
+                return task(t)
+            } finally {
+                t.stop()
+            }
+        }
     }
 
     private class AppTraceWrapper(
