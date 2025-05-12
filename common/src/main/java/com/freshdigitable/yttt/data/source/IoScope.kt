@@ -29,6 +29,7 @@ interface NetworkResponse<T> {
 
     abstract class Exception(throwable: Throwable?) : kotlin.Exception(throwable) {
         abstract val statusCode: Int
+        open val isQuotaExceeded: Boolean get() = false
     }
 
     companion object {
