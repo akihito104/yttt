@@ -1,20 +1,25 @@
 package com.freshdigitable.yttt.feature.timetable
 
+import androidx.compose.material3.SnackbarVisuals
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.compose.HorizontalPagerTabViewModel
+import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.video.FindLiveVideoUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,7 +46,8 @@ internal class TimetableTabViewModel @Inject constructor(
             val lastUpdateDatetime = settingRepository.lastUpdateDatetime ?: return true
             return (lastUpdateDatetime + Duration.ofMinutes(30)) <= dateTimeProvider.now()
         }
-
+    private val _snackbarChannel = Channel<SnackbarVisuals>()
+    val snackbarChannel: ReceiveChannel<SnackbarVisuals> get() = _snackbarChannel
     fun loadList() {
         viewModelScope.launch {
             if (_isLoading.value == false) {
@@ -50,6 +56,22 @@ internal class TimetableTabViewModel @Inject constructor(
                     val tasks = fetchStreamTasks.map { async { it() } }.awaitAll()
                     if (tasks.isNotEmpty() && tasks.all { it.isSuccess }) {
                         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
+                    } else {
+                        val failed = tasks.first { it.isFailure }.exceptionOrNull()
+                        val message = if (failed is NetworkResponse.Exception) {
+                            if (failed.isQuotaExceeded) {
+                                "we have reached the usage limit. please try again later."
+                            } else if (failed.statusCode in 400..499) {
+                                "we have encountered an error. please contact to app developer."
+                            } else if (failed.statusCode in 500..599) {
+                                "service temporarily unavailable. please try again later."
+                            } else {
+                                "unknown error"
+                            }
+                        } else {
+                            "unknown error"
+                        }
+                        _snackbarChannel.send(SnackbarMessage(message = message))
                     }
                 }
                 _isLoading.postValue(false)
@@ -74,6 +96,11 @@ internal class TimetableTabViewModel @Inject constructor(
         viewModelScope.launch {
             contextMenuDelegate.consumeMenuItem(item)
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        _snackbarChannel.close()
     }
 
     override val tabData: Flow<List<TimetableTabData>> get() = tabs

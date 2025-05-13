@@ -116,7 +116,8 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
                     titleModifier = titleModifier,
                     topAppBarState = checkNotNull(topAppBarState).also {
                         it.update(title = stringResource(id = R.string.title_timetable))
-                    }
+                    },
+                    snackbarHostState = checkNotNull(snackbarHostState),
                 )
             }
         }

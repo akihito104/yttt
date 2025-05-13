@@ -16,6 +16,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -36,6 +37,7 @@ import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
 import com.freshdigitable.yttt.feature.timetable.textRes
 import com.freshdigitable.yttt.logD
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -49,11 +51,17 @@ internal fun TimetableTabScreen(
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     topAppBarState: TopAppBarStateHolder,
+    snackbarHostState: SnackbarHostState,
 ) {
     AppLogger.logD("TimetableTab") { "start:" }
     LaunchedEffect(Unit) {
         if (viewModel.canUpdate) {
             viewModel.loadList()
+        }
+    }
+    LaunchedEffect(snackbarHostState) {
+        viewModel.snackbarChannel.consumeEach {
+            snackbarHostState.showSnackbar(it)
         }
     }
     val refreshing = viewModel.isLoading.observeAsState(false)

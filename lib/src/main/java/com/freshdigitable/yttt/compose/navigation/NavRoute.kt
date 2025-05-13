@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDeepLink
@@ -73,6 +74,7 @@ interface NavAnimatedScopedComposable : NavContent {
 
         @OptIn(ExperimentalSharedTransitionApi::class)
         val sharedTransition: SharedTransitionScope?
+        val snackbarHostState: SnackbarHostState?
 
         companion object {
             @OptIn(ExperimentalSharedTransitionApi::class)
@@ -98,6 +100,7 @@ class ScreenStateHolder(
     val navController: NavHostController,
     val topAppBarStateHolder: TopAppBarStateHolder? = null,
     val sharedTransition: SharedTransitionScope? = null,
+    val snackbarHostState: SnackbarHostState? = null,
 )
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -112,6 +115,8 @@ internal fun NavAnimatedScopedComposable.Scope.Companion.create(
             get() = screenStateHolder.topAppBarStateHolder
         override val sharedTransition: SharedTransitionScope?
             get() = screenStateHolder.sharedTransition
+        override val snackbarHostState: SnackbarHostState?
+            get() = screenStateHolder.snackbarHostState
     }
 
 fun NavGraphBuilder.composableWith(

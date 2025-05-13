@@ -15,6 +15,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -92,13 +93,7 @@ private fun MainScreen(
     val coroutineScope = rememberCoroutineScope()
     LaunchedEffect(snackbarMessage) {
         snackbarMessage.collectLatest { action ->
-            val message = action.message
-            val res = snackbarHostState.showSnackbar(
-                message.message,
-                message.actionLabel,
-                message.withDismissAction,
-                message.duration
-            )
+            val res = snackbarHostState.showSnackbar(action.message)
             if (res == SnackbarResult.ActionPerformed) {
                 when (action) {
                     is SnackbarAction.NavigationAction -> action(navController)
@@ -148,6 +143,7 @@ private fun MainScreen(
                             navController,
                             topAppBarStateHolder,
                             this@SharedTransitionLayout,
+                            snackbarHostState = snackbarHostState,
                         ),
                         navRoutes = navigation
                     )
@@ -270,15 +266,15 @@ class MainViewModel @Inject constructor(
 }
 
 data class SnackbarMessage(
-    val message: String,
-    val actionLabel: String? = null,
-    val withDismissAction: Boolean = false,
-    val duration: SnackbarDuration =
+    override val message: String,
+    override val actionLabel: String? = null,
+    override val withDismissAction: Boolean = false,
+    override val duration: SnackbarDuration =
         if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
-)
+) : SnackbarVisuals
 
 sealed class SnackbarAction {
-    abstract val message: SnackbarMessage
+    abstract val message: SnackbarVisuals
 
     data class NavigationAction(
         override val message: SnackbarMessage,
