@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -23,6 +25,7 @@ import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.feature.video.LiveVideoDetailItem
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
+import kotlinx.coroutines.channels.consumeEach
 import java.math.BigInteger
 
 @Composable
@@ -32,7 +35,13 @@ fun VideoDetailScreen(
     titleModifier: Modifier = Modifier,
     topAppBarStateHolder: TopAppBarStateHolder,
     onChannelClicked: (LiveChannel.Id) -> Unit,
+    snackbarHostState: SnackbarHostState,
 ) {
+    LaunchedEffect(snackbarHostState) {
+        viewModel.errorMessage.consumeEach {
+            snackbarHostState.showSnackbar(it)
+        }
+    }
     val menuItems = viewModel.contextMenuItems.collectAsState(initial = emptyList())
     topAppBarStateHolder.updateMenuItems(menuItems.value)
     val item = viewModel.detail.collectAsState(null)

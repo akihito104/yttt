@@ -12,14 +12,17 @@ import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.video.FindLiveVideoUseCase
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +37,7 @@ import javax.inject.Inject
 internal class TimetableTabViewModel @Inject constructor(
     private val settingRepository: SettingRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
-    private val contextMenuDelegate: TimetableContextMenuDelegate,
+    contextMenuDelegateFactory: TimetableContextMenuDelegate.Factory,
     private val dateTimeProvider: DateTimeProvider,
     timetablePageDelegate: TimetablePageDelegate,
 ) : ViewModel(), TimetablePageDelegate by timetablePageDelegate,
@@ -48,6 +51,7 @@ internal class TimetableTabViewModel @Inject constructor(
         }
     private val _snackbarChannel = Channel<SnackbarVisuals>()
     val snackbarChannel: ReceiveChannel<SnackbarVisuals> get() = _snackbarChannel
+    private val contextMenuDelegate = contextMenuDelegateFactory.create(_snackbarChannel)
     fun loadList() {
         viewModelScope.launch {
             if (_isLoading.value == false) {
@@ -57,21 +61,8 @@ internal class TimetableTabViewModel @Inject constructor(
                     if (tasks.isNotEmpty() && tasks.all { it.isSuccess }) {
                         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
                     } else {
-                        val failed = tasks.first { it.isFailure }.exceptionOrNull()
-                        val message = if (failed is NetworkResponse.Exception) {
-                            if (failed.isQuotaExceeded) {
-                                "we have reached the usage limit. please try again later."
-                            } else if (failed.statusCode in 400..499) {
-                                "we have encountered an error. please contact to app developer."
-                            } else if (failed.statusCode in 500..599) {
-                                "service temporarily unavailable. please try again later."
-                            } else {
-                                "unknown error"
-                            }
-                        } else {
-                            "unknown error"
-                        }
-                        _snackbarChannel.send(SnackbarMessage(message = message))
+                        val failed = checkNotNull(tasks.first { it.isFailure }.exceptionOrNull())
+                        _snackbarChannel.send(SnackbarMessage.fromThrowable(failed))
                     }
                 }
                 _isLoading.postValue(false)
@@ -112,10 +103,16 @@ internal class TimetableTabViewModel @Inject constructor(
     }
 }
 
-class TimetableContextMenuDelegate @Inject constructor(
+class TimetableContextMenuDelegate @AssistedInject constructor(
     private val findLiveVideoMap: IdBaseClassMap<FindLiveVideoUseCase>,
     private val menuSelectorMap: IdBaseClassMap<TimetableContextMenuSelector>,
+    @Assisted private val errorMessageChannel: SendChannel<SnackbarVisuals>,
 ) {
+    @AssistedFactory
+    interface Factory {
+        fun create(errorMessageChannel: SendChannel<SnackbarVisuals>): TimetableContextMenuDelegate
+    }
+
     private val _selectedLiveVideo = MutableStateFlow<LiveVideo<*>?>(null)
     private val selected: LiveVideo<*> get() = checkNotNull(_selectedLiveVideo.value)
     private val menuSelector get() = checkNotNull(menuSelectorMap[selected.id.type.java])
@@ -128,8 +125,9 @@ class TimetableContextMenuDelegate @Inject constructor(
     }
 
     suspend fun setupMenu(id: LiveVideo.Id) {
-        val video = checkNotNull(findLiveVideoMap[id.type.java]).invoke(id)
-        _selectedLiveVideo.value = video
+        checkNotNull(findLiveVideoMap[id.type.java]).invoke(id)
+            .onFailure { errorMessageChannel.send(SnackbarMessage.fromThrowable(it)) }
+            .onSuccess { _selectedLiveVideo.value = it }
     }
 
     suspend fun consumeMenuItem(item: TimetableMenuItem) {
@@ -143,7 +141,9 @@ class TimetableContextMenuDelegate @Inject constructor(
 
     suspend fun findMenuItems(videoId: LiveVideo.Id): List<TimetableMenuItem> {
         val useCase = checkNotNull(findLiveVideoMap[videoId.type.java])
-        val video = useCase(videoId) ?: return emptyList()
-        return menuSelector.findMenuItems(video)
+        return useCase(videoId)
+            .onFailure { errorMessageChannel.send(SnackbarMessage.fromThrowable(it)) }
+            .map { v -> v?.let { menuSelector.findMenuItems(it) } ?: emptyList() }
+            .getOrDefault(emptyList())
     }
 }

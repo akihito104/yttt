@@ -41,6 +41,7 @@ import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.TwitchAccountRepository
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.lib.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
@@ -271,7 +272,26 @@ data class SnackbarMessage(
     override val withDismissAction: Boolean = false,
     override val duration: SnackbarDuration =
         if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
-) : SnackbarVisuals
+) : SnackbarVisuals {
+    companion object {
+        fun fromThrowable(throwable: Throwable): SnackbarMessage {
+            val message = if (throwable is NetworkResponse.Exception) {
+                if (throwable.isQuotaExceeded) {
+                    "we have reached the usage limit. please try again later."
+                } else if (throwable.statusCode in 400..499) {
+                    "we have encountered an error. please contact to app developer."
+                } else if (throwable.statusCode in 500..599) {
+                    "service temporarily unavailable. please try again later."
+                } else {
+                    "unknown error"
+                }
+            } else {
+                "unknown error"
+            }
+            return SnackbarMessage(message)
+        }
+    }
+}
 
 sealed class SnackbarAction {
     abstract val message: SnackbarVisuals
