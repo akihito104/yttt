@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.feature.channel
 
-import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.runtime.Composable
+import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TabData
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
@@ -9,7 +9,6 @@ import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
 
 interface ChannelDetailDelegate {
@@ -22,7 +21,7 @@ interface ChannelDetailDelegate {
         fun create(
             id: LiveChannel.Id,
             coroutineScope: CoroutineScope,
-            errorMessageChannel: SendChannel<SnackbarVisuals>,
+            errorMessageChannel: SnackbarMessageBus.Sender,
         ): ChannelDetailDelegate
     }
 

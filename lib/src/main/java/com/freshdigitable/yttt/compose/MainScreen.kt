@@ -42,6 +42,9 @@ import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.lib.R
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,12 +56,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 import javax.inject.Qualifier
 
 @Composable
 fun MainScreen(
-    viewModel: MainViewModel = hiltViewModel()
+    viewModel: MainViewModel = hiltViewModel { f: MainViewModel.Factory ->
+        f.create(SnackbarMessageBus.create())
+    },
 ) {
     val navController = rememberNavController()
     val showMenuBadge = viewModel.showMenuBadge.collectAsState()
@@ -70,6 +74,7 @@ fun MainScreen(
         showMenuBadge = { showMenuBadge.value },
         drawerItems = { drawerMenuItems.value },
         snackbarMessage = viewModel.snackbarMessage,
+        snackbarMessageSender = viewModel.sender,
         onDrawerMenuClick = {
             val route = viewModel.getDrawerRoute(it)
             navController.navigate(route)
@@ -86,6 +91,7 @@ private fun MainScreen(
     showMenuBadge: () -> Boolean,
     drawerItems: () -> List<DrawerMenuListItem>,
     snackbarMessage: Flow<SnackbarAction>,
+    snackbarMessageSender: SnackbarMessageBus.Sender,
     onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -98,6 +104,7 @@ private fun MainScreen(
                 when (action) {
                     is SnackbarAction.NavigationAction -> action(navController)
                     is SnackbarAction.CustomAction -> action()
+                    is SnackbarAction.NopAction -> Unit
                 }
             }
         }
@@ -143,7 +150,7 @@ private fun MainScreen(
                             navController,
                             topAppBarStateHolder,
                             this@SharedTransitionLayout,
-                            snackbarHostState = snackbarHostState,
+                            snackbarBus = snackbarMessageSender,
                         ),
                         navRoutes = navigation
                     )
@@ -218,11 +225,17 @@ private fun NavDrawerPreview() {
     }
 }
 
-@HiltViewModel
-class MainViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = MainViewModel.Factory::class)
+class MainViewModel @AssistedInject constructor(
     @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
     accountRepository: TwitchAccountRepository,
+    @Assisted private val messageBus: SnackbarMessageBus,
 ) : ViewModel() {
+    @AssistedFactory
+    interface Factory {
+        fun create(messageBus: SnackbarMessageBus): MainViewModel
+    }
+
     val routes: Set<NavRoute> = (MainNavRoute.routes + ossLicensePage).toSet()
     val startDestination = MainNavRoute.startDestination
     internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
@@ -239,7 +252,9 @@ class MainViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val showMenuBadge = drawerMenuItems.map { i -> i.any { it.showBadge } }
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
+    val sender get() = messageBus.getSender()
     val snackbarMessage = merge(
+        messageBus.messageFlow.map { SnackbarAction.NopAction(it) },
         accountRepository.isTwitchTokenInvalidated.filter { it ?: false }
             .map {
                 SnackbarAction.NavigationAction(
@@ -263,6 +278,11 @@ class MainViewModel @Inject constructor(
             DrawerMenuItem.OSS_LICENSE -> ossLicensePage.root
         }
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        messageBus.close()
+    }
 }
 
 sealed class SnackbarAction {
@@ -285,6 +305,8 @@ sealed class SnackbarAction {
             action()
         }
     }
+
+    data class NopAction(override val message: SnackbarVisuals) : SnackbarAction()
 }
 
 internal data class DrawerMenuListItem(

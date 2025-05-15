@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import androidx.compose.material3.SnackbarVisuals
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -8,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.compose.HorizontalPagerTabViewModel
 import com.freshdigitable.yttt.compose.SnackbarMessage
+import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.SettingRepository
@@ -21,9 +21,6 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -32,17 +29,22 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
-import javax.inject.Inject
 
-@HiltViewModel
-internal class TimetableTabViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = TimetableTabViewModel.Factory::class)
+internal class TimetableTabViewModel @AssistedInject constructor(
     private val settingRepository: SettingRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     contextMenuDelegateFactory: TimetableContextMenuDelegate.Factory,
     private val dateTimeProvider: DateTimeProvider,
     timetablePageDelegate: TimetablePageDelegate,
+    @Assisted private val sender: SnackbarMessageBus.Sender,
 ) : ViewModel(), TimetablePageDelegate by timetablePageDelegate,
     HorizontalPagerTabViewModel<TimetableTabData> {
+    @AssistedFactory
+    interface Factory {
+        fun create(sender: SnackbarMessageBus.Sender): TimetableTabViewModel
+    }
+
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
     val canUpdate: Boolean
@@ -50,9 +52,7 @@ internal class TimetableTabViewModel @Inject constructor(
             val lastUpdateDatetime = settingRepository.lastUpdateDatetime ?: return true
             return (lastUpdateDatetime + Duration.ofMinutes(30)) <= dateTimeProvider.now()
         }
-    private val _snackbarChannel = Channel<SnackbarVisuals>()
-    val snackbarChannel: ReceiveChannel<SnackbarVisuals> get() = _snackbarChannel
-    private val contextMenuDelegate = contextMenuDelegateFactory.create(_snackbarChannel)
+    private val contextMenuDelegate = contextMenuDelegateFactory.create(sender)
     fun loadList() {
         viewModelScope.launch {
             if (_isLoading.value == false) {
@@ -61,9 +61,10 @@ internal class TimetableTabViewModel @Inject constructor(
                     val tasks = fetchStreamTasks.map { async { it() } }.awaitAll()
                     if (tasks.isNotEmpty() && tasks.all { it.isSuccess }) {
                         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
+                        sender.send(SnackbarMessage(message = "succeeded!"))
                     } else {
                         val failed = checkNotNull(tasks.first { it.isFailure }.exceptionOrNull())
-                        _snackbarChannel.send(SnackbarMessage.fromThrowable(failed))
+                        sender.send(SnackbarMessage.fromThrowable(failed))
                     }
                 }
                 _isLoading.postValue(false)
@@ -90,11 +91,6 @@ internal class TimetableTabViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        _snackbarChannel.close()
-    }
-
     override val tabData: Flow<List<TimetableTabData>> get() = tabs
     override val initialTab: List<TimetableTabData> = TimetableTabData.initialValues()
 
@@ -107,11 +103,11 @@ internal class TimetableTabViewModel @Inject constructor(
 class TimetableContextMenuDelegate @AssistedInject constructor(
     private val findLiveVideoMap: IdBaseClassMap<FindLiveVideoUseCase>,
     private val menuSelectorMap: IdBaseClassMap<TimetableContextMenuSelector>,
-    @Assisted private val errorMessageChannel: SendChannel<SnackbarVisuals>,
+    @Assisted private val sender: SnackbarMessageBus.Sender,
 ) {
     @AssistedFactory
     interface Factory {
-        fun create(errorMessageChannel: SendChannel<SnackbarVisuals>): TimetableContextMenuDelegate
+        fun create(sender: SnackbarMessageBus.Sender): TimetableContextMenuDelegate
     }
 
     private val _selectedLiveVideo = MutableStateFlow<LiveVideo<*>?>(null)
@@ -127,7 +123,7 @@ class TimetableContextMenuDelegate @AssistedInject constructor(
 
     suspend fun setupMenu(id: LiveVideo.Id) {
         checkNotNull(findLiveVideoMap[id.type.java]).invoke(id)
-            .onFailureWithSnackbarMessage(errorMessageChannel)
+            .onFailureWithSnackbarMessage(sender)
             .onSuccess { _selectedLiveVideo.value = it }
     }
 
@@ -143,7 +139,7 @@ class TimetableContextMenuDelegate @AssistedInject constructor(
     suspend fun findMenuItems(videoId: LiveVideo.Id): List<TimetableMenuItem> {
         val useCase = checkNotNull(findLiveVideoMap[videoId.type.java])
         return useCase(videoId)
-            .onFailureWithSnackbarMessage(errorMessageChannel)
+            .onFailureWithSnackbarMessage(sender)
             .map { v -> v?.let { menuSelector.findMenuItems(it) } ?: emptyList() }
             .getOrDefault(emptyList())
     }

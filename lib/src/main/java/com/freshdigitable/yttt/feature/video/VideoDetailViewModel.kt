@@ -1,42 +1,46 @@
 package com.freshdigitable.yttt.feature.video
 
-import androidx.compose.material3.SnackbarVisuals
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.LiveVideoSharedTransitionRoute.VideoDetail.toLiveVideoRoute
 import com.freshdigitable.yttt.compose.SnackbarMessage
+import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TopAppBarMenuItem
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import javax.inject.Inject
 
-@HiltViewModel
-class VideoDetailViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = VideoDetailViewModel.Factory::class)
+class VideoDetailViewModel @AssistedInject constructor(
     findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
     annotatedStringFactory: IdBaseClassMap<AnnotatableStringFactory>,
     contextMenuDelegateFactory: TimetableContextMenuDelegate.Factory,
     savedStateHandle: SavedStateHandle,
+    @Assisted sender: SnackbarMessageBus.Sender,
 ) : ViewModel() {
+    @AssistedFactory
+    interface Factory {
+        fun create(sender: SnackbarMessageBus.Sender): VideoDetailViewModel
+    }
+
     private val videoId = savedStateHandle.toLiveVideoRoute
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
     private val annotatedString = checkNotNull(annotatedStringFactory[videoId.type.java])
-    private val _errorMessageChannel = Channel<SnackbarVisuals>()
-    val errorMessage: ReceiveChannel<SnackbarVisuals> = _errorMessageChannel
-    private val contextMenuDelegate = contextMenuDelegateFactory.create(_errorMessageChannel)
+    private val contextMenuDelegate = contextMenuDelegateFactory.create(sender)
     internal val detail: Flow<LiveVideoDetailItem?> = flowOf(videoId).map { id ->
         findLiveVideo(id)
-            .onFailureWithSnackbarMessage(_errorMessageChannel)
-            .onSuccess { if (it == null) _errorMessageChannel.send(SnackbarMessage("Video not found")) }
+            .onFailureWithSnackbarMessage(sender)
+            .onSuccess { if (it == null) sender.send(SnackbarMessage("Video not found")) }
             .map { v ->
                 v?.let {
                     LiveVideoDetailItem(
@@ -59,9 +63,4 @@ class VideoDetailViewModel @Inject constructor(
                 }
             }
         }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    override fun onCleared() {
-        super.onCleared()
-        _errorMessageChannel.close()
-    }
 }

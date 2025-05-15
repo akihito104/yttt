@@ -1,8 +1,8 @@
 package com.freshdigitable.yttt.feature.channel
 
-import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.runtime.Composable
 import com.freshdigitable.yttt.compose.SnackbarMessage
+import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
@@ -29,7 +29,6 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -52,14 +51,14 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val dateTimeProvider: DateTimeProvider,
     @Assisted id: LiveChannel.Id,
     @Assisted coroutineScope: CoroutineScope,
-    @Assisted private val errorMessageChannel: SendChannel<SnackbarVisuals>,
+    @Assisted private val errorMessageChannel: SnackbarMessageBus.Sender,
 ) : ChannelDetailDelegate, YouTubeChannelDetailPagerContent {
     @AssistedFactory
     interface Factory : ChannelDetailDelegate.Factory {
         override fun create(
             id: LiveChannel.Id,
             coroutineScope: CoroutineScope,
-            errorMessageChannel: SendChannel<SnackbarVisuals>,
+            errorMessageChannel: SnackbarMessageBus.Sender
         ): ChannelDetailDelegateForYouTube
     }
 

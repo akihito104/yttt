@@ -16,7 +16,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -28,7 +27,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -37,7 +35,6 @@ import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
 import com.freshdigitable.yttt.feature.timetable.textRes
 import com.freshdigitable.yttt.logD
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -45,23 +42,17 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TimetableTabScreen(
-    viewModel: TimetableTabViewModel = hiltViewModel(),
+    viewModel: TimetableTabViewModel,
     onListItemClicked: (LiveVideo.Id) -> Unit,
     tabModifier: Modifier = Modifier,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     topAppBarState: TopAppBarStateHolder,
-    snackbarHostState: SnackbarHostState,
 ) {
     AppLogger.logD("TimetableTab") { "start:" }
     LaunchedEffect(Unit) {
         if (viewModel.canUpdate) {
             viewModel.loadList()
-        }
-    }
-    LaunchedEffect(snackbarHostState) {
-        viewModel.snackbarChannel.consumeEach {
-            snackbarHostState.showSnackbar(it)
         }
     }
     val refreshing = viewModel.isLoading.observeAsState(false)
