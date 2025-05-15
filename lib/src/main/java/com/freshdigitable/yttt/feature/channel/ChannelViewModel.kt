@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.feature.channel
 
+import androidx.compose.material3.SnackbarVisuals
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,8 @@ import com.freshdigitable.yttt.compose.MainNavRoute.ChannelDetail.toLiveChannelR
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -19,8 +22,10 @@ class ChannelViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel(), ChannelDetailDelegate {
     private val channelId = savedStateHandle.toLiveChannelRoute
+    private val _errorMessage = Channel<SnackbarVisuals>()
+    val errorMessage: ReceiveChannel<SnackbarVisuals> get() = _errorMessage
     private val delegate = checkNotNull(delegateFactory[channelId.type.java])
-        .create(channelId, viewModelScope)
+        .create(channelId, viewModelScope, _errorMessage)
 
     override val tabs: List<ChannelDetailPageTab<*>> get() = delegate.tabs
     override val channelDetailBody: StateFlow<LiveChannelDetailBody?> = delegate.channelDetailBody
@@ -29,6 +34,7 @@ class ChannelViewModel @Inject constructor(
         get() = delegate.pagerContent
 
     override fun onCleared() {
+        _errorMessage.close()
         viewModelScope.launch {
             delegate.clearForDetail()
         }

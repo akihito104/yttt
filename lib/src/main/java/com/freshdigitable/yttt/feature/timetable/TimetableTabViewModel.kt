@@ -9,6 +9,7 @@ import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.compose.HorizontalPagerTabViewModel
 import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.TimetableTabData
+import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -126,7 +127,7 @@ class TimetableContextMenuDelegate @AssistedInject constructor(
 
     suspend fun setupMenu(id: LiveVideo.Id) {
         checkNotNull(findLiveVideoMap[id.type.java]).invoke(id)
-            .onFailure { errorMessageChannel.send(SnackbarMessage.fromThrowable(it)) }
+            .onFailureWithSnackbarMessage(errorMessageChannel)
             .onSuccess { _selectedLiveVideo.value = it }
     }
 
@@ -142,7 +143,7 @@ class TimetableContextMenuDelegate @AssistedInject constructor(
     suspend fun findMenuItems(videoId: LiveVideo.Id): List<TimetableMenuItem> {
         val useCase = checkNotNull(findLiveVideoMap[videoId.type.java])
         return useCase(videoId)
-            .onFailure { errorMessageChannel.send(SnackbarMessage.fromThrowable(it)) }
+            .onFailureWithSnackbarMessage(errorMessageChannel)
             .map { v -> v?.let { menuSelector.findMenuItems(it) } ?: emptyList() }
             .getOrDefault(emptyList())
     }

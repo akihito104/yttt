@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.compose.LiveVideoSharedTransitionRoute.VideoDetail.toLiveVideoRoute
 import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.TopAppBarMenuItem
+import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,7 +35,7 @@ class VideoDetailViewModel @Inject constructor(
     private val contextMenuDelegate = contextMenuDelegateFactory.create(_errorMessageChannel)
     internal val detail: Flow<LiveVideoDetailItem?> = flowOf(videoId).map { id ->
         findLiveVideo(id)
-            .onFailure { _errorMessageChannel.send(SnackbarMessage.fromThrowable(it)) }
+            .onFailureWithSnackbarMessage(_errorMessageChannel)
             .onSuccess { if (it == null) _errorMessageChannel.send(SnackbarMessage("Video not found")) }
             .map { v ->
                 v?.let {

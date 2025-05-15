@@ -16,8 +16,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -49,6 +51,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.components.ActivityComponent
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -83,8 +86,12 @@ fun ChannelDetailScreen(
     viewModel: ChannelViewModel = hiltViewModel(),
     channelId: LiveChannel.Id,
     pageFactory: IdBaseClassMap<ChannelDetailPageComposableFactory> = requireChannelDetailPageComposableFactory(),
+    snackbarHostState: SnackbarHostState,
 ) {
     AppLogger.logD("ChannelDetail") { "start:" }
+    LaunchedEffect(snackbarHostState) {
+        viewModel.errorMessage.consumeEach { snackbarHostState.showSnackbar(it) }
+    }
     val detail = viewModel.channelDetailBody.collectAsState()
     val dialog = remember { LinkAnnotationDialogState() }
     val scope = remember(viewModel.pagerContent, dialog) {

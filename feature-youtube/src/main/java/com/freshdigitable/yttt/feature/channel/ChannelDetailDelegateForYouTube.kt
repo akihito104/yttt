@@ -1,6 +1,9 @@
 package com.freshdigitable.yttt.feature.channel
 
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.runtime.Composable
+import com.freshdigitable.yttt.compose.SnackbarMessage
+import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -26,6 +29,7 @@ import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -48,12 +52,14 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val dateTimeProvider: DateTimeProvider,
     @Assisted id: LiveChannel.Id,
     @Assisted coroutineScope: CoroutineScope,
+    @Assisted private val errorMessageChannel: SendChannel<SnackbarVisuals>,
 ) : ChannelDetailDelegate, YouTubeChannelDetailPagerContent {
     @AssistedFactory
     interface Factory : ChannelDetailDelegate.Factory {
         override fun create(
             id: LiveChannel.Id,
             coroutineScope: CoroutineScope,
+            errorMessageChannel: SendChannel<SnackbarVisuals>,
         ): ChannelDetailDelegateForYouTube
     }
 
@@ -70,6 +76,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     )
     private val detail: Flow<YouTubeChannelDetail?> = flowOf(id).map { i ->
         repository.fetchChannelList(setOf(i.mapTo())).map { it.firstOrNull() }
+            .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "detail:$i" } }
             .getOrNull()
     }
@@ -84,17 +91,16 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     }
     override val uploadedVideo: Flow<List<YouTubePlaylistItem>> = detail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
-        try {
-            repository.fetchPlaylistItems(pId, maxResult = 10).getOrDefault(emptyList())
-        } catch (e: Exception) {
-            logE(throwable = e) { "detail:$d" }
-            emptyList()
-        }
+        repository.fetchPlaylistItems(pId, maxResult = 10)
+            .onFailureWithSnackbarMessage(errorMessageChannel)
+            .onFailure { logE(throwable = it) { "detail:$d" } }
+            .getOrDefault(emptyList())
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     @OptIn(FlowPreview::class)
     override val sections: Flow<List<ChannelSectionItem>> = flowOf(id).transform { i ->
         val section = channelSectionFacade.fetchChannelSection(i.mapTo())
+            .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "fetchChannelSection:$i" } }
             .getOrDefault(emptyList())
         val taskItems = YouTubeChannelSectionFacade.FetchTaskItems.create(section)
@@ -103,6 +109,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             .onEach { r ->
                 emit(section.map { ChannelSectionItem.create(it, r) }.apply { sorted() })
             }.last().failure.forEach {
+                errorMessageChannel.send(SnackbarMessage.fromThrowable(it))
                 logE(throwable = it) { "channelSectionTask.result:$i" }
             }
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
@@ -113,6 +120,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
             publishedAfter = dateTimeProvider.now() - Duration.ofDays(7),
             maxResult = 20,
         ).onFailure { logE(throwable = it) { "fetchLiveChannelLogs:$i" } }
+            .onFailureWithSnackbarMessage(errorMessageChannel)
             .getOrDefault(emptyList())
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 

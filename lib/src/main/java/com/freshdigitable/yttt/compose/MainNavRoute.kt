@@ -53,7 +53,10 @@ sealed class MainNavRoute(override val root: String) : NavRoute {
         override fun content(): NavGraphBuilder.(ScreenStateHolder) -> Unit = { screenState ->
             composable<LiveChannel.Id>(typeMap = liveIdTypeMap) {
                 screenState.topAppBarStateHolder?.update(stringResource(id = R.string.title_channel_detail))
-                ChannelDetailScreen(channelId = it.toRoute())
+                ChannelDetailScreen(
+                    channelId = it.toRoute(),
+                    snackbarHostState = checkNotNull(screenState.snackbarHostState),
+                )
             }
         }
     }
