@@ -39,21 +39,22 @@ internal class YouTubeRemoteMediator @Inject constructor(
         if (!accountRepository.hasAccount()) {
             return MediatorResult.Success(endOfPaginationReached = true)
         }
-        return when (loadType) {
+        when (loadType) {
             LoadType.REFRESH -> {
-                val res = repository.fetchSubscriptions(YouTubeDataSource.MAX_PAGE_SIZE).last()
+                repository.fetchSubscriptions(YouTubeDataSource.MAX_PAGE_SIZE).last()
+                    .onFailure { return MediatorResult.Error(it) }
                     .onSuccess { s ->
                         (s as? YouTubeSubscriptions.Updated)?.let {
                             repository.addSubscribes(it)
                             repository.removeSubscribes(it.deleted)
                         }
+                        return MediatorResult.Success(endOfPaginationReached = true)
                     }
-                if (res.isSuccess) MediatorResult.Success(true)
-                else MediatorResult.Error(res.exceptionOrNull()!!)
             }
 
-            LoadType.PREPEND, LoadType.APPEND -> MediatorResult.Success(true)
+            LoadType.PREPEND, LoadType.APPEND -> Unit
         }
+        return MediatorResult.Success(true)
     }
 }
 

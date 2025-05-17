@@ -47,6 +47,10 @@ sealed class MainNavRoute(override val root: String) : NavRoute {
             topAppBarState?.update(title = stringResource(id = R.string.title_subscription))
             SubscriptionListScreen(
                 onListItemClicked = navController::navigate,
+                onError = {
+                    val message = SnackbarMessage.fromThrowable(it)
+                    snackbarBusSender?.send(message)
+                }
             )
         }
     }

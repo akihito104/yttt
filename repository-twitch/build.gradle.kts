@@ -76,7 +76,7 @@ dependencies {
     androidTestImplementation(project(":image-loadable-coil"))
     androidTestImplementation(project(":common-test"))
     androidTestImplementation(libs.androidx.room.runtime)
-    androidTestImplementation(libs.assertj.core)
+    androidTestImplementation(libs.truth)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.hilt.android.testing)

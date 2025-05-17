@@ -61,7 +61,6 @@ internal class TimetableTabViewModel @AssistedInject constructor(
                     val tasks = fetchStreamTasks.map { async { it() } }.awaitAll()
                     if (tasks.isNotEmpty() && tasks.all { it.isSuccess }) {
                         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
-                        sender.send(SnackbarMessage(message = "succeeded!"))
                     } else {
                         val failed = checkNotNull(tasks.first { it.isFailure }.exceptionOrNull())
                         sender.send(SnackbarMessage.fromThrowable(failed))
