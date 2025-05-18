@@ -39,6 +39,7 @@ class TwitchLiveLocalDataSourceTest {
         fun setup() = rule.runWithLocalSource {
             dataSource.setMe(me)
             dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
+            dataSource.addUsers(listOf(broadcaster))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
             val updatable = TwitchChannelScheduleUpdatable.createAtFetched(schedule, Instant.EPOCH)
             dao.replaceChannelSchedules(broadcaster.id, updatable)
