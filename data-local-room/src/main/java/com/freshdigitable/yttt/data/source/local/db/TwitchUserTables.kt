@@ -130,6 +130,9 @@ internal class TwitchUserDetailExpireTable(
         @Upsert
         suspend fun addUserDetailExpireEntities(expires: Collection<TwitchUserDetailExpireTable>)
 
+        @Query("DELETE FROM twitch_user_detail_expire WHERE user_id IN (:ids)")
+        suspend fun removeDetailExpireEntities(ids: Collection<TwitchUser.Id>)
+
         @Query("DELETE FROM twitch_user_detail_expire")
         override suspend fun deleteTable()
     }

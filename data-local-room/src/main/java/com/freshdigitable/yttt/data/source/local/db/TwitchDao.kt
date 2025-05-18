@@ -40,6 +40,7 @@ internal class TwitchDao @Inject constructor(
     }
 
     private suspend fun removeUser(id: Collection<TwitchUser.Id>) = db.withTransaction {
+        removeDetailExpireEntities(id)
         removeUserDetail(id)
         removeUsers(id)
     }
