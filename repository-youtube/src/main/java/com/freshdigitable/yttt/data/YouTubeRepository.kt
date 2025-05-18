@@ -189,11 +189,10 @@ class YouTubeRepository @Inject constructor(
         if (ids.isEmpty()) {
             return Result.success(emptyList())
         }
-        val videoCache = localSource.fetchVideoList(ids)
-        if (videoCache.isFailure) {
-            return Result.failure(videoCache.exceptionOrNull()!!)
-        }
-        val cache = checkNotNull(videoCache.getOrNull()).associateBy { it.id }
+        val cache = localSource.fetchVideoList(ids)
+            .onFailure { return Result.failure(it) }
+            .map { v -> v.associateBy { it.id } }
+            .getOrDefault(emptyMap())
         val current = dateTimeProvider.now()
         val notCached = ids - cache.keys
         val updatable = cache.values.filter { it.isUpdatable(current) }.map { it.id }.toSet()
@@ -201,9 +200,9 @@ class YouTubeRepository @Inject constructor(
         if (needed.isEmpty()) {
             return Result.success(cache.values.toList())
         }
-        val videoRes = remoteSource.fetchVideoList(needed)
-        return videoRes.map { v ->
-            v.map { it.extend(old = cache[it.id], fetchedAt = dateTimeProvider.now()) } +
+        return remoteSource.fetchVideoList(needed).map { v ->
+            val fetchedAt = dateTimeProvider.now()
+            v.map { it.extend(old = cache[it.id], fetchedAt = fetchedAt) } +
                 (ids - needed).mapNotNull { cache[it] }
         }
     }

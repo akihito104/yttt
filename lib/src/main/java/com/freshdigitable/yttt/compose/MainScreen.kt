@@ -15,6 +15,7 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -41,6 +42,9 @@ import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.TwitchAccountRepository
 import com.freshdigitable.yttt.lib.R
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -52,12 +56,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 import javax.inject.Qualifier
 
 @Composable
 fun MainScreen(
-    viewModel: MainViewModel = hiltViewModel()
+    viewModel: MainViewModel = hiltViewModel { f: MainViewModel.Factory ->
+        f.create(SnackbarMessageBus.create())
+    },
 ) {
     val navController = rememberNavController()
     val showMenuBadge = viewModel.showMenuBadge.collectAsState()
@@ -69,6 +74,7 @@ fun MainScreen(
         showMenuBadge = { showMenuBadge.value },
         drawerItems = { drawerMenuItems.value },
         snackbarMessage = viewModel.snackbarMessage,
+        snackbarMessageSender = viewModel.sender,
         onDrawerMenuClick = {
             val route = viewModel.getDrawerRoute(it)
             navController.navigate(route)
@@ -85,6 +91,7 @@ private fun MainScreen(
     showMenuBadge: () -> Boolean,
     drawerItems: () -> List<DrawerMenuListItem>,
     snackbarMessage: Flow<SnackbarAction>,
+    snackbarMessageSender: SnackbarMessageBus.Sender,
     onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -92,17 +99,12 @@ private fun MainScreen(
     val coroutineScope = rememberCoroutineScope()
     LaunchedEffect(snackbarMessage) {
         snackbarMessage.collectLatest { action ->
-            val message = action.message
-            val res = snackbarHostState.showSnackbar(
-                message.message,
-                message.actionLabel,
-                message.withDismissAction,
-                message.duration
-            )
+            val res = snackbarHostState.showSnackbar(action.message)
             if (res == SnackbarResult.ActionPerformed) {
                 when (action) {
                     is SnackbarAction.NavigationAction -> action(navController)
                     is SnackbarAction.CustomAction -> action()
+                    is SnackbarAction.NopAction -> Unit
                 }
             }
         }
@@ -148,6 +150,7 @@ private fun MainScreen(
                             navController,
                             topAppBarStateHolder,
                             this@SharedTransitionLayout,
+                            snackbarBus = snackbarMessageSender,
                         ),
                         navRoutes = navigation
                     )
@@ -222,11 +225,17 @@ private fun NavDrawerPreview() {
     }
 }
 
-@HiltViewModel
-class MainViewModel @Inject constructor(
+@HiltViewModel(assistedFactory = MainViewModel.Factory::class)
+class MainViewModel @AssistedInject constructor(
     @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
     accountRepository: TwitchAccountRepository,
+    @Assisted private val messageBus: SnackbarMessageBus,
 ) : ViewModel() {
+    @AssistedFactory
+    interface Factory {
+        fun create(messageBus: SnackbarMessageBus): MainViewModel
+    }
+
     val routes: Set<NavRoute> = (MainNavRoute.routes + ossLicensePage).toSet()
     val startDestination = MainNavRoute.startDestination
     internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
@@ -243,7 +252,9 @@ class MainViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val showMenuBadge = drawerMenuItems.map { i -> i.any { it.showBadge } }
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
+    val sender get() = messageBus.getSender()
     val snackbarMessage = merge(
+        messageBus.messageFlow.map { SnackbarAction.NopAction(it) },
         accountRepository.isTwitchTokenInvalidated.filter { it ?: false }
             .map {
                 SnackbarAction.NavigationAction(
@@ -267,18 +278,15 @@ class MainViewModel @Inject constructor(
             DrawerMenuItem.OSS_LICENSE -> ossLicensePage.root
         }
     }
+
+    override fun onCleared() {
+        super.onCleared()
+        messageBus.close()
+    }
 }
 
-data class SnackbarMessage(
-    val message: String,
-    val actionLabel: String? = null,
-    val withDismissAction: Boolean = false,
-    val duration: SnackbarDuration =
-        if (actionLabel == null) SnackbarDuration.Short else SnackbarDuration.Indefinite,
-)
-
 sealed class SnackbarAction {
-    abstract val message: SnackbarMessage
+    abstract val message: SnackbarVisuals
 
     data class NavigationAction(
         override val message: SnackbarMessage,
@@ -297,6 +305,8 @@ sealed class SnackbarAction {
             action()
         }
     }
+
+    data class NopAction(override val message: SnackbarVisuals) : SnackbarAction()
 }
 
 internal data class DrawerMenuListItem(

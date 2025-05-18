@@ -8,6 +8,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
@@ -24,6 +25,9 @@ import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.create
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.feature.channel.ChannelViewModel
+import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
+import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import com.freshdigitable.yttt.lib.R
 
 sealed class MainNavRoute(override val root: String) : NavRoute {
@@ -43,6 +47,10 @@ sealed class MainNavRoute(override val root: String) : NavRoute {
             topAppBarState?.update(title = stringResource(id = R.string.title_subscription))
             SubscriptionListScreen(
                 onListItemClicked = navController::navigate,
+                onError = {
+                    val message = SnackbarMessage.fromThrowable(it)
+                    snackbarBusSender?.send(message)
+                }
             )
         }
     }
@@ -53,7 +61,12 @@ sealed class MainNavRoute(override val root: String) : NavRoute {
         override fun content(): NavGraphBuilder.(ScreenStateHolder) -> Unit = { screenState ->
             composable<LiveChannel.Id>(typeMap = liveIdTypeMap) {
                 screenState.topAppBarStateHolder?.update(stringResource(id = R.string.title_channel_detail))
-                ChannelDetailScreen(channelId = it.toRoute())
+                ChannelDetailScreen(
+                    viewModel = hiltViewModel { f: ChannelViewModel.Factory ->
+                        f.create(checkNotNull(screenState.snackbarBus))
+                    },
+                    channelId = it.toRoute(),
+                )
             }
         }
     }
@@ -105,6 +118,9 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
         override fun body(): ScopedNavContent = {
             asAnimatedSharedTransitionScope {
                 TimetableTabScreen(
+                    viewModel = hiltViewModel { f: TimetableTabViewModel.Factory ->
+                        f.create(checkNotNull(snackbarBusSender))
+                    },
                     onListItemClicked = navController::navigate,
                     tabModifier = Modifier
                         .renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
@@ -116,7 +132,7 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
                     titleModifier = titleModifier,
                     topAppBarState = checkNotNull(topAppBarState).also {
                         it.update(title = stringResource(id = R.string.title_timetable))
-                    }
+                    },
                 )
             }
         }
@@ -139,6 +155,9 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
             val id = it.toRoute<LiveVideo.Id>()
             asAnimatedSharedTransitionScope {
                 VideoDetailScreen(
+                    viewModel = hiltViewModel { f: VideoDetailViewModel.Factory ->
+                        f.create(checkNotNull(snackbarBusSender))
+                    },
                     thumbnailModifier = thumbnailModifier(id),
                     titleModifier = titleModifier(id).skipToLookaheadSize(),
                     topAppBarStateHolder = topAppBar,

@@ -15,6 +15,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.activity
 import androidx.navigation.compose.composable
+import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TopAppBarStateHolder
 import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import com.freshdigitable.yttt.data.model.IdBase
@@ -73,6 +74,7 @@ interface NavAnimatedScopedComposable : NavContent {
 
         @OptIn(ExperimentalSharedTransitionApi::class)
         val sharedTransition: SharedTransitionScope?
+        val snackbarBusSender: SnackbarMessageBus.Sender?
 
         companion object {
             @OptIn(ExperimentalSharedTransitionApi::class)
@@ -98,6 +100,7 @@ class ScreenStateHolder(
     val navController: NavHostController,
     val topAppBarStateHolder: TopAppBarStateHolder? = null,
     val sharedTransition: SharedTransitionScope? = null,
+    val snackbarBus: SnackbarMessageBus.Sender? = null,
 )
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -112,6 +115,8 @@ internal fun NavAnimatedScopedComposable.Scope.Companion.create(
             get() = screenStateHolder.topAppBarStateHolder
         override val sharedTransition: SharedTransitionScope?
             get() = screenStateHolder.sharedTransition
+        override val snackbarBusSender: SnackbarMessageBus.Sender?
+            get() = screenStateHolder.snackbarBus
     }
 
 fun NavGraphBuilder.composableWith(

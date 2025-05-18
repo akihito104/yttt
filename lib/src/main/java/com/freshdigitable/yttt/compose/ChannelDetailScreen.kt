@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
@@ -80,7 +79,7 @@ private fun Context.getActivity(): Activity {
 
 @Composable
 fun ChannelDetailScreen(
-    viewModel: ChannelViewModel = hiltViewModel(),
+    viewModel: ChannelViewModel,
     channelId: LiveChannel.Id,
     pageFactory: IdBaseClassMap<ChannelDetailPageComposableFactory> = requireChannelDetailPageComposableFactory(),
 ) {

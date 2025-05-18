@@ -1,6 +1,8 @@
 package com.freshdigitable.yttt.feature.channel
 
 import androidx.compose.runtime.Composable
+import com.freshdigitable.yttt.compose.SnackbarMessageBus
+import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.TwitchRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
@@ -34,12 +36,14 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     private val repository: TwitchRepository,
     @Assisted id: LiveChannel.Id,
     @Assisted coroutineScope: CoroutineScope,
+    @Assisted private val errorMessageChannel: SnackbarMessageBus.Sender,
 ) : ChannelDetailDelegate, TwitchChannelDetailPagerContent {
     @AssistedFactory
     interface Factory : ChannelDetailDelegate.Factory {
         override fun create(
             id: LiveChannel.Id,
             coroutineScope: CoroutineScope,
+            errorMessageChannel: SnackbarMessageBus.Sender,
         ): ChannelDetailDelegateForTwitch
     }
 
@@ -52,8 +56,10 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         TwitchChannelDetailTab.Vod,
         if (BuildConfig.DEBUG) TwitchChannelDetailTab.Debug else null
     )
-    private val detail: Flow<TwitchUserDetail?> = flowOf(id).map {
-        repository.findUsersById(setOf(it.mapTo())).getOrNull()?.firstOrNull()
+    private val detail: Flow<TwitchUserDetail?> = flowOf(id).map { i ->
+        repository.findUsersById(setOf(i.mapTo()))
+            .onFailureWithSnackbarMessage(errorMessageChannel)
+            .getOrNull()?.firstOrNull()
     }
     override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
         d?.let { LiveChannelDetailTwitch(it) }
@@ -65,7 +71,9 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         AnnotatableString.createForTwitch(desc)
     }
     override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).mapNotNull { i ->
-        repository.fetchVideosByUserId(i.mapTo()).getOrNull()
+        repository.fetchVideosByUserId(i.mapTo())
+            .onFailureWithSnackbarMessage(errorMessageChannel)
+            .getOrNull()
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
     override val debug: Flow<Map<TwitchChannelDetailPagerContent.DebugId, String>> = combine(
         listOf(

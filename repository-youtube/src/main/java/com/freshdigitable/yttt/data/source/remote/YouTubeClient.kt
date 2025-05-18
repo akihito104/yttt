@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data.source.remote
 
-import androidx.annotation.VisibleForTesting
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
@@ -171,16 +170,19 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
             try {
                 request().execute()
             } catch (e: HttpResponseException) {
-                throw YouTubeException(e.statusCode, e)
+                throw YouTubeException(e.statusCode, e.statusMessage, e)
             }
     }
 }
 
-@VisibleForTesting
 class YouTubeException(
     override val statusCode: Int,
+    private val statusMessage: String,
     throwable: Throwable? = null,
-) : NetworkResponse.Exception(throwable)
+) : NetworkResponse.Exception(throwable) {
+    override val isQuotaExceeded: Boolean
+        get() = statusCode == 403 && statusMessage == "quotaExceeded"
+}
 
 private data class YouTubeSubscriptionRemote(
     private val subscription: Subscription,

@@ -10,7 +10,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.LoadState
@@ -30,12 +32,14 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.feature.subscription.SubscriptionListViewModel
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import java.time.Instant
 
 @Composable
 fun SubscriptionListScreen(
     viewModel: SubscriptionListViewModel = hiltViewModel(),
     onListItemClicked: (LiveChannel.Id) -> Unit,
+    onError: suspend (Throwable) -> Unit,
 ) {
     AppLogger.logD("SubscriptionList") { "start:" }
     val items = viewModel.pagingData.map { v -> v.collectAsLazyPagingItems() }
@@ -55,6 +59,7 @@ fun SubscriptionListScreen(
             itemProvider = { items[index] },
             listState = listState[index],
             onListItemClicked = { onListItemClicked(it) },
+            onError = onError
         )
     }
 }
@@ -64,12 +69,25 @@ private fun SubscriptionListContent(
     itemProvider: () -> LazyPagingItems<LiveSubscription>,
     listState: LazyListState = rememberLazyListState(),
     onListItemClicked: (LiveChannel.Id) -> Unit = {},
+    onError: suspend (Throwable) -> Unit = {},
 ) {
     AppLogger.logD("SubscriptionListContent") { "start:" }
+    val item = itemProvider()
+    val coroutineScope = rememberCoroutineScope()
+    LaunchedEffect(item) {
+        if (item.loadState.hasError) {
+            val error = item.loadState.run { listOf(refresh, append, prepend) }
+                .firstNotNullOfOrNull { it as LoadState.Error }?.error
+            if (error != null) {
+                coroutineScope.launch {
+                    onError(error)
+                }
+            }
+        }
+    }
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
-        val item = itemProvider()
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = listState,

@@ -18,6 +18,12 @@ import retrofit2.http.Query
 import java.lang.reflect.Type
 import java.time.Instant
 
+// ## Twitch Rate Limits
+// https://dev.twitch.tv/docs/api/guide/
+// Twitch uses a token-bucket algorithm to ensure the limits are respected. Your app is given a bucket of points.
+// Each endpoint is assigned a points value (the default points value per request for an endpoint is 1).
+// When your app calls the endpoint, the endpoint’s points value is subtracted from the remaining points in your bucket.
+// If your bucket runs out of points within 1 minute, the request returns status code 429.
 internal interface TwitchHelixService {
     companion object {
         internal const val BASE_URL = "https://api.twitch.tv/"
@@ -46,6 +52,8 @@ internal interface TwitchHelixService {
     ): Call<FollowingStreamsResponse>
 
     /// https://dev.twitch.tv/docs/api/reference/#get-channel-stream-schedule
+    // 403 Forbidden: Only partners and affiliates may add non-recurring broadcast segments.
+    // 404 Not Found: The broadcaster has not created a streaming schedule.
     @GET("helix/schedule")
     fun getChannelStreamSchedule(
         @Query("broadcaster_id") broadcasterId: TwitchUser.Id,
@@ -62,6 +70,8 @@ internal interface TwitchHelixService {
     ): Call<ChannelStreamScheduleResponse>
 
     // https://dev.twitch.tv/docs/api/reference/#get-videos
+    // 404 Not Found: The ID in the game_id query parameter was not found.
+    //                The ID in the id query parameter was not found. Returned only if all the IDs were not found; otherwise, the ID is ignored.
     @GET("helix/videos")
     fun getVideoByUserId(
         @Query("user_id") userId: TwitchUser.Id,

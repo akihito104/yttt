@@ -49,7 +49,10 @@ interface TwitchHelixClient {
 class TwitchException(
     override val statusCode: Int,
     override val message: String?,
-) : NetworkResponse.Exception(null)
+) : NetworkResponse.Exception(null) {
+    override val isQuotaExceeded: Boolean
+        get() = statusCode == 429 // Too Many Requests
+}
 
 private class Impl(
     private val service: TwitchHelixService,

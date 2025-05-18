@@ -12,14 +12,14 @@ import javax.inject.Inject
 internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
     private val repository: TwitchLiveRepository,
 ) : FindLiveVideoUseCase {
-    override suspend operator fun invoke(id: LiveVideo.Id): LiveVideo<*>? {
+    override suspend operator fun invoke(id: LiveVideo.Id): Result<LiveVideo<*>?> {
         val twitchVideoId = when (id.type) {
             TwitchStream.Id::class -> id.mapTo<TwitchStream.Id>()
             TwitchChannelSchedule.Stream.Id::class -> id.mapTo<TwitchChannelSchedule.Stream.Id>()
             else -> throw AssertionError("unsupported type: ${id.type}")
         }
-        val d = repository.fetchStreamDetail(twitchVideoId) ?: return null
-        return LiveVideo.create(d)
+        val d = repository.fetchStreamDetail(twitchVideoId)
+        return Result.success(d?.let { LiveVideo.create(it) })
     }
 }
 

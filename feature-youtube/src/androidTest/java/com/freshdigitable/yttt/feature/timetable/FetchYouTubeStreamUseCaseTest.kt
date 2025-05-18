@@ -117,7 +117,8 @@ class FetchYouTubeStreamUseCaseTest {
     fun failedToGetSubscription_returnsFailure() = runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        FakeRemoteSourceModule.subscription = { _, _ -> throw YouTubeException(500) }
+        FakeRemoteSourceModule.subscription =
+            { _, _ -> throw YouTubeException(500, "Server Internal Error") }
         TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
         // exercise
@@ -157,7 +158,7 @@ class FetchYouTubeStreamUseCaseTest {
         FakeYouTubeAccountModule.account = "account"
         TestCoroutineScopeModule.testScheduler = testScheduler
         FakeRemoteSourceModule.setup(10, 2)
-        FakeRemoteSourceModule.channel = { throw YouTubeException(500) }
+        FakeRemoteSourceModule.channel = { throw YouTubeException(500, "Server Internal Error") }
         hiltRule.inject()
         // exercise
         val actual = sut.invoke()
@@ -182,7 +183,7 @@ class FetchYouTubeStreamUseCaseTest {
             setup(10, 2)
             val base = playlistItem!!
             playlistItem = { id ->
-                if (id.value.contains("1")) throw YouTubeException(500)
+                if (id.value.contains("1")) throw YouTubeException(500, "Server Internal Error")
                 else base.invoke(id)
             }
         }
@@ -203,7 +204,8 @@ class FetchYouTubeStreamUseCaseTest {
             setup(10, 2)
             val base = video!!
             video = { id ->
-                if (id.any { it.value.contains("1") }) throw YouTubeException(500)
+                if (id.any { it.value.contains("1") })
+                    throw YouTubeException(500, "Server Internal Error")
                 else base.invoke(id)
             }
         }
@@ -244,7 +246,7 @@ class FetchYouTubeStreamUseCaseTest {
             if (page == 0) {
                 page++
                 channel!!.invoke(it)
-            } else throw YouTubeException(500)
+            } else throw YouTubeException(500, "Server Internal Error")
         }
         TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()

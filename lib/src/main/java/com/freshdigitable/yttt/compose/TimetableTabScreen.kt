@@ -27,7 +27,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.LightModePreview
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -43,7 +42,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TimetableTabScreen(
-    viewModel: TimetableTabViewModel = hiltViewModel(),
+    viewModel: TimetableTabViewModel,
     onListItemClicked: (LiveVideo.Id) -> Unit,
     tabModifier: Modifier = Modifier,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },

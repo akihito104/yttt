@@ -4,7 +4,7 @@ import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
 
 interface FindLiveVideoUseCase {
-    suspend operator fun invoke(id: LiveVideo.Id): LiveVideo<*>?
+    suspend operator fun invoke(id: LiveVideo.Id): Result<LiveVideo<*>?>
 }
 
 interface AnnotatableStringFactory {

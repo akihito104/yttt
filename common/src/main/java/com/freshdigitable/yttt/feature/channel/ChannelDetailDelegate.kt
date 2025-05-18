@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.feature.channel
 
 import androidx.compose.runtime.Composable
+import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TabData
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
@@ -17,7 +18,11 @@ interface ChannelDetailDelegate {
     suspend fun clearForDetail() {}
 
     interface Factory {
-        fun create(id: LiveChannel.Id, coroutineScope: CoroutineScope): ChannelDetailDelegate
+        fun create(
+            id: LiveChannel.Id,
+            coroutineScope: CoroutineScope,
+            errorMessageChannel: SnackbarMessageBus.Sender,
+        ): ChannelDetailDelegate
     }
 
     interface PagerContent {

@@ -12,13 +12,12 @@ import javax.inject.Inject
 internal class FindLiveVideoFromYouTubeUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FindLiveVideoUseCase {
-    override suspend fun invoke(id: LiveVideo.Id): LiveVideo<*>? {
+    override suspend fun invoke(id: LiveVideo.Id): Result<LiveVideo<*>?> {
         check(id.type == YouTubeVideo.Id::class)
-        val v = repository.fetchVideoList(setOf(id.mapTo()))
+        return repository.fetchVideoList(setOf(id.mapTo()))
             .onFailure { logE(throwable = it) { "invoke: $id" } }
-            .map { it.firstOrNull() }.getOrNull()
-            ?: return null
-        return LiveVideo.create(v)
+            .onSuccess { repository.addVideo(it) }
+            .map { v -> v.firstOrNull()?.let { LiveVideo.create(it) } }
     }
 }
 

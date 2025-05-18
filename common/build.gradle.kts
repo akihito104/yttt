@@ -47,6 +47,9 @@ dependencies {
     implementation(libs.kermit)
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.runtime.android)
+    val composeBom = platform(libs.androidx.compose.bom)
+    implementation(composeBom)
+    implementation(libs.androidx.compose.material3)
 
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)

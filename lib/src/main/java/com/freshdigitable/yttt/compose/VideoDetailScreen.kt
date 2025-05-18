@@ -16,7 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
@@ -27,7 +26,7 @@ import java.math.BigInteger
 
 @Composable
 fun VideoDetailScreen(
-    viewModel: VideoDetailViewModel = hiltViewModel(),
+    viewModel: VideoDetailViewModel,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
     topAppBarStateHolder: TopAppBarStateHolder,
