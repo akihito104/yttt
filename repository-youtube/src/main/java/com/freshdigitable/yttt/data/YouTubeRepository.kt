@@ -201,6 +201,23 @@ class YouTubeRepository @Inject constructor(
             return Result.success(cache.values.toList())
         }
         return remoteSource.fetchVideoList(needed).map { v ->
+            val needsChannel = v.filter {
+                it.channel.iconUrl.isNullOrEmpty() && cache[it.id]?.channel?.iconUrl.isNullOrEmpty()
+            }
+            if (needsChannel.isEmpty()) {
+                v
+            } else {
+                fetchChannelList(needsChannel.map { it.channel.id }.toSet()).map { c ->
+                    val channels = c.associateBy { it.id }
+                    needsChannel.map {
+                        val channel = channels.getValue(it.channel.id)
+                        object : YouTubeVideo by it {
+                            override val channel: YouTubeChannel get() = channel
+                        }
+                    }
+                }.map { it + (v - needsChannel.toSet()) }.getOrThrow()
+            }
+        }.map { v ->
             val fetchedAt = dateTimeProvider.now()
             v.map { it.extend(old = cache[it.id], fetchedAt = fetchedAt) } +
                 (ids - needed).mapNotNull { cache[it] }
