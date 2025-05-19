@@ -160,7 +160,7 @@ private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
     )
 
 private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
-    id = id, title = title, iconUrl = iconUrl,
+    id = id, title = title, iconUrl = iconUrl ?: "",
 )
 
 private fun YouTubePlaylistWithItems.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(

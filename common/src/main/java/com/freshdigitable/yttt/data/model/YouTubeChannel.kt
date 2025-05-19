@@ -6,7 +6,7 @@ import java.time.Instant
 interface YouTubeChannel {
     val id: Id
     val title: String
-    val iconUrl: String
+    val iconUrl: String?
 
     data class Id(override val value: String) : YouTubeId
 }
@@ -16,6 +16,13 @@ data class YouTubeChannelEntity(
     override val title: String,
     override val iconUrl: String,
 ) : YouTubeChannel
+
+class YouTubeChannelTitle(
+    override val id: YouTubeChannel.Id,
+    override val title: String,
+) : YouTubeChannel {
+    override val iconUrl: String? get() = null
+}
 
 interface YouTubeChannelAddition {
     val bannerUrl: String?
@@ -30,7 +37,10 @@ interface YouTubeChannelAddition {
     val uploadedPlayList: YouTubePlaylist.Id?
 }
 
-interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition
+interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition {
+    override val iconUrl: String
+}
+
 interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {
     val id: Id
     val channelId: YouTubeChannel.Id
