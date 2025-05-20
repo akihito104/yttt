@@ -1,18 +1,16 @@
 package com.freshdigitable.yttt.data
 
+import com.freshdigitable.yttt.data.RecordableFunction.Companion.spy
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
-import com.freshdigitable.yttt.data.model.YouTubeChannelLog
-import com.freshdigitable.yttt.data.model.YouTubeChannelSection
-import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.NetworkResponse
-import com.freshdigitable.yttt.data.source.remote.YouTubeClient
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeVideoRemote
-import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
+import com.freshdigitable.yttt.test.FakeYouTubeClient
+import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
@@ -23,19 +21,14 @@ import com.google.api.services.youtube.model.Video
 import com.google.api.services.youtube.model.VideoLiveStreamingDetails
 import com.google.api.services.youtube.model.VideoSnippet
 import com.google.common.truth.Truth.assertThat
-import dagger.Module
-import dagger.Provides
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
-import dagger.hilt.components.SingletonComponent
-import dagger.hilt.testing.TestInstallIn
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
-import java.math.BigInteger
 import java.time.Instant
 import javax.inject.Inject
-import javax.inject.Singleton
 
 @HiltAndroidTest
 class YouTubeRepositoryTest {
@@ -45,48 +38,80 @@ class YouTubeRepositoryTest {
     @Inject
     lateinit var sut: YouTubeRepository
 
+    @After
+    fun tearDown() {
+        FakeYouTubeClientModule.clean()
+        RecordableFunction.recorded.run {
+            forEach { assertThat(it.actual).isEqualTo(it.expected) }
+            clear()
+        }
+    }
+
     @Test
-    fun init() = runTest {
+    fun fetchVideoList_itemFromRemoteHasIconUrl() = runTest {
         // setup
+        FakeDateTimeProviderModule.instant = Instant.EPOCH
+        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        FakeYouTubeClientModule.client = FakeRemoteSource(
+            videoList = spy(expected = 1) { listOf(video(1, channelDetail)) },
+            channelList = spy(expected = 1) { listOf(channelDetail) },
+        )
         TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
-        FakeDateTimeProviderModule.instant = Instant.EPOCH
-        FakeRemoteSourceModule.videoList = {
-            listOf(YouTubeVideoRemote(Video().apply {
-                id = "1"
-                snippet = VideoSnippet().apply {
-                    channelId = "channel_1"
-                    channelTitle = "channel_1_title"
-                    description = "description"
-                    liveBroadcastContent = "upcoming"
-                    thumbnails = ThumbnailDetails().apply {
-                        standard = Thumbnail().apply {
-                            url = "<url is here>"
-                        }
-                    }
-                }
-                liveStreamingDetails = VideoLiveStreamingDetails().apply {
-                    scheduledStartTime = DateTime("2022-01-01T00:00:00Z")
-                }
-            }))
+        // exercise
+        val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
+        // verify
+        assertResultThat(actual).isSuccess { value ->
+            assertThat(value.first().channel.iconUrl).apply {
+                isNotNull()
+                isNotEmpty()
+            }
         }
-        FakeRemoteSourceModule.channelList = {
-            listOf(object : YouTubeChannelDetail {
-                override val iconUrl: String get() = "<url is here>"
-                override val id: YouTubeChannel.Id get() = YouTubeChannel.Id("channel_1")
-                override val title: String get() = "channel_1_title"
-                override val bannerUrl: String? get() = "<url is here>"
-                override val subscriberCount: BigInteger get() = BigInteger.TEN
-                override val isSubscriberHidden: Boolean get() = false
-                override val videoCount: BigInteger get() = BigInteger.TEN
-                override val viewsCount: BigInteger get() = BigInteger.TEN
-                override val publishedAt: Instant get() = Instant.EPOCH
-                override val customUrl: String get() = "channel_1"
-                override val keywords: Collection<String> get() = emptyList()
-                override val description: String? get() = "description"
-                override val uploadedPlayList: YouTubePlaylist.Id? get() = YouTubePlaylist.Id("channel_1_uploaded")
-            })
+    }
+
+    @Inject
+    lateinit var localSource: YouTubeDataSource.Local
+
+    @Test
+    fun fetchVideoList_itemFromCacheHasIconUrl() = runTest {
+        // setup
+        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(999)
+        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val video = video(1, channelDetail)
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        hiltRule.inject()
+        localSource.addChannelList(listOf(channelDetail))
+        sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
+            override val isFreeChat: Boolean get() = false
+            override val updatableAt: Instant get() = Instant.ofEpochMilli(1000)
+        }))
+        // exercise
+        val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
+        // verify
+        assertResultThat(actual).isSuccess { value ->
+            assertThat(value.first().channel.iconUrl).apply {
+                isNotNull()
+                isNotEmpty()
+            }
         }
+    }
+
+    @Test
+    fun fetchVideoList_updatedItemHasIconUrl() = runTest {
+        // setup
+        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
+        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val video = video(1, channelDetail)
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        FakeYouTubeClientModule.client = FakeRemoteSource(
+            videoList = spy(expected = 1) { listOf(video) },
+        )
+        hiltRule.inject()
+        localSource.addChannelList(listOf(channelDetail))
+        sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
+            override val isFreeChat: Boolean get() = false
+            override val updatableAt: Instant get() = Instant.ofEpochMilli(1000)
+        }))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
@@ -99,62 +124,58 @@ class YouTubeRepositoryTest {
     }
 }
 
-@Module
-@TestInstallIn(
-    components = [SingletonComponent::class],
-    replaces = [YouTubeModule::class],
-)
-interface FakeRemoteSourceModule {
-    companion object {
-        var videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null
-        var channelList: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null
-
-        @Provides
-        @Singleton
-        fun provideYouTubeClient(): YouTubeClient {
-            return object : YouTubeClient {
-                override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
-                    NetworkResponse.create(videoList!!.invoke(ids))
-
-                override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
-                    NetworkResponse.create(channelList!!.invoke(ids))
-
-                override fun fetchSubscription(
-                    pageSize: Long,
-                    offset: Int,
-                    token: String?
-                ): NetworkResponse<List<YouTubeSubscription>> {
-                    TODO("Not yet implemented")
-                }
-
-                override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> {
-                    TODO("Not yet implemented")
-                }
-
-                override fun fetchPlaylistItems(
-                    id: YouTubePlaylist.Id,
-                    maxResult: Long
-                ): NetworkResponse<List<YouTubePlaylistItem>> {
-                    TODO("Not yet implemented")
-                }
-
-                override fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>> {
-                    TODO("Not yet implemented")
-                }
-
-                override fun fetchLiveChannelLogs(
-                    channelId: YouTubeChannel.Id,
-                    publishedAfter: Instant?,
-                    maxResult: Long?,
-                    token: String?
-                ): NetworkResponse<List<YouTubeChannelLog>> {
-                    TODO("Not yet implemented")
+private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo =
+    YouTubeVideoRemote(Video().apply {
+        this.id = "$id"
+        snippet = VideoSnippet().apply {
+            channelId = channel.id.value
+            channelTitle = channel.title
+            title = "title$id"
+            description = "description"
+            liveBroadcastContent = "upcoming"
+            thumbnails = ThumbnailDetails().apply {
+                standard = Thumbnail().apply {
+                    url = "<url is here>"
                 }
             }
         }
-    }
+        liveStreamingDetails = VideoLiveStreamingDetails().apply {
+            scheduledStartTime = DateTime("2022-01-01T00:00:00Z")
+        }
+    })
+
+private class FakeRemoteSource(
+    val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
+    val channelList: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
+) : FakeYouTubeClient() {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
+        NetworkResponse.create(videoList!!.invoke(ids))
+
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
+        NetworkResponse.create(channelList!!.invoke(ids))
 }
 
+interface FakeRemoteSourceModule : FakeYouTubeClientModule
 interface FakeDbModule : InMemoryDbModule
 interface FakeCoroutineScopeModule : TestCoroutineScopeModule
 interface FakeClockModule : FakeDateTimeProviderModule
+
+interface RecordableFunction<T, R> : (T) -> R {
+    val actual: Int
+    val expected: Int
+
+    companion object {
+        val recorded = mutableListOf<RecordableFunction<*, *>>()
+
+        fun <T, R> spy(expected: Int, body: (T) -> R): RecordableFunction<T, R> =
+            object : RecordableFunction<T, R> {
+                private var _count: Int = 0
+                override val actual: Int get() = _count
+                override val expected: Int get() = expected
+                override fun invoke(p1: T): R {
+                    _count++
+                    return body(p1)
+                }
+            }.also { recorded.add(it) }
+    }
+}

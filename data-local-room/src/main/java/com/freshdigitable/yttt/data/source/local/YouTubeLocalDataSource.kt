@@ -140,9 +140,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun addVideo(
         video: Collection<YouTubeVideoExtended>,
-    ) = ioScope.asResult {
-        dao.addVideos(video)
-    }.getOrNull()!! // FIXME
+    ) = ioScope.asResult { dao.addVideos(video) }.getOrThrow()
 
     override suspend fun cleanUp() {
         database.youTubeChannelLogDao.deleteTable()

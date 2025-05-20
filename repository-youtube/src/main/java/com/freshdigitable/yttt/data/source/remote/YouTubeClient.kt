@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import androidx.annotation.VisibleForTesting
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
@@ -220,6 +221,7 @@ private data class YouTubeChannelLogEntity(
         get() = activity.snippet.type
 }
 
+@VisibleForTesting
 internal class YouTubeVideoRemote(
     private val video: Video,
 ) : YouTubeVideo {

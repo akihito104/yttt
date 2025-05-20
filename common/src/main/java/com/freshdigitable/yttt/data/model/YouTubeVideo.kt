@@ -126,10 +126,12 @@ interface YouTubeVideoUpdatable {
 
 private class YouTubeVideoExtendedImpl(
     private val old: YouTubeVideoExtended?,
-    video: YouTubeVideo,
+    private val video: YouTubeVideo,
     private val _isFreeChat: Boolean?,
     private val fetchedAt: Instant,
 ) : YouTubeVideoExtended, YouTubeVideo by video {
+    override val channel: YouTubeChannel
+        get() = old?.channel ?: video.channel
     override val isFreeChat: Boolean
         get() = _isFreeChat
             ?: if (old?.title == title) {
