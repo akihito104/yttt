@@ -13,7 +13,7 @@ import java.util.Locale
 
 @Immutable
 internal data class LiveVideoDetailItem(
-    private val video: LiveVideo<*>,
+    val video: LiveVideo<*>,
     val annotatableDescription: AnnotatableString,
     val annotatableTitle: AnnotatableString,
     private val zoneId: ZoneId = ZoneId.systemDefault(),

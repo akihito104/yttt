@@ -9,13 +9,14 @@ import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TopAppBarMenuItem
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.di.IdBaseClassMap
-import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuDelegate
+import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuSelector
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -24,7 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 class VideoDetailViewModel @AssistedInject constructor(
     findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
     annotatedStringFactory: IdBaseClassMap<AnnotatableStringFactory>,
-    contextMenuDelegateFactory: TimetableContextMenuDelegate.Factory,
+    menuSelectorMap: IdBaseClassMap<TimetableContextMenuSelector>,
     savedStateHandle: SavedStateHandle,
     @Assisted sender: SnackbarMessageBus.Sender,
 ) : ViewModel() {
@@ -36,7 +37,6 @@ class VideoDetailViewModel @AssistedInject constructor(
     private val videoId = savedStateHandle.toLiveVideoRoute
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
     private val annotatedString = checkNotNull(annotatedStringFactory[videoId.type.java])
-    private val contextMenuDelegate = contextMenuDelegateFactory.create(sender)
     internal val detail: Flow<LiveVideoDetailItem?> = flowOf(videoId).map { id ->
         findLiveVideo(id)
             .onFailureWithSnackbarMessage(sender)
@@ -52,15 +52,13 @@ class VideoDetailViewModel @AssistedInject constructor(
             }.getOrNull()
     }
 
-    val contextMenuItems: Flow<List<TopAppBarMenuItem>> =
-        flowOf(videoId).map { id ->
-            contextMenuDelegate.setupMenu(id)
-            contextMenuDelegate.findMenuItems(id)
-        }.map { items ->
-            items.map {
-                TopAppBarMenuItem.inOthers(it.text) {
-                    contextMenuDelegate.consumeMenuItem(it)
-                }
+    private val menuSelector = menuSelectorMap.getValue(videoId.type.java)
+    val contextMenuItems: Flow<List<TopAppBarMenuItem>> = detail.filterNotNull().map { d ->
+        val items = menuSelector.findMenuItems(d.video)
+        items.map {
+            TopAppBarMenuItem.inOthers(it.text) {
+                menuSelector.consumeMenuItem(d.video, it)
             }
-        }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 }
