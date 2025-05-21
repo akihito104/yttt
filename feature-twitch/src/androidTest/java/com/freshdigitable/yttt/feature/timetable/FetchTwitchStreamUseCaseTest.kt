@@ -97,9 +97,8 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).apply {
-                isFailure()
-                throwable().isInstanceOf(TwitchException::class.java)
+            assertResultThat(actual).isFailure {
+                it.isInstanceOf(TwitchException::class.java)
             }
             assertResultThat(localSource.fetchMe()).value().isNull()
             localSource.onAir.test { assertThat(awaitItem()).isEmpty() }
@@ -153,9 +152,8 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).apply {
-                isFailure()
-                throwable().isInstanceOf(TwitchException::class.java)
+            assertResultThat(actual).isFailure {
+                it.isInstanceOf(TwitchException::class.java)
             }
             assertResultThat(localSource.fetchMe()).apply {
                 isSuccess()
@@ -345,9 +343,8 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).apply {
-                isFailure()
-                throwable().isInstanceOf(TwitchException::class.java)
+            assertResultThat(actual).isFailure {
+                it.isInstanceOf(TwitchException::class.java)
             }
             assertResultThat(localSource.fetchMe()).apply {
                 isSuccess()

@@ -125,9 +125,8 @@ class FetchYouTubeStreamUseCaseTest {
         val actual = sut.invoke()
         advanceUntilIdle()
         // verify
-        assertResultThat(actual).apply {
-            isFailure()
-            throwable().isInstanceOf(YouTubeException::class.java)
+        assertResultThat(actual).isFailure {
+            it.isInstanceOf(YouTubeException::class.java)
         }
         localSource.videos.test {
             assertThat(awaitItem()).isEmpty()
@@ -165,9 +164,8 @@ class FetchYouTubeStreamUseCaseTest {
         val actual = sut.invoke()
         advanceUntilIdle()
         // verify
-        assertResultThat(actual).apply {
-            isFailure()
-            throwable().isInstanceOf(YouTubeException::class.java)
+        assertResultThat(actual).isFailure {
+            it.isInstanceOf(YouTubeException::class.java)
         }
         localSource.videos.test {
             assertThat(awaitItem()).isEmpty()
@@ -254,9 +252,8 @@ class FetchYouTubeStreamUseCaseTest {
         val actual = sut.invoke()
         advanceUntilIdle()
         // verify
-        assertResultThat(actual).apply {
-            isFailure()
-            throwable().isInstanceOf(YouTubeException::class.java)
+        assertResultThat(actual).isFailure {
+            it.isInstanceOf(YouTubeException::class.java)
         }
     }
 

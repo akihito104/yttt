@@ -1,13 +1,14 @@
 package com.freshdigitable.yttt.data
 
-import com.freshdigitable.yttt.data.RecordableFunction.Companion.spy
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
+import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.data.source.remote.YouTubeVideoRemote
+import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
@@ -27,13 +28,17 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
 @HiltAndroidTest
 class YouTubeRepositoryTest {
-    @get:Rule
+    @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
+    val recorder = CallerVerifier()
 
     @Inject
     lateinit var sut: YouTubeRepository
@@ -41,10 +46,6 @@ class YouTubeRepositoryTest {
     @After
     fun tearDown() {
         FakeYouTubeClientModule.clean()
-        RecordableFunction.recorded.run {
-            forEach { assertThat(it.actual).isEqualTo(it.expected) }
-            clear()
-        }
     }
 
     @Test
@@ -53,8 +54,8 @@ class YouTubeRepositoryTest {
         FakeDateTimeProviderModule.instant = Instant.EPOCH
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         FakeYouTubeClientModule.client = FakeRemoteSource(
-            videoList = spy(expected = 1) { listOf(video(1, channelDetail)) },
-            channelList = spy(expected = 1) { listOf(channelDetail) },
+            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail)) },
+            channelList = recorder.wrap(expected = 1) { listOf(channelDetail) },
         )
         TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
@@ -97,6 +98,52 @@ class YouTubeRepositoryTest {
     }
 
     @Test
+    fun fetchVideoList_videoFromRemoteAndChannelFromCache() = runTest {
+        // setup
+        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
+        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        FakeYouTubeClientModule.client = FakeRemoteSource(
+            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail)) },
+        )
+        hiltRule.inject()
+        localSource.addChannelList(listOf(channelDetail))
+        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
+        // exercise
+        val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
+        // verify
+        assertResultThat(actual).isSuccess { value ->
+            assertThat(value.first().channel.iconUrl).apply {
+                isNotNull()
+                isNotEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun fetchVideoList_videoFromRemoteAndChannelGetsException_returnsFailure() = runTest {
+        // setup
+        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
+        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        TestCoroutineScopeModule.testScheduler = testScheduler
+        FakeYouTubeClientModule.client = FakeRemoteSource(
+            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail)) },
+            channelList = recorder.wrap(expected = 1) {
+                throw YouTubeException(500, "Internal error")
+            },
+        )
+        hiltRule.inject()
+        localSource.addChannelList(listOf(channelDetail))
+        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1) + Duration.ofDays(1)
+        // exercise
+        val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
+        // verify
+        assertResultThat(actual).isFailure {
+            it.isInstanceOf(YouTubeException::class.java)
+        }
+    }
+
+    @Test
     fun fetchVideoList_updatedItemHasIconUrl() = runTest {
         // setup
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
@@ -104,7 +151,7 @@ class YouTubeRepositoryTest {
         val video = video(1, channelDetail)
         TestCoroutineScopeModule.testScheduler = testScheduler
         FakeYouTubeClientModule.client = FakeRemoteSource(
-            videoList = spy(expected = 1) { listOf(video) },
+            videoList = recorder.wrap(expected = 1) { listOf(video) },
         )
         hiltRule.inject()
         localSource.addChannelList(listOf(channelDetail))
@@ -159,23 +206,3 @@ interface FakeRemoteSourceModule : FakeYouTubeClientModule
 interface FakeDbModule : InMemoryDbModule
 interface FakeCoroutineScopeModule : TestCoroutineScopeModule
 interface FakeClockModule : FakeDateTimeProviderModule
-
-interface RecordableFunction<T, R> : (T) -> R {
-    val actual: Int
-    val expected: Int
-
-    companion object {
-        val recorded = mutableListOf<RecordableFunction<*, *>>()
-
-        fun <T, R> spy(expected: Int, body: (T) -> R): RecordableFunction<T, R> =
-            object : RecordableFunction<T, R> {
-                private var _count: Int = 0
-                override val actual: Int get() = _count
-                override val expected: Int get() = expected
-                override fun invoke(p1: T): R {
-                    _count++
-                    return body(p1)
-                }
-            }.also { recorded.add(it) }
-    }
-}

@@ -26,10 +26,13 @@ class ResultSubject<T>(
         }
     }
 
-    fun isFailure() {
+    fun isFailure(subjectScope: ((ThrowableSubject) -> Unit)? = null) {
         check("isFailure").that(actual?.isFailure).isTrue()
+        if (actual?.isFailure == true) {
+            subjectScope?.invoke(throwable())
+        }
     }
 
     fun value(): Subject = check("value").that(actual?.getOrNull())
-    fun throwable(): ThrowableSubject = check("throwable").that(actual?.exceptionOrNull())
+    private fun throwable(): ThrowableSubject = check("throwable").that(actual?.exceptionOrNull())
 }

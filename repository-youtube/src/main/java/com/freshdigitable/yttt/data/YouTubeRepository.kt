@@ -200,7 +200,7 @@ class YouTubeRepository @Inject constructor(
         if (needed.isEmpty()) {
             return Result.success(cache.values.toList())
         }
-        return remoteSource.fetchVideoList(needed).map { v ->
+        return remoteSource.fetchVideoList(needed).mapCatching { v ->
             val needsChannel = v.filter {
                 it.channel.iconUrl.isNullOrEmpty() && cache[it.id]?.channel?.iconUrl.isNullOrEmpty()
             }
