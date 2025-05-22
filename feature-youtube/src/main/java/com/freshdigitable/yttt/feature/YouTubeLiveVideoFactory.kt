@@ -87,6 +87,6 @@ internal abstract class YouTubeLiveVideo<T : LiveVideo<T>>(
 internal fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
     id = id.mapTo(),
     title = title,
-    iconUrl = iconUrl ?: "",
+    iconUrl = iconUrl,
     platform = YouTube,
 )

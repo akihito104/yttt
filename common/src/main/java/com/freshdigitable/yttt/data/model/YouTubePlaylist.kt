@@ -17,7 +17,7 @@ interface YouTubePlaylistItem {
     val id: Id
     val playlistId: YouTubePlaylist.Id
     val title: String
-    val channel: YouTubeChannel
+    val channel: YouTubeChannelTitle
     val thumbnailUrl: String
     val videoId: YouTubeVideo.Id
     val description: String

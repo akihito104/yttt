@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.data.source.remote.YouTubeVideoRemote
+import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
@@ -83,6 +84,7 @@ class YouTubeRepositoryTest {
         hiltRule.inject()
         localSource.addChannelList(listOf(channelDetail))
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
+            override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
             override val updatableAt: Instant get() = Instant.ofEpochMilli(1000)
         }))
@@ -156,6 +158,7 @@ class YouTubeRepositoryTest {
         hiltRule.inject()
         localSource.addChannelList(listOf(channelDetail))
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
+            override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
             override val updatableAt: Instant get() = Instant.ofEpochMilli(1000)
         }))
@@ -195,11 +198,15 @@ private class FakeRemoteSource(
     val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
     val channelList: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
 ) : FakeYouTubeClient() {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
-        NetworkResponse.create(videoList!!.invoke(ids))
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+        logD { "fetchVideoList: $ids" }
+        return NetworkResponse.create(videoList!!.invoke(ids))
+    }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
-        NetworkResponse.create(channelList!!.invoke(ids))
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
+        logD { "fetchChannelList: $ids" }
+        return NetworkResponse.create(channelList!!.invoke(ids))
+    }
 }
 
 interface FakeRemoteSourceModule : FakeYouTubeClientModule

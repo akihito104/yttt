@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelAddition
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
@@ -43,6 +44,13 @@ internal data class YouTubeChannelTable(
         override suspend fun deleteTable()
     }
 }
+
+internal class YouTubeChannelTitleDb(
+    @ColumnInfo(name = "id")
+    override val id: YouTubeChannel.Id,
+    @ColumnInfo(name = "title")
+    override val title: String,
+) : YouTubeChannelTitle
 
 @Entity(
     tableName = "channel_addition",

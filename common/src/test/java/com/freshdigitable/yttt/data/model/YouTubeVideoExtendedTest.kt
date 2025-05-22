@@ -79,6 +79,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(title = "changed title") {
+                override val channel: YouTubeChannel get() = old.channel
                 override val isFreeChat: Boolean = true
                 override val updatableAt: Instant = Instant.EPOCH
             }
@@ -182,6 +183,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(title = "changed title") {
+                override val channel: YouTubeChannel get() = old.channel
                 override val isFreeChat: Boolean = true
                 override val updatableAt: Instant = Instant.EPOCH
             }
@@ -270,6 +272,7 @@ class YouTubeVideoExtendedTest {
             // setup
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE) {
+                override val channel: YouTubeChannel get() = old.channel
                 override val isFreeChat: Boolean = false
                 override val updatableAt: Instant = Instant.EPOCH
             }
@@ -384,6 +387,7 @@ internal data class YouTubeVideoImpl(
 
 internal fun YouTubeVideoImpl.extended(isFreeChat: Boolean): YouTubeVideoExtended =
     object : YouTubeVideoExtended, YouTubeVideo by this {
+        override val channel: YouTubeChannel get() = this@extended.channel
         override val isFreeChat: Boolean = isFreeChat
         override val updatableAt: Instant = Instant.EPOCH
     }

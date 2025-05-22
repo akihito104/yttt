@@ -153,7 +153,7 @@ private fun MultiChannelContent(item: YouTubeChannel, modifier: Modifier = Modif
             modifier = Modifier.padding(vertical = 8.dp),
         ) {
             ImageLoadableView.UserIcon(
-                url = item.iconUrl ?: "",
+                url = item.iconUrl,
                 size = 48.dp,
             )
         }
