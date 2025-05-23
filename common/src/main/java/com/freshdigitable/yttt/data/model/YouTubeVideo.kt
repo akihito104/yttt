@@ -18,7 +18,7 @@ import java.time.Instant
 interface YouTubeVideo {
     val id: Id
     val title: String
-    val channel: YouTubeChannel
+    val channel: YouTubeChannelTitle
     val thumbnailUrl: String
     val scheduledStartDateTime: Instant?
     val scheduledEndDateTime: Instant?
@@ -72,6 +72,7 @@ interface YouTubeVideo {
 }
 
 interface YouTubeVideoExtended : YouTubeVideo, YouTubeVideoUpdatable {
+    override val channel: YouTubeChannel
     val isFreeChat: Boolean?
     val isThumbnailUpdatable: Boolean get() = false
 
@@ -126,10 +127,12 @@ interface YouTubeVideoUpdatable {
 
 private class YouTubeVideoExtendedImpl(
     private val old: YouTubeVideoExtended?,
-    video: YouTubeVideo,
+    private val video: YouTubeVideo,
     private val _isFreeChat: Boolean?,
     private val fetchedAt: Instant,
 ) : YouTubeVideoExtended, YouTubeVideo by video {
+    override val channel: YouTubeChannel
+        get() = old?.channel?.update(video.channel) ?: video.channel.toChannel()
     override val isFreeChat: Boolean
         get() = _isFreeChat
             ?: if (old?.title == title) {
@@ -169,5 +172,19 @@ private class YouTubeVideoExtendedImpl(
                 _isFreeChat = true,
                 fetchedAt = this.fetchedAt,
             )
+
+        private fun YouTubeChannelTitle.toChannel(): YouTubeChannel {
+            if (this is YouTubeChannel) return this
+            return YouTubeChannelEntity(id = id, title = title, iconUrl = "")
+        }
+
+        private fun YouTubeChannel.update(title: YouTubeChannelTitle): YouTubeChannel {
+            val icon = if ((title as? YouTubeChannel)?.iconUrl.isNullOrEmpty()) {
+                this.iconUrl
+            } else {
+                (title as? YouTubeChannel)?.iconUrl ?: ""
+            }
+            return YouTubeChannelEntity(id = id, title = title.title, iconUrl = icon)
+        }
     }
 }

@@ -1,10 +1,12 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import androidx.annotation.VisibleForTesting
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
+import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -219,16 +221,16 @@ private data class YouTubeChannelLogEntity(
         get() = activity.snippet.type
 }
 
-private class YouTubeVideoRemote(
+@VisibleForTesting
+internal class YouTubeVideoRemote(
     private val video: Video,
 ) : YouTubeVideo {
     private val liveStreamingDetails: VideoLiveStreamingDetails? get() = video.liveStreamingDetails
     private val snippet get() = requireNotNull(video.snippet) { "json: $video" }
     override val id: YouTubeVideo.Id = YouTubeVideo.Id(video.id)
-    override val channel: YouTubeChannel = YouTubeChannelEntity(
+    override val channel: YouTubeChannelTitle = YouTubeChannelTitleImpl(
         id = YouTubeChannel.Id(snippet.channelId),
         title = snippet.channelTitle,
-        iconUrl = "",
     )
     override val title: String get() = snippet.title
     override val scheduledStartDateTime: Instant? =
@@ -377,11 +379,10 @@ private class PlaylistItemRemote(
     override val title: String get() = item.snippet.title
     override val thumbnailUrl: String get() = item.snippet.thumbnails?.url ?: ""
     override val videoId: YouTubeVideo.Id get() = YouTubeVideo.Id(item.contentDetails.videoId)
-    override val channel: YouTubeChannel
-        get() = YouTubeChannelEntity(
+    override val channel: YouTubeChannelTitle
+        get() = YouTubeChannelTitleImpl(
             id = YouTubeChannel.Id(item.snippet.channelId),
             title = item.snippet.channelTitle,
-            iconUrl = "",
         )
     override val description: String = item.snippet.description
     override val videoOwnerChannelId: YouTubeChannel.Id? =
@@ -389,3 +390,8 @@ private class PlaylistItemRemote(
     override val publishedAt: Instant get() = item.snippet.publishedAt.toInstant()
     override fun toString(): String = item.toPrettyString()
 }
+
+private class YouTubeChannelTitleImpl(
+    override val id: YouTubeChannel.Id,
+    override val title: String,
+) : YouTubeChannelTitle

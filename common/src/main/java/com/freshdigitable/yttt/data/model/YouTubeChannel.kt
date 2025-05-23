@@ -3,9 +3,12 @@ package com.freshdigitable.yttt.data.model
 import java.math.BigInteger
 import java.time.Instant
 
-interface YouTubeChannel {
-    val id: Id
+interface YouTubeChannelTitle {
+    val id: YouTubeChannel.Id
     val title: String
+}
+
+interface YouTubeChannel : YouTubeChannelTitle {
     val iconUrl: String
 
     data class Id(override val value: String) : YouTubeId
@@ -30,7 +33,10 @@ interface YouTubeChannelAddition {
     val uploadedPlayList: YouTubePlaylist.Id?
 }
 
-interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition
+interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition {
+    override val iconUrl: String
+}
+
 interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {
     val id: Id
     val channelId: YouTubeChannel.Id

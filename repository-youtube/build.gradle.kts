@@ -13,7 +13,7 @@ android {
     defaultConfig {
         minSdk = 26
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.freshdigitable.yttt.test.CustomTestRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -51,6 +51,12 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
 
     testImplementation(libs.junit)
+    androidTestImplementation(project(":common-test"))
+    androidTestImplementation(project(":image-loadable-coil"))
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.truth)
     androidTestImplementation(libs.androidx.espresso.core)
+    kspAndroidTest(libs.hilt.compiler)
+    androidTestImplementation(libs.hilt.android.testing)
 }

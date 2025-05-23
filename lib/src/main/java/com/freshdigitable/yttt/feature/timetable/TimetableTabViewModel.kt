@@ -134,12 +134,4 @@ class TimetableContextMenuDelegate @AssistedInject constructor(
     fun tearDownMenu() {
         _selectedLiveVideo.value = null
     }
-
-    suspend fun findMenuItems(videoId: LiveVideo.Id): List<TimetableMenuItem> {
-        val useCase = checkNotNull(findLiveVideoMap[videoId.type.java])
-        return useCase(videoId)
-            .onFailureWithSnackbarMessage(sender)
-            .map { v -> v?.let { menuSelector.findMenuItems(it) } ?: emptyList() }
-            .getOrDefault(emptyList())
-    }
 }

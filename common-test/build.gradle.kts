@@ -37,6 +37,7 @@ android {
 dependencies {
     implementation(project(":common"))
     implementation(project(":data-local-room"))
+    implementation(project(":repository-youtube"))
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.room.runtime)

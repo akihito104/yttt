@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.test
 
 import com.google.common.truth.FailureMetadata
 import com.google.common.truth.Subject
+import com.google.common.truth.Subject.Factory
 import com.google.common.truth.ThrowableSubject
 import com.google.common.truth.Truth
 
@@ -18,14 +19,20 @@ class ResultSubject<T>(
             Truth.assertAbout(factory<T>()).that(actual)
     }
 
-    fun isSuccess() {
+    fun isSuccess(valueScope: ((T) -> Unit)? = null) {
         check("isSuccess").that(actual?.isSuccess).isTrue()
+        if (actual?.isSuccess == true) {
+            valueScope?.invoke(actual.getOrThrow())
+        }
     }
 
-    fun isFailure() {
+    fun isFailure(subjectScope: ((ThrowableSubject) -> Unit)? = null) {
         check("isFailure").that(actual?.isFailure).isTrue()
+        if (actual?.isFailure == true) {
+            subjectScope?.invoke(throwable())
+        }
     }
 
     fun value(): Subject = check("value").that(actual?.getOrNull())
-    fun throwable(): ThrowableSubject = check("throwable").that(actual?.exceptionOrNull())
+    private fun throwable(): ThrowableSubject = check("throwable").that(actual?.exceptionOrNull())
 }

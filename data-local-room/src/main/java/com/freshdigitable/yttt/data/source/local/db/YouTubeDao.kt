@@ -159,7 +159,7 @@ private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
         viewsCount = viewsCount,
     )
 
-private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
+internal fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
     id = id, title = title, iconUrl = iconUrl,
 )
 

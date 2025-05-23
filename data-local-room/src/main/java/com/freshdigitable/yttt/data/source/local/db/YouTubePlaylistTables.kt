@@ -169,7 +169,7 @@ internal data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "title")
     override val title: String,
     @Embedded(prefix = "channel_")
-    override val channel: YouTubeChannelTable,
+    override val channel: YouTubeChannelTitleDb,
     @ColumnInfo(name = "thumbnail_url")
     override val thumbnailUrl: String,
     @ColumnInfo(name = "video_id")
@@ -184,7 +184,7 @@ internal data class YouTubePlaylistItemDb(
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT p.*, c.icon AS channel_icon, c.title AS channel_title FROM playlist_item AS p " +
+            "SELECT p.*, c.id AS channel_id, c.title AS channel_title FROM playlist_item AS p " +
                 "INNER JOIN channel AS c ON c.id = p.channel_id WHERE p.playlist_id = :id"
         )
         suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDb>

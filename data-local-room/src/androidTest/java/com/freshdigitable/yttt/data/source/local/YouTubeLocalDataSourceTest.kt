@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.li
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
+import com.freshdigitable.yttt.data.source.local.db.toDbEntity
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -56,7 +57,7 @@ class YouTubeLocalDataSourceTest {
                 YouTubeVideoEntity.archivedStream(),
             )
             val video = unfinished + inactive
-            val channels = video.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
+            val channels = video.map { it.channel.toDbEntity() }.distinctBy { it.id }
             dao.addChannels(channels)
             // exercise
             dataSource.addVideo(video)
@@ -115,7 +116,7 @@ class YouTubeLocalDataSourceTest {
                     videoId = YouTubeVideo.Id("video"),
                 ),
             )
-            val channel = items.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
+            val channel = items.map { it.channel.toDbEntity() }.distinctBy { it.id }
             dao.addChannels(channel)
             val updatable = YouTubePlaylistWithItems.newPlaylist(
                 playlist = playlist(playlistId),
@@ -153,7 +154,7 @@ class YouTubeLocalDataSourceTest {
 
         @Before
         fun setup() = rule.runWithLocalSource {
-            val channels = video.map { it.channel as YouTubeChannelTable }.distinctBy { it.id }
+            val channels = video.map { it.channel.toDbEntity() }.distinctBy { it.id }
             dao.addChannels(channels)
             dataSource.addVideo(video)
         }
@@ -340,7 +341,7 @@ class YouTubeLocalDataSourceTest {
                 fetchedAt = dateTimeProvider.now(),
             )
             dataSource.updatePlaylistWithItems(updatable)
-            val channels = videos.map { it.channel as YouTubeChannelTable }
+            val channels = videos.map { it.channel.toDbEntity() }
                 .distinctBy { it.id }.toList()
             dao.addChannels(channels)
             dataSource.addVideo(videos)

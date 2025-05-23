@@ -30,7 +30,6 @@ import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
 import javax.inject.Singleton
 
-@VisibleForTesting
 @Module
 @InstallIn(SingletonComponent::class)
 interface YouTubeModule {

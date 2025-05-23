@@ -31,7 +31,6 @@ internal interface TwitchAccountDataSourceModule {
     @Binds
     @IntoMap
     @LivePlatformKey(Twitch::class)
-    @LivePlatformQualifier(Twitch::class)
     fun bindAccountRepository(repository: TwitchAccountRepository): AccountRepository
 }
 
