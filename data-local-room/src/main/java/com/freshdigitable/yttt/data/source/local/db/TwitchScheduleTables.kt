@@ -118,7 +118,7 @@ internal class TwitchChannelScheduleStream(
     @Embedded("category_") override val category: TwitchCategoryTable?,
 ) : TwitchChannelSchedule.Stream {
     @androidx.room.Dao
-    interface Dao {
+    internal interface Dao {
         companion object {
             private const val SQL_STREAM_SCHEDULE =
                 "SELECT s.id, s.start_time, s.end_time, s.title, s.canceled_until, s.is_recurring, s.category_id, " +
@@ -205,7 +205,7 @@ internal class TwitchLiveScheduleDb(
     override val thumbnailUrlBase: String get() = schedule.category?.artUrlBase ?: ""
 
     @androidx.room.Dao
-    interface Dao {
+    internal interface Dao {
         companion object {
             private const val SQL_LIVE_SCHEDULE =
                 "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base, " +

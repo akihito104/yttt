@@ -35,6 +35,9 @@ android {
     room {
         schemaDirectory("$projectDir/schemas")
     }
+    packaging {
+        resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
+    }
 }
 
 kotlin {

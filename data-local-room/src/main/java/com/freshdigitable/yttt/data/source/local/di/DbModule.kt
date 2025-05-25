@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local.di
 
 import android.content.Context
+import androidx.room.Room
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
@@ -20,16 +21,33 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import org.jetbrains.annotations.VisibleForTesting
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DbModule {
+internal object DbModule {
     @Singleton
     @Provides
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
-        AppDatabase.create(context)
+    internal fun provideDatabase(
+        @ApplicationContext context: Context,
+        flag: DbFlagModule.Flag? = null,
+    ): AppDatabase =
+        if (flag == null) AppDatabase.create(context) else AppDatabase.createInMemory(context)
 }
+
+@VisibleForTesting
+@Module
+@InstallIn(SingletonComponent::class)
+object DbFlagModule {
+    enum class Flag { InMemory }
+
+    @get:Provides
+    internal val provideFlag: Flag? get() = null
+}
+
+private fun AppDatabase.Companion.createInMemory(context: Context) =
+    Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
 
 @Module
 @InstallIn(SingletonComponent::class)
