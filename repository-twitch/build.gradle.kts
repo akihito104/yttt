@@ -1,21 +1,15 @@
 import java.io.FileInputStream
 import java.util.Properties
 
-@Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.yttt.android.library)
+    alias(libs.plugins.yttt.hilt)
 }
 
 android {
     namespace = "com.freshdigitable.yttt.data"
-    compileSdk = 34
 
     defaultConfig {
-        minSdk = 26
-
         testInstrumentationRunner = "com.freshdigitable.yttt.test.CustomTestRunner"
         consumerProguardFiles("consumer-rules.pro")
 
@@ -50,28 +44,20 @@ android {
     }
 }
 
-kotlin {
-    jvmToolchain(17)
-}
-
 dependencies {
     api(project(":common"))
     implementation(project(":data-local-room"))
 
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.paging.runtime)
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
     implementation(libs.retrofit)
     ksp(libs.retrofit.responseTypeKeeper)
     implementation(libs.converter.gson)
-    implementation(libs.androidx.datastore.preferences)
-    implementation(libs.androidx.paging.runtime)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
-
     androidTestImplementation(project(":repository-appuser"))
     androidTestImplementation(project(":image-loadable-coil"))
     androidTestImplementation(project(":common-test"))

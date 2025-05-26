@@ -1,5 +1,6 @@
 [versions]
 androidGradlePlugin = "8.10.0"
+androidTools = "31.10.0"
 assertjCore = "3.26.3"
 kotlin = "2.1.21"
 ksp = "2.1.21-2.0.1"
@@ -9,7 +10,6 @@ licensee = "1.8.0"
 oss-license-plugin = "0.10.6"
 oss-license-lib = "17.1.0"
 
-compose-compiler-extension = "1.5.15"
 androidxComposeBom = "2025.02.00"
 compose-runtime = "1.7.8"
 compose-animation = "1.7.8"
@@ -112,6 +112,13 @@ okhttp = { module = "com.squareup.okhttp3:okhttp" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor" }
 oss-lisence-lib = { module = "com.google.android.gms:play-services-oss-licenses", version.ref = "oss-license-lib" }
 
+## for build-logic
+android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "androidGradlePlugin" }
+android-tools-common = { group = "com.android.tools", name = "common", version.ref = "androidTools" }
+compose-gradlePlugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
+ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
@@ -122,3 +129,8 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 android-room = { id = "androidx.room", version.ref = "room-ktx" }
 licensee = { id = "app.cash.licensee", version.ref = "licensee" }
 oss-license-plugin = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "oss-license-plugin" }
+## for build-logic
+yttt-android-application = { id = "yttt.android.application" }
+yttt-android-library = { id = "yttt.android.library" }
+yttt-android-library-compose = { id = "yttt.android.library.compose" }
+yttt-hilt = { id = "yttt.hilt" }
