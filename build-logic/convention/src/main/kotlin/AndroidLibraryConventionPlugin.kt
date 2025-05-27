@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.applyAndroidLibrary
 import com.freshdigitable.yttt.applyComposeCompiler
 import com.freshdigitable.yttt.applyKotlinAndroid
 import com.freshdigitable.yttt.configureAndroidSdk
+import com.freshdigitable.yttt.configureDesugaring
 import com.freshdigitable.yttt.configureKotlin
 import com.freshdigitable.yttt.debugImplementation
 import com.freshdigitable.yttt.implementation
@@ -26,6 +27,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         extensions.configure<LibraryExtension> {
             configureAndroidSdk(this)
             configureKotlin<KotlinAndroidProjectExtension>()
+            configureDesugaring(this)
         }
     }
 }

@@ -1,8 +1,10 @@
 package com.freshdigitable.yttt
 
+import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.provideDelegate
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinBaseExtension
@@ -23,3 +25,14 @@ inline fun <reified T : KotlinBaseExtension> Project.configureKotlin() = configu
         )
     }
 }
+
+fun Project.configureDesugaring(commonExtension: CommonExtension<*, *, *, *, *, *>) =
+    commonExtension.apply {
+        compileOptions.isCoreLibraryDesugaringEnabled = true
+        packaging {
+            resources.excludes.add("META-INF/INDEX.LIST")
+        }
+        dependencies {
+            add("coreLibraryDesugaring", libs.findLibrary("desugarJdkLibs").get())
+        }
+    }
