@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
-    kotlin("plugin.serialization") version libs.versions.kotlin
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {

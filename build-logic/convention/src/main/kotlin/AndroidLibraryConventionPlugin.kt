@@ -1,6 +1,15 @@
 import com.android.build.api.dsl.LibraryExtension
+import com.freshdigitable.yttt.androidTestImplementation
+import com.freshdigitable.yttt.androidxComposeBom
+import com.freshdigitable.yttt.androidxComposeUiTooling
+import com.freshdigitable.yttt.androidxComposeUiToolingPreview
+import com.freshdigitable.yttt.applyAndroidLibrary
+import com.freshdigitable.yttt.applyComposeCompiler
+import com.freshdigitable.yttt.applyKotlinAndroid
 import com.freshdigitable.yttt.configureAndroidSdk
 import com.freshdigitable.yttt.configureKotlin
+import com.freshdigitable.yttt.debugImplementation
+import com.freshdigitable.yttt.implementation
 import com.freshdigitable.yttt.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -11,8 +20,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 class AndroidLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         with(pluginManager) {
-            apply("com.android.library")
-            apply("org.jetbrains.kotlin.android")
+            applyAndroidLibrary()
+            applyKotlinAndroid()
         }
         extensions.configure<LibraryExtension> {
             configureAndroidSdk(this)
@@ -22,21 +31,20 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
 }
 
 class AndroidLibraryComposeConventionPlugin : Plugin<Project> {
-    private val libraryPlugin = AndroidLibraryConventionPlugin()
     override fun apply(target: Project) = with(target) {
-        libraryPlugin.apply(this)
-        with(pluginManager) {
-            apply("org.jetbrains.kotlin.plugin.compose")
-        }
+        AndroidLibraryConventionPlugin().apply(this)
+
+        pluginManager.applyComposeCompiler()
+
         extensions.configure<LibraryExtension> {
             buildFeatures.compose = true
 
             dependencies {
-                val bom = libs.findLibrary("androidx-compose-bom").get()
-                add("implementation", platform(bom))
-                add("androidTestImplementation", platform(bom))
-                add("implementation", libs.findLibrary("androidx-compose-ui-tooling-preview").get())
-                add("debugImplementation", libs.findLibrary("androidx-compose-ui-tooling").get())
+                val bom = libs.androidxComposeBom
+                implementation(platform(bom))
+                androidTestImplementation(platform(bom))
+                implementation(libs.androidxComposeUiToolingPreview)
+                debugImplementation(libs.androidxComposeUiTooling)
             }
         }
     }

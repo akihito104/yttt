@@ -127,6 +127,7 @@ hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt-andr
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-room = { id = "androidx.room", version.ref = "room-ktx" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 licensee = { id = "app.cash.licensee", version.ref = "licensee" }
 oss-license-plugin = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "oss-license-plugin" }
 ## for build-logic
