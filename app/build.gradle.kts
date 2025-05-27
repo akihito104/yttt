@@ -63,6 +63,7 @@ dependencies {
 licensee {
     allow("Apache-2.0")
     allow("MIT")
+    allow("BSD-3-Clause")
     allowUrl("https://developer.android.com/studio/terms.html")
     ignoreDependencies("junit")
     ignoreDependencies("org.hamcrest")
