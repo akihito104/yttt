@@ -3,9 +3,11 @@ import com.freshdigitable.yttt.applyAndroidApplication
 import com.freshdigitable.yttt.applyKotlinAndroid
 import com.freshdigitable.yttt.configureAndroidSdk
 import com.freshdigitable.yttt.configureKotlin
+import com.freshdigitable.yttt.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.dependencies
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 
 class AndroidApplicationConventionPlugin : Plugin<Project> {
@@ -19,6 +21,14 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             configureAndroidSdk(this)
             configureKotlin<KotlinAndroidProjectExtension>()
             testOptions.animationsDisabled = true
+
+            compileOptions.isCoreLibraryDesugaringEnabled = true
+            packaging {
+                resources.excludes.add("META-INF/INDEX.LIST")
+            }
+            dependencies {
+                add("coreLibraryDesugaring", libs.findLibrary("desugarJdkLibs").get())
+            }
         }
     }
 }
