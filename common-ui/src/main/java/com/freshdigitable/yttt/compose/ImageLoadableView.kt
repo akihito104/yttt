@@ -180,7 +180,7 @@ object ImageLoadableView {
             postTranslate(dx, dy)
         }
         val provider = bitmapProvider ?: { s ->
-            createBitmap(s.width.toInt(), s.height.toInt(), input.config)
+            createBitmap(s.width.toInt(), s.height.toInt(), input.config ?: Bitmap.Config.ARGB_8888)
         }
         return provider(scaledSize).apply {
             setHasAlpha(input.hasAlpha())

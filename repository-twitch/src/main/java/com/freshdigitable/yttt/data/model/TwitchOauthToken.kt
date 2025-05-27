@@ -9,11 +9,11 @@ data class TwitchOauthToken(
     val tokenType: String,
 ) {
     companion object {
-        private const val paramTokenType = "token_type"
-        private const val paramState = "state"
-        private const val paramAccessToken = "access_token"
-        private const val paramScope = "scope"
-        private val params = setOf(paramTokenType, paramState, paramAccessToken, paramScope)
+        private const val PARAM_TOKEN_TYPE = "token_type"
+        private const val PARAM_STATE = "state"
+        private const val PARAM_ACCESS_TOKEN = "access_token"
+        private const val PARAM_SCOPE = "scope"
+        private val params = setOf(PARAM_TOKEN_TYPE, PARAM_STATE, PARAM_ACCESS_TOKEN, PARAM_SCOPE)
 
         fun create(url: String): TwitchOauthToken {
             check(url.startsWith(BuildConfig.TWITCH_REDIRECT_URI)) { "unsupported url" }
@@ -26,10 +26,10 @@ data class TwitchOauthToken(
                 query.first { q -> q.startsWith("$p=") }.split("=").last()
             }
             return TwitchOauthToken(
-                tokenType = requireNotNull(values[paramTokenType]),
-                state = requireNotNull(values[paramState]),
-                accessToken = requireNotNull(values[paramAccessToken]),
-                scope = requireNotNull(values[paramScope]),
+                tokenType = requireNotNull(values[PARAM_TOKEN_TYPE]),
+                state = requireNotNull(values[PARAM_STATE]),
+                accessToken = requireNotNull(values[PARAM_ACCESS_TOKEN]),
+                scope = requireNotNull(values[PARAM_SCOPE]),
             )
         }
     }

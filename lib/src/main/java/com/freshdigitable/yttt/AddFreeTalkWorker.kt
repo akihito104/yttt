@@ -2,6 +2,7 @@ package com.freshdigitable.yttt
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -21,7 +22,7 @@ class AddFreeTalkWorker @AssistedInject constructor(
 ) : CoroutineWorker(appContext, workerParams) {
     override suspend fun doWork(): Result {
         val text = inputData.uri ?: return Result.failure()
-        val url = Uri.parse(text)
+        val url = text.toUri()
         if (!url.isYouTubeUri) {
             logD { "handleFreeTalk: ${url.scheme}, ${url.host}, ${url.pathSegments}" }
             return Result.failure()
