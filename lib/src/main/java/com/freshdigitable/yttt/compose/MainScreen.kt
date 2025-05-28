@@ -242,7 +242,7 @@ class MainViewModel @AssistedInject constructor(
         listOf(
             flowOf(DrawerMenuItem.SUBSCRIPTION.toListItem()),
             accountRepository.isTwitchTokenInvalidated.map {
-                DrawerMenuItem.AUTH_STATUS.toListItem(it ?: false)
+                DrawerMenuItem.AUTH_STATUS.toListItem(it == true)
             },
             flowOf(DrawerMenuItem.APP_SETTING.toListItem()),
             flowOf(DrawerMenuItem.OSS_LICENSE.toListItem()),
@@ -255,7 +255,7 @@ class MainViewModel @AssistedInject constructor(
     val sender get() = messageBus.getSender()
     val snackbarMessage = merge(
         messageBus.messageFlow.map { SnackbarAction.NopAction(it) },
-        accountRepository.isTwitchTokenInvalidated.filter { it ?: false }
+        accountRepository.isTwitchTokenInvalidated.filter { it == true }
             .map {
                 SnackbarAction.NavigationAction(
                     SnackbarMessage(

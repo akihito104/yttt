@@ -17,7 +17,6 @@ import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.TwitchDataSource
-import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.db.TwitchLiveSubscription
 import com.freshdigitable.yttt.data.source.remote.Broadcaster
 import com.freshdigitable.yttt.data.source.remote.ChannelStreamScheduleResponse
@@ -37,7 +36,6 @@ import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.google.common.truth.FailureMetadata
 import com.google.common.truth.Subject
-import com.google.common.truth.Subject.Factory
 import com.google.common.truth.ThrowableSubject
 import com.google.common.truth.Truth
 import com.google.common.truth.Truth.assertThat
@@ -71,8 +69,6 @@ class TwitchRemoteMediatorTest {
     @Inject
     internal lateinit var pagerFactory: TwitchSubscriptionPagerFactory
 
-    @Inject
-    lateinit var db: AppDatabase
     private val broadcaster = broadcaster(100)
     private val followings =
         TwitchFollowings.createAtFetched(authUser.id, broadcaster, Instant.ofEpochMilli(20))
@@ -98,7 +94,6 @@ class TwitchRemoteMediatorTest {
     fun tearDown() = runTest {
         FakeDateTimeProviderModule.instant = null
         FakeRemoteSourceModule.clear()
-        db.close()
     }
 
     private val sut: Pager<Int, LiveSubscription> by lazy {

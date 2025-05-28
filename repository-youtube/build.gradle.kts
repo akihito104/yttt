@@ -1,18 +1,12 @@
-@Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.hilt.android)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.yttt.android.library)
+    alias(libs.plugins.yttt.hilt)
 }
 
 android {
     namespace = "com.freshdigitable.yttt.data.source.remote"
-    compileSdk = 34
 
     defaultConfig {
-        minSdk = 26
-
         testInstrumentationRunner = "com.freshdigitable.yttt.test.CustomTestRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -29,10 +23,6 @@ android {
     }
 }
 
-kotlin {
-    jvmToolchain(17)
-}
-
 dependencies {
     api(project(":common"))
     implementation(project(":data-local-room"))
@@ -45,8 +35,6 @@ dependencies {
     }
     implementation(libs.play.services.base)
     implementation(libs.play.services.auth)
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.paging.runtime)
 

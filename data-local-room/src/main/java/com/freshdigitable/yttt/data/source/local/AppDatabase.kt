@@ -122,7 +122,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     TwitchCategoryIdConverter::class,
     CsvConverter::class,
 )
-abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProviders {
+internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProviders {
     @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
     internal class MigrateRemoveVideoVisible : AutoMigrationSpec
 

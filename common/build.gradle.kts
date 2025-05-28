@@ -1,27 +1,15 @@
-@Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.hilt.android)
-    alias(libs.plugins.ksp)
-    kotlin("plugin.serialization") version libs.versions.kotlin
+    alias(libs.plugins.yttt.android.library.compose)
+    alias(libs.plugins.yttt.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
     namespace = "com.freshdigitable.yttt.data.model"
-    compileSdk = 34
 
     defaultConfig {
-        minSdk = 26
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
-    }
-    buildFeatures {
-        compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = libs.versions.compose.compiler.extension.get()
     }
     buildTypes {
         release {
@@ -35,20 +23,12 @@ android {
     }
 }
 
-kotlin {
-    jvmToolchain(17)
-}
-
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.hilt.android)
     implementation(libs.kotlinx.serialization.json)
-    ksp(libs.hilt.compiler)
     implementation(libs.kermit)
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.runtime.android)
-    val composeBom = platform(libs.androidx.compose.bom)
-    implementation(composeBom)
     implementation(libs.androidx.compose.material3)
 
     implementation(platform(libs.okhttp.bom))

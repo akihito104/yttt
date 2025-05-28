@@ -154,7 +154,7 @@ internal class YouTubePlaylistWithItemSummariesDb(
     override val summary: List<YouTubePlaylistItemSummaryDb>,
 ) : YouTubePlaylistWithItemSummaries, Updatable by playlist {
     @androidx.room.Dao
-    interface Dao {
+    internal interface Dao {
         @Transaction
         @Query("SELECT * FROM playlist WHERE id = :id")
         suspend fun findPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummariesDb?
