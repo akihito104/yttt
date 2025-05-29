@@ -1,7 +1,10 @@
-package com.freshdigitable.yttt
+package com.freshdigitable.yttt.feature
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
@@ -11,11 +14,12 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.freshdigitable.yttt.data.YouTubeFacade
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.logD
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
 @HiltWorker
-class AddFreeTalkWorker @AssistedInject constructor(
+internal class AddFreeTalkWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val facade: YouTubeFacade,
@@ -52,5 +56,22 @@ class AddFreeTalkWorker @AssistedInject constructor(
         private val Uri.isYouTubeUri: Boolean
             get() = scheme == "https" && host?.endsWith("youtube.com") == true
                 && pathSegments.firstOrNull() == "live"
+    }
+}
+
+class AddStreamActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        logD { "onCreate: $intent" }
+        super.onCreate(savedInstanceState)
+        handleIntent(intent)
+
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        startActivity(intent)
+        finish()
+    }
+
+    private fun handleIntent(intent: Intent) {
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
+        AddFreeTalkWorker.enqueue(this, text)
     }
 }

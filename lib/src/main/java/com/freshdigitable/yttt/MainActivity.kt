@@ -26,7 +26,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         logD { "onCreate(${this}): ${intent.data}" }
         val startDestination = if (isOauthEvent()) LaunchNavRoute.Auth else LaunchNavRoute.Splash
-        handleFreeTalkIntent()
         setContent {
             AppTheme(dynamicColor = true) {
                 val navController = rememberNavController()
@@ -44,11 +43,6 @@ class MainActivity : AppCompatActivity() {
         logD { "onNewIntent: $intent" }
         super.onNewIntent(intent)
         twitchConsumer.consumeOAuthEvent(intent.data.toString())
-    }
-
-    private fun handleFreeTalkIntent() {
-        val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
-        AddFreeTalkWorker.enqueue(this, text)
     }
 
     private fun isOauthEvent(): Boolean {
