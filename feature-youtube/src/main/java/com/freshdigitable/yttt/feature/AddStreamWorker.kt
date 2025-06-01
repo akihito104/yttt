@@ -10,6 +10,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.freshdigitable.yttt.data.YouTubeFacade
@@ -17,9 +18,10 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.logD
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.Flow
 
 @HiltWorker
-internal class AddFreeTalkWorker @AssistedInject constructor(
+internal class AddStreamWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val facade: YouTubeFacade,
@@ -28,24 +30,27 @@ internal class AddFreeTalkWorker @AssistedInject constructor(
         val text = inputData.uri ?: return Result.failure()
         val url = text.toUri()
         if (!url.isYouTubeUri) {
-            logD { "handleFreeTalk: ${url.scheme}, ${url.host}, ${url.pathSegments}" }
+            logD { "handleUrl: ${url.scheme}, ${url.host}, ${url.pathSegments}" }
             return Result.failure()
         }
         val value = url.pathSegments[1] ?: return Result.failure()
-        logD { "handleFreeTalk: $value" }
+        logD { "handlePathParameter: $value" }
         val id = YouTubeVideo.Id(value)
-        facade.addFreeChatFromWorker(id)
-        return Result.success()
+        val res = facade.addVideoFromWorker(id)
+        return if (res.isSuccess) Result.success() else Result.failure()
     }
 
     companion object {
         private const val KEY_URI = "uri"
 
-        fun enqueue(context: Context, uri: String) {
-            val workReq = OneTimeWorkRequestBuilder<AddFreeTalkWorker>()
+        fun enqueue(context: Context, uri: String): Flow<WorkInfo?> {
+            val workReq = OneTimeWorkRequestBuilder<AddStreamWorker>()
                 .setInputData(getData(uri))
                 .build()
-            WorkManager.getInstance(context).enqueue(workReq)
+            return WorkManager.getInstance(context).run {
+                enqueue(workReq)
+                getWorkInfoByIdFlow(workReq.id)
+            }
         }
 
         private fun getData(uri: String): Data = Data.Builder()
@@ -72,6 +77,6 @@ class AddStreamActivity : AppCompatActivity() {
 
     private fun handleIntent(intent: Intent) {
         val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
-        AddFreeTalkWorker.enqueue(this, text)
+        AddStreamWorker.enqueue(this, text)
     }
 }

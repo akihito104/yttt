@@ -62,4 +62,5 @@ dependencies {
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.turbine)
+    androidTestImplementation(libs.androidx.work.testing)
 }

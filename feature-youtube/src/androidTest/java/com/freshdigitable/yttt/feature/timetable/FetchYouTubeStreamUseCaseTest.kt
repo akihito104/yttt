@@ -311,7 +311,7 @@ private fun FakeYouTubeClientModule.Companion.setup(
     .apply { setup(subscriptionCount, itemsPerPlaylist) }
     .also { client = it }
 
-private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : YouTubeVideo {
+internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : YouTubeVideo {
     override val id: YouTubeVideo.Id = YouTubeVideo.Id("${channel.id.value}-video_$id")
     override val channel: YouTubeChannel = channel
     override val liveBroadcastContent: YouTubeVideo.BroadcastType =
