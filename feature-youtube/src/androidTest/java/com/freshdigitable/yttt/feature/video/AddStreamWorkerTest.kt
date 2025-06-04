@@ -1,6 +1,7 @@
-package com.freshdigitable.yttt.feature
+package com.freshdigitable.yttt.feature.video
 
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.Configuration
@@ -11,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.feature.timetable.video
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.CallerVerifier
@@ -63,16 +65,11 @@ class AddStreamWorkerTest {
     }
 
     @Test
-    fun invalidUrl_stateIsFailed() = testScope.runTest {
-        // setup
-        hiltRule.inject()
-        val context = InstrumentationRegistry.getInstrumentation().context
-        WorkManagerTestInitHelper.initializeTestWorkManager(context, config)
+    fun invalidUrl_inputDataIsNull() = testScope.runTest {
         // exercise
-        val actual = AddStreamWorker.enqueue(context, "https://example.com/")
-            .firstOrNull { it?.state?.isFinished == true }
+        val data = AddStreamUseCase.Input.create("https://example.com/".toUri())
         // verify
-        assertThat(actual?.state).isEqualTo(WorkInfo.State.FAILED)
+        assertThat(data).isNull()
     }
 
     @Test
@@ -80,27 +77,70 @@ class AddStreamWorkerTest {
         // setup
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         val video = video(1, channelDetail)
-        FakeYouTubeClientModule.client = object : FakeYouTubeClient() {
-            override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
-                logD { "fetchVideoList: $ids" }
-                return NetworkResponse.create(listOf(video))
-            }
-
-            override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
-                logD { "fetchChannelList: $ids" }
-                return NetworkResponse.create(listOf(channelDetail))
-            }
-        }
+        FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
+            videoList = caller.wrap(expected = 1) { listOf(video) },
+            channelList = caller.wrap(expected = 1) { listOf(channelDetail) },
+        )
         hiltRule.inject()
+        initTestWorkManager()
+        val data =
+            AddStreamUseCase.Input.create("https://youtube.com/live/${video.id.value}".toUri())!!
+        val context = InstrumentationRegistry.getInstrumentation().context
+        // exercise
+        val actual = AddStreamWorker.enqueue(context, data)
+            .firstOrNull { it?.state?.isFinished == true }
+        // verify
+        assertThat(actual?.state).isEqualTo(WorkInfo.State.SUCCEEDED)
+        val actualVideo = localSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
+        assertThat(actualVideo.isFreeChat).isFalse()
+    }
+
+    @Inject
+    lateinit var localSource: YouTubeDataSource.Local
+
+    @Test
+    fun validUrlForFreeChat_stateIsSucceeded() = testScope.runTest {
+        // setup
+        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val video = video(1, channelDetail)
+        FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
+            videoList = caller.wrap(expected = 1) { listOf(video) },
+            channelList = caller.wrap(expected = 1) { listOf(channelDetail) },
+        )
+        hiltRule.inject()
+        initTestWorkManager()
+        val uri = "https://youtube.com/live/${video.id.value}".toUri()
+        val data = AddStreamUseCase.Input.create(uri, true)!!
+        val context = InstrumentationRegistry.getInstrumentation().context
+        // exercise
+        val actual = AddStreamWorker.enqueue(context, data)
+            .firstOrNull { it?.state?.isFinished == true }
+        // verify
+        assertThat(actual?.state).isEqualTo(WorkInfo.State.SUCCEEDED)
+        val actualVideo = localSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
+        assertThat(actualVideo.isFreeChat).isTrue()
+    }
+
+    private fun initTestWorkManager() {
         val context = InstrumentationRegistry.getInstrumentation().context
         WorkManagerTestInitHelper.initializeTestWorkManager(
             context, config, WorkManagerTestInitHelper.ExecutorsMode.PRESERVE_EXECUTORS,
         )
-        // exercise
-        val actual = AddStreamWorker.enqueue(context, "https://youtube.com/live/${video.id.value}")
-            .firstOrNull { it?.state?.isFinished == true }
-        // verify
-        assertThat(actual?.state).isEqualTo(WorkInfo.State.SUCCEEDED)
+    }
+}
+
+class FakeYouTubeClientImpl(
+    private val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
+    private val channelList: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
+) : FakeYouTubeClient() {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+        logD { "fetchVideoList: $ids" }
+        return NetworkResponse.create(videoList!!.invoke(ids))
+    }
+
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
+        logD { "fetchChannelList: $ids" }
+        return NetworkResponse.create(channelList!!.invoke(ids))
     }
 }
 
