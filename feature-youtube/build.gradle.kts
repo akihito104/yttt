@@ -42,6 +42,9 @@ dependencies {
     implementation(libs.accompanist.permissions)
     implementation(libs.play.services.base)
     implementation(libs.play.services.auth)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
@@ -59,4 +62,5 @@ dependencies {
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.turbine)
+    androidTestImplementation(libs.androidx.work.testing)
 }

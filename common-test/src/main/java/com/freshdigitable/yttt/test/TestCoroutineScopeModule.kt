@@ -9,7 +9,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runTest
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import javax.inject.Singleton
+import kotlin.time.Duration
 
 @Module
 @TestInstallIn(
@@ -18,15 +23,38 @@ import javax.inject.Singleton
 )
 interface TestCoroutineScopeModule {
     companion object {
-        var testScheduler: TestCoroutineScheduler? = null
+        internal var testScheduler: TestCoroutineScheduler? = null
 
         @Provides
         @Singleton
-        fun provideIoCoroutineScope(): CoroutineScope =
-            CoroutineScope(StandardTestDispatcher(testScheduler))
+        fun provideIoCoroutineScope(coroutineDispatcher: CoroutineDispatcher): CoroutineScope =
+            CoroutineScope(coroutineDispatcher)
 
         @Provides
         @Singleton
-        fun provideIoDispatcher(): CoroutineDispatcher = StandardTestDispatcher(testScheduler)
+        fun provideIoDispatcher(): CoroutineDispatcher = StandardTestDispatcher(testScheduler!!)
+
+        fun clean() {
+            testScheduler = null
+        }
+    }
+}
+
+class TestCoroutineScopeRule : TestWatcher() {
+    private val testScope = TestScope()
+    fun runTest(timeout: Duration? = null, testBody: suspend TestScope.() -> Unit) {
+        if (timeout == null) {
+            testScope.runTest(testBody = testBody)
+        } else {
+            testScope.runTest(timeout = timeout, testBody = testBody)
+        }
+    }
+
+    override fun starting(description: Description) {
+        TestCoroutineScopeModule.testScheduler = testScope.testScheduler
+    }
+
+    override fun finished(description: Description?) {
+        TestCoroutineScopeModule.clean()
     }
 }
