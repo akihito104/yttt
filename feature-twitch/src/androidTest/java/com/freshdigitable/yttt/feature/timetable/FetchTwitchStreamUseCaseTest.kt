@@ -22,6 +22,7 @@ import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
+import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.google.common.truth.Truth.assertThat
 import dagger.Module
 import dagger.Provides
@@ -30,9 +31,10 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -52,6 +54,9 @@ class FetchTwitchStreamUseCaseTest {
         val hilt = HiltAndroidRule(this)
 
         @get:Rule(order = 1)
+        val testScope = TestCoroutineScopeRule()
+
+        @get:Rule(order = 2)
         val traceRule = AppTraceVerifier()
 
         @Inject
@@ -64,14 +69,12 @@ class FetchTwitchStreamUseCaseTest {
         fun setup() {
             FakeTwitchHelixClient.clear()
             FakeDateTimeProviderModule.instant = null
-            TestCoroutineScopeModule.testScheduler = null
+            hilt.inject()
         }
 
         @Test
-        fun noAccount_earlyReturnAsSuccess() = runTest {
+        fun noAccount_earlyReturnAsSuccess() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeTwitchHelixClient.hasAccount = false
             traceRule.isTraceable = false
             // exercise
@@ -84,10 +87,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun failedToGetMe_returnAsFailure() = runTest {
+        fun failedToGetMe_returnAsFailure() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -106,10 +107,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun noFollowing_returnAsSuccess() = runTest {
+        fun noFollowing_returnAsSuccess() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -136,10 +135,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun failedToGetFollowing_returnFailure() = runTest {
+        fun failedToGetFollowing_returnFailure() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -164,10 +161,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun has1FollowingWithStream_returnAsSuccess() = runTest {
+        fun has1FollowingWithStream_returnAsSuccess() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -201,10 +196,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun has1FollowingWithSchedule_returnAsSuccess() = runTest {
+        fun has1FollowingWithSchedule_returnAsSuccess() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -244,10 +237,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun has1FollowingWithSchedule_failedToGetCategory_returnAsSuccess() = runTest {
+        fun has1FollowingWithSchedule_failedToGetCategory_returnAsSuccess() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -286,10 +277,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun has1FollowingWithSchedule_failedToGetSchedule_returnAsFailure() = runTest {
+        fun has1FollowingWithSchedule_failedToGetSchedule_returnAsFailure() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -320,10 +309,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun failedToGetUserDetail_returnAsFailure() = runTest {
+        fun failedToGetUserDetail_returnAsFailure() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -359,10 +346,8 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun failedToGetStreams_returnAsFailure() = runTest {
+        fun failedToGetStreams_returnAsFailure() = testScope.runTest {
             // setup
-            TestCoroutineScopeModule.testScheduler = testScheduler
-            hilt.inject()
             FakeDateTimeProviderModule.instant = Instant.EPOCH
             FakeTwitchHelixClient.apply {
                 hasAccount = true
@@ -395,6 +380,9 @@ class FetchTwitchStreamUseCaseTest {
         val hilt = HiltAndroidRule(this)
 
         @get:Rule(order = 1)
+        val testScope = TestCoroutineScopeRule()
+
+        @get:Rule(order = 2)
         val rule = AppTraceVerifier()
 
         @Inject
@@ -403,13 +391,6 @@ class FetchTwitchStreamUseCaseTest {
         @Inject
         internal lateinit var localSource: TwitchDataSource.Local
 
-        @Before
-        fun setup() {
-            FakeTwitchHelixClient.clear()
-            FakeDateTimeProviderModule.instant = null
-            TestCoroutineScopeModule.testScheduler = null
-        }
-
         private val current = Instant.parse("2025-04-29T00:00:00Z")
         private val category = category("1")
         private val streamUser = userDetail("10")
@@ -417,8 +398,8 @@ class FetchTwitchStreamUseCaseTest {
         private val streamSchedule =
             streamSchedule("1", category, Instant.parse("2025-04-30T00:00:00Z"))
 
-        private suspend fun TestScope.initialLoad() {
-            TestCoroutineScopeModule.testScheduler = testScheduler
+        @Before
+        fun setup(): Unit = runBlocking {
             hilt.inject()
             localSource.deleteAllTables()
 
@@ -440,6 +421,15 @@ class FetchTwitchStreamUseCaseTest {
                 }
                 userResponse = { NetworkResponse.create(item = listOf(streamUser, scheduleUser)) }
             }
+        }
+
+        @After
+        fun tearDown() {
+            FakeTwitchHelixClient.clear()
+            FakeDateTimeProviderModule.instant = null
+        }
+
+        private suspend fun TestScope.initialLoad() {
             val actual = sut.invoke()
             advanceUntilIdle()
             assertResultThat(actual).isSuccess()
@@ -450,7 +440,7 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun hasOnAirAndUpcomingItems() = runTest {
+        fun hasOnAirAndUpcomingItems() = testScope.runTest {
             // setup
             initialLoad()
             // exercise
@@ -469,7 +459,7 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun onAirStreamIsFinished_onAirIsEmpty() = runTest {
+        fun onAirStreamIsFinished_onAirIsEmpty() = testScope.runTest {
             // setup
             initialLoad()
             FakeDateTimeProviderModule.instant = current + Duration.ofMinutes(10)
@@ -492,7 +482,7 @@ class FetchTwitchStreamUseCaseTest {
         }
 
         @Test
-        fun upcomingPublishDeadlineIsOver_upcomingIsEmpty() = runTest {
+        fun upcomingPublishDeadlineIsOver_upcomingIsEmpty() = testScope.runTest {
             // setup
             initialLoad()
             FakeDateTimeProviderModule.instant = streamSchedule.startTime + Duration.ofHours(7)

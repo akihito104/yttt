@@ -23,7 +23,7 @@ import kotlin.time.Duration
 )
 interface TestCoroutineScopeModule {
     companion object {
-        var testScheduler: TestCoroutineScheduler? = null
+        internal var testScheduler: TestCoroutineScheduler? = null
 
         @Provides
         @Singleton

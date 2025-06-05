@@ -25,6 +25,7 @@ import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
+import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.google.common.truth.Truth.assertThat
 import dagger.Binds
 import dagger.Module
@@ -37,7 +38,6 @@ import dagger.multibindings.IntoMap
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -54,6 +54,9 @@ class FetchYouTubeStreamUseCaseTest {
     val hiltRule = HiltAndroidRule(this)
 
     @get:Rule(order = 1)
+    val testScope = TestCoroutineScopeRule()
+
+    @get:Rule(order = 2)
     val traceRule = AppTraceVerifier()
 
     @Inject
@@ -68,13 +71,11 @@ class FetchYouTubeStreamUseCaseTest {
         FakeDateTimeProviderModule.instant = current
         FakeYouTubeAccountModule.account = null
         FakeYouTubeClientModule.clean()
-        TestCoroutineScopeModule.testScheduler = null
     }
 
     @Test
-    fun earlyReturn_whenNoAccount() = runTest {
+    fun earlyReturn_whenNoAccount() = testScope.runTest {
         // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
         traceRule.isTraceable = false
         // exercise
@@ -88,10 +89,9 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun videoAndSubscriptionAreEmpty_whenSuccess() = runTest {
+    fun videoAndSubscriptionAreEmpty_whenSuccess() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        TestCoroutineScopeModule.testScheduler = testScheduler
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
             subscription = { offset, token ->
                 if (offset == 0 && token == null) {
@@ -113,13 +113,12 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun failedToGetSubscription_returnsFailure() = runTest {
+    fun failedToGetSubscription_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
             subscription = { _, _ -> throw YouTubeException(500, "Server Internal Error") },
         )
-        TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
         // exercise
         val actual = sut.invoke()
@@ -135,10 +134,9 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun videoFromNewPlaylistItem_returns20Videos() = runTest {
+    fun videoFromNewPlaylistItem_returns20Videos() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        TestCoroutineScopeModule.testScheduler = testScheduler
         FakeYouTubeClientModule.setup(10, 2)
         hiltRule.inject()
         // exercise
@@ -152,10 +150,9 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun failedToGetChannelDetails_returnsFailure() = runTest {
+    fun failedToGetChannelDetails_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        TestCoroutineScopeModule.testScheduler = testScheduler
         FakeYouTubeClientModule.setup(10, 2).apply {
             channel = { throw YouTubeException(500, "Server Internal Error") }
         }
@@ -174,10 +171,9 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun failedToGetPlaylistItem_returnsFailure() = runTest {
+    fun failedToGetPlaylistItem_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        TestCoroutineScopeModule.testScheduler = testScheduler
         FakeYouTubeClientModule.setup(10, 2).apply {
             val base = playlistItem!!
             playlistItem = { id ->
@@ -194,10 +190,9 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun failedToGetVideoDetail_returnsFailure() = runTest {
+    fun failedToGetVideoDetail_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        TestCoroutineScopeModule.testScheduler = testScheduler
         FakeYouTubeClientModule.setup(10, 2).apply {
             val base = video!!
             video = { id ->
@@ -215,10 +210,9 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun videoFromNewPlaylistItem_fetch2PagesOfSubscription_returns200Videos() = runTest {
+    fun videoFromNewPlaylistItem_fetch2PagesOfSubscription_returns200Videos() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        TestCoroutineScopeModule.testScheduler = testScheduler
         FakeYouTubeClientModule.setup(100, 2)
         hiltRule.inject()
         // exercise
@@ -233,7 +227,7 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
-    fun failedToGetChannelDetailsAt2ndPageOfSubscription_returnsFailure() = runTest {
+    fun failedToGetChannelDetailsAt2ndPageOfSubscription_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         FakeYouTubeClientModule.setup(100, 2).apply {
@@ -246,7 +240,6 @@ class FetchYouTubeStreamUseCaseTest {
                 } else throw YouTubeException(500, "Server Internal Error")
             }
         }
-        TestCoroutineScopeModule.testScheduler = testScheduler
         hiltRule.inject()
         // exercise
         val actual = sut.invoke()
@@ -259,10 +252,9 @@ class FetchYouTubeStreamUseCaseTest {
 
     @Test
     fun videoFromNewPlaylistItem_has1Subscription_fetch2PagesOfSubscription_returns200Videos() =
-        runTest {
+        testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            TestCoroutineScopeModule.testScheduler = testScheduler
             val fake = FakeYouTubeClientModule.setup(1, 2)
             hiltRule.inject()
             sut.invoke()
@@ -281,10 +273,9 @@ class FetchYouTubeStreamUseCaseTest {
         }
 
     @Test
-    fun videoFromNewPlaylistItem_update10Subscription() = runTest {
+    fun videoFromNewPlaylistItem_update10Subscription() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        TestCoroutineScopeModule.testScheduler = testScheduler
         val fakeClient = FakeYouTubeClientModule.setup(10, 2)
         hiltRule.inject()
         sut.invoke()

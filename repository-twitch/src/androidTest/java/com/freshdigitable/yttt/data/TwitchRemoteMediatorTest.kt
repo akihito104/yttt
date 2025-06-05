@@ -34,6 +34,7 @@ import com.freshdigitable.yttt.di.TwitchModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
+import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.google.common.truth.FailureMetadata
 import com.google.common.truth.Subject
 import com.google.common.truth.ThrowableSubject
@@ -45,11 +46,14 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Timeout
 import org.junit.After
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import retrofit2.Call
@@ -60,8 +64,11 @@ import javax.inject.Inject
 
 @HiltAndroidTest
 class TwitchRemoteMediatorTest {
-    @get:Rule
+    @get:Rule(order = 0)
     var hiltRule = HiltAndroidRule(this)
+
+    @get:Rule(order = 1)
+    val testScope = TestCoroutineScopeRule()
 
     @Inject
     lateinit var localSource: TwitchDataSource.Local
@@ -73,7 +80,9 @@ class TwitchRemoteMediatorTest {
     private val followings =
         TwitchFollowings.createAtFetched(authUser.id, broadcaster, Instant.ofEpochMilli(20))
 
-    private suspend fun setup() {
+    @Before
+    fun setup(): Unit = runBlocking {
+        hiltRule.inject()
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(10)
         localSource.setMe(authUser)
         val stream = broadcaster.take(10).map { stream(it) }
@@ -101,25 +110,20 @@ class TwitchRemoteMediatorTest {
     }
 
     @Test
-    fun firstTimeToLoadSubscriptionPage() = runTest {
+    fun firstTimeToLoadSubscriptionPage() = testScope.runTest {
         // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        hiltRule.inject()
-        setup()
         FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
         // exercise
         val actual = sut.flow.asSnapshot()
+        advanceUntilIdle()
         // verify
         assertThat(actual).hasSize(60) // PagingConfig.pageSize = 20, default initialLoadSize is 60 = (20 * 3)
         assertThat(actual.map { it.channel.iconUrl }).doesNotContain("")
     }
 
     @Test
-    fun firstTimeToLoadSubscriptionPage_needsRefresh() = runTest {
+    fun firstTimeToLoadSubscriptionPage_needsRefresh() = testScope.runTest {
         // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        hiltRule.inject()
-        setup()
         val base = followings.updatableAt
         FakeDateTimeProviderModule.instant = base
         FakeRemoteSourceModule.following = { followingResponse(100) }
@@ -131,11 +135,8 @@ class TwitchRemoteMediatorTest {
     }
 
     @Test
-    fun firstTimeToLoadSubscriptionPage_scrollToLastItem() = runTest {
+    fun firstTimeToLoadSubscriptionPage_scrollToLastItem() = testScope.runTest {
         // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        hiltRule.inject()
-        setup()
         FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
         // exercise
         val actual = sut.flow.asSnapshot {
@@ -151,11 +152,8 @@ class TwitchRemoteMediatorTest {
 
     @OptIn(ExperimentalPagingApi::class)
     @Test
-    fun failedToGetFollowingsAtRefresh_returnsError() = runTest {
+    fun failedToGetFollowingsAtRefresh_returnsError() = testScope.runTest {
         // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        hiltRule.inject()
-        setup()
         val base = followings.updatableAt
         FakeDateTimeProviderModule.instant = base
         FakeRemoteSourceModule.following =
@@ -173,11 +171,8 @@ class TwitchRemoteMediatorTest {
 
     @OptIn(ExperimentalPagingApi::class)
     @Test
-    fun failedToGetUserDetailAtRefresh_returnsSuccess() = runTest {
+    fun failedToGetUserDetailAtRefresh_returnsSuccess() = testScope.runTest {
         // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        hiltRule.inject()
-        setup()
         val base = followings.updatableAt
         FakeDateTimeProviderModule.instant = base
         FakeRemoteSourceModule.following = { followingResponse(100) }
@@ -194,11 +189,8 @@ class TwitchRemoteMediatorTest {
 
     @OptIn(ExperimentalPagingApi::class)
     @Test
-    fun failedToGetFollowingsAtPrepend_returnsSuccess() = runTest {
+    fun failedToGetFollowingsAtPrepend_returnsSuccess() = testScope.runTest {
         // setup
-        TestCoroutineScopeModule.testScheduler = testScheduler
-        hiltRule.inject()
-        setup()
         FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
         FakeRemoteSourceModule.userDetails =
             { Response.error(500, "internal error".toResponseBody()) }
