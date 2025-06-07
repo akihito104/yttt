@@ -24,8 +24,8 @@ android {
         )
         buildConfigField(
             "String", "TWITCH_REDIRECT_URI",
-            "\"${twitchProperties.getOrDefault("twitch_redirect_uri_scheme", "")}://" +
-                "${twitchProperties.getOrDefault("twitch_redirect_uri_host", "")}\""
+            "\"${twitchProperties.getOrDefault("twitch_redirect_uri_scheme", "https")}://" +
+                "${twitchProperties.getOrDefault("twitch_redirect_uri_host", "example.com")}\""
         )
     }
 
