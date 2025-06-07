@@ -31,6 +31,8 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -645,6 +647,7 @@ interface FakeTwitchHelixClient {
         @LivePlatformQualifier(Twitch::class)
         fun provideAccountRepository(): AccountRepository = object : AccountRepository {
             override fun hasAccount(): Boolean = checkNotNull(hasAccount)
+            override val isTokenInvalid: Flow<Boolean?> get() = emptyFlow()
         }
 
         fun clear() {

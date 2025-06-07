@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.yttt.android.application)
+    alias(libs.plugins.yttt.android.application.compose)
     alias(libs.plugins.yttt.hilt)
     alias(libs.plugins.licensee)
     alias(libs.plugins.oss.license.plugin)
@@ -48,6 +48,8 @@ dependencies {
     implementation(project(":feature-youtube"))
     implementation(project(":feature-twitch"))
 
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.animation)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.hilt.work)
     implementation(libs.oss.lisence.lib)

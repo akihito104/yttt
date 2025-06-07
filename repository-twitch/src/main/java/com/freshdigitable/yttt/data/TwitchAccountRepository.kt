@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.source.TwitchAccountDataStore
 import com.freshdigitable.yttt.data.source.TwitchOauthDataStore
 import com.freshdigitable.yttt.data.source.TwitchOauthRemoteDataStore
 import com.freshdigitable.yttt.data.source.remote.TwitchOauthService
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,6 +15,7 @@ class TwitchAccountRepository @Inject constructor(
     local: TwitchAccountDataStore.Local,
 ) : TwitchAccountDataStore by local, AccountRepository {
     override fun hasAccount(): Boolean = twitchToken.value != null
+    override val isTokenInvalid: Flow<Boolean?> = local.isTwitchTokenInvalidated
 }
 
 @Singleton

@@ -40,7 +40,8 @@ import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
 import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
-import com.freshdigitable.yttt.data.TwitchAccountRepository
+import com.freshdigitable.yttt.data.source.AccountRepository
+import com.freshdigitable.yttt.di.LivePlatformMap
 import com.freshdigitable.yttt.lib.R
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -50,7 +51,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -228,7 +229,7 @@ private fun NavDrawerPreview() {
 @HiltViewModel(assistedFactory = MainViewModel.Factory::class)
 class MainViewModel @AssistedInject constructor(
     @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
-    accountRepository: TwitchAccountRepository,
+    accountRepositories: LivePlatformMap<AccountRepository>,
     @Assisted private val messageBus: SnackbarMessageBus,
 ) : ViewModel() {
     @AssistedFactory
@@ -238,12 +239,12 @@ class MainViewModel @AssistedInject constructor(
 
     val routes: Set<NavRoute> = (MainNavRoute.routes + ossLicensePage).toSet()
     val startDestination = MainNavRoute.startDestination
+    private val isTokenInvalid: Flow<Boolean?> =
+        combine(accountRepositories.map { it.value.isTokenInvalid }) { i -> i.any { it == true } }
     internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
         listOf(
             flowOf(DrawerMenuItem.SUBSCRIPTION.toListItem()),
-            accountRepository.isTwitchTokenInvalidated.map {
-                DrawerMenuItem.AUTH_STATUS.toListItem(it == true)
-            },
+            isTokenInvalid.map { DrawerMenuItem.AUTH_STATUS.toListItem(it == true) },
             flowOf(DrawerMenuItem.APP_SETTING.toListItem()),
             flowOf(DrawerMenuItem.OSS_LICENSE.toListItem()),
         )
@@ -255,19 +256,20 @@ class MainViewModel @AssistedInject constructor(
     val sender get() = messageBus.getSender()
     val snackbarMessage = merge(
         messageBus.messageFlow.map { SnackbarAction.NopAction(it) },
-        accountRepository.isTwitchTokenInvalidated.filter { it == true }
-            .map {
-                SnackbarAction.NavigationAction(
-                    SnackbarMessage(
-                        message = "Your Twitch login credential has expired.",
-                        actionLabel = "account setting",
-                        withDismissAction = false,
-                        duration = SnackbarDuration.Long,
-                    )
-                ) {
-                    it.navigate(MainNavRoute.Auth.route)
-                }
+        accountRepositories.map { r ->
+            r.value.isTokenInvalid.map { if (it == true) r.key else null }
+        }.merge().filterNotNull().map {
+            SnackbarAction.NavigationAction(
+                SnackbarMessage(
+                    message = "Your ${it.name} login credential has expired.",
+                    actionLabel = "account setting",
+                    withDismissAction = false,
+                    duration = SnackbarDuration.Long,
+                )
+            ) {
+                it.navigate(MainNavRoute.Auth.route)
             }
+        },
     )
 
     internal fun getDrawerRoute(item: DrawerMenuItem): String {

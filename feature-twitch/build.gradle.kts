@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
@@ -9,6 +12,14 @@ android {
     defaultConfig {
         testInstrumentationRunner = "com.freshdigitable.yttt.test.CustomTestRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        val twitchPFile = rootProject.file("twitch.properties")
+        val twitchProperties = Properties()
+        if (twitchPFile.exists()) {
+            FileInputStream(twitchPFile).use { twitchProperties.load(it) }
+        }
+        manifestPlaceholders["scheme"] = twitchProperties.getOrDefault("twitch_redirect_uri_scheme", "")
+        manifestPlaceholders["host"] = twitchProperties.getOrDefault("twitch_redirect_uri_host", "")
     }
 
     buildTypes {
@@ -30,6 +41,7 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.compose.runtime.livedata)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.paging.runtime)

@@ -55,7 +55,7 @@ turbine = "1.2.0"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
-androidx-activity-ktx = { module = "androidx.activity:activity-ktx", version.ref = "androidxActivityKtx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidxActivityKtx" }
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
@@ -136,6 +136,7 @@ licensee = { id = "app.cash.licensee", version.ref = "licensee" }
 oss-license-plugin = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "oss-license-plugin" }
 ## for build-logic
 yttt-android-application = { id = "yttt.android.application" }
+yttt-android-application-compose = { id = "yttt.android.application.compose" }
 yttt-android-library = { id = "yttt.android.library" }
 yttt-android-library-compose = { id = "yttt.android.library.compose" }
 yttt-hilt = { id = "yttt.hilt" }
