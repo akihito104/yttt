@@ -4,7 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.freshdigitable.yttt.LauncherOption
 import com.freshdigitable.yttt.logD
+import com.freshdigitable.yttt.startLauncherActivity
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -27,8 +29,7 @@ class TwitchOauthActivity : AppCompatActivity() {
         val url = intent.data?.toString() ?: return
         val res = twitchConsumer.consumeOAuthEvent(url)
         if (res) {
-            val intent = packageManager.getLaunchIntentForPackage(packageName)
-            startActivity(intent)
+            startLauncherActivity(LauncherOption.ON_FINISH_OAUTH)
         } else {
             Toast.makeText(this, "Invalid URL", Toast.LENGTH_SHORT).show()
         }

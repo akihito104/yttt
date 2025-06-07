@@ -14,6 +14,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.freshdigitable.yttt.LauncherOption
+import com.freshdigitable.yttt.startLauncherActivity
 import com.freshdigitable.yttt.logD
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -79,8 +81,7 @@ open class AddStreamActivity : AppCompatActivity() {
             val info = AddStreamWorker.enqueue(this@AddStreamActivity, data)
                 .firstOrNull { it?.state?.isFinished == true }
             if (info?.state == WorkInfo.State.SUCCEEDED) {
-                val intent = packageManager.getLaunchIntentForPackage(packageName)
-                startActivity(intent)
+                startLauncherActivity(LauncherOption.NO_SPLASH)
             } else {
                 Toast.makeText(this@AddStreamActivity, "Failed to add stream", Toast.LENGTH_SHORT)
                     .show()
