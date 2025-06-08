@@ -31,6 +31,10 @@ gradlePlugin {
             id = "yttt.android.application"
             implementationClass = "AndroidApplicationConventionPlugin"
         }
+        register("androidApplicationCompose") {
+            id = "yttt.android.application.compose"
+            implementationClass = "AndroidApplicationComposeConventionPlugin"
+        }
         register("androidLibrary") {
             id = "yttt.android.library"
             implementationClass = "AndroidLibraryConventionPlugin"

@@ -9,6 +9,7 @@ live streaming timetable for you
 - if you want to connect Twitch API, follow [get started with the Twitch API](https://dev.twitch.tv/docs/api/get-started/). 
 then, create `twitch.properties` and add redirect URL and client ID to the properties file as following: 
   ```properties
-  twitch_redirect_uri=<redirect url>
+  twitch_redirect_uri_scheme=<redirect uri scheme>
+  twitch_redirect_uri_host=<redirect uri host>
   twitch_client_id=<client id>
   ```

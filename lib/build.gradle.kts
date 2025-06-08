@@ -33,8 +33,6 @@ android {
 dependencies {
     api(project(":common"))
     api(project(":common-ui"))
-    implementation(project(":feature-twitch"))
-    implementation(project(":repository-twitch"))
     implementation(project(":repository-appuser"))
     implementation(project(":image-loadable-coil"))
 
@@ -46,7 +44,6 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.activity.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
 
     implementation(libs.androidx.paging.runtime)
