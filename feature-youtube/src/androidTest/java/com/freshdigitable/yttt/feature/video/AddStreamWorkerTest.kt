@@ -11,6 +11,7 @@ import androidx.work.testing.WorkManagerTestInitHelper
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.feature.timetable.video
@@ -130,10 +131,10 @@ class AddStreamWorkerTest {
 }
 
 class FakeYouTubeClientImpl(
-    private val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
+    private val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideoUpdatable>)? = null,
     private val channelList: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
 ) : FakeYouTubeClient() {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideoUpdatable>> {
         logD { "fetchVideoList: $ids" }
         return NetworkResponse.create(videoList!!.invoke(ids))
     }

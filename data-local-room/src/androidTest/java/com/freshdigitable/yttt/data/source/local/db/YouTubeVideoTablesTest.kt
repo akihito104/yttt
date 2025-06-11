@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import app.cash.turbine.test
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import org.assertj.core.api.Assertions.assertThat
@@ -9,6 +10,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
+import java.time.Duration
 import java.time.Instant
 
 @RunWith(Enclosed::class)
@@ -50,7 +52,11 @@ class YouTubeVideoTablesTest {
                 YouTubeVideoTable(id = it, channelId = channel.id)
             }
             val expire = listOf(simple, freechat).map {
-                YouTubeVideoExpireTable(videoId = it, expiredAt = Instant.ofEpochMilli(100))
+                YouTubeVideoExpireTable(
+                    videoId = it,
+                    fetchedAt = Instant.ofEpochMilli(100),
+                    maxAge = Duration.ZERO,
+                )
             }
             dao.addChannels(listOf(channel))
             dao.addVideoEntities(videos)

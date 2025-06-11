@@ -128,14 +128,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
-        val updatableAt =
-            dateTimeProvider.now() + YouTubeVideoUpdatable.UPDATABLE_DURATION_FREE_CHAT
-        dao.addFreeChatItems(ids, true, updatableAt)
+        dao.addFreeChatItems(ids, true, YouTubeVideoUpdatable.UPDATABLE_DURATION_FREE_CHAT)
     }
 
     override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) {
-        val updatableAt = dateTimeProvider.now() + YouTubeVideoUpdatable.UPDATABLE_DURATION_DEFAULT
-        dao.addFreeChatItems(ids, false, updatableAt)
+        dao.addFreeChatItems(ids, false, YouTubeVideoUpdatable.UPDATABLE_DURATION_DEFAULT)
     }
 
     override suspend fun addVideo(

@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.UPCOMING_DEADLINE
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isFreeChatTitle
@@ -60,18 +61,17 @@ interface YouTubeVideo {
                 && Duration.between(s, current) > UPDATABLE_LIMIT_SOON
         }
 
-        fun YouTubeVideo.extend(
+        fun YouTubeVideoUpdatable.extend(
             old: YouTubeVideoExtended?,
             isFreeChat: Boolean? = null,
-            fetchedAt: Instant,
         ): YouTubeVideoExtended = when (this) {
             is YouTubeVideoExtended -> this
-            else -> YouTubeVideoExtendedImpl(old = old, video = this, isFreeChat, fetchedAt)
+            else -> YouTubeVideoExtendedImpl(old = old, video = this, isFreeChat)
         }
     }
 }
 
-interface YouTubeVideoExtended : YouTubeVideo, YouTubeVideoUpdatable {
+interface YouTubeVideoExtended : YouTubeVideoUpdatable {
     override val channel: YouTubeChannel
     val isFreeChat: Boolean?
     val isThumbnailUpdatable: Boolean get() = false
@@ -93,15 +93,12 @@ interface YouTubeVideoExtended : YouTubeVideo, YouTubeVideoUpdatable {
     }
 }
 
-interface YouTubeVideoUpdatable {
-    val updatableAt: Instant
-    fun isUpdatable(current: Instant): Boolean = updatableAt <= current
-
+interface YouTubeVideoUpdatable : YouTubeVideo, Updatable {
     companion object {
         /**
          * archived video is not needed to update (`Long.MAX_VALUE`, because of DB limitation :( )
          */
-        internal val NOT_UPDATABLE: Instant = Instant.ofEpochMilli(Long.MAX_VALUE)
+        internal val NOT_UPDATABLE: Duration = Duration.ofMillis(Long.MAX_VALUE)
 
         /**
          * update duration for default (20 min.)
@@ -127,10 +124,10 @@ interface YouTubeVideoUpdatable {
 
 private class YouTubeVideoExtendedImpl(
     private val old: YouTubeVideoExtended?,
-    private val video: YouTubeVideo,
+    private val video: YouTubeVideoUpdatable,
     private val _isFreeChat: Boolean?,
-    private val fetchedAt: Instant,
 ) : YouTubeVideoExtended, YouTubeVideo by video {
+    override val fetchedAt: Instant get() = video.fetchedAt
     override val channel: YouTubeChannel
         get() = old?.channel?.update(video.channel) ?: video.channel.toChannel()
     override val isFreeChat: Boolean
@@ -140,19 +137,22 @@ private class YouTubeVideoExtendedImpl(
             } else {
                 isUpcoming() && isFreeChatTitle
             }
-    override val updatableAt: Instant
+    override val maxAge: Duration
         get() {
-            val defaultValue = fetchedAt + UPDATABLE_DURATION_DEFAULT
-            val expiring = when {
-                isFreeChat -> fetchedAt + UPDATABLE_DURATION_FREE_CHAT
+            val defaultValue = UPDATABLE_DURATION_DEFAULT
+            return when {
+                isFreeChat -> UPDATABLE_DURATION_FREE_CHAT
                 isUnscheduledLive() -> defaultValue
                 isPostponedLive(fetchedAt) -> defaultValue
-                isUpcoming() -> defaultValue.coerceAtMost(checkNotNull(scheduledStartDateTime))
-                isNowOnAir() -> fetchedAt + UPDATABLE_DURATION_ON_AIR
+                this.isUpcoming() -> Duration.between(
+                    fetchedAt,
+                    (fetchedAt + defaultValue).coerceAtMost<Instant>(checkNotNull<Instant>(this.scheduledStartDateTime)),
+                )
+
+                this.isNowOnAir() -> UPDATABLE_DURATION_ON_AIR
                 isArchived -> NOT_UPDATABLE
                 else -> defaultValue
             }
-            return expiring
         }
     override val isThumbnailUpdatable: Boolean
         get() {
@@ -170,7 +170,6 @@ private class YouTubeVideoExtendedImpl(
                 old = this.old,
                 video = this,
                 _isFreeChat = true,
-                fetchedAt = this.fetchedAt,
             )
 
         private fun YouTubeChannelTitle.toChannel(): YouTubeChannel {
@@ -182,7 +181,7 @@ private class YouTubeVideoExtendedImpl(
             val icon = if ((title as? YouTubeChannel)?.iconUrl.isNullOrEmpty()) {
                 this.iconUrl
             } else {
-                (title as? YouTubeChannel)?.iconUrl ?: ""
+                title.iconUrl
             }
             return YouTubeChannelEntity(id = id, title = title.title, iconUrl = icon)
         }

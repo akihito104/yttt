@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import androidx.annotation.VisibleForTesting
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
@@ -11,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpResponseException
@@ -27,6 +29,7 @@ import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
 import com.google.api.services.youtube.model.VideoLiveStreamingDetails
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 
 interface YouTubeClient {
@@ -43,7 +46,7 @@ interface YouTubeClient {
         maxResult: Long,
     ): NetworkResponse<List<YouTubePlaylistItem>>
 
-    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>>
+    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideoUpdatable>>
     fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>>
     fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -53,11 +56,15 @@ interface YouTubeClient {
     ): NetworkResponse<List<YouTubeChannelLog>>
 
     companion object {
-        fun create(youtube: YouTube): YouTubeClient = YouTubeClientImpl(youtube)
+        fun create(youtube: YouTube, dateTimeProvider: DateTimeProvider): YouTubeClient =
+            YouTubeClientImpl(youtube, dateTimeProvider)
     }
 }
 
-internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
+internal class YouTubeClientImpl(
+    private val youtube: YouTube,
+    private val dateTimeProvider: DateTimeProvider,
+) : YouTubeClient {
     override fun fetchSubscription(
         pageSize: Long,
         offset: Int,
@@ -114,15 +121,16 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
         )
     }
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideoUpdatable>> {
         val res = youtube.fetch {
             videos()
                 .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
+        val current = dateTimeProvider.now()
         return NetworkResponse.create(
-            item = res.items.map { YouTubeVideoRemote(it) },
+            item = res.items.map { YouTubeVideoRemote(it, current) },
             nextPageToken = res.nextPageToken,
         )
     }
@@ -224,7 +232,8 @@ private data class YouTubeChannelLogEntity(
 @VisibleForTesting
 internal class YouTubeVideoRemote(
     private val video: Video,
-) : YouTubeVideo {
+    override val fetchedAt: Instant,
+) : YouTubeVideoUpdatable {
     private val liveStreamingDetails: VideoLiveStreamingDetails? get() = video.liveStreamingDetails
     private val snippet get() = requireNotNull(video.snippet) { "json: $video" }
     override val id: YouTubeVideo.Id = YouTubeVideo.Id(video.id)
@@ -244,10 +253,12 @@ internal class YouTubeVideoRemote(
     override val viewerCount: BigInteger? get() = liveStreamingDetails?.concurrentViewers
     override val liveBroadcastContent: YouTubeVideo.BroadcastType =
         findBy(snippet.liveBroadcastContent)
+    override val maxAge: Duration get() = MAX_AGE
 
     override fun toString(): String = video.toString()
 
     companion object {
+        private val MAX_AGE = Duration.ofMinutes(5)
         private fun findBy(name: String?): YouTubeVideo.BroadcastType = when (name) {
             "live" -> YouTubeVideo.BroadcastType.LIVE
             "upcoming" -> YouTubeVideo.BroadcastType.UPCOMING

@@ -84,7 +84,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         YouTubePlaylistItemSummaryDb::class,
         TwitchUserDetailDbView::class,
     ],
-    version = 16,
+    version = 17,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -103,6 +103,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
             to = 15,
             spec = AppDatabase.MigrateRemoveTwitchUserDetailViewsCount::class,
         ),
+        AutoMigration(from = 16, to = 17, spec = AppDatabase.MigrateRenameExpiredAt::class),
     ]
 )
 @TypeConverters(
@@ -134,6 +135,17 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
     )
     internal class MigrateRemoveTwitchUserDetailViewsCount : AutoMigrationSpec
 
+    @DeleteColumn.Entries(
+        DeleteColumn(
+            tableName = "channel_addition_expire",
+            columnName = "expired_at",
+        ),
+        DeleteColumn(
+            tableName = "video_expire",
+            columnName = "expired_at",
+        ),
+    )
+    internal class MigrateRenameExpiredAt : AutoMigrationSpec
     companion object {
         private const val DATABASE_NAME = "ytttdb"
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =
