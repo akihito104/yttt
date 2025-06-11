@@ -25,7 +25,6 @@ import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import kotlinx.coroutines.flow.Flow
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -173,7 +172,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
 
     override suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>) {
-        dao.addChannelDetails(channelDetail, dateTimeProvider.now() + Duration.ofDays(1))
+        dao.addChannelDetails(channelDetail)
     }
 
     private val channelSections = mutableMapOf<YouTubeChannel.Id, List<YouTubeChannelSection>>()

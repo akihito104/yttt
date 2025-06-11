@@ -19,6 +19,7 @@ import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Singleton
 
@@ -80,7 +81,10 @@ abstract class FakeYouTubeClient : YouTubeClient {
     ): NetworkResponse<List<YouTubeChannelLog>> = throw NotImplementedError()
 
     companion object {
-        fun channelDetail(id: Int): YouTubeChannelDetail = object : YouTubeChannelDetail {
+        fun channelDetail(
+            id: Int,
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeChannelDetail = object : YouTubeChannelDetail {
             override val id: YouTubeChannel.Id = YouTubeChannel.Id("channel_$id")
             override val uploadedPlayList: YouTubePlaylist.Id =
                 YouTubePlaylist.Id("playlist_${this.id.value}")
@@ -95,6 +99,8 @@ abstract class FakeYouTubeClient : YouTubeClient {
             override val customUrl: String = ""
             override val keywords: Collection<String> = emptyList()
             override val description: String = ""
+            override val maxAge: Duration get() = Duration.ofMinutes(5)
+            override val fetchedAt: Instant get() = fetchedAt
         }
     }
 }

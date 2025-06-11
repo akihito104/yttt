@@ -33,7 +33,7 @@ interface YouTubeChannelAddition {
     val uploadedPlayList: YouTubePlaylist.Id?
 }
 
-interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition {
+interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition, Updatable {
     override val iconUrl: String
 }
 

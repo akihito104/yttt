@@ -90,7 +90,8 @@ internal class YouTubeClientImpl(
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
-        return NetworkResponse.create(item = res.items.map { YouTubeChannelImpl(it) })
+        val current = dateTimeProvider.now()
+        return NetworkResponse.create(item = res.items.map { YouTubeChannelImpl(it, current) })
     }
 
     override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> {
@@ -287,6 +288,7 @@ private val ThumbnailDetails.iconUrl: String
 
 private data class YouTubeChannelImpl(
     private val channel: Channel,
+    override val fetchedAt: Instant,
 ) : YouTubeChannelDetail {
     override val id: YouTubeChannel.Id
         get() = YouTubeChannel.Id(channel.id)
@@ -316,6 +318,8 @@ private data class YouTubeChannelImpl(
         get() = channel.contentDetails?.relatedPlaylists?.uploads?.let { YouTubePlaylist.Id(it) }
 
     override fun toString(): String = channel.toPrettyString()
+    override val maxAge: Duration
+        get() = Duration.ofMinutes(5)
 }
 
 private data class YouTubeChannelSectionImpl(

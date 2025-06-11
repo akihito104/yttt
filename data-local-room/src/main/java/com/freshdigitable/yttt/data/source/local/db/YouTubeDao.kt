@@ -12,7 +12,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 
 internal class YouTubeDao @Inject constructor(
@@ -70,14 +69,13 @@ internal class YouTubeDao @Inject constructor(
 
     suspend fun addChannelDetails(
         channelDetail: Collection<YouTubeChannelDetail>,
-        fetchedAt: Instant,
     ) = db.withTransaction {
         val channels = channelDetail.map { it.toDbEntity() }
         val additions = channelDetail.map { it.toAddition() }
         val playlists = additions.mapNotNull { it.uploadedPlayList }
             .distinct()
             .map { YouTubePlaylistTable(it) }
-        val expired = additions.map { YouTubeChannelAdditionExpireTable(it.id, fetchedAt) }
+        val expired = channelDetail.map { YouTubeChannelAdditionExpireTable(it.id, it.fetchedAt) }
         addChannels(channels)
         addPlaylists(playlists)
         addChannelAddition(additions)
