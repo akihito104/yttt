@@ -85,7 +85,7 @@ internal data class TwitchStreamDbView(
         companion object {
             private const val SQL_STREAM =
                 "SELECT s.*, u.created_at AS created_at, u.description AS description, u.display_name AS display_name, " +
-                    "u.login_name AS login_name, u.profile_image_url AS profile_image_url, " +
+                    "u.login_name AS login_name, u.profile_image_url AS profile_image_url, u.fetched_at AS fetched_at, u.max_age AS max_age, " +
                     "c.name AS game_name FROM twitch_stream AS s " +
                     "INNER JOIN twitch_user_detail_view AS u ON u.user_id = s.user_id " +
                     "INNER JOIN twitch_category AS c ON c.id = s.game_id"

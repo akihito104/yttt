@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "6c5befc2fb0d3fca812bfadb37232733",
+    "identityHash": "2be98442e53109b52b85c480e44ce9c0",
     "entities": [
       {
         "tableName": "channel",
@@ -157,7 +157,7 @@
             "notNull": true
           },
           {
-            "fieldPath": "expiredAt",
+            "fieldPath": "fetchedAt",
             "columnName": "fetched_at",
             "affinity": "INTEGER",
             "defaultValue": "null"
@@ -780,7 +780,7 @@
       },
       {
         "tableName": "twitch_user_detail_expire",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `expired_at` INTEGER DEFAULT null, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user_detail`(`user_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `fetched_at` INTEGER NOT NULL DEFAULT 0, `max_age` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_user_detail`(`user_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "userId",
@@ -789,10 +789,18 @@
             "notNull": true
           },
           {
-            "fieldPath": "expiredAt",
-            "columnName": "expired_at",
+            "fieldPath": "fetchedAt",
+            "columnName": "fetched_at",
             "affinity": "INTEGER",
-            "defaultValue": "null"
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "maxAge",
+            "columnName": "max_age",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           }
         ],
         "primaryKey": {
@@ -1373,12 +1381,12 @@
       },
       {
         "viewName": "twitch_user_detail_view",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT u.login_name, u.display_name, d.* FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT u.login_name, u.display_name, d.*, e.fetched_at, e.max_age FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id INNER JOIN twitch_user_detail_expire AS e ON d.user_id = e.user_id"
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '6c5befc2fb0d3fca812bfadb37232733')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2be98442e53109b52b85c480e44ce9c0')"
     ]
   }
 }

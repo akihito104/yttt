@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -23,17 +24,17 @@ internal class TwitchDao @Inject constructor(
     private val scheduleDao: TwitchScheduleDaoImpl,
     private val streamDao: TwitchStreamDaoImpl,
 ) : TwitchUserDao by userDao, TwitchScheduleDao by scheduleDao, TwitchStreamDao by streamDao {
-    suspend fun setMe(me: TwitchUserDetail, expiredAt: Instant) = db.withTransaction {
-        addUserDetails(listOf(me), expiredAt)
+    suspend fun setMe(me: TwitchUserDetail, maxAge: Duration) = db.withTransaction {
+        addUserDetails(listOf(me), maxAge)
         setMeEntity(TwitchAuthorizedUserTable(me.id))
     }
 
     suspend fun addUserDetails(
         users: Collection<TwitchUserDetail>,
-        expiredAt: Instant,
+        maxAge: Duration,
     ) = db.withTransaction {
         val details = users.map { it.toTable() }
-        val expires = users.map { TwitchUserDetailExpireTable(it.id, expiredAt) }
+        val expires = users.map { TwitchUserDetailExpireTable(it.id, it.fetchedAt, maxAge) }
         addUsers(users.map { (it as TwitchUser).toTable() })
         addUserDetailEntities(details)
         addUserDetailExpireEntities(expires)

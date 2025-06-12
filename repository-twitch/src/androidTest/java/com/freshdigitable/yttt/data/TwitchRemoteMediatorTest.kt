@@ -16,6 +16,7 @@ import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchLiveSubscription
 import com.freshdigitable.yttt.data.source.remote.Broadcaster
@@ -59,6 +60,7 @@ import org.junit.Test
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -209,14 +211,17 @@ class TwitchRemoteMediatorTest {
     }
 
     private companion object {
-        val authUser = TwitchUserDetailRemote(
+        val authUser = object : TwitchUserDetail by TwitchUserDetailRemote(
             id = TwitchUser.Id("user.me"),
             loginName = "user.me",
             displayName = "user.me",
             description = "description",
             createdAt = Instant.EPOCH,
             profileImageUrl = "",
-        )
+        ) {
+            override val fetchedAt: Instant get() = Instant.EPOCH
+            override val maxAge: Duration get() = Duration.ofMinutes(5)
+        }
 
         fun broadcaster(count: Int): List<Broadcaster> = (0..<count).map {
             Broadcaster(

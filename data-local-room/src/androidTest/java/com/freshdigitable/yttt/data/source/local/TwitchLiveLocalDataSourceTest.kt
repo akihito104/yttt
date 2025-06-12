@@ -178,6 +178,8 @@ internal fun userDetail(
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
     override val createdAt: Instant get() = Instant.EPOCH
+    override val fetchedAt: Instant get() = Instant.EPOCH
+    override val maxAge: Duration get() = Duration.ZERO
 }
 
 private fun channelSchedule(

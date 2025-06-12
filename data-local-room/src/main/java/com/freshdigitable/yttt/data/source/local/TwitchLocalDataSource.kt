@@ -41,13 +41,13 @@ internal class TwitchLocalDataSource @Inject constructor(
     }
 
     override suspend fun addUsers(users: Collection<TwitchUserDetail>) {
-        dao.addUserDetails(users, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
+        dao.addUserDetails(users, MAX_AGE_USER_DETAIL)
     }
 
     override suspend fun fetchMe(): Result<TwitchUserDetail?> = ioScope.asResult { dao.findMe() }
 
     override suspend fun setMe(me: TwitchUserDetail) {
-        dao.setMe(me, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
+        dao.setMe(me, MAX_AGE_USER_DETAIL)
     }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =

@@ -11,7 +11,7 @@ interface TwitchUser {
     data class Id(override val value: String) : TwitchId
 }
 
-interface TwitchUserDetail : TwitchUser {
+interface TwitchUserDetail : TwitchUser, Updatable {
     val description: String
     val profileImageUrl: String
     val createdAt: Instant

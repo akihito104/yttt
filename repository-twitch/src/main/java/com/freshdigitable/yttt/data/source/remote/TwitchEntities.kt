@@ -16,6 +16,7 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import java.lang.reflect.Type
+import java.time.Duration
 import java.time.Instant
 
 internal class TwitchUserDetailRemote(
@@ -31,7 +32,10 @@ internal class TwitchUserDetailRemote(
     override val loginName: String,
     @SerializedName("description")
     override val description: String,
-) : TwitchUserDetail
+) : TwitchUserDetail {
+    override val maxAge: Duration get() = Duration.ofMinutes(5)
+    override val fetchedAt: Instant get() = throw NotImplementedError()
+}
 
 internal class TwitchUserRemote(
     override val id: TwitchUser.Id,
