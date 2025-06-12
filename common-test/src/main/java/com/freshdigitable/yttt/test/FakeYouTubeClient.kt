@@ -7,12 +7,13 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.di.YouTubeModule
 import dagger.Module
 import dagger.Provides
@@ -65,7 +66,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long
-    ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
+    ): NetworkResponse<List<YouTubePlaylistItemUpdatable>> = throw NotImplementedError()
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideoUpdatable>> =
         throw NotImplementedError()
@@ -99,7 +100,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
             override val customUrl: String = ""
             override val keywords: Collection<String> = emptyList()
             override val description: String = ""
-            override val maxAge: Duration get() = Duration.ofMinutes(5)
+            override val maxAge: Duration get() = MAX_AGE_DEFAULT
             override val fetchedAt: Instant get() = fetchedAt
         }
     }

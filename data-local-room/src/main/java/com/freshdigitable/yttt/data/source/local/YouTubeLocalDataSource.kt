@@ -42,7 +42,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         ids: Collection<YouTubeSubscription.Id>,
     ): List<YouTubeSubscriptionSummary> = ioScope.asResult {
         dao.findSubscriptionSummaries(ids)
-    }.getOrNull()!!  // FIXME
+    }.getOrThrow()
 
     override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions>> =
         ioScope.asResultFlow {
@@ -63,7 +63,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
             if (subscriptions is YouTubeSubscriptions.Updated) {
                 _subscriptionsFetchedAt = subscriptions.lastUpdatedAt
             }
-        }.getOrNull()!! // FIXME
+        }.getOrThrow()
 
     override suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>) {
         dao.removeSubscriptions(subscriptions)
@@ -164,7 +164,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val thumbs = dao.findThumbnailUrlByIds(ids)
         fetchByIds(ids) { removeVideos(it) }
         removeImageByUrl(thumbs)
-    }.getOrNull()!! // FIXME
+    }.getOrThrow()
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>> =
         ioScope.asResult {

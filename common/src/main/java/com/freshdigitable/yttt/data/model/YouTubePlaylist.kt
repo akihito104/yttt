@@ -25,3 +25,5 @@ interface YouTubePlaylistItem {
 
     data class Id(override val value: String) : YouTubeId
 }
+
+interface YouTubePlaylistItemUpdatable : YouTubePlaylistItem, Updatable
