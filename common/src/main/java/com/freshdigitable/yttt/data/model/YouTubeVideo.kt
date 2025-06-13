@@ -127,7 +127,7 @@ private class YouTubeVideoExtendedImpl(
     private val video: YouTubeVideoUpdatable,
     private val _isFreeChat: Boolean?,
 ) : YouTubeVideoExtended, YouTubeVideo by video {
-    override val fetchedAt: Instant get() = video.fetchedAt
+    override val fetchedAt: Instant get() = checkNotNull(video.fetchedAt)
     override val channel: YouTubeChannel
         get() = old?.channel?.update(video.channel) ?: video.channel.toChannel()
     override val isFreeChat: Boolean

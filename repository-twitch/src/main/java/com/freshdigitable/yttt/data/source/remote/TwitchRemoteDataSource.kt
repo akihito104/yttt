@@ -34,9 +34,6 @@ internal class TwitchRemoteDataSource @Inject constructor(
         TwitchUserDetailImpl(it, now)
     }
 
-    internal class TwitchUserDetailImpl(detail: TwitchUserDetail, override val fetchedAt: Instant) :
-        TwitchUserDetail by detail
-
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
         fetchAll { getFollowing(userId = userId, itemsPerPage = 100, cursor = it) }.map {
             val fetchedAt = dateTimeProvider.now()
@@ -117,3 +114,6 @@ internal class TwitchRemoteDataSource @Inject constructor(
         }
     }
 }
+
+internal class TwitchUserDetailImpl(detail: TwitchUserDetail, override val fetchedAt: Instant) :
+    TwitchUserDetail by detail

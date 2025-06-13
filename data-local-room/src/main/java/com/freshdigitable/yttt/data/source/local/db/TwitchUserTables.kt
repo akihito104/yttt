@@ -127,10 +127,10 @@ internal class TwitchUserDetailExpireTable(
     @PrimaryKey
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
-    @ColumnInfo("fetched_at", defaultValue = "0")
-    val fetchedAt: Instant,
-    @ColumnInfo("max_age", defaultValue = "0")
-    val maxAge: Duration,
+    @ColumnInfo("fetched_at", defaultValue = "null")
+    val fetchedAt: Instant?,
+    @ColumnInfo("max_age", defaultValue = "null")
+    val maxAge: Duration?,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {

@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.TwitchStreams.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
@@ -93,7 +94,7 @@ class TwitchRepository @Inject constructor(
     ): Result<TwitchChannelScheduleUpdatable> {
         val cache = localDataSource.fetchFollowedStreamSchedule(id)
         val current = dateTimeProvider.now()
-        if (cache.isSuccess && checkNotNull(cache.getOrNull()).updatableAt > current) {
+        if (cache.isSuccess && checkNotNull(cache.getOrNull()).isUpdatable(current).not()) {
             return cache
         }
         return remoteDataSource.fetchFollowedStreamSchedule(id, maxCount).onSuccess {

@@ -79,7 +79,8 @@ internal class TwitchLocalDataSource @Inject constructor(
         val schedule = dao.findChannelSchedule(id)
         object : TwitchChannelScheduleUpdatable {
             override val schedule: TwitchChannelSchedule? get() = schedule
-            override val updatableAt: Instant get() = expire?.expiredAt ?: Instant.EPOCH
+            override val fetchedAt: Instant? get() = expire?.fetchedAt
+            override val maxAge: Duration get() = expire?.maxAge ?: super.maxAge
         }
     }
 

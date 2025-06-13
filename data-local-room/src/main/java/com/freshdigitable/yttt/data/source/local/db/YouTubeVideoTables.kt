@@ -90,9 +90,9 @@ internal data class YouTubeVideoDb(
     @ColumnInfo("is_free_chat")
     override val isFreeChat: Boolean?,
     @ColumnInfo(name = "fetched_at")
-    private val _fetchedAt: Instant?,
+    override val fetchedAt: Instant?,
     @ColumnInfo(name = "max_age")
-    private val _maxAge: Duration?,
+    override val maxAge: Duration?,
 ) : YouTubeVideoExtended {
     override val id: YouTubeVideo.Id
         get() = video.id
@@ -114,10 +114,6 @@ internal data class YouTubeVideoDb(
         get() = video.viewerCount
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?
         get() = video.broadcastContent
-    override val fetchedAt: Instant
-        get() = _fetchedAt ?: Instant.EPOCH
-    override val maxAge: Duration
-        get() = _maxAge ?: Duration.ZERO
 
     @androidx.room.Dao
     internal interface Dao {

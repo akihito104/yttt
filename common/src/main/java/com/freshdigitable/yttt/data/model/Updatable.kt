@@ -4,11 +4,14 @@ import java.time.Duration
 import java.time.Instant
 
 interface Updatable {
-    val maxAge: Duration
-    val fetchedAt: Instant
+    val maxAge: Duration?
+    val fetchedAt: Instant?
 
     companion object {
-        private val Updatable.updatableAt: Instant get() = fetchedAt + maxAge
-        fun Updatable.isUpdatable(current: Instant): Boolean = updatableAt <= current
+        fun Updatable.isUpdatable(current: Instant): Boolean {
+            val f = fetchedAt ?: return true
+            val a = maxAge ?: return true
+            return f + a <= current
+        }
     }
 }

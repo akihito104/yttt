@@ -96,8 +96,8 @@ internal class YouTubeDao @Inject constructor(
         if (updatable.playlist is YouTubePlaylistTable) {
             updatePlaylist(
                 id = updatable.playlist.id,
-                lastModified = updatable.fetchedAt,
-                maxAge = updatable.maxAge,
+                lastModified = checkNotNull(updatable.fetchedAt),
+                maxAge = checkNotNull(updatable.maxAge),
             )
         } else {
             addPlaylist(updatable.toEntity())
@@ -163,8 +163,8 @@ internal fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTa
 
 private fun YouTubePlaylistWithItems.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
     id = playlist.id,
-    fetchedAt = fetchedAt,
-    maxAge = maxAge,
+    fetchedAt = checkNotNull(fetchedAt),
+    maxAge = checkNotNull(maxAge),
 )
 
 private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(

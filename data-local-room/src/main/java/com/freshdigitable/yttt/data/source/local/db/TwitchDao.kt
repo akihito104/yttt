@@ -76,7 +76,8 @@ internal class TwitchDao @Inject constructor(
         val schedule = updatable.schedule
         val streams = schedule?.segments?.map { it.toStreamScheduleTable(broadcasterId) }
         val vacations = schedule?.vacation.toVacationScheduleTable(broadcasterId)
-        val expire = TwitchChannelScheduleExpireTable(broadcasterId, updatable.updatableAt)
+        val expire =
+            TwitchChannelScheduleExpireTable(broadcasterId, updatable.fetchedAt, updatable.maxAge)
         val category = schedule?.segments?.mapNotNull { it.category?.toTable() }
         if (!category.isNullOrEmpty()) addCategories(category)
 

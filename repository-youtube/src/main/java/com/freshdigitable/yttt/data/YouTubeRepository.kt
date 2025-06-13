@@ -126,7 +126,7 @@ class YouTubeRepository @Inject constructor(
     ): Result<YouTubePlaylistWithItems> {
         return if (cache != null) {
             remoteSource.fetchPlaylistItems(id, maxResult).map {
-                cache.update(it, it.first().fetchedAt)
+                cache.update(it, checkNotNull(it.first().fetchedAt))
             }
         } else {
             val playlistRes = remoteSource.fetchPlaylist(setOf(id)).map { it.firstOrNull() }
@@ -140,7 +140,7 @@ class YouTubeRepository @Inject constructor(
                 YouTubePlaylistWithItems.newPlaylist(
                     playlist = playlist,
                     items = it,
-                    fetchedAt = it.first().fetchedAt,
+                    fetchedAt = checkNotNull(it.first().fetchedAt),
                 )
             }
         }
