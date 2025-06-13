@@ -15,6 +15,14 @@ interface TwitchUserDetail : TwitchUser, Updatable {
     val description: String
     val profileImageUrl: String
     val createdAt: Instant
+
+    companion object {
+        val MAX_AGE_USER_DETAIL: Duration = Duration.ofDays(1)
+        fun TwitchUserDetail.update(maxAge: Duration): TwitchUserDetail =
+            object : TwitchUserDetail by this {
+                override val maxAge: Duration? get() = maxAge
+            }
+    }
 }
 
 interface TwitchBroadcaster : TwitchUser {

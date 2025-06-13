@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchStreams.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchUserDetail.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.source.ImageDataSource
@@ -39,6 +40,7 @@ class TwitchRepository @Inject constructor(
             return cacheRes
         }
         return remoteDataSource.findUsersById(remoteIds)
+            .map { u -> u.map { it.update(TwitchUserDetail.MAX_AGE_USER_DETAIL) } }
             .onSuccess { localDataSource.addUsers(it) }
             .map { it + cache }
     }
@@ -49,6 +51,7 @@ class TwitchRepository @Inject constructor(
             return me
         }
         return remoteDataSource.fetchMe()
+            .map { m -> m?.update(TwitchUserDetail.MAX_AGE_USER_DETAIL) }
             .onSuccess { if (it != null) localDataSource.setMe(it) }
     }
 
