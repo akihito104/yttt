@@ -152,6 +152,10 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
             tableName = "twitch_channel_schedule_expire",
             columnName = "expired_at",
         ),
+        DeleteColumn(
+            tableName = "twitch_stream_expire",
+            columnName = "expired_at",
+        ),
     )
     internal class MigrateRenameExpiredAt : AutoMigrationSpec
     companion object {

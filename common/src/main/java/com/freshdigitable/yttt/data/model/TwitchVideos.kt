@@ -104,29 +104,25 @@ interface TwitchCategory {
     data class Id(override val value: String) : TwitchId
 }
 
-interface TwitchStreams {
+interface TwitchStreams : Updatable {
     val followerId: TwitchUser.Id
     val streams: List<TwitchStream>
-    val updatableAt: Instant
+    override val maxAge: Duration get() = MAX_AGE_STREAM
 
     companion object {
         fun create(
             followerId: TwitchUser.Id,
             streams: List<TwitchStream>,
-            updatableAt: Instant,
-        ): TwitchStreams = Impl(followerId, streams, updatableAt)
+            fetchedAt: Instant?,
+            maxAge: Duration? = MAX_AGE_STREAM,
+        ): TwitchStreams = Impl(followerId, streams, fetchedAt, maxAge ?: MAX_AGE_STREAM)
 
         private val MAX_AGE_STREAM = Duration.ofMinutes(10)
-
-        fun createAtFetched(
-            followerId: TwitchUser.Id,
-            streams: List<TwitchStream>,
-            updated: Instant,
-        ): TwitchStreams = Impl(followerId, streams, updated + MAX_AGE_STREAM)
+        private val TwitchStreams.updatableAt: Instant get() = fetchedAt!! + maxAge
 
         fun TwitchStreams.update(new: TwitchStreams): TwitchStreams {
             require(this.followerId == new.followerId)
-            require(this.updatableAt < new.updatableAt)
+            require(this.fetchedAt == null || this.updatableAt < new.updatableAt)
             val map = this.streams.associateBy { it.id }
             return object : Updated, TwitchStreams by new {
                 override val updatableThumbnails: Set<String>
@@ -151,7 +147,8 @@ interface TwitchStreams {
     private class Impl(
         override val followerId: TwitchUser.Id,
         override val streams: List<TwitchStream>,
-        override val updatableAt: Instant,
+        override val fetchedAt: Instant?,
+        override val maxAge: Duration,
     ) : TwitchStreams
 
     interface Updated : TwitchStreams {

@@ -91,7 +91,8 @@ class TwitchRemoteMediatorTest {
         val streams = object : TwitchStreams.Updated {
             override val followerId: TwitchUser.Id get() = authUser.id
             override val streams: List<TwitchStream> get() = stream
-            override val updatableAt: Instant get() = Instant.EPOCH
+            override val fetchedAt: Instant? get() = Instant.EPOCH
+            override val maxAge: Duration get() = Duration.ZERO
             override val updatableThumbnails: Set<String> get() = emptySet()
             override val deletedThumbnails: Set<String> get() = emptySet()
         }

@@ -73,7 +73,7 @@ class TwitchRepository @Inject constructor(
             return cacheRes
         }
         val cache = checkNotNull(cacheRes.getOrNull())
-        if (dateTimeProvider.now() < cache.updatableAt) {
+        if (cache.isUpdatable(dateTimeProvider.now()).not()) {
             return cacheRes
         }
         return remoteDataSource.fetchFollowedStreams(id)

@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -116,8 +117,10 @@ internal class TwitchStreamExpireTable(
     @PrimaryKey
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
-    @ColumnInfo("expired_at")
-    val expiredAt: Instant,
+    @ColumnInfo("fetched_at", defaultValue = "null")
+    val fetchedAt: Instant?,
+    @ColumnInfo("max_age", defaultValue = "null")
+    val maxAge: Duration?,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {

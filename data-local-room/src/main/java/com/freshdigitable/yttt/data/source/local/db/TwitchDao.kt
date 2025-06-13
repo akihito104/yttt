@@ -119,14 +119,16 @@ internal class TwitchDao @Inject constructor(
     }
 
     suspend fun findStreamByMe(me: TwitchUser.Id): TwitchStreams = db.withTransaction {
-        val expiredAt = findStreamExpire(me)?.expiredAt
+        val expire = findStreamExpire(me)
         val s = findAllStreams()
-        TwitchStreams.create(me, s, expiredAt ?: Instant.EPOCH)
+        TwitchStreams.create(me, s, expire?.fetchedAt, expire?.maxAge)
     }
 
     suspend fun replaceAllStreams(streams: TwitchStreams) = db.withTransaction {
         db.twitchStreamDao.deleteTable()
-        setStreamExpire(TwitchStreamExpireTable(streams.followerId, streams.updatableAt))
+        setStreamExpire(
+            TwitchStreamExpireTable(streams.followerId, streams.fetchedAt, streams.maxAge)
+        )
         addUsers(streams.streams.map { it.user.toTable() })
         addCategories(streams.streams.map { TwitchCategoryTable(it.gameId, it.gameName) })
         addStreams(streams.streams.map { it.toTable() })

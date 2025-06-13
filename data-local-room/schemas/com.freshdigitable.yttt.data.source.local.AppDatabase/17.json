@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "185270043f8548fd9d63f2e47a005666",
+    "identityHash": "7419e1838e3054f2fd5d4f7deeee26b3",
     "entities": [
       {
         "tableName": "channel",
@@ -1101,7 +1101,7 @@
       },
       {
         "tableName": "twitch_stream_expire",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `expired_at` INTEGER NOT NULL, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_auth_user`(`user_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`user_id` TEXT NOT NULL, `fetched_at` INTEGER DEFAULT null, `max_age` INTEGER DEFAULT null, PRIMARY KEY(`user_id`), FOREIGN KEY(`user_id`) REFERENCES `twitch_auth_user`(`user_id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "userId",
@@ -1110,10 +1110,16 @@
             "notNull": true
           },
           {
-            "fieldPath": "expiredAt",
-            "columnName": "expired_at",
+            "fieldPath": "fetchedAt",
+            "columnName": "fetched_at",
             "affinity": "INTEGER",
-            "notNull": true
+            "defaultValue": "null"
+          },
+          {
+            "fieldPath": "maxAge",
+            "columnName": "max_age",
+            "affinity": "INTEGER",
+            "defaultValue": "null"
           }
         ],
         "primaryKey": {
@@ -1390,7 +1396,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '185270043f8548fd9d63f2e47a005666')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7419e1838e3054f2fd5d4f7deeee26b3')"
     ]
   }
 }
