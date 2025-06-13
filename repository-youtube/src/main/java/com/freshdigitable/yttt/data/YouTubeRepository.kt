@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
@@ -150,7 +151,10 @@ class YouTubeRepository @Inject constructor(
         if (ids.isEmpty()) {
             return Result.success(emptyList())
         }
-        val cacheRes = localSource.fetchChannelList(ids)
+        val cacheRes = localSource.fetchChannelList(ids).map {
+            val current = dateTimeProvider.now()
+            it.filter { it.isUpdatable(current).not() }
+        }
         if (cacheRes.isFailure) {
             return cacheRes
         }
@@ -160,6 +164,7 @@ class YouTubeRepository @Inject constructor(
             return cacheRes
         }
         return remoteSource.fetchChannelList(needed)
+            .map { c -> c.map { it.update(YouTubeChannelDetail.MAX_AGE) } }
             .onSuccess { localSource.addChannelList(it) }
             .map { it + cache }
     }

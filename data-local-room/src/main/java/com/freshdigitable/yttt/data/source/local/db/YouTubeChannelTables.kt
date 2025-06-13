@@ -123,6 +123,8 @@ internal data class YouTubeChannelAdditionExpireTable(
     val channelId: YouTubeChannel.Id,
     @ColumnInfo(name = "fetched_at", defaultValue = "null")
     val fetchedAt: Instant? = null,
+    @ColumnInfo(name = "max_age", defaultValue = "null")
+    val maxAge: Duration?,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -131,11 +133,6 @@ internal data class YouTubeChannelAdditionExpireTable(
 
         @Query("DELETE FROM channel_addition_expire")
         override suspend fun deleteTable()
-    }
-
-    companion object {
-        internal const val MAX_AGE = 24 * 60 * 60 * 1000L
-        internal val MAX_AGE_DURATION = Duration.ofMillis(MAX_AGE)
     }
 }
 
@@ -147,27 +144,22 @@ internal data class YouTubeChannelDetailDb(
     @Embedded
     val addition: YouTubeChannelAdditionTable,
     @ColumnInfo(name = "fetched_at")
-    override val fetchedAt: Instant,
+    override val fetchedAt: Instant?,
+    @ColumnInfo(name = "max_age")
+    override val maxAge: Duration?
 ) : YouTubeChannelDetail, YouTubeChannel, YouTubeChannelAddition by addition {
     @get:Ignore
     override val id: YouTubeChannel.Id get() = addition.id
 
-    @get:Ignore
-    override val maxAge: Duration get() = YouTubeChannelAdditionExpireTable.MAX_AGE_DURATION
-
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT c.icon AS icon, c.title AS title, a.*, e.fetched_at AS fetched_at FROM channel AS c " +
+            "SELECT c.icon AS icon, c.title AS title, a.*, e.fetched_at AS fetched_at, e.max_age AS max_age FROM channel AS c " +
                 "INNER JOIN channel_addition AS a ON c.id = a.id " +
-                "INNER JOIN (SELECT * FROM channel_addition_expire WHERE :current < (fetched_at + " +
-                "${YouTubeChannelAdditionExpireTable.MAX_AGE})) AS e ON c.id = e.channel_id " +
+                "INNER JOIN channel_addition_expire AS e ON c.id = e.channel_id " +
                 "WHERE c.id IN (:id)"
         )
-        suspend fun findChannelDetail(
-            id: Collection<YouTubeChannel.Id>,
-            current: Instant,
-        ): List<YouTubeChannelDetailDb>
+        suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDb>
     }
 }
 

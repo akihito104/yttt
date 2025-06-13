@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "7419e1838e3054f2fd5d4f7deeee26b3",
+    "identityHash": "7ad420bc5f0fa9386c2115e4548ee256",
     "entities": [
       {
         "tableName": "channel",
@@ -148,7 +148,7 @@
       },
       {
         "tableName": "channel_addition_expire",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`channel_id` TEXT NOT NULL, `fetched_at` INTEGER DEFAULT null, PRIMARY KEY(`channel_id`), FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`channel_id` TEXT NOT NULL, `fetched_at` INTEGER DEFAULT null, `max_age` INTEGER DEFAULT null, PRIMARY KEY(`channel_id`), FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         "fields": [
           {
             "fieldPath": "channelId",
@@ -159,6 +159,12 @@
           {
             "fieldPath": "fetchedAt",
             "columnName": "fetched_at",
+            "affinity": "INTEGER",
+            "defaultValue": "null"
+          },
+          {
+            "fieldPath": "maxAge",
+            "columnName": "max_age",
             "affinity": "INTEGER",
             "defaultValue": "null"
           }
@@ -1396,7 +1402,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7419e1838e3054f2fd5d4f7deeee26b3')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7ad420bc5f0fa9386c2115e4548ee256')"
     ]
   }
 }

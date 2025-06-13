@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
-import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -34,7 +33,6 @@ internal class YouTubeLocalDataSource @Inject constructor(
     private val database: AppDatabase,
     private val dao: YouTubeDao,
     imageDataSource: ImageDataSource,
-    private val dateTimeProvider: DateTimeProvider,
     private val ioScope: IoScope,
 ) : YouTubeDataSource.Local, ImageDataSource by imageDataSource {
     override val videos: Flow<List<YouTubeVideoExtended>> = dao.watchAllUnfinishedVideos()
@@ -167,9 +165,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }.getOrThrow()
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>> =
-        ioScope.asResult {
-            dao.findChannelDetail(ids, current = dateTimeProvider.now())
-        }
+        ioScope.asResult { dao.findChannelDetail(ids) }
 
     override suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>) {
         dao.addChannelDetails(channelDetail)
