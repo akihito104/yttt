@@ -210,7 +210,7 @@ internal fun followings(
     followerId: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
     fetchedAt: Instant = Instant.EPOCH,
-): TwitchFollowings = TwitchFollowings.createAtFetched(followerId, followings, fetchedAt)
+): TwitchFollowings = TwitchFollowings.create(followerId, followings, fetchedAt)
 
 private fun broadcaster(
     user: TwitchUser,

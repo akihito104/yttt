@@ -27,8 +27,7 @@ internal class YouTubeDatabaseTestRule(
                 database,
                 dao,
                 NopImageDataSource,
-                dateTimeProvider,
-                IoScope(StandardTestDispatcher(testScope.testScheduler))
+                IoScope(StandardTestDispatcher(testScope.testScheduler)),
             ),
         )
 

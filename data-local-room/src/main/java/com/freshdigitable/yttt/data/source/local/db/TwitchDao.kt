@@ -54,14 +54,17 @@ internal class TwitchDao @Inject constructor(
         db.withTransaction {
             val items = findBroadcastersByFollowerId(userId)
             val expires = findByFollowerUserId(userId)
-            val updatableAt = expires?.expireAt ?: Instant.EPOCH
-            TwitchFollowings.create(userId, items, updatableAt)
+            TwitchFollowings.create(userId, items, expires?.fetchedAt, expires?.maxAge)
         }
 
     suspend fun replaceAllBroadcasters(followings: TwitchFollowings) = db.withTransaction {
         removeBroadcastersByFollowerId(followings.followerId)
         addBroadcasters(followings.followerId, followings.followings)
-        val expires = TwitchBroadcasterExpireTable(followings.followerId, followings.updatableAt)
+        val expires = TwitchBroadcasterExpireTable(
+            followings.followerId,
+            followings.fetchedAt,
+            followings.maxAge,
+        )
         addBroadcasterExpireEntity(expires)
     }
 

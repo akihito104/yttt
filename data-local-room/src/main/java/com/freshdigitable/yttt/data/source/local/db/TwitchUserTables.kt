@@ -13,6 +13,7 @@ import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Duration
 import java.time.Instant
@@ -204,9 +205,11 @@ internal class TwitchBroadcasterExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("follower_user_id", index = true)
     val followerId: TwitchUser.Id,
-    @ColumnInfo("expire_at")
-    val expireAt: Instant,
-) {
+    @ColumnInfo("fetched_at", defaultValue = "null")
+    override val fetchedAt: Instant?,
+    @ColumnInfo("max_age", defaultValue = "null")
+    override val maxAge: Duration?,
+) : Updatable {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert

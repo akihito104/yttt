@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.AppDatabase
@@ -83,7 +84,7 @@ internal class TwitchPagingSourceImpl @Inject constructor(
         for (u in users) {
             val expire = db.twitchBroadcasterExpireDao.findByFollowerUserId(u.userId)
                 ?: return@withTransaction true
-            if (expire.expireAt <= current) return@withTransaction true
+            if (expire.isUpdatable(current)) return@withTransaction true
         }
         return@withTransaction false
     }

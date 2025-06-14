@@ -38,7 +38,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
         fetchAll { getFollowing(userId = userId, itemsPerPage = 100, cursor = it) }.map {
             val fetchedAt = dateTimeProvider.now()
-            TwitchFollowings.createAtFetched(userId, it, fetchedAt)
+            TwitchFollowings.create(userId, it, fetchedAt, Duration.ofMinutes(5))
         }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<TwitchStreams?> {
