@@ -7,12 +7,15 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
@@ -302,26 +305,30 @@ private fun FakeYouTubeClientModule.Companion.setup(
     .apply { setup(subscriptionCount, itemsPerPlaylist) }
     .also { client = it }
 
-internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : YouTubeVideo {
-    override val id: YouTubeVideo.Id = YouTubeVideo.Id("${channel.id.value}-video_$id")
-    override val channel: YouTubeChannel = channel
-    override val liveBroadcastContent: YouTubeVideo.BroadcastType =
-        YouTubeVideo.BroadcastType.UPCOMING
-    override val title: String = ""
-    override val thumbnailUrl: String = ""
-    override val scheduledStartDateTime: Instant? = Instant.EPOCH
-    override val scheduledEndDateTime: Instant? = null
-    override val actualStartDateTime: Instant? = null
-    override val actualEndDateTime: Instant? = null
-    override val description: String = ""
-    override val viewerCount: BigInteger? = BigInteger.ONE
-}
+internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideoUpdatable =
+    object : YouTubeVideoUpdatable {
+        override val id: YouTubeVideo.Id = YouTubeVideo.Id("${channel.id.value}-video_$id")
+        override val channel: YouTubeChannel = channel
+        override val liveBroadcastContent: YouTubeVideo.BroadcastType =
+            YouTubeVideo.BroadcastType.UPCOMING
+        override val title: String = ""
+        override val thumbnailUrl: String = ""
+        override val scheduledStartDateTime: Instant? = Instant.EPOCH
+        override val scheduledEndDateTime: Instant? = null
+        override val actualStartDateTime: Instant? = null
+        override val actualEndDateTime: Instant? = null
+        override val description: String = ""
+        override val viewerCount: BigInteger? = BigInteger.ONE
+        override val fetchedAt: Instant get() = Instant.EPOCH
+        override val maxAge: Duration get() = Duration.ZERO
+    }
 
 private fun playlistItem(
     id: Int,
     channelDetail: YouTubeChannelDetail,
     videoId: YouTubeVideo.Id,
-): YouTubePlaylistItem = object : YouTubePlaylistItem {
+    fetchedAt: Instant = Instant.EPOCH,
+): YouTubePlaylistItemUpdatable = object : YouTubePlaylistItemUpdatable {
     override val id: YouTubePlaylistItem.Id =
         YouTubePlaylistItem.Id("playlistItem_${channelDetail.id.value}_$id")
     override val playlistId: YouTubePlaylist.Id = channelDetail.uploadedPlayList!!
@@ -332,6 +339,8 @@ private fun playlistItem(
     override val description: String = ""
     override val videoOwnerChannelId: YouTubeChannel.Id? = null
     override val publishedAt: Instant = Instant.EPOCH
+    override val maxAge: Duration get() = MAX_AGE_DEFAULT
+    override val fetchedAt: Instant get() = fetchedAt
 }
 
 private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription =
@@ -345,8 +354,8 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
 private class FakeYouTubeClientImpl(
     var subscription: ((Int, String?) -> NetworkResponse<List<YouTubeSubscription>>)? = null,
     var channel: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
-    var playlistItem: ((YouTubePlaylist.Id) -> List<YouTubePlaylistItem>)? = null,
-    var video: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
+    var playlistItem: ((YouTubePlaylist.Id) -> List<YouTubePlaylistItemUpdatable>)? = null,
+    var video: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideoUpdatable>)? = null,
 ) : FakeYouTubeClient() {
     companion object {
         fun FakeYouTubeClientImpl.setup(
@@ -393,7 +402,7 @@ private class FakeYouTubeClientImpl(
         return NetworkResponse.create(item = channel!!.invoke(ids))
     }
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideoUpdatable>> {
         logD { "fetchVideoList: $ids" }
         check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
         return NetworkResponse.create(item = video!!.invoke(ids))
@@ -402,7 +411,7 @@ private class FakeYouTubeClientImpl(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItem>> {
+    ): NetworkResponse<List<YouTubePlaylistItemUpdatable>> {
         logD { "fetchPlaylistItems: $id, $maxResult" }
         return NetworkResponse.create(playlistItem!!.invoke(id))
     }

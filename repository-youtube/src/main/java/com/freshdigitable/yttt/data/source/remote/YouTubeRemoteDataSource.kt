@@ -7,10 +7,11 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
@@ -42,7 +43,7 @@ internal class YouTubeRemoteDataSource(
         fetchLiveChannelLogs(channelId, publishedAfter, maxResult, it)
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideo>> =
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideoUpdatable>> =
         fetchList(ids) { fetchVideoList(it) }
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>> =
@@ -54,7 +55,7 @@ internal class YouTubeRemoteDataSource(
     override suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): Result<List<YouTubePlaylistItem>> = fetch { fetchPlaylistItems(id, maxResult).item }
+    ): Result<List<YouTubePlaylistItemUpdatable>> = fetch { fetchPlaylistItems(id, maxResult).item }
 
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>> =
         fetchList(ids) { fetchPlaylist(it) }

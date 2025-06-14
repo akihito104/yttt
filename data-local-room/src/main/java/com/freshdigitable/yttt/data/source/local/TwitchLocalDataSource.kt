@@ -41,13 +41,13 @@ internal class TwitchLocalDataSource @Inject constructor(
     }
 
     override suspend fun addUsers(users: Collection<TwitchUserDetail>) {
-        dao.addUserDetails(users, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
+        dao.addUserDetails(users)
     }
 
     override suspend fun fetchMe(): Result<TwitchUserDetail?> = ioScope.asResult { dao.findMe() }
 
     override suspend fun setMe(me: TwitchUserDetail) {
-        dao.setMe(me, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
+        dao.setMe(me)
     }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
@@ -79,7 +79,8 @@ internal class TwitchLocalDataSource @Inject constructor(
         val schedule = dao.findChannelSchedule(id)
         object : TwitchChannelScheduleUpdatable {
             override val schedule: TwitchChannelSchedule? get() = schedule
-            override val updatableAt: Instant get() = expire?.expiredAt ?: Instant.EPOCH
+            override val fetchedAt: Instant? get() = expire?.fetchedAt
+            override val maxAge: Duration get() = expire?.maxAge ?: super.maxAge
         }
     }
 
@@ -119,9 +120,5 @@ internal class TwitchLocalDataSource @Inject constructor(
         is TwitchStream.Id -> dao.findStream(id)
         is TwitchChannelSchedule.Stream.Id -> dao.findStreamSchedule(id)
         else -> throw AssertionError("unsupported id type: $id")
-    }
-
-    companion object {
-        private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
     }
 }

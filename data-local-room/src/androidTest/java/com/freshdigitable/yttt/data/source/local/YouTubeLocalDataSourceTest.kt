@@ -9,6 +9,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.upd
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.liveFinished
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDatabaseTestRule
@@ -406,7 +407,10 @@ private data class YouTubeVideoEntity(
     override val description: String = "",
     override val viewerCount: BigInteger? = null,
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?,
-) : YouTubeVideo {
+    override val fetchedAt: Instant,
+) : YouTubeVideoUpdatable {
+    override val maxAge: Duration get() = Duration.ofMinutes(5)
+
     companion object {
         fun uploadedVideo(
             id: String = "uploaded_video",
@@ -414,7 +418,8 @@ private data class YouTubeVideoEntity(
         ): YouTubeVideoExtended = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
-        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
+            fetchedAt = fetchedAt,
+        ).extend(old = null, isFreeChat = false)
 
         fun archivedStream(
             id: String = "archived_stream",
@@ -428,7 +433,8 @@ private data class YouTubeVideoEntity(
             actualStartDateTime = actualStartDateTime,
             actualEndDateTime = actualEndDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
-        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
+            fetchedAt = fetchedAt,
+        ).extend(old = null, isFreeChat = false)
 
         fun liveStreaming(
             id: String = "live_streaming",
@@ -440,7 +446,8 @@ private data class YouTubeVideoEntity(
             scheduledStartDateTime = scheduledStartDateTime,
             actualStartDateTime = actualStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE,
-        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
+            fetchedAt = fetchedAt,
+        ).extend(old = null, isFreeChat = false)
 
         fun YouTubeVideo.liveFinished(
             duration: Duration = Duration.ofHours(1),
@@ -464,7 +471,8 @@ private data class YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             scheduledStartDateTime = scheduledStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
+            fetchedAt = fetchedAt,
+        ).extend(old = null, isFreeChat = false)
 
         fun unscheduledUpcoming(
             id: String = "unscheduled_upcoming",
@@ -472,7 +480,8 @@ private data class YouTubeVideoEntity(
         ): YouTubeVideoExtended = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-        ).extend(old = null, isFreeChat = false, fetchedAt = fetchedAt)
+            fetchedAt = fetchedAt,
+        ).extend(old = null, isFreeChat = false)
 
         fun freeChat(
             id: String = "free_chat",
@@ -483,7 +492,8 @@ private data class YouTubeVideoEntity(
             title = "free chat",
             scheduledStartDateTime = scheduledStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-        ).extend(old = null, isFreeChat = true, fetchedAt = fetchedAt)
+            fetchedAt = fetchedAt,
+        ).extend(old = null, isFreeChat = true)
     }
 }
 

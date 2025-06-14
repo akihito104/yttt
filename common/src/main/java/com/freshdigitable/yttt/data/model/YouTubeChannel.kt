@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 
 interface YouTubeChannelTitle {
@@ -33,8 +34,17 @@ interface YouTubeChannelAddition {
     val uploadedPlayList: YouTubePlaylist.Id?
 }
 
-interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition {
+interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition, Updatable {
     override val iconUrl: String
+
+    companion object {
+        val MAX_AGE: Duration = Duration.ofDays(1)
+        fun YouTubeChannelDetail.update(maxAge: Duration): YouTubeChannelDetail {
+            return object : YouTubeChannelDetail by this {
+                override val maxAge: Duration? get() = maxAge
+            }
+        }
+    }
 }
 
 interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {
