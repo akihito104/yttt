@@ -13,5 +13,11 @@ interface Updatable {
             val a = maxAge ?: return true
             return f + a <= current
         }
+
+        fun Updatable.requireUpdate(new: Updatable) {
+            require(this.fetchedAt?.let { it < checkNotNull(new.fetchedAt) } != false) {
+                "old.fetchedAt: ${this.fetchedAt}, new.fetchedAt: ${new.fetchedAt}"
+            }
+        }
     }
 }

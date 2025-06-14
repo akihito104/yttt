@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.Updatable.Companion.requireUpdate
 import java.time.Duration
 import java.time.Instant
 
@@ -44,10 +45,8 @@ interface TwitchFollowings : Updatable {
         ): TwitchFollowings = Impl(follower, followings, fetchedAt, maxAge ?: MAX_AGE_BROADCASTER)
 
         fun TwitchFollowings.update(new: TwitchFollowings): Updated {
-            require(this.fetchedAt?.let { it < checkNotNull(new.fetchedAt) } != false) {
-                "old.updatableAt: ${this.fetchedAt}, new.updatableAt: ${new.fetchedAt}"
-            }
             require(this.followerId == new.followerId) { "followerId must be same." }
+            this.requireUpdate(new)
             return object : Updated, TwitchFollowings by new {
                 override val removed: Set<TwitchUser.Id>
                     get() = getRemovedFollowingIds(this@update, new)

@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.Updatable.Companion.requireUpdate
 import java.time.Duration
 import java.time.Instant
 
@@ -118,11 +119,10 @@ interface TwitchStreams : Updatable {
         ): TwitchStreams = Impl(followerId, streams, fetchedAt, maxAge ?: MAX_AGE_STREAM)
 
         private val MAX_AGE_STREAM = Duration.ofMinutes(10)
-        private val TwitchStreams.updatableAt: Instant get() = fetchedAt!! + maxAge
 
         fun TwitchStreams.update(new: TwitchStreams): TwitchStreams {
             require(this.followerId == new.followerId)
-            require(this.fetchedAt == null || this.updatableAt < new.updatableAt)
+            this.requireUpdate(new)
             val map = this.streams.associateBy { it.id }
             return object : Updated, TwitchStreams by new {
                 override val updatableThumbnails: Set<String>
