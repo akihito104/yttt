@@ -57,6 +57,10 @@ interface YouTubeDataSource {
 
     interface Remote : YouTubeDataSource {
         override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>>
+        override suspend fun fetchPlaylistItems(
+            id: YouTubePlaylist.Id,
+            maxResult: Long,
+        ): Result<List<YouTubePlaylistItem>>
 
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideo>>
     }

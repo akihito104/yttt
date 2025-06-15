@@ -87,7 +87,8 @@ class YouTubeRepositoryTest {
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
-            override val updatableAt: Instant get() = Instant.ofEpochMilli(1000)
+            override val fetchedAt: Instant get() = Instant.ofEpochMilli(200)
+            override val maxAge: Duration get() = Duration.ofMillis(800)
         }))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
@@ -158,7 +159,8 @@ class YouTubeRepositoryTest {
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
-            override val updatableAt: Instant get() = Instant.ofEpochMilli(1000)
+            override val fetchedAt: Instant get() = Instant.ofEpochMilli(200)
+            override val maxAge: Duration get() = Duration.ofMillis(800)
         }))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
@@ -172,8 +174,8 @@ class YouTubeRepositoryTest {
     }
 }
 
-private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo =
-    YouTubeVideoRemote(Video().apply {
+private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = YouTubeVideoRemote(
+    Video().apply {
         this.id = "$id"
         snippet = VideoSnippet().apply {
             channelId = channel.id.value
@@ -190,7 +192,9 @@ private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo =
         liveStreamingDetails = VideoLiveStreamingDetails().apply {
             scheduledStartTime = DateTime("2022-01-01T00:00:00Z")
         }
-    })
+    },
+    fetchedAt = Instant.EPOCH,
+)
 
 private class FakeRemoteSource(
     val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,

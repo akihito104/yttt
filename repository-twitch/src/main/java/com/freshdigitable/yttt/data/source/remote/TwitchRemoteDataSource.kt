@@ -12,6 +12,8 @@ import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.TwitchDataSource
+import java.time.Duration
+import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,20 +24,27 @@ internal class TwitchRemoteDataSource @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
 ) : TwitchDataSource.Remote {
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<TwitchUserDetail>> =
-        fetch { getUser(ids = ids) }
+        fetch { getUser(ids = ids) }.map { u ->
+            val now = dateTimeProvider.now()
+            u.map { TwitchUserDetailImpl(it, now) }
+        }
 
-    override suspend fun fetchMe(): Result<TwitchUserDetail?> = fetch { getMe() }
+    override suspend fun fetchMe(): Result<TwitchUserDetail?> = fetch { getMe() }.map {
+        if (it == null) return@map null
+        val now = dateTimeProvider.now()
+        TwitchUserDetailImpl(it, now)
+    }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
         fetchAll { getFollowing(userId = userId, itemsPerPage = 100, cursor = it) }.map {
             val fetchedAt = dateTimeProvider.now()
-            TwitchFollowings.createAtFetched(userId, it, fetchedAt)
+            TwitchFollowings.create(userId, it, fetchedAt, Duration.ofMinutes(5))
         }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<TwitchStreams?> {
         val id = me ?: fetchMe().getOrNull()?.id ?: return Result.success(null)
         return fetchAll { getFollowedStreams(id, cursor = it) }.map {
-            TwitchStreams.createAtFetched(id, it, dateTimeProvider.now())
+            TwitchStreams.create(id, it, dateTimeProvider.now(), Duration.ofMinutes(5))
         }
     }
 
@@ -106,3 +115,6 @@ internal class TwitchRemoteDataSource @Inject constructor(
         }
     }
 }
+
+internal class TwitchUserDetailImpl(detail: TwitchUserDetail, override val fetchedAt: Instant) :
+    TwitchUserDetail by detail

@@ -58,7 +58,10 @@ interface YouTubeModule {
 
         @Provides
         @Singleton
-        fun provideYouTubeClient(youTube: YouTube): YouTubeClient = YouTubeClient.create(youTube)
+        fun provideYouTubeClient(
+            youTube: YouTube,
+            dateTimeProvider: DateTimeProvider,
+        ): YouTubeClient = YouTubeClient.create(youTube, dateTimeProvider)
 
         @Provides
         @Singleton

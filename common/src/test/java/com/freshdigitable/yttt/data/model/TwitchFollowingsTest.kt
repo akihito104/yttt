@@ -17,11 +17,11 @@ class TwitchFollowingsTest {
 
     class Init {
         @Test
-        fun createAtFetched() {
+        fun create_maxAgeIsDefaultValue() {
             // exercise
-            val sut = TwitchFollowings.createAtFetched(me, emptyList(), fetchedAt = Instant.EPOCH)
+            val sut = TwitchFollowings.create(me, emptyList(), fetchedAt = Instant.EPOCH)
             // verify
-            assertThat(sut.updatableAt).isEqualTo(Instant.EPOCH + TwitchFollowings.MAX_AGE_BROADCASTER)
+            assertThat(sut.maxAge).isEqualTo(TwitchFollowings.MAX_AGE_BROADCASTER)
         }
     }
 
@@ -146,8 +146,7 @@ private fun followings(
     me: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
     fetchedAtMillis: Long,
-): TwitchFollowings =
-    TwitchFollowings.createAtFetched(me, followings, Instant.ofEpochMilli(fetchedAtMillis))
+): TwitchFollowings = TwitchFollowings.create(me, followings, Instant.ofEpochMilli(fetchedAtMillis))
 
 private fun Collection<Int>.broadcasters(): List<TwitchBroadcaster> =
     map { broadcaster("broadcaster$it") }

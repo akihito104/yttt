@@ -178,6 +178,8 @@ internal fun userDetail(
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
     override val createdAt: Instant get() = Instant.EPOCH
+    override val fetchedAt: Instant get() = Instant.EPOCH
+    override val maxAge: Duration get() = Duration.ZERO
 }
 
 private fun channelSchedule(
@@ -208,7 +210,7 @@ internal fun followings(
     followerId: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
     fetchedAt: Instant = Instant.EPOCH,
-): TwitchFollowings = TwitchFollowings.createAtFetched(followerId, followings, fetchedAt)
+): TwitchFollowings = TwitchFollowings.create(followerId, followings, fetchedAt)
 
 private fun broadcaster(
     user: TwitchUser,

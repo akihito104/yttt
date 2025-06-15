@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
@@ -315,12 +316,15 @@ internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : Yo
     override val actualEndDateTime: Instant? = null
     override val description: String = ""
     override val viewerCount: BigInteger? = BigInteger.ONE
+    override val fetchedAt: Instant get() = Instant.EPOCH
+    override val maxAge: Duration get() = Duration.ZERO
 }
 
 private fun playlistItem(
     id: Int,
     channelDetail: YouTubeChannelDetail,
     videoId: YouTubeVideo.Id,
+    fetchedAt: Instant = Instant.EPOCH,
 ): YouTubePlaylistItem = object : YouTubePlaylistItem {
     override val id: YouTubePlaylistItem.Id =
         YouTubePlaylistItem.Id("playlistItem_${channelDetail.id.value}_$id")
@@ -332,6 +336,8 @@ private fun playlistItem(
     override val description: String = ""
     override val videoOwnerChannelId: YouTubeChannel.Id? = null
     override val publishedAt: Instant = Instant.EPOCH
+    override val maxAge: Duration get() = MAX_AGE_DEFAULT
+    override val fetchedAt: Instant get() = fetchedAt
 }
 
 private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription =

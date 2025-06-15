@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
@@ -125,7 +126,7 @@ class YouTubeRepository @Inject constructor(
     ): Result<YouTubePlaylistWithItems> {
         return if (cache != null) {
             remoteSource.fetchPlaylistItems(id, maxResult).map {
-                cache.update(it, dateTimeProvider.now())
+                cache.update(it, checkNotNull(it.first().fetchedAt))
             }
         } else {
             val playlistRes = remoteSource.fetchPlaylist(setOf(id)).map { it.firstOrNull() }
@@ -135,11 +136,10 @@ class YouTubeRepository @Inject constructor(
                 playlistRes.getOrNull()
                     ?: return Result.failure(IOException("playlist:${id.value} not found"))
             }
-            remoteSource.fetchPlaylistItems(id, maxResult).map {
+            remoteSource.fetchPlaylistItems(id, maxResult).map { items ->
                 YouTubePlaylistWithItems.newPlaylist(
                     playlist = playlist,
-                    items = it,
-                    fetchedAt = dateTimeProvider.now(),
+                    items = items,
                 )
             }
         }
@@ -149,7 +149,10 @@ class YouTubeRepository @Inject constructor(
         if (ids.isEmpty()) {
             return Result.success(emptyList())
         }
-        val cacheRes = localSource.fetchChannelList(ids)
+        val cacheRes = localSource.fetchChannelList(ids).map {
+            val current = dateTimeProvider.now()
+            it.filter { it.isUpdatable(current).not() }
+        }
         if (cacheRes.isFailure) {
             return cacheRes
         }
@@ -159,6 +162,7 @@ class YouTubeRepository @Inject constructor(
             return cacheRes
         }
         return remoteSource.fetchChannelList(needed)
+            .map { c -> c.map { it.update(YouTubeChannelDetail.MAX_AGE) } }
             .onSuccess { localSource.addChannelList(it) }
             .map { it + cache }
     }
@@ -216,9 +220,7 @@ class YouTubeRepository @Inject constructor(
                 }.map { it + (v - needsChannel.toSet()) }.getOrThrow()
             }
         }.map { v ->
-            val fetchedAt = dateTimeProvider.now()
-            v.map { it.extend(old = cache[it.id], fetchedAt = fetchedAt) } +
-                (ids - needed).mapNotNull { cache[it] }
+            v.map { it.extend(old = cache[it.id]) } + (ids - needed).mapNotNull { cache[it] }
         }
     }
 }
