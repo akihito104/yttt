@@ -4,7 +4,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
@@ -175,34 +174,33 @@ class YouTubeRepositoryTest {
     }
 }
 
-private fun video(id: Int, channel: YouTubeChannel): YouTubeVideoUpdatable =
-    YouTubeVideoRemote(
-        Video().apply {
-            this.id = "$id"
-            snippet = VideoSnippet().apply {
-                channelId = channel.id.value
-                channelTitle = channel.title
-                title = "title$id"
-                description = "description"
-                liveBroadcastContent = "upcoming"
-                thumbnails = ThumbnailDetails().apply {
-                    standard = Thumbnail().apply {
-                        url = "<url is here>"
-                    }
+private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = YouTubeVideoRemote(
+    Video().apply {
+        this.id = "$id"
+        snippet = VideoSnippet().apply {
+            channelId = channel.id.value
+            channelTitle = channel.title
+            title = "title$id"
+            description = "description"
+            liveBroadcastContent = "upcoming"
+            thumbnails = ThumbnailDetails().apply {
+                standard = Thumbnail().apply {
+                    url = "<url is here>"
                 }
             }
-            liveStreamingDetails = VideoLiveStreamingDetails().apply {
-                scheduledStartTime = DateTime("2022-01-01T00:00:00Z")
-            }
-        },
-        fetchedAt = Instant.EPOCH,
-    )
+        }
+        liveStreamingDetails = VideoLiveStreamingDetails().apply {
+            scheduledStartTime = DateTime("2022-01-01T00:00:00Z")
+        }
+    },
+    fetchedAt = Instant.EPOCH,
+)
 
 private class FakeRemoteSource(
-    val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideoUpdatable>)? = null,
+    val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
     val channelList: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
 ) : FakeYouTubeClient() {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideoUpdatable>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
         return NetworkResponse.create(videoList!!.invoke(ids))
     }

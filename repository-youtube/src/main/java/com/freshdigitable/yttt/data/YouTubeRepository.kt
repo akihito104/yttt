@@ -16,7 +16,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import kotlinx.coroutines.CoroutineScope
@@ -215,7 +214,7 @@ class YouTubeRepository @Inject constructor(
                     val channels = c.associateBy { it.id }
                     needsChannel.map {
                         val channel = channels.getValue(it.channel.id)
-                        object : YouTubeVideoUpdatable by it {
+                        object : YouTubeVideo by it {
                             override val channel: YouTubeChannel get() = channel
                         }
                     }

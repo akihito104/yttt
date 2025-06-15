@@ -21,7 +21,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Duration
 import java.time.Instant
@@ -139,7 +138,7 @@ internal class YouTubePlaylistItemSummaryDb(
 ) : YouTubePlaylistItemSummary {
     @get:Ignore
     override val videoExpiredAt: Instant?
-        get() = fetchedAt?.plus(maxAge ?: YouTubeVideoUpdatable.UPDATABLE_DURATION_DEFAULT)
+        get() = fetchedAt?.plus(maxAge ?: YouTubeVideo.MAX_AGE_DEFAULT)
 
     @androidx.room.Dao
     internal interface Dao {

@@ -9,7 +9,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.upd
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.liveFinished
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDatabaseTestRule
@@ -408,7 +407,7 @@ private data class YouTubeVideoEntity(
     override val viewerCount: BigInteger? = null,
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?,
     override val fetchedAt: Instant,
-) : YouTubeVideoUpdatable {
+) : YouTubeVideo {
     override val maxAge: Duration get() = Duration.ofMinutes(5)
 
     companion object {

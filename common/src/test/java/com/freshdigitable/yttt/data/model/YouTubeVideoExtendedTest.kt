@@ -126,7 +126,7 @@ class YouTubeVideoExtendedTest {
         fun notUpdatedButFreeChat_returnsTrue() {
             // setup
             val current =
-                old.copy(fetchedAt = Instant.EPOCH + YouTubeVideoUpdatable.UPDATABLE_DURATION_FREE_CHAT)
+                old.copy(fetchedAt = Instant.EPOCH + YouTubeVideo.MAX_AGE_FREE_CHAT)
             val oldAsFreeChat = old.extend(old = null, isFreeChat = true)
             // exercise
             val actual = current.extend(oldAsFreeChat, isFreeChat = true)
@@ -386,10 +386,10 @@ internal data class YouTubeVideoImpl(
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?,
     override val maxAge: Duration = Duration.ZERO,
     override val fetchedAt: Instant = Instant.EPOCH,
-) : YouTubeVideoUpdatable
+) : YouTubeVideo
 
 internal fun YouTubeVideoImpl.extended(isFreeChat: Boolean): YouTubeVideoExtended =
-    object : YouTubeVideoExtended, YouTubeVideoUpdatable by this {
+    object : YouTubeVideoExtended, YouTubeVideo by this {
         override val channel: YouTubeChannel get() = this@extended.channel
         override val isFreeChat: Boolean = isFreeChat
     }

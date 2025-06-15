@@ -17,7 +17,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
@@ -125,11 +124,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
-        dao.addFreeChatItems(ids, true, YouTubeVideoUpdatable.UPDATABLE_DURATION_FREE_CHAT)
+        dao.addFreeChatItems(ids, true, YouTubeVideo.MAX_AGE_FREE_CHAT)
     }
 
     override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) {
-        dao.addFreeChatItems(ids, false, YouTubeVideoUpdatable.UPDATABLE_DURATION_DEFAULT)
+        dao.addFreeChatItems(ids, false, YouTubeVideo.MAX_AGE_DEFAULT)
     }
 
     override suspend fun addVideo(

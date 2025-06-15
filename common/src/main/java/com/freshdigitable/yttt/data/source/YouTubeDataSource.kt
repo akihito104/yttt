@@ -16,7 +16,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
@@ -64,7 +63,7 @@ interface YouTubeDataSource {
             maxResult: Long
         ): Result<List<YouTubePlaylistItemUpdatable>>
 
-        suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideoUpdatable>>
+        suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideo>>
     }
 }
 

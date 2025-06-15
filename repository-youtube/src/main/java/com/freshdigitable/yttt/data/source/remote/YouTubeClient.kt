@@ -13,7 +13,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoUpdatable
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
@@ -48,7 +47,7 @@ interface YouTubeClient {
         maxResult: Long,
     ): NetworkResponse<List<YouTubePlaylistItemUpdatable>>
 
-    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideoUpdatable>>
+    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>>
     fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>>
     fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -127,7 +126,7 @@ internal class YouTubeClientImpl(
         )
     }
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideoUpdatable>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         val res = youtube.fetch {
             videos()
                 .list(listOf(PART_SNIPPET, PART_LIVE_STREAMING_DETAILS))
@@ -239,7 +238,7 @@ private data class YouTubeChannelLogEntity(
 internal class YouTubeVideoRemote(
     private val video: Video,
     override val fetchedAt: Instant,
-) : YouTubeVideoUpdatable {
+) : YouTubeVideo {
     private val liveStreamingDetails: VideoLiveStreamingDetails? get() = video.liveStreamingDetails
     private val snippet get() = requireNotNull(video.snippet) { "json: $video" }
     override val id: YouTubeVideo.Id = YouTubeVideo.Id(video.id)
