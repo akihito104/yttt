@@ -7,7 +7,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemUpdatable
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
@@ -64,8 +64,8 @@ abstract class FakeYouTubeClient : YouTubeClient {
 
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
-        maxResult: Long
-    ): NetworkResponse<List<YouTubePlaylistItemUpdatable>> = throw NotImplementedError()
+        maxResult: Long,
+    ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
         throw NotImplementedError()

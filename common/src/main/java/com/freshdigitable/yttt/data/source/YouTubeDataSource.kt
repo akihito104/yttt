@@ -7,7 +7,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
@@ -60,8 +59,8 @@ interface YouTubeDataSource {
         override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>>
         override suspend fun fetchPlaylistItems(
             id: YouTubePlaylist.Id,
-            maxResult: Long
-        ): Result<List<YouTubePlaylistItemUpdatable>>
+            maxResult: Long,
+        ): Result<List<YouTubePlaylistItem>>
 
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideo>>
     }

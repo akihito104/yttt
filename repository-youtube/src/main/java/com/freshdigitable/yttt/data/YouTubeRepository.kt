@@ -136,11 +136,10 @@ class YouTubeRepository @Inject constructor(
                 playlistRes.getOrNull()
                     ?: return Result.failure(IOException("playlist:${id.value} not found"))
             }
-            remoteSource.fetchPlaylistItems(id, maxResult).map {
+            remoteSource.fetchPlaylistItems(id, maxResult).map { items ->
                 YouTubePlaylistWithItems.newPlaylist(
                     playlist = playlist,
-                    items = it,
-                    fetchedAt = checkNotNull(it.first().fetchedAt),
+                    items = items,
                 )
             }
         }

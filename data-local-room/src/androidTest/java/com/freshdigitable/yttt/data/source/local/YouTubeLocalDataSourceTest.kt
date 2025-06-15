@@ -76,9 +76,8 @@ class YouTubeLocalDataSourceTest {
             // setup
             val id = YouTubePlaylist.Id("test")
             val updatable = YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist(id),
+                playlist = playlist(id, dateTimeProvider.now()),
                 items = emptyList(),
-                fetchedAt = dateTimeProvider.now(),
             )
             // exercise
             dataSource.updatePlaylistWithItems(updatable)
@@ -93,9 +92,8 @@ class YouTubeLocalDataSourceTest {
             // setup
             val id = YouTubePlaylist.Id("test")
             val updatable = YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist(id),
+                playlist = playlist(id, dateTimeProvider.now()),
                 items = null,
-                fetchedAt = dateTimeProvider.now(),
             )
             // exercise
             dataSource.updatePlaylistWithItems(updatable)
@@ -114,14 +112,14 @@ class YouTubeLocalDataSourceTest {
                     id = YouTubePlaylistItem.Id("playlist"),
                     playlistId = playlistId,
                     videoId = YouTubeVideo.Id("video"),
+                    fetchedAt = dateTimeProvider.now(),
                 ),
             )
             val channel = items.map { it.channel.toDbEntity() }.distinctBy { it.id }
             dao.addChannels(channel)
             val updatable = YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = playlist(playlistId, dateTimeProvider.now()),
                 items = items,
-                fetchedAt = dateTimeProvider.now(),
             )
             // exercise
             dataSource.updatePlaylistWithItems(updatable)
@@ -211,15 +209,15 @@ class YouTubeLocalDataSourceTest {
                     id = YouTubePlaylistItem.Id("playlist"),
                     playlistId = simple,
                     videoId = YouTubeVideo.Id("video"),
+                    fetchedAt = rule.dateTimeProvider.now(),
                 ),
             ),
             privatePlaylist to null,
             empty to emptyList()
         ).map { (playlistId, items) ->
             playlistId to YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = playlist(playlistId, rule.dateTimeProvider.now()),
                 items = items,
-                fetchedAt = rule.dateTimeProvider.now(),
             )
         }.toMap()
         private val channel = items.values.map { it.items }.flatten()
@@ -260,6 +258,7 @@ class YouTubeLocalDataSourceTest {
                     id = YouTubePlaylistItem.Id("item2"),
                     playlistId = simple,
                     videoId = YouTubeVideo.Id("video_item2"),
+                    fetchedAt = dateTimeProvider.now(),
                 )
             ) + checkNotNull(items[simple]!!.items)
             val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
@@ -333,12 +332,12 @@ class YouTubeLocalDataSourceTest {
                     id = YouTubePlaylistItem.Id(it.id.value),
                     playlistId = playlistId,
                     videoId = it.id,
+                    fetchedAt = rule.dateTimeProvider.now(),
                 )
             }
             val updatable = YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = playlist(playlistId, dateTimeProvider.now()),
                 items = items,
-                fetchedAt = dateTimeProvider.now(),
             )
             dataSource.updatePlaylistWithItems(updatable)
             val channels = videos.map { it.channel.toDbEntity() }
@@ -502,10 +501,15 @@ private fun channelTable(
     iconUrl: String = "",
 ): YouTubeChannelTable = YouTubeChannelTable(id, title, iconUrl)
 
-private fun playlist(playlistId: YouTubePlaylist.Id): YouTubePlaylist = object : YouTubePlaylist {
+private fun playlist(
+    playlistId: YouTubePlaylist.Id,
+    fetchedAt: Instant = Instant.EPOCH,
+): YouTubePlaylist = object : YouTubePlaylist {
     override val id: YouTubePlaylist.Id = playlistId
     override val title: String = ""
     override val thumbnailUrl: String = ""
+    override val fetchedAt: Instant? get() = fetchedAt
+    override val maxAge: Duration? get() = Duration.ofMinutes(5)
 }
 
 private data class YouTubePlaylistItemEntity(
@@ -518,4 +522,6 @@ private data class YouTubePlaylistItemEntity(
     override val description: String = "",
     override val videoOwnerChannelId: YouTubeChannel.Id? = null,
     override val publishedAt: Instant = Instant.EPOCH,
+    override val maxAge: Duration? = Duration.ofMinutes(5),
+    override val fetchedAt: Instant?,
 ) : YouTubePlaylistItem

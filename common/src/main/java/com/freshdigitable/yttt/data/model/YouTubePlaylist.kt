@@ -2,7 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 import java.time.Instant
 
-interface YouTubePlaylist {
+interface YouTubePlaylist : Updatable {
     val id: Id
     val title: String
     val thumbnailUrl: String
@@ -10,9 +10,7 @@ interface YouTubePlaylist {
     data class Id(override val value: String) : YouTubeId
 }
 
-interface YouTubePlaylistUpdatable : YouTubePlaylist, Updatable
-
-interface YouTubePlaylistItem {
+interface YouTubePlaylistItem : Updatable {
     val id: Id
     val playlistId: YouTubePlaylist.Id
     val title: String
@@ -25,5 +23,3 @@ interface YouTubePlaylistItem {
 
     data class Id(override val value: String) : YouTubeId
 }
-
-interface YouTubePlaylistItemUpdatable : YouTubePlaylistItem, Updatable

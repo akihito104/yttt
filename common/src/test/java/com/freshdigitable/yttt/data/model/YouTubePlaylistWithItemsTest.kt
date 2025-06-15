@@ -20,9 +20,8 @@ class YouTubePlaylistWithItemsTest {
         fun create_newItemIsNull_returnsMaxDuration() {
             // setup
             val sut = YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = playlist(playlistId, Instant.EPOCH),
                 items = null,
-                fetchedAt = Instant.EPOCH,
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(MAX_AGE_MAX)
@@ -33,9 +32,8 @@ class YouTubePlaylistWithItemsTest {
         fun create_newItemIsEmpty_returnsMaxDuration() {
             // setup
             val sut = YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = playlist(playlistId, Instant.EPOCH),
                 items = emptyList(),
-                fetchedAt = Instant.EPOCH,
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(MAX_AGE_MAX)
@@ -46,14 +44,13 @@ class YouTubePlaylistWithItemsTest {
         fun create_newItemIsNotEmpty_returnsDefaultDuration() {
             // setup
             val sut = YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = playlist(playlistId, Instant.EPOCH),
                 items = listOf(
                     playlistItem(
                         playlistId = playlistId,
                         itemId = YouTubePlaylistItem.Id("item_id_01"),
                     ),
                 ),
-                fetchedAt = Instant.EPOCH,
             )
             // verify
             assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT)
@@ -232,10 +229,15 @@ class YouTubePlaylistWithItemsTest {
     }
 }
 
-private fun playlist(playlistId: YouTubePlaylist.Id): YouTubePlaylist = object : YouTubePlaylist {
+private fun playlist(
+    playlistId: YouTubePlaylist.Id,
+    fetchedAt: Instant = Instant.EPOCH,
+): YouTubePlaylist = object : YouTubePlaylist {
     override val id: YouTubePlaylist.Id = playlistId
     override val title: String = ""
     override val thumbnailUrl: String = ""
+    override val fetchedAt: Instant? get() = fetchedAt
+    override val maxAge: Duration? get() = Duration.ofMinutes(5)
 }
 
 private fun playlistWithItems(
@@ -244,7 +246,7 @@ private fun playlistWithItems(
     items: List<YouTubePlaylistItem>,
     fetchedAt: Instant = Instant.EPOCH,
 ): YouTubePlaylistWithItems = YouTubePlaylistWithItems.create(
-    playlist = object : YouTubePlaylistUpdatable, YouTubePlaylist by playlist(playlistId) {
+    playlist = object : YouTubePlaylist by playlist(playlistId, fetchedAt) {
         override val maxAge: Duration = maxAge
         override val fetchedAt: Instant = fetchedAt
     },
@@ -269,6 +271,8 @@ private fun playlistItem(
     videoId = YouTubeVideo.Id("video"),
     videoOwnerChannelId = null,
     publishedAt = publishedAt,
+    fetchedAt = Instant.EPOCH,
+    maxAge = Duration.ofMinutes(5),
 )
 
 data class YouTubePlaylistItemEntity(
@@ -281,4 +285,6 @@ data class YouTubePlaylistItemEntity(
     override val description: String,
     override val videoOwnerChannelId: YouTubeChannel.Id?,
     override val publishedAt: Instant,
+    override val maxAge: Duration?,
+    override val fetchedAt: Instant?,
 ) : YouTubePlaylistItem

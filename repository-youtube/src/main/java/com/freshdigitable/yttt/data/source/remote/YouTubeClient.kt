@@ -10,7 +10,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
@@ -45,7 +44,7 @@ interface YouTubeClient {
     fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItemUpdatable>>
+    ): NetworkResponse<List<YouTubePlaylistItem>>
 
     fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>>
     fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>>
@@ -104,8 +103,9 @@ internal class YouTubeClientImpl(
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
+        val current = dateTimeProvider.now()
         return NetworkResponse.create(
-            item = res.items.map { YouTubePlaylistRemote(it) },
+            item = res.items.map { YouTubePlaylistRemote(it, current) },
             nextPageToken = res.nextPageToken,
         )
     }
@@ -113,7 +113,7 @@ internal class YouTubeClientImpl(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItemUpdatable>> {
+    ): NetworkResponse<List<YouTubePlaylistItem>> {
         val res = youtube.fetch {
             playlistItems()
                 .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
@@ -381,17 +381,21 @@ private data class YouTubeChannelSectionImpl(
     }
 }
 
-private class YouTubePlaylistRemote(private val playlist: Playlist) : YouTubePlaylist {
+private class YouTubePlaylistRemote(
+    private val playlist: Playlist,
+    override val fetchedAt: Instant?,
+) : YouTubePlaylist {
     override val id: YouTubePlaylist.Id get() = YouTubePlaylist.Id(playlist.id)
     override val title: String get() = playlist.snippet.title
     override val thumbnailUrl: String get() = playlist.snippet.thumbnails.url
+    override val maxAge: Duration? get() = MAX_AGE_DEFAULT
     override fun toString(): String = playlist.toPrettyString()
 }
 
 private class PlaylistItemRemote(
     private val item: PlaylistItem,
     override val fetchedAt: Instant,
-) : YouTubePlaylistItemUpdatable {
+) : YouTubePlaylistItem {
     override val id: YouTubePlaylistItem.Id get() = YouTubePlaylistItem.Id(item.id)
     override val playlistId: YouTubePlaylist.Id get() = YouTubePlaylist.Id(item.snippet.playlistId)
     override val title: String get() = item.snippet.title

@@ -17,7 +17,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
-import com.freshdigitable.yttt.data.model.YouTubePlaylistUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -35,7 +34,7 @@ internal class YouTubePlaylistTable(
     override val fetchedAt: Instant = Instant.EPOCH,
     @ColumnInfo(name = "max_age")
     override val maxAge: Duration = MAX_AGE_DEFAULT,
-) : YouTubePlaylistUpdatable {
+) : YouTubePlaylist {
     @Ignore
     override val thumbnailUrl: String = "" // TODO: implement for all_playlist with paging
 
@@ -186,12 +185,19 @@ internal data class YouTubePlaylistItemDb(
     override val videoOwnerChannelId: YouTubeChannel.Id?,
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
+    @ColumnInfo(name = "fetched_at")
+    override val fetchedAt: Instant?,
+    @ColumnInfo(name = "max_age")
+    override val maxAge: Duration?,
 ) : YouTubePlaylistItem {
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT p.*, c.id AS channel_id, c.title AS channel_title FROM playlist_item AS p " +
-                "INNER JOIN channel AS c ON c.id = p.channel_id WHERE p.playlist_id = :id"
+            "SELECT p.*, c.id AS channel_id, c.title AS channel_title, l.last_modified AS fetched_at, l.max_age AS max_age " +
+                "FROM playlist_item AS p " +
+                "INNER JOIN channel AS c ON c.id = p.channel_id " +
+                "LEFT OUTER JOIN playlist AS l ON l.id = p.playlist_id " +
+                "WHERE p.playlist_id = :id"
         )
         suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDb>
     }
