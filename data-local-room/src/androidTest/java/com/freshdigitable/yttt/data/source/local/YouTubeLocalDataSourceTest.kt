@@ -406,9 +406,10 @@ private data class YouTubeVideoEntity(
     override val description: String = "",
     override val viewerCount: BigInteger? = null,
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?,
-    override val fetchedAt: Instant,
+    private val fetchedAt: Instant,
 ) : YouTubeVideo {
-    override val maxAge: Duration get() = Duration.ofMinutes(5)
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(fetchedAt, Duration.ofMinutes(5))
 
     companion object {
         fun uploadedVideo(

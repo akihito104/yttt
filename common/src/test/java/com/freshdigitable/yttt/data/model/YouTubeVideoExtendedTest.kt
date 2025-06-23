@@ -82,8 +82,7 @@ class YouTubeVideoExtendedTest {
                 YouTubeVideo by old.copy(title = "changed title") {
                 override val channel: YouTubeChannel get() = old.channel
                 override val isFreeChat: Boolean = true
-                override val fetchedAt: Instant get() = Instant.EPOCH
-                override val maxAge: Duration get() = Duration.ZERO
+                override val cacheControl: CacheControl get() = CacheControl.zero()
             }
             // exercise
             val actual = current.extend(oldEx)
@@ -184,8 +183,7 @@ class YouTubeVideoExtendedTest {
                 YouTubeVideo by old.copy(title = "changed title") {
                 override val channel: YouTubeChannel get() = old.channel
                 override val isFreeChat: Boolean = true
-                override val fetchedAt: Instant get() = Instant.EPOCH
-                override val maxAge: Duration get() = Duration.ZERO
+                override val cacheControl: CacheControl get() = CacheControl.zero()
             }
             // exercise
             val actual = current.extend(oldEx)
@@ -274,8 +272,7 @@ class YouTubeVideoExtendedTest {
                 YouTubeVideo by old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE) {
                 override val channel: YouTubeChannel get() = old.channel
                 override val isFreeChat: Boolean = false
-                override val fetchedAt: Instant get() = Instant.EPOCH
-                override val maxAge: Duration get() = Duration.ZERO
+                override val cacheControl: CacheControl get() = CacheControl.zero()
             }
             // exercise
             val actual = current.extend(oldEx)
@@ -384,9 +381,11 @@ internal data class YouTubeVideoImpl(
     override val description: String = "",
     override val viewerCount: BigInteger? = null,
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?,
-    override val maxAge: Duration = Duration.ZERO,
-    override val fetchedAt: Instant = Instant.EPOCH,
-) : YouTubeVideo
+    private val maxAge: Duration = Duration.ZERO,
+    private val fetchedAt: Instant = Instant.EPOCH,
+) : YouTubeVideo {
+    override val cacheControl: CacheControl get() = CacheControl.create(fetchedAt, maxAge)
+}
 
 internal fun YouTubeVideoImpl.extended(isFreeChat: Boolean): YouTubeVideoExtended =
     object : YouTubeVideoExtended, YouTubeVideo by this {

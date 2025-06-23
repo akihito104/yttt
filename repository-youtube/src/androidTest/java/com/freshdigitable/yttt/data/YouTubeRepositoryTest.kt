@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -87,8 +88,8 @@ class YouTubeRepositoryTest {
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
-            override val fetchedAt: Instant get() = Instant.ofEpochMilli(200)
-            override val maxAge: Duration get() = Duration.ofMillis(800)
+            override val cacheControl: CacheControl
+                get() = CacheControl.create(Instant.ofEpochMilli(200), Duration.ofMillis(800))
         }))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
@@ -159,8 +160,8 @@ class YouTubeRepositoryTest {
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
-            override val fetchedAt: Instant get() = Instant.ofEpochMilli(200)
-            override val maxAge: Duration get() = Duration.ofMillis(800)
+            override val cacheControl: CacheControl
+                get() = CacheControl.create(Instant.ofEpochMilli(200), Duration.ofMillis(800))
         }))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))

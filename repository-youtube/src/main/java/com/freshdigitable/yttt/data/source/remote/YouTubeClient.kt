@@ -240,7 +240,7 @@ private data class YouTubeChannelLogEntity(
 @VisibleForTesting
 internal class YouTubeVideoRemote(
     private val video: Video,
-    override val fetchedAt: Instant,
+    private val fetchedAt: Instant,
 ) : YouTubeVideo {
     private val liveStreamingDetails: VideoLiveStreamingDetails? get() = video.liveStreamingDetails
     private val snippet get() = requireNotNull(video.snippet) { "json: $video" }
@@ -261,7 +261,7 @@ internal class YouTubeVideoRemote(
     override val viewerCount: BigInteger? get() = liveStreamingDetails?.concurrentViewers
     override val liveBroadcastContent: YouTubeVideo.BroadcastType =
         findBy(snippet.liveBroadcastContent)
-    override val maxAge: Duration get() = MAX_AGE_DEFAULT
+    override val cacheControl: CacheControl get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
 
     override fun toString(): String = video.toString()
 

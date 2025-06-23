@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.feature.timetable
 
 import app.cash.turbine.test
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -316,8 +317,7 @@ internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : Yo
     override val actualEndDateTime: Instant? = null
     override val description: String = ""
     override val viewerCount: BigInteger? = BigInteger.ONE
-    override val fetchedAt: Instant get() = Instant.EPOCH
-    override val maxAge: Duration get() = Duration.ZERO
+    override val cacheControl: CacheControl get() = CacheControl.zero()
 }
 
 private fun playlistItem(

@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
-import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_FREE_CHAT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_NOT_UPDATABLE
@@ -15,7 +16,7 @@ import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 
-interface YouTubeVideo : CacheControl {
+interface YouTubeVideo : Updatable {
     val id: Id
     val title: String
     val channel: YouTubeChannelTitle
@@ -122,42 +123,21 @@ private class YouTubeVideoExtendedImpl(
     private val video: YouTubeVideo,
     private val _isFreeChat: Boolean?,
 ) : YouTubeVideoExtended, YouTubeVideo by video {
-    override val fetchedAt: Instant get() = checkNotNull(video.fetchedAt)
     override val channel: YouTubeChannel
         get() = old?.channel?.update(video.channel) ?: video.channel.toChannel()
     override val isFreeChat: Boolean
-        get() = _isFreeChat
-            ?: if (old?.title == title) {
-                isUpcoming() && old.isFreeChat ?: isFreeChatTitle
-            } else {
-                isUpcoming() && isFreeChatTitle
-            }
-    override val maxAge: Duration
-        get() {
-            val defaultValue = MAX_AGE_DEFAULT
-            return when {
-                isFreeChat -> MAX_AGE_FREE_CHAT
-                isUnscheduledLive() -> defaultValue
-                isPostponedLive(fetchedAt) -> defaultValue
-                this.isUpcoming() -> Duration.between(
-                    fetchedAt,
-                    (fetchedAt + defaultValue).coerceAtMost(checkNotNull(this.scheduledStartDateTime)),
-                )
-
-                this.isNowOnAir() -> MAX_AGE_ON_AIR
-                isArchived -> MAX_AGE_NOT_UPDATABLE
-                else -> defaultValue
-            }
-        }
+        get() = isFreeChat(old, video, _isFreeChat)
     override val isThumbnailUpdatable: Boolean
         get() {
             val o = old ?: return false
             return when {
-                isFreeChat -> o.isUpdatable(fetchedAt) // at same time of updating this entity
+                isFreeChat -> o.isUpdatable(checkNotNull(video.cacheControl.fetchedAt)) // at same time of updating this entity
                 isLiveStream() -> (o.title != title || (o.isUpcoming() && isNowOnAir()))
                 else -> false
             }
         }
+    override val cacheControl: CacheControl
+        get() = video.cacheControl.overrideMaxAge(maxAge(old, video, _isFreeChat))
 
     companion object {
         fun YouTubeVideoExtendedImpl.createAsFreeChat(): YouTubeVideoExtended =
@@ -166,6 +146,38 @@ private class YouTubeVideoExtendedImpl(
                 video = this,
                 _isFreeChat = true,
             )
+
+        fun isFreeChat(
+            old: YouTubeVideoExtended?,
+            new: YouTubeVideo,
+            isNewVideoFreeChat: Boolean?,
+        ): Boolean = isNewVideoFreeChat ?: if (old?.title == new.title) {
+            new.isUpcoming() && old.isFreeChat ?: new.isFreeChatTitle
+        } else {
+            new.isUpcoming() && new.isFreeChatTitle
+        }
+
+        fun maxAge(
+            old: YouTubeVideoExtended?,
+            new: YouTubeVideo,
+            isNewVideoFreeChat: Boolean?,
+        ): Duration {
+            val defaultValue = MAX_AGE_DEFAULT
+            val fetchedAt = checkNotNull(new.cacheControl.fetchedAt)
+            return when {
+                isFreeChat(old, new, isNewVideoFreeChat) -> MAX_AGE_FREE_CHAT
+                new.isUnscheduledLive() -> defaultValue
+                new.isPostponedLive(fetchedAt) -> defaultValue
+                new.isUpcoming() -> Duration.between(
+                    fetchedAt,
+                    (fetchedAt + defaultValue).coerceAtMost(checkNotNull(new.scheduledStartDateTime)),
+                )
+
+                new.isNowOnAir() -> MAX_AGE_ON_AIR
+                new.isArchived -> MAX_AGE_NOT_UPDATABLE
+                else -> defaultValue
+            }
+        }
 
         private fun YouTubeChannelTitle.toChannel(): YouTubeChannel {
             if (this is YouTubeChannel) return this

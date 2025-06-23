@@ -90,10 +90,8 @@ internal data class YouTubeVideoDb(
     override val channel: YouTubeChannelTable,
     @ColumnInfo("is_free_chat")
     override val isFreeChat: Boolean?,
-    @ColumnInfo(name = "fetched_at")
-    override val fetchedAt: Instant?,
-    @ColumnInfo(name = "max_age")
-    override val maxAge: Duration?,
+    @Embedded
+    override val cacheControl: CacheControlDb,
 ) : YouTubeVideoExtended {
     override val id: YouTubeVideo.Id
         get() = video.id

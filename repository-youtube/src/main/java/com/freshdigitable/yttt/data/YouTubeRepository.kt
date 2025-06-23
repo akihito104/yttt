@@ -1,9 +1,9 @@
 package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.isFresh
-import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail.Companion.update

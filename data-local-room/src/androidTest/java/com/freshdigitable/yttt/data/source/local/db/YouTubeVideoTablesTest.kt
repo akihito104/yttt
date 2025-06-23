@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import app.cash.turbine.test
-import com.freshdigitable.yttt.data.model.CacheControl.Companion.isFresh
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import org.assertj.core.api.Assertions.assertThat

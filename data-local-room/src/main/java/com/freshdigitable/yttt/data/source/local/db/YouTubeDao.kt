@@ -55,8 +55,7 @@ internal class YouTubeDao @Inject constructor(
         val v = videos.filter { it !is YouTubeVideoDb }
         val entity = v.map { it.toDbEntity() }
         val freeChat = v.map { FreeChatTable(it.id, it.isFreeChat) }
-        val expiring =
-            v.map { YouTubeVideoExpireTable(it.id, CacheControlDb(it.fetchedAt, it.maxAge)) }
+        val expiring = v.map { YouTubeVideoExpireTable(it.id, it.cacheControl.toDb()) }
         addVideoEntities(entity)
         addFreeChatItemEntities(freeChat)
         addLiveVideoExpire(expiring)
