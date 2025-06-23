@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
-import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_FREE_CHAT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_NOT_UPDATABLE
@@ -15,7 +15,7 @@ import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 
-interface YouTubeVideo : Updatable {
+interface YouTubeVideo : CacheControl {
     val id: Id
     val title: String
     val channel: YouTubeChannelTitle

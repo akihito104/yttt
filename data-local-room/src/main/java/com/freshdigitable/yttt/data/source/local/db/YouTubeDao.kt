@@ -55,7 +55,8 @@ internal class YouTubeDao @Inject constructor(
         val v = videos.filter { it !is YouTubeVideoDb }
         val entity = v.map { it.toDbEntity() }
         val freeChat = v.map { FreeChatTable(it.id, it.isFreeChat) }
-        val expiring = v.map { YouTubeVideoExpireTable(it.id, it.fetchedAt, it.maxAge) }
+        val expiring =
+            v.map { YouTubeVideoExpireTable(it.id, CacheControlDb(it.fetchedAt, it.maxAge)) }
         addVideoEntities(entity)
         addFreeChatItemEntities(freeChat)
         addLiveVideoExpire(expiring)
@@ -76,7 +77,7 @@ internal class YouTubeDao @Inject constructor(
             .distinct()
             .map { YouTubePlaylistTable(it) }
         val expired = channelDetail
-            .map { YouTubeChannelAdditionExpireTable(it.id, it.fetchedAt, it.maxAge) }
+            .map { YouTubeChannelAdditionExpireTable(it.id, it.cacheControl.toDb()) }
         addChannels(channels)
         addPlaylists(playlists)
         addChannelAddition(additions)
@@ -164,8 +165,7 @@ internal fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTa
 
 private fun YouTubePlaylistWithItems.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
     id = playlist.id,
-    fetchedAt = checkNotNull(fetchedAt),
-    maxAge = checkNotNull(maxAge),
+    cacheControl = YouTubePlaylistCacheControlDb(checkNotNull(fetchedAt), checkNotNull(maxAge))
 )
 
 private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(

@@ -15,7 +15,6 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -83,15 +82,14 @@ internal class TwitchUserDetailTable(
     value = "SELECT u.login_name, u.display_name, d.*, e.fetched_at, e.max_age " +
         "FROM twitch_user_detail AS d " +
         "INNER JOIN twitch_user AS u ON d.user_id = u.id " +
-        "INNER JOIN twitch_user_detail_expire AS e ON d.user_id = e.user_id",
+        "LEFT OUTER JOIN twitch_user_detail_expire AS e ON d.user_id = e.user_id",
     viewName = "twitch_user_detail_view",
 )
 internal data class TwitchUserDetailDbView(
     @Embedded private val detail: TwitchUserDetailTable,
     @ColumnInfo("login_name") override val loginName: String,
     @ColumnInfo("display_name") override val displayName: String,
-    @ColumnInfo("fetched_at") override val fetchedAt: Instant,
-    @ColumnInfo("max_age") override val maxAge: Duration,
+    @Embedded override val cacheControl: CacheControlDb,
 ) : TwitchUserDetail {
     override val id: TwitchUser.Id get() = detail.id
     override val profileImageUrl: String get() = detail.profileImageUrl
@@ -128,11 +126,8 @@ internal class TwitchUserDetailExpireTable(
     @PrimaryKey
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
-    @ColumnInfo("fetched_at", defaultValue = "null")
-    val fetchedAt: Instant?,
-    @ColumnInfo("max_age", defaultValue = "null")
-    val maxAge: Duration?,
-) {
+    @Embedded override val cacheControl: CacheControlDb,
+) : Updatable {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -205,10 +200,7 @@ internal class TwitchBroadcasterExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("follower_user_id", index = true)
     val followerId: TwitchUser.Id,
-    @ColumnInfo("fetched_at", defaultValue = "null")
-    override val fetchedAt: Instant?,
-    @ColumnInfo("max_age", defaultValue = "null")
-    override val maxAge: Duration?,
+    @Embedded override val cacheControl: CacheControlDb,
 ) : Updatable {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {

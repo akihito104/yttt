@@ -10,7 +10,7 @@ interface YouTubePlaylist : Updatable {
     data class Id(override val value: String) : YouTubeId
 }
 
-interface YouTubePlaylistItem : Updatable {
+interface YouTubePlaylistItem : CacheControl {
     val id: Id
     val playlistId: YouTubePlaylist.Id
     val title: String

@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import app.cash.turbine.test
-import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.isFresh
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import org.assertj.core.api.Assertions.assertThat
@@ -54,8 +54,7 @@ class YouTubeVideoTablesTest {
             val expire = listOf(simple, freechat).map {
                 YouTubeVideoExpireTable(
                     videoId = it,
-                    fetchedAt = Instant.ofEpochMilli(100),
-                    maxAge = Duration.ZERO,
+                    cacheControl = CacheControlDb(Instant.ofEpochMilli(100), Duration.ZERO),
                 )
             }
             dao.addChannels(listOf(channel))
@@ -70,7 +69,7 @@ class YouTubeVideoTablesTest {
             val target = simple
             // exercise
             val actual = dao.findVideosById(listOf(target))
-                .filter { !it.isUpdatable(Instant.ofEpochMilli(99)) }
+                .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
             assertThat(actual).hasSize(1)
             assertThat(actual.first().id).isEqualTo(target)
@@ -82,7 +81,7 @@ class YouTubeVideoTablesTest {
             val target = simple
             // exercise
             val actual = dao.findVideosById(listOf(target))
-                .filter { !it.isUpdatable(Instant.ofEpochMilli(100)) }
+                .filter { it.isFresh(Instant.ofEpochMilli(100)) }
             // verify
             assertThat(actual).hasSize(0)
         }
@@ -93,7 +92,7 @@ class YouTubeVideoTablesTest {
             val target = freechat
             // exercise
             val actual = dao.findVideosById(listOf(target))
-                .filter { !it.isUpdatable(Instant.ofEpochMilli(99)) }
+                .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
             assertThat(actual).hasSize(1)
             assertThat(actual.first().id).isEqualTo(target)
@@ -106,7 +105,7 @@ class YouTubeVideoTablesTest {
             val target = hasNoExpire
             // exercise
             val actual = dao.findVideosById(listOf(target))
-                .filter { !it.isUpdatable(Instant.ofEpochMilli(100)) }
+                .filter { it.isFresh(Instant.ofEpochMilli(100)) }
             // verify
             assertThat(actual).isEmpty()
         }
@@ -117,7 +116,7 @@ class YouTubeVideoTablesTest {
             val target = listOf(simple, hasNoExpire)
             // exercise
             val actual = dao.findVideosById(target)
-                .filter { !it.isUpdatable(Instant.ofEpochMilli(99)) }
+                .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
             assertThat(actual.map { it.id }).containsExactlyInAnyOrder(simple)
         }

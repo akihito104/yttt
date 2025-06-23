@@ -8,6 +8,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -188,11 +189,9 @@ internal class YouTubeVideoExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "video_id")
     val videoId: YouTubeVideo.Id,
-    @ColumnInfo(name = "fetched_at", defaultValue = "null")
-    val fetchedAt: Instant?,
-    @ColumnInfo(name = "max_age", defaultValue = "null")
-    val maxAge: Duration?,
-) {
+    @Embedded
+    override val cacheControl: CacheControlDb,
+) : Updatable {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert

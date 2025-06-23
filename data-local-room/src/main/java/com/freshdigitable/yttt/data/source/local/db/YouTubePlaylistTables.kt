@@ -12,6 +12,7 @@ import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
@@ -30,10 +31,8 @@ internal class YouTubePlaylistTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylist.Id,
-    @ColumnInfo(name = "last_modified")
-    override val fetchedAt: Instant = Instant.EPOCH,
-    @ColumnInfo(name = "max_age")
-    override val maxAge: Duration = MAX_AGE_DEFAULT,
+    @Embedded
+    override val cacheControl: YouTubePlaylistCacheControlDb = YouTubePlaylistCacheControlDb(Instant.EPOCH, MAX_AGE_DEFAULT),
 ) : YouTubePlaylist {
     @Ignore
     override val thumbnailUrl: String = "" // TODO: implement for all_playlist with paging
@@ -62,6 +61,11 @@ internal class YouTubePlaylistTable(
         override suspend fun deleteTable()
     }
 }
+
+internal class YouTubePlaylistCacheControlDb(
+    @ColumnInfo(name = "last_modified") override val fetchedAt: Instant,
+    @ColumnInfo(name = "max_age") override val maxAge: Duration,
+) : CacheControl
 
 @Entity(
     tableName = "playlist_item",
@@ -158,6 +162,9 @@ internal class YouTubePlaylistWithItemSummariesDb(
     )
     override val summary: List<YouTubePlaylistItemSummaryDb>,
 ) : YouTubePlaylistWithItemSummaries, Updatable by playlist {
+    override val fetchedAt: Instant? get() = cacheControl.fetchedAt
+    override val maxAge: Duration? get() = cacheControl.maxAge
+
     @androidx.room.Dao
     internal interface Dao {
         @Transaction

@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import androidx.annotation.VisibleForTesting
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -93,7 +94,8 @@ internal class YouTubeClientImpl(
                 .setMaxResults(ids.size.toLong())
         }
         val current = dateTimeProvider.now()
-        return NetworkResponse.create(item = res.items.map { YouTubeChannelImpl(it, current) })
+        val cacheControl = CacheControl.create(current, MAX_AGE_DEFAULT)
+        return NetworkResponse.create(item = res.items.map { YouTubeChannelImpl(it, cacheControl) })
     }
 
     override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> {
@@ -104,8 +106,9 @@ internal class YouTubeClientImpl(
                 .setMaxResults(ids.size.toLong())
         }
         val current = dateTimeProvider.now()
+        val cacheControl = CacheControl.create(current, MAX_AGE_DEFAULT)
         return NetworkResponse.create(
-            item = res.items.map { YouTubePlaylistRemote(it, current) },
+            item = res.items.map { YouTubePlaylistRemote(it, cacheControl) },
             nextPageToken = res.nextPageToken,
         )
     }
@@ -291,7 +294,7 @@ private val ThumbnailDetails.iconUrl: String
 
 private data class YouTubeChannelImpl(
     private val channel: Channel,
-    override val fetchedAt: Instant,
+    override val cacheControl: CacheControl,
 ) : YouTubeChannelDetail {
     override val id: YouTubeChannel.Id
         get() = YouTubeChannel.Id(channel.id)
@@ -319,7 +322,6 @@ private data class YouTubeChannelImpl(
         get() = channel.brandingSettings?.channel?.description
     override val uploadedPlayList: YouTubePlaylist.Id?
         get() = channel.contentDetails?.relatedPlaylists?.uploads?.let { YouTubePlaylist.Id(it) }
-    override val maxAge: Duration get() = MAX_AGE_DEFAULT
 
     override fun toString(): String = channel.toPrettyString()
 }
@@ -383,12 +385,11 @@ private data class YouTubeChannelSectionImpl(
 
 private class YouTubePlaylistRemote(
     private val playlist: Playlist,
-    override val fetchedAt: Instant?,
+    override val cacheControl: CacheControl,
 ) : YouTubePlaylist {
     override val id: YouTubePlaylist.Id get() = YouTubePlaylist.Id(playlist.id)
     override val title: String get() = playlist.snippet.title
     override val thumbnailUrl: String get() = playlist.snippet.thumbnails.url
-    override val maxAge: Duration? get() = MAX_AGE_DEFAULT
     override fun toString(): String = playlist.toPrettyString()
 }
 

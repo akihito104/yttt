@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "b61c356a052dcfa80a2c7d43589afb1e",
+    "identityHash": "4805e43671c5659fa1f3921e4a7bf55e",
     "entities": [
       {
         "tableName": "channel",
@@ -1403,12 +1403,12 @@
       },
       {
         "viewName": "twitch_user_detail_view",
-        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT u.login_name, u.display_name, d.*, e.fetched_at, e.max_age FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id INNER JOIN twitch_user_detail_expire AS e ON d.user_id = e.user_id"
+        "createSql": "CREATE VIEW `${VIEW_NAME}` AS SELECT u.login_name, u.display_name, d.*, e.fetched_at, e.max_age FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id LEFT OUTER JOIN twitch_user_detail_expire AS e ON d.user_id = e.user_id"
       }
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b61c356a052dcfa80a2c7d43589afb1e')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '4805e43671c5659fa1f3921e4a7bf55e')"
     ]
   }
 }

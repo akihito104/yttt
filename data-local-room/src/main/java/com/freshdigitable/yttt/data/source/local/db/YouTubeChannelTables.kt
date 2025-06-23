@@ -9,6 +9,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelAddition
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -18,7 +19,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.math.BigInteger
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -121,11 +121,9 @@ internal data class YouTubeChannelAdditionExpireTable(
     @PrimaryKey
     @ColumnInfo(name = "channel_id")
     val channelId: YouTubeChannel.Id,
-    @ColumnInfo(name = "fetched_at", defaultValue = "null")
-    val fetchedAt: Instant? = null,
-    @ColumnInfo(name = "max_age", defaultValue = "null")
-    val maxAge: Duration?,
-) {
+    @Embedded
+    override val cacheControl: CacheControlDb,
+) : Updatable {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -143,10 +141,8 @@ internal data class YouTubeChannelDetailDb(
     override val iconUrl: String,
     @Embedded
     val addition: YouTubeChannelAdditionTable,
-    @ColumnInfo(name = "fetched_at")
-    override val fetchedAt: Instant?,
-    @ColumnInfo(name = "max_age")
-    override val maxAge: Duration?
+    @Embedded
+    override val cacheControl: CacheControlDb,
 ) : YouTubeChannelDetail, YouTubeChannel, YouTubeChannelAddition by addition {
     @get:Ignore
     override val id: YouTubeChannel.Id get() = addition.id

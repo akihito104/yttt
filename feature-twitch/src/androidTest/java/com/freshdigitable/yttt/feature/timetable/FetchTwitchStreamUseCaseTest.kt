@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.feature.timetable
 
 import app.cash.turbine.test
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
@@ -520,8 +521,8 @@ private fun userDetail(
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
     override val createdAt: Instant get() = Instant.EPOCH
-    override val maxAge: Duration get() = Duration.ZERO
-    override val fetchedAt: Instant get() = fetchedAt
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(fetchedAt, Duration.ZERO)
 }
 
 private fun broadcaster(user: TwitchUser, followedAt: Instant = Instant.EPOCH) =

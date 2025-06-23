@@ -236,8 +236,8 @@ private fun playlist(
     override val id: YouTubePlaylist.Id = playlistId
     override val title: String = ""
     override val thumbnailUrl: String = ""
-    override val fetchedAt: Instant? get() = fetchedAt
-    override val maxAge: Duration? get() = Duration.ofMinutes(5)
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(fetchedAt, Duration.ofMinutes(5))
 }
 
 private fun playlistWithItems(
@@ -247,8 +247,8 @@ private fun playlistWithItems(
     fetchedAt: Instant = Instant.EPOCH,
 ): YouTubePlaylistWithItems = YouTubePlaylistWithItems.create(
     playlist = object : YouTubePlaylist by playlist(playlistId, fetchedAt) {
-        override val maxAge: Duration = maxAge
-        override val fetchedAt: Instant = fetchedAt
+        override val cacheControl: CacheControl
+            get() = CacheControl.create(fetchedAt, maxAge)
     },
     items = items,
 )

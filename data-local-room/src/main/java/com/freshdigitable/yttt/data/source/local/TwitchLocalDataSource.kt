@@ -19,8 +19,6 @@ import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -77,11 +75,7 @@ internal class TwitchLocalDataSource @Inject constructor(
     ): Result<TwitchChannelScheduleUpdatable> = ioScope.asResult {
         val expire = dao.findChannelScheduleExpire(id)
         val schedule = dao.findChannelSchedule(id)
-        object : TwitchChannelScheduleUpdatable {
-            override val schedule: TwitchChannelSchedule? get() = schedule
-            override val fetchedAt: Instant? get() = expire?.fetchedAt
-            override val maxAge: Duration get() = expire?.maxAge ?: super.maxAge
-        }
+        TwitchChannelScheduleUpdatable.create(schedule, expire?.cacheControl)
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =

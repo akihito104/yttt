@@ -30,7 +30,9 @@ internal class TwitchDao @Inject constructor(
 
     suspend fun addUserDetails(users: Collection<TwitchUserDetail>) = db.withTransaction {
         val details = users.map { it.toTable() }
-        val expires = users.map { TwitchUserDetailExpireTable(it.id, it.fetchedAt, it.maxAge) }
+        val expires = users.map {
+            TwitchUserDetailExpireTable(it.id, it.cacheControl.toDb())
+        }
         addUsers(users.map { (it as TwitchUser).toTable() })
         addUserDetailEntities(details)
         addUserDetailExpireEntities(expires)
@@ -54,17 +56,14 @@ internal class TwitchDao @Inject constructor(
         db.withTransaction {
             val items = findBroadcastersByFollowerId(userId)
             val expires = findByFollowerUserId(userId)
-            TwitchFollowings.create(userId, items, expires?.fetchedAt, expires?.maxAge)
+            TwitchFollowings.create(userId, items, expires?.cacheControl)
         }
 
     suspend fun replaceAllBroadcasters(followings: TwitchFollowings) = db.withTransaction {
         removeBroadcastersByFollowerId(followings.followerId)
         addBroadcasters(followings.followerId, followings.followings)
-        val expires = TwitchBroadcasterExpireTable(
-            followings.followerId,
-            followings.fetchedAt,
-            followings.maxAge,
-        )
+        val expires =
+            TwitchBroadcasterExpireTable(followings.followerId, followings.cacheControl.toDb())
         addBroadcasterExpireEntity(expires)
     }
 
@@ -75,8 +74,7 @@ internal class TwitchDao @Inject constructor(
         val schedule = updatable.schedule
         val streams = schedule?.segments?.map { it.toStreamScheduleTable(broadcasterId) }
         val vacations = schedule?.vacation.toVacationScheduleTable(broadcasterId)
-        val expire =
-            TwitchChannelScheduleExpireTable(broadcasterId, updatable.fetchedAt, updatable.maxAge)
+        val expire = TwitchChannelScheduleExpireTable(broadcasterId, updatable.cacheControl.toDb())
         val category = schedule?.segments?.mapNotNull { it.category?.toTable() }
         if (!category.isNullOrEmpty()) addCategories(category)
 
@@ -120,14 +118,12 @@ internal class TwitchDao @Inject constructor(
     suspend fun findStreamByMe(me: TwitchUser.Id): TwitchStreams = db.withTransaction {
         val expire = findStreamExpire(me)
         val s = findAllStreams()
-        TwitchStreams.create(me, s, expire?.fetchedAt, expire?.maxAge)
+        TwitchStreams.create(me, s, expire?.cacheControl)
     }
 
     suspend fun replaceAllStreams(streams: TwitchStreams) = db.withTransaction {
         db.twitchStreamDao.deleteTable()
-        setStreamExpire(
-            TwitchStreamExpireTable(streams.followerId, streams.fetchedAt, streams.maxAge)
-        )
+        setStreamExpire(TwitchStreamExpireTable(streams.followerId, streams.cacheControl.toDb()))
         addUsers(streams.streams.map { it.user.toTable() })
         addCategories(streams.streams.map { TwitchCategoryTable(it.gameId, it.gameName) })
         addStreams(streams.streams.map { it.toTable() })

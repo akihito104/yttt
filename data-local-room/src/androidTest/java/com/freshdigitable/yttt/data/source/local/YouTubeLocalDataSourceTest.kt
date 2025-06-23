@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local
 
 import app.cash.turbine.test
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -508,8 +509,8 @@ private fun playlist(
     override val id: YouTubePlaylist.Id = playlistId
     override val title: String = ""
     override val thumbnailUrl: String = ""
-    override val fetchedAt: Instant? get() = fetchedAt
-    override val maxAge: Duration? get() = Duration.ofMinutes(5)
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(fetchedAt, Duration.ofMinutes(5))
 }
 
 private data class YouTubePlaylistItemEntity(

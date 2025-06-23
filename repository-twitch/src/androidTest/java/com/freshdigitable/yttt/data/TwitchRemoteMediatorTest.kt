@@ -9,6 +9,7 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.paging.testing.asSnapshot
 import com.freshdigitable.yttt.data.MediatorResultSubject.Companion.assertThat
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -82,7 +83,8 @@ class TwitchRemoteMediatorTest {
     private val fetchedAt = Instant.ofEpochMilli(20)
     private val maxAge = Duration.ofMinutes(5)
     private val updatableAt = fetchedAt + maxAge
-    private val followings = TwitchFollowings.create(authUser.id, broadcaster, fetchedAt, maxAge)
+    private val followings =
+        TwitchFollowings.create(authUser.id, broadcaster, CacheControl.create(fetchedAt, maxAge))
 
     @Before
     fun setup(): Unit = runBlocking {
@@ -93,10 +95,9 @@ class TwitchRemoteMediatorTest {
         val streams = object : TwitchStreams.Updated {
             override val followerId: TwitchUser.Id get() = authUser.id
             override val streams: List<TwitchStream> get() = stream
-            override val fetchedAt: Instant? get() = Instant.EPOCH
-            override val maxAge: Duration get() = Duration.ZERO
             override val updatableThumbnails: Set<String> get() = emptySet()
             override val deletedThumbnails: Set<String> get() = emptySet()
+            override val cacheControl: CacheControl get() = CacheControl.zero()
         }
         localSource.replaceFollowedStreams(streams)
         localSource.replaceAllFollowings(followings)
@@ -219,8 +220,8 @@ class TwitchRemoteMediatorTest {
             createdAt = Instant.EPOCH,
             profileImageUrl = "",
         ) {
-            override val fetchedAt: Instant get() = Instant.EPOCH
-            override val maxAge: Duration get() = Duration.ofMinutes(5)
+            override val cacheControl: CacheControl
+                get() = CacheControl.create(Instant.EPOCH, Duration.ofMinutes(5))
         }
 
         fun broadcaster(count: Int): List<Broadcaster> = (0..<count).map {

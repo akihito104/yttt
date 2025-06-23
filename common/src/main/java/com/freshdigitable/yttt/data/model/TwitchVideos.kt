@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
-import com.freshdigitable.yttt.data.model.Updatable.Companion.requireUpdate
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
+import com.freshdigitable.yttt.data.model.Updatable.Companion.checkUpdatableBy
 import java.time.Duration
 import java.time.Instant
 
@@ -80,19 +81,21 @@ interface TwitchChannelSchedule {
 
 interface TwitchChannelScheduleUpdatable : Updatable {
     val schedule: TwitchChannelSchedule?
-    override val maxAge: Duration get() = MAX_AGE_CHANNEL_SCHEDULE
 
     companion object {
-        private val MAX_AGE_CHANNEL_SCHEDULE = Duration.ofDays(1)
-        fun createAtFetched(
+        val MAX_AGE_CHANNEL_SCHEDULE: Duration = Duration.ofDays(1)
+        fun create(
             schedule: TwitchChannelSchedule?,
-            fetchedAt: Instant,
-        ): TwitchChannelScheduleUpdatable = Impl(schedule, fetchedAt)
+            cacheControl: CacheControl?,
+        ): TwitchChannelScheduleUpdatable = Impl(schedule, cacheControl ?: CacheControl.empty())
+
+        fun TwitchChannelScheduleUpdatable.update(maxAge: Duration): TwitchChannelScheduleUpdatable =
+            create(schedule, cacheControl.overrideMaxAge(maxAge))
     }
 
     private class Impl(
         override val schedule: TwitchChannelSchedule?,
-        override val fetchedAt: Instant,
+        override val cacheControl: CacheControl,
     ) : TwitchChannelScheduleUpdatable
 }
 
@@ -108,23 +111,23 @@ interface TwitchCategory {
 interface TwitchStreams : Updatable {
     val followerId: TwitchUser.Id
     val streams: List<TwitchStream>
-    override val maxAge: Duration get() = MAX_AGE_STREAM
 
     companion object {
         fun create(
             followerId: TwitchUser.Id,
             streams: List<TwitchStream>,
-            fetchedAt: Instant?,
-            maxAge: Duration? = MAX_AGE_STREAM,
-        ): TwitchStreams = Impl(followerId, streams, fetchedAt, maxAge ?: MAX_AGE_STREAM)
+            cacheControl: CacheControl?,
+        ): TwitchStreams = Impl(followerId, streams, cacheControl ?: CacheControl.empty())
 
         private val MAX_AGE_STREAM = Duration.ofMinutes(10)
 
         fun TwitchStreams.update(new: TwitchStreams): TwitchStreams {
             require(this.followerId == new.followerId)
-            this.requireUpdate(new)
+            this.checkUpdatableBy(new)
             val map = this.streams.associateBy { it.id }
+            val cc = new.cacheControl.overrideMaxAge(MAX_AGE_STREAM)
             return object : Updated, TwitchStreams by new {
+                override val cacheControl: CacheControl get() = cc
                 override val updatableThumbnails: Set<String>
                     get() {
                         return new.streams.filter { n ->
@@ -147,8 +150,7 @@ interface TwitchStreams : Updatable {
     private class Impl(
         override val followerId: TwitchUser.Id,
         override val streams: List<TwitchStream>,
-        override val fetchedAt: Instant?,
-        override val maxAge: Duration,
+        override val cacheControl: CacheControl,
     ) : TwitchStreams
 
     interface Updated : TwitchStreams {

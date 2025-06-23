@@ -1,7 +1,9 @@
 package com.freshdigitable.yttt.data
 
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.isFresh
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail.Companion.update
@@ -98,7 +100,7 @@ class YouTubeRepository @Inject constructor(
             return Result.failure(checkNotNull(cacheRes.exceptionOrNull()))
         }
         val cache = cacheRes.getOrNull()
-        if (cache?.isUpdatable(dateTimeProvider.now()) == false) {
+        if (cache?.isFresh(dateTimeProvider.now()) == true) {
             return Result.success(cache.items)
         }
         return fetchPlaylistWithItems(id, maxResult, cache).map { it?.items ?: emptyList() }
@@ -149,9 +151,9 @@ class YouTubeRepository @Inject constructor(
         if (ids.isEmpty()) {
             return Result.success(emptyList())
         }
-        val cacheRes = localSource.fetchChannelList(ids).map {
+        val cacheRes = localSource.fetchChannelList(ids).map { res ->
             val current = dateTimeProvider.now()
-            it.filter { it.isUpdatable(current).not() }
+            res.filter { it.isFresh(current) }
         }
         if (cacheRes.isFailure) {
             return cacheRes

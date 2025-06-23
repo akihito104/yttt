@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.test
 
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -19,7 +20,6 @@ import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import java.math.BigInteger
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Singleton
 
@@ -99,8 +99,8 @@ abstract class FakeYouTubeClient : YouTubeClient {
             override val customUrl: String = ""
             override val keywords: Collection<String> = emptyList()
             override val description: String = ""
-            override val maxAge: Duration get() = MAX_AGE_DEFAULT
-            override val fetchedAt: Instant get() = fetchedAt
+            override val cacheControl: CacheControl
+                get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
         }
     }
 }

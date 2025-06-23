@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.local
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -41,7 +42,7 @@ class TwitchLiveLocalDataSourceTest {
             dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
             dataSource.addUsers(listOf(broadcaster))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            val updatable = TwitchChannelScheduleUpdatable.createAtFetched(schedule, Instant.EPOCH)
+            val updatable = TwitchChannelScheduleUpdatable.create(schedule, CacheControl.zero())
             dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
@@ -93,7 +94,7 @@ class TwitchLiveLocalDataSourceTest {
                 dataSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            val updatable = TwitchChannelScheduleUpdatable.createAtFetched(schedule, Instant.EPOCH)
+            val updatable = TwitchChannelScheduleUpdatable.create(schedule, CacheControl.zero())
             dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
@@ -178,8 +179,7 @@ internal fun userDetail(
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
     override val createdAt: Instant get() = Instant.EPOCH
-    override val fetchedAt: Instant get() = Instant.EPOCH
-    override val maxAge: Duration get() = Duration.ZERO
+    override val cacheControl: CacheControl get() = CacheControl.zero()
 }
 
 private fun channelSchedule(
@@ -210,7 +210,8 @@ internal fun followings(
     followerId: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
     fetchedAt: Instant = Instant.EPOCH,
-): TwitchFollowings = TwitchFollowings.create(followerId, followings, fetchedAt)
+): TwitchFollowings =
+    TwitchFollowings.create(followerId, followings, CacheControl.create(fetchedAt, Duration.ZERO))
 
 private fun broadcaster(
     user: TwitchUser,

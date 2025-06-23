@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -33,8 +34,8 @@ internal class TwitchUserDetailRemote(
     @SerializedName("description")
     override val description: String,
 ) : TwitchUserDetail {
-    override val maxAge: Duration get() = Duration.ofMinutes(5)
-    override val fetchedAt: Instant get() = throw NotImplementedError()
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(null, Duration.ofMinutes(5))
 }
 
 internal class TwitchUserRemote(

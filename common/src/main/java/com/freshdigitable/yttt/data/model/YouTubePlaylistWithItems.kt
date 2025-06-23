@@ -78,7 +78,7 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
             get() = newItems ?: emptyList()
         override val fetchedAt: Instant
             get() = items.firstOrNull()?.let { checkNotNull(it.fetchedAt) }
-                ?: checkNotNull(playlist.fetchedAt)
+                ?: checkNotNull(playlist.cacheControl.fetchedAt)
         override val maxAge: Duration
             get() = if (items.isEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT
         override val addedItems: List<YouTubePlaylistItem>
@@ -91,6 +91,8 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
     ) : YouTubePlaylistWithItems, Updatable by playlist {
         override val addedItems: List<YouTubePlaylistItem>
             get() = emptyList()
+        override val fetchedAt: Instant? get() = cacheControl.fetchedAt
+        override val maxAge: Duration? get() = cacheControl.maxAge
     }
 }
 
@@ -100,7 +102,7 @@ interface YouTubePlaylistWithItemSummaries : YouTubePlaylistWithItemIds<YouTubeP
         get() = summary.map { it.playlistItemId }
 }
 
-interface YouTubePlaylistWithItemIds<T : IdBase> : Updatable {
+interface YouTubePlaylistWithItemIds<T : IdBase> : CacheControl {
     val playlist: YouTubePlaylist
     val itemId: List<T>
 }

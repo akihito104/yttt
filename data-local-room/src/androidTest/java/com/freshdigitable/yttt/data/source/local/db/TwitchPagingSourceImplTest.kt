@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.db
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.source.local.TwitchDataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.userDetail
@@ -17,7 +18,8 @@ class TwitchPagingSourceImplTest {
         private val me = userDetail(id = "user_me")
         private val fetchedAt = Instant.EPOCH
         private val maxAge = Duration.ofMinutes(5)
-        private val followings = TwitchFollowings.create(me.id, emptyList(), fetchedAt, maxAge)
+        private val followings =
+            TwitchFollowings.create(me.id, emptyList(), CacheControl.create(fetchedAt, maxAge))
     }
 
     @Test

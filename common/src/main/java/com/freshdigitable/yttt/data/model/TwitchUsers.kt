@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
-import com.freshdigitable.yttt.data.model.Updatable.Companion.requireUpdate
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
+import com.freshdigitable.yttt.data.model.Updatable.Companion.checkUpdatableBy
 import java.time.Duration
 import java.time.Instant
 
@@ -19,10 +20,12 @@ interface TwitchUserDetail : TwitchUser, Updatable {
 
     companion object {
         val MAX_AGE_USER_DETAIL: Duration = Duration.ofDays(1)
-        fun TwitchUserDetail.update(maxAge: Duration): TwitchUserDetail =
-            object : TwitchUserDetail by this {
-                override val maxAge: Duration? get() = maxAge
+        fun TwitchUserDetail.update(maxAge: Duration): TwitchUserDetail {
+            val cacheControl = cacheControl.overrideMaxAge(maxAge)
+            return object : TwitchUserDetail by this {
+                override val cacheControl: CacheControl get() = cacheControl
             }
+        }
     }
 }
 
@@ -33,23 +36,27 @@ interface TwitchBroadcaster : TwitchUser {
 interface TwitchFollowings : Updatable {
     val followerId: TwitchUser.Id
     val followings: List<TwitchBroadcaster>
-    override val maxAge: Duration get() = MAX_AGE_BROADCASTER
 
     companion object {
         internal val MAX_AGE_BROADCASTER: Duration = Duration.ofHours(12)
         fun create(
             follower: TwitchUser.Id,
             followings: List<TwitchBroadcaster>,
-            fetchedAt: Instant?,
-            maxAge: Duration? = null,
-        ): TwitchFollowings = Impl(follower, followings, fetchedAt, maxAge ?: MAX_AGE_BROADCASTER)
+            cacheControl: CacheControl?,
+        ): TwitchFollowings = Impl(
+            follower,
+            followings,
+            cacheControl ?: CacheControl.empty(),
+        )
 
         fun TwitchFollowings.update(new: TwitchFollowings): Updated {
             require(this.followerId == new.followerId) { "followerId must be same." }
-            this.requireUpdate(new)
+            this.checkUpdatableBy(new)
+            val cacheControl = new.cacheControl.overrideMaxAge(MAX_AGE_BROADCASTER)
             return object : Updated, TwitchFollowings by new {
                 override val removed: Set<TwitchUser.Id>
                     get() = getRemovedFollowingIds(this@update, new)
+                override val cacheControl: CacheControl get() = cacheControl
             }
         }
 
@@ -65,8 +72,7 @@ interface TwitchFollowings : Updatable {
     private data class Impl(
         override val followerId: TwitchUser.Id,
         override val followings: List<TwitchBroadcaster>,
-        override val fetchedAt: Instant?,
-        override val maxAge: Duration,
+        override val cacheControl: CacheControl,
     ) : TwitchFollowings
 
     interface Updated : TwitchFollowings {
