@@ -24,7 +24,7 @@ class YouTubePlaylistWithItemsTest {
                 items = null,
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_MAX)
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
             assertThat(sut.addedItems).isEmpty()
         }
 
@@ -36,7 +36,7 @@ class YouTubePlaylistWithItemsTest {
                 items = emptyList(),
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_MAX)
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
             assertThat(sut.addedItems).isEmpty()
         }
 
@@ -53,7 +53,7 @@ class YouTubePlaylistWithItemsTest {
                 ),
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT)
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_DEFAULT)
             assertThat(sut.addedItems.map { it.id })
                 .containsExactlyInAnyOrder(YouTubePlaylistItem.Id("item_id_01"))
         }
@@ -84,7 +84,7 @@ class YouTubePlaylistWithItemsTest {
                 fetchedAt = Instant.EPOCH,
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT)
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_DEFAULT)
             assertThat(sut.addedItems.map { it.id })
                 .containsExactlyInAnyOrder(YouTubePlaylistItem.Id("item_id_02"))
         }
@@ -106,7 +106,7 @@ class YouTubePlaylistWithItemsTest {
                 fetchedAt = Instant.EPOCH,
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_MAX)
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
             assertThat(sut.addedItems).isEmpty()
         }
     }
@@ -141,7 +141,7 @@ class YouTubePlaylistWithItemsTest {
                 fetchedAt = latestModified + Duration.ofDays(1).minusMillis(1),
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT)
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_DEFAULT)
         }
 
         @Test
@@ -154,7 +154,7 @@ class YouTubePlaylistWithItemsTest {
                 fetchedAt = latestModified + Duration.ofDays(1),
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT.multipliedBy(2))
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_DEFAULT.multipliedBy(2))
         }
 
         @Test
@@ -167,7 +167,7 @@ class YouTubePlaylistWithItemsTest {
                 fetchedAt = latestModified + Duration.ofDays(7),
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_MAX)
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
         }
 
         @Test
@@ -180,7 +180,7 @@ class YouTubePlaylistWithItemsTest {
                 fetchedAt = latestModified + Duration.ofDays(30),
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_MAX)
+            assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
         }
 
         @Test
@@ -202,7 +202,9 @@ class YouTubePlaylistWithItemsTest {
                 fetchedAt = updatedLatest + Duration.ofDays(3).minusMillis(1),
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT.multipliedBy(2.0.pow(n = 2).toLong()))
+            assertThat(sut.cacheControl.maxAge).isEqualTo(
+                MAX_AGE_DEFAULT.multipliedBy(2.0.pow(n = 2).toLong())
+            )
         }
 
         @Test
@@ -224,7 +226,9 @@ class YouTubePlaylistWithItemsTest {
                 fetchedAt = updatedLatest + Duration.ofDays(3),
             )
             // verify
-            assertThat(sut.maxAge).isEqualTo(MAX_AGE_DEFAULT.multipliedBy(2.0.pow(n = 3).toLong()))
+            assertThat(sut.cacheControl.maxAge).isEqualTo(
+                MAX_AGE_DEFAULT.multipliedBy(2.0.pow(n = 3).toLong())
+            )
         }
     }
 }
@@ -285,6 +289,9 @@ data class YouTubePlaylistItemEntity(
     override val description: String,
     override val videoOwnerChannelId: YouTubeChannel.Id?,
     override val publishedAt: Instant,
-    override val maxAge: Duration?,
-    override val fetchedAt: Instant?,
-) : YouTubePlaylistItem
+    private val maxAge: Duration?,
+    private val fetchedAt: Instant?,
+) : YouTubePlaylistItem {
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(fetchedAt, maxAge)
+}

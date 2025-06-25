@@ -119,7 +119,11 @@ class FetchYouTubeStreamUseCaseTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-            subscription = { _, _ -> throw YouTubeException(500, "Server Internal Error") },
+            subscription = { _, _ ->
+                throw YouTubeException(
+                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                )
+            },
         )
         hiltRule.inject()
         // exercise
@@ -156,7 +160,11 @@ class FetchYouTubeStreamUseCaseTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         FakeYouTubeClientModule.setup(10, 2).apply {
-            channel = { throw YouTubeException(500, "Server Internal Error") }
+            channel = {
+                throw YouTubeException(
+                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                )
+            }
         }
         hiltRule.inject()
         // exercise
@@ -179,7 +187,9 @@ class FetchYouTubeStreamUseCaseTest {
         FakeYouTubeClientModule.setup(10, 2).apply {
             val base = playlistItem!!
             playlistItem = { id ->
-                if (id.value.contains("1")) throw YouTubeException(500, "Server Internal Error")
+                if (id.value.contains("1")) throw YouTubeException(
+                    500, "Server Internal Error", cacheControl = CacheControl.create(current, null),
+                )
                 else base.invoke(id)
             }
         }
@@ -199,7 +209,9 @@ class FetchYouTubeStreamUseCaseTest {
             val base = video!!
             video = { id ->
                 if (id.any { it.value.contains("1") })
-                    throw YouTubeException(500, "Server Internal Error")
+                    throw YouTubeException(
+                        500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                    )
                 else base.invoke(id)
             }
         }
@@ -239,7 +251,9 @@ class FetchYouTubeStreamUseCaseTest {
                 if (page == 0) {
                     page++
                     channel!!.invoke(it)
-                } else throw YouTubeException(500, "Server Internal Error")
+                } else throw YouTubeException(
+                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                )
             }
         }
         hiltRule.inject()
@@ -336,8 +350,8 @@ private fun playlistItem(
     override val description: String = ""
     override val videoOwnerChannelId: YouTubeChannel.Id? = null
     override val publishedAt: Instant = Instant.EPOCH
-    override val maxAge: Duration get() = MAX_AGE_DEFAULT
-    override val fetchedAt: Instant get() = fetchedAt
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
 }
 
 private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription =

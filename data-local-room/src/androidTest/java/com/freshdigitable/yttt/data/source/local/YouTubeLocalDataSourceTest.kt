@@ -524,6 +524,9 @@ private data class YouTubePlaylistItemEntity(
     override val description: String = "",
     override val videoOwnerChannelId: YouTubeChannel.Id? = null,
     override val publishedAt: Instant = Instant.EPOCH,
-    override val maxAge: Duration? = Duration.ofMinutes(5),
-    override val fetchedAt: Instant?,
-) : YouTubePlaylistItem
+    private val maxAge: Duration? = Duration.ofMinutes(5),
+    private val fetchedAt: Instant?,
+) : YouTubePlaylistItem {
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(fetchedAt, maxAge)
+}

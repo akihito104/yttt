@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data
 
-import com.freshdigitable.yttt.data.model.CacheControl.Companion.isFresh
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
@@ -128,7 +127,7 @@ class YouTubeRepository @Inject constructor(
     ): Result<YouTubePlaylistWithItems> {
         return if (cache != null) {
             remoteSource.fetchPlaylistItems(id, maxResult).map {
-                cache.update(it, checkNotNull(it.first().fetchedAt))
+                cache.update(it, checkNotNull(it.first().cacheControl.fetchedAt))
             }
         } else {
             val playlistRes = remoteSource.fetchPlaylist(setOf(id)).map { it.firstOrNull() }

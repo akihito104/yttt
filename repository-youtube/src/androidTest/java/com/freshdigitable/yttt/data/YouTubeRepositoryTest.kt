@@ -132,7 +132,7 @@ class YouTubeRepositoryTest {
         FakeYouTubeClientModule.client = FakeRemoteSource(
             videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail)) },
             channelList = recorder.wrap(expected = 1) {
-                throw YouTubeException(500, "Internal error")
+                throw YouTubeException(500, "Internal error", cacheControl = CacheControl.empty())
             },
         )
         hiltRule.inject()

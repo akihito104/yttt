@@ -15,6 +15,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
+import com.freshdigitable.yttt.logD
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpResponseException
 import com.google.api.client.util.DateTime
@@ -124,8 +125,9 @@ internal class YouTubeClientImpl(
                 .setMaxResults(maxResult)
         }
         val current = dateTimeProvider.now()
+        val cacheControl = PlaylistItemRemote.cacheControl(current)
         return NetworkResponse.create(
-            item = res.items.map { PlaylistItemRemote(it, current) },
+            item = res.items.map { PlaylistItemRemote(it, cacheControl) },
         )
     }
 
@@ -186,9 +188,15 @@ internal class YouTubeClientImpl(
         private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
         private fun <T> YouTube.fetch(request: YouTube.() -> AbstractGoogleClientRequest<T>): T =
             try {
-                request().execute()
+                val req = request()
+                req.executeUnparsed()
+                    .also { logD { "YouTube.fetch: ${it.headers}" } }
+                    .parseAs(req.responseClass)
             } catch (e: HttpResponseException) {
-                throw YouTubeException(e.statusCode, e.statusMessage, e)
+                logD { "YouTube.fetch: ${e.headers}" }
+                val date = e.headers.date?.let { Instant.parse(it) }
+                val cacheControl = CacheControl.create(date, MAX_AGE_DEFAULT)
+                throw YouTubeException(e.statusCode, e.statusMessage, e, cacheControl)
             }
     }
 }
@@ -197,6 +205,7 @@ class YouTubeException(
     override val statusCode: Int,
     private val statusMessage: String,
     throwable: Throwable? = null,
+    override val cacheControl: CacheControl,
 ) : NetworkResponse.Exception(throwable) {
     override val isQuotaExceeded: Boolean
         get() = statusCode == 403 && statusMessage == "quotaExceeded"
@@ -395,8 +404,13 @@ private class YouTubePlaylistRemote(
 
 private class PlaylistItemRemote(
     private val item: PlaylistItem,
-    override val fetchedAt: Instant,
+    override val cacheControl: CacheControl,
 ) : YouTubePlaylistItem {
+    companion object {
+        fun cacheControl(fetchedAt: Instant): CacheControl =
+            CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
+    }
+
     override val id: YouTubePlaylistItem.Id get() = YouTubePlaylistItem.Id(item.id)
     override val playlistId: YouTubePlaylist.Id get() = YouTubePlaylist.Id(item.snippet.playlistId)
     override val title: String get() = item.snippet.title
@@ -411,7 +425,6 @@ private class PlaylistItemRemote(
     override val videoOwnerChannelId: YouTubeChannel.Id? =
         item.snippet.videoOwnerChannelId?.let { YouTubeChannel.Id(it) }
     override val publishedAt: Instant get() = item.snippet.publishedAt.toInstant()
-    override val maxAge: Duration get() = MAX_AGE_DEFAULT
     override fun toString(): String = item.toPrettyString()
 }
 
