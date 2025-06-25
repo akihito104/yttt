@@ -15,7 +15,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
-import com.freshdigitable.yttt.logD
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpResponseException
 import com.google.api.client.util.DateTime
@@ -189,11 +188,8 @@ internal class YouTubeClientImpl(
         private fun <T> YouTube.fetch(request: YouTube.() -> AbstractGoogleClientRequest<T>): T =
             try {
                 val req = request()
-                req.executeUnparsed()
-                    .also { logD { "YouTube.fetch: ${it.headers}" } }
-                    .parseAs(req.responseClass)
+                req.executeUnparsed().parseAs(req.responseClass)
             } catch (e: HttpResponseException) {
-                logD { "YouTube.fetch: ${e.headers}" }
                 val date = e.headers.date?.let { Instant.parse(it) }
                 val cacheControl = CacheControl.create(date, MAX_AGE_DEFAULT)
                 throw YouTubeException(e.statusCode, e.statusMessage, e, cacheControl)
