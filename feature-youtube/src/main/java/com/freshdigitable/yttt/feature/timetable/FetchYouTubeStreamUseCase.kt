@@ -200,7 +200,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         return liveRepository.fetchPlaylistWithItems(id, maxResult = 10, cache)
             .recoverCatching {
                 if (cache != null && (it as? NetworkResponse.Exception)?.statusCode == 404) {
-                    cache.update(emptyList(), it.cacheControl.fetchedAt ?: dateTimeProvider.now())
+                    cache.update(emptyList(), checkNotNull(it.cacheControl.fetchedAt))
                         .also { i -> liveRepository.updatePlaylistWithItems(i) }
                 } else {
                     throw it

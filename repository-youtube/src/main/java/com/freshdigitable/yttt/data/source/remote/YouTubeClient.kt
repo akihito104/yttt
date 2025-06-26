@@ -32,6 +32,7 @@ import com.google.api.services.youtube.model.VideoLiveStreamingDetails
 import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 interface YouTubeClient {
     fun fetchSubscription(
@@ -190,8 +191,8 @@ internal class YouTubeClientImpl(
                 val req = request()
                 req.executeUnparsed().parseAs(req.responseClass)
             } catch (e: HttpResponseException) {
-                val date = e.headers.date?.let { Instant.parse(it) }
-                val cacheControl = CacheControl.create(date, MAX_AGE_DEFAULT)
+                val date = DateTimeFormatter.RFC_1123_DATE_TIME.parse(e.headers.date)
+                val cacheControl = CacheControl.create(Instant.from(date), MAX_AGE_DEFAULT)
                 throw YouTubeException(e.statusCode, e.statusMessage, e, cacheControl)
             }
     }
