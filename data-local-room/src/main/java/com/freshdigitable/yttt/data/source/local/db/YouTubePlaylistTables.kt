@@ -12,12 +12,12 @@ import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
-import com.freshdigitable.yttt.data.model.YouTubePlaylistUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -31,11 +31,9 @@ internal class YouTubePlaylistTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylist.Id,
-    @ColumnInfo(name = "last_modified")
-    override val fetchedAt: Instant = Instant.EPOCH,
-    @ColumnInfo(name = "max_age")
-    override val maxAge: Duration = MAX_AGE_DEFAULT,
-) : YouTubePlaylistUpdatable {
+    @Embedded
+    override val cacheControl: YouTubePlaylistCacheControlDb = YouTubePlaylistCacheControlDb(),
+) : YouTubePlaylist {
     @Ignore
     override val thumbnailUrl: String = "" // TODO: implement for all_playlist with paging
 
@@ -63,6 +61,11 @@ internal class YouTubePlaylistTable(
         override suspend fun deleteTable()
     }
 }
+
+internal class YouTubePlaylistCacheControlDb(
+    @ColumnInfo(name = "last_modified") override val fetchedAt: Instant = Instant.EPOCH,
+    @ColumnInfo(name = "max_age") override val maxAge: Duration = MAX_AGE_DEFAULT,
+) : CacheControl
 
 @Entity(
     tableName = "playlist_item",
@@ -116,8 +119,8 @@ internal class YouTubePlaylistItemTable(
 }
 
 @DatabaseView(
-    "SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived, e.expired_at AS video_expired_at " +
-        "FROM playlist_item AS i " +
+    "SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived," +
+        " e.fetched_at AS fetched_at, e.max_age AS max_age FROM playlist_item AS i " +
         "LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id " +
         "LEFT OUTER JOIN video_expire AS e ON i.video_id = e.video_id",
     viewName = "yt_playlist_item_summary",
@@ -131,9 +134,15 @@ internal class YouTubePlaylistItemSummaryDb(
     override val videoId: YouTubeVideo.Id,
     @ColumnInfo("is_archived")
     override val isArchived: Boolean?,
-    @ColumnInfo("video_expired_at")
-    override val videoExpiredAt: Instant?,
+    @ColumnInfo("fetched_at")
+    private val fetchedAt: Instant?,
+    @ColumnInfo("max_age")
+    private val maxAge: Duration?,
 ) : YouTubePlaylistItemSummary {
+    @get:Ignore
+    override val videoExpiredAt: Instant?
+        get() = fetchedAt?.plus(maxAge ?: YouTubeVideo.MAX_AGE_DEFAULT)
+
     @androidx.room.Dao
     internal interface Dao {
         @Query("SELECT * FROM yt_playlist_item_summary AS s WHERE s.playlist_id = :id LIMIT :maxResult")
@@ -180,12 +189,17 @@ internal data class YouTubePlaylistItemDb(
     override val videoOwnerChannelId: YouTubeChannel.Id?,
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
+    @Embedded
+    override val cacheControl: CacheControlDb,
 ) : YouTubePlaylistItem {
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT p.*, c.id AS channel_id, c.title AS channel_title FROM playlist_item AS p " +
-                "INNER JOIN channel AS c ON c.id = p.channel_id WHERE p.playlist_id = :id"
+            "SELECT p.*, c.id AS channel_id, c.title AS channel_title, l.last_modified AS fetched_at, l.max_age AS max_age " +
+                "FROM playlist_item AS p " +
+                "INNER JOIN channel AS c ON c.id = p.channel_id " +
+                "LEFT OUTER JOIN playlist AS l ON l.id = p.playlist_id " +
+                "WHERE p.playlist_id = :id"
         )
         suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDb>
     }

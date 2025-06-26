@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -87,7 +88,8 @@ class YouTubeRepositoryTest {
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
-            override val updatableAt: Instant get() = Instant.ofEpochMilli(1000)
+            override val cacheControl: CacheControl
+                get() = CacheControl.create(Instant.ofEpochMilli(200), Duration.ofMillis(800))
         }))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
@@ -130,7 +132,7 @@ class YouTubeRepositoryTest {
         FakeYouTubeClientModule.client = FakeRemoteSource(
             videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail)) },
             channelList = recorder.wrap(expected = 1) {
-                throw YouTubeException(500, "Internal error")
+                throw YouTubeException(500, "Internal error", cacheControl = CacheControl.empty())
             },
         )
         hiltRule.inject()
@@ -158,7 +160,8 @@ class YouTubeRepositoryTest {
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
-            override val updatableAt: Instant get() = Instant.ofEpochMilli(1000)
+            override val cacheControl: CacheControl
+                get() = CacheControl.create(Instant.ofEpochMilli(200), Duration.ofMillis(800))
         }))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
@@ -172,8 +175,8 @@ class YouTubeRepositoryTest {
     }
 }
 
-private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo =
-    YouTubeVideoRemote(Video().apply {
+private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = YouTubeVideoRemote(
+    Video().apply {
         this.id = "$id"
         snippet = VideoSnippet().apply {
             channelId = channel.id.value
@@ -190,7 +193,9 @@ private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo =
         liveStreamingDetails = VideoLiveStreamingDetails().apply {
             scheduledStartTime = DateTime("2022-01-01T00:00:00Z")
         }
-    })
+    },
+    fetchedAt = Instant.EPOCH,
+)
 
 private class FakeRemoteSource(
     val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,

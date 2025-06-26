@@ -5,6 +5,7 @@ import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
@@ -199,9 +200,8 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         return liveRepository.fetchPlaylistWithItems(id, maxResult = 10, cache)
             .recoverCatching {
                 if (cache != null && (it as? NetworkResponse.Exception)?.statusCode == 404) {
-                    cache.update(emptyList(), dateTimeProvider.now()).also { i ->
-                        liveRepository.updatePlaylistWithItems(i)
-                    }
+                    cache.update(emptyList(), checkNotNull(it.cacheControl.fetchedAt))
+                        .also { i -> liveRepository.updatePlaylistWithItems(i) }
                 } else {
                     throw it
                 }

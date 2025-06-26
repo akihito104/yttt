@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,7 @@ interface NetworkResponse<T> {
 
     abstract class Exception(throwable: Throwable?) : kotlin.Exception(throwable) {
         abstract val statusCode: Int
+        open val cacheControl: CacheControl get() = CacheControl.empty()
         open val isQuotaExceeded: Boolean get() = false
     }
 

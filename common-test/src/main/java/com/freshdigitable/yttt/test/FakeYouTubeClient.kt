@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.test
 
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -12,6 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.di.YouTubeModule
 import dagger.Module
 import dagger.Provides
@@ -62,7 +64,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
 
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
-        maxResult: Long
+        maxResult: Long,
     ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
@@ -79,7 +81,10 @@ abstract class FakeYouTubeClient : YouTubeClient {
     ): NetworkResponse<List<YouTubeChannelLog>> = throw NotImplementedError()
 
     companion object {
-        fun channelDetail(id: Int): YouTubeChannelDetail = object : YouTubeChannelDetail {
+        fun channelDetail(
+            id: Int,
+            fetchedAt: Instant = Instant.EPOCH,
+        ): YouTubeChannelDetail = object : YouTubeChannelDetail {
             override val id: YouTubeChannel.Id = YouTubeChannel.Id("channel_$id")
             override val uploadedPlayList: YouTubePlaylist.Id =
                 YouTubePlaylist.Id("playlist_${this.id.value}")
@@ -94,6 +99,8 @@ abstract class FakeYouTubeClient : YouTubeClient {
             override val customUrl: String = ""
             override val keywords: Collection<String> = emptyList()
             override val description: String = ""
+            override val cacheControl: CacheControl
+                get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
         }
     }
 }

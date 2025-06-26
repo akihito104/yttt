@@ -23,17 +23,16 @@ internal class TwitchDao @Inject constructor(
     private val scheduleDao: TwitchScheduleDaoImpl,
     private val streamDao: TwitchStreamDaoImpl,
 ) : TwitchUserDao by userDao, TwitchScheduleDao by scheduleDao, TwitchStreamDao by streamDao {
-    suspend fun setMe(me: TwitchUserDetail, expiredAt: Instant) = db.withTransaction {
-        addUserDetails(listOf(me), expiredAt)
+    suspend fun setMe(me: TwitchUserDetail) = db.withTransaction {
+        addUserDetails(listOf(me))
         setMeEntity(TwitchAuthorizedUserTable(me.id))
     }
 
-    suspend fun addUserDetails(
-        users: Collection<TwitchUserDetail>,
-        expiredAt: Instant,
-    ) = db.withTransaction {
+    suspend fun addUserDetails(users: Collection<TwitchUserDetail>) = db.withTransaction {
         val details = users.map { it.toTable() }
-        val expires = users.map { TwitchUserDetailExpireTable(it.id, expiredAt) }
+        val expires = users.map {
+            TwitchUserDetailExpireTable(it.id, it.cacheControl.toDb())
+        }
         addUsers(users.map { (it as TwitchUser).toTable() })
         addUserDetailEntities(details)
         addUserDetailExpireEntities(expires)
@@ -57,14 +56,14 @@ internal class TwitchDao @Inject constructor(
         db.withTransaction {
             val items = findBroadcastersByFollowerId(userId)
             val expires = findByFollowerUserId(userId)
-            val updatableAt = expires?.expireAt ?: Instant.EPOCH
-            TwitchFollowings.create(userId, items, updatableAt)
+            TwitchFollowings.create(userId, items, expires?.cacheControl)
         }
 
     suspend fun replaceAllBroadcasters(followings: TwitchFollowings) = db.withTransaction {
         removeBroadcastersByFollowerId(followings.followerId)
         addBroadcasters(followings.followerId, followings.followings)
-        val expires = TwitchBroadcasterExpireTable(followings.followerId, followings.updatableAt)
+        val expires =
+            TwitchBroadcasterExpireTable(followings.followerId, followings.cacheControl.toDb())
         addBroadcasterExpireEntity(expires)
     }
 
@@ -75,7 +74,7 @@ internal class TwitchDao @Inject constructor(
         val schedule = updatable.schedule
         val streams = schedule?.segments?.map { it.toStreamScheduleTable(broadcasterId) }
         val vacations = schedule?.vacation.toVacationScheduleTable(broadcasterId)
-        val expire = TwitchChannelScheduleExpireTable(broadcasterId, updatable.updatableAt)
+        val expire = TwitchChannelScheduleExpireTable(broadcasterId, updatable.cacheControl.toDb())
         val category = schedule?.segments?.mapNotNull { it.category?.toTable() }
         if (!category.isNullOrEmpty()) addCategories(category)
 
@@ -117,14 +116,14 @@ internal class TwitchDao @Inject constructor(
     }
 
     suspend fun findStreamByMe(me: TwitchUser.Id): TwitchStreams = db.withTransaction {
-        val expiredAt = findStreamExpire(me)?.expiredAt
+        val expire = findStreamExpire(me)
         val s = findAllStreams()
-        TwitchStreams.create(me, s, expiredAt ?: Instant.EPOCH)
+        TwitchStreams.create(me, s, expire?.cacheControl)
     }
 
     suspend fun replaceAllStreams(streams: TwitchStreams) = db.withTransaction {
         db.twitchStreamDao.deleteTable()
-        setStreamExpire(TwitchStreamExpireTable(streams.followerId, streams.updatableAt))
+        setStreamExpire(TwitchStreamExpireTable(streams.followerId, streams.cacheControl.toDb()))
         addUsers(streams.streams.map { it.user.toTable() })
         addCategories(streams.streams.map { TwitchCategoryTable(it.gameId, it.gameName) })
         addStreams(streams.streams.map { it.toTable() })

@@ -1,9 +1,8 @@
 package com.freshdigitable.yttt.data.model
 
-import java.time.Duration
 import java.time.Instant
 
-interface YouTubePlaylist {
+interface YouTubePlaylist : Updatable {
     val id: Id
     val title: String
     val thumbnailUrl: String
@@ -11,9 +10,7 @@ interface YouTubePlaylist {
     data class Id(override val value: String) : YouTubeId
 }
 
-interface YouTubePlaylistUpdatable : YouTubePlaylist, Updatable
-
-interface YouTubePlaylistItem {
+interface YouTubePlaylistItem : Updatable {
     val id: Id
     val playlistId: YouTubePlaylist.Id
     val title: String
@@ -25,14 +22,4 @@ interface YouTubePlaylistItem {
     val publishedAt: Instant
 
     data class Id(override val value: String) : YouTubeId
-}
-
-interface Updatable {
-    val maxAge: Duration
-    val fetchedAt: Instant
-
-    companion object {
-        private val Updatable.updatableAt: Instant get() = fetchedAt + maxAge
-        fun Updatable.isUpdatable(current: Instant): Boolean = updatableAt <= current
-    }
 }

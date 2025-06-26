@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.feature.timetable
 
 import app.cash.turbine.test
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -13,6 +14,7 @@ import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
@@ -117,7 +119,11 @@ class FetchYouTubeStreamUseCaseTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-            subscription = { _, _ -> throw YouTubeException(500, "Server Internal Error") },
+            subscription = { _, _ ->
+                throw YouTubeException(
+                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                )
+            },
         )
         hiltRule.inject()
         // exercise
@@ -154,7 +160,11 @@ class FetchYouTubeStreamUseCaseTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         FakeYouTubeClientModule.setup(10, 2).apply {
-            channel = { throw YouTubeException(500, "Server Internal Error") }
+            channel = {
+                throw YouTubeException(
+                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                )
+            }
         }
         hiltRule.inject()
         // exercise
@@ -177,7 +187,9 @@ class FetchYouTubeStreamUseCaseTest {
         FakeYouTubeClientModule.setup(10, 2).apply {
             val base = playlistItem!!
             playlistItem = { id ->
-                if (id.value.contains("1")) throw YouTubeException(500, "Server Internal Error")
+                if (id.value.contains("1")) throw YouTubeException(
+                    500, "Server Internal Error", cacheControl = CacheControl.create(current, null),
+                )
                 else base.invoke(id)
             }
         }
@@ -197,7 +209,9 @@ class FetchYouTubeStreamUseCaseTest {
             val base = video!!
             video = { id ->
                 if (id.any { it.value.contains("1") })
-                    throw YouTubeException(500, "Server Internal Error")
+                    throw YouTubeException(
+                        500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                    )
                 else base.invoke(id)
             }
         }
@@ -237,7 +251,9 @@ class FetchYouTubeStreamUseCaseTest {
                 if (page == 0) {
                     page++
                     channel!!.invoke(it)
-                } else throw YouTubeException(500, "Server Internal Error")
+                } else throw YouTubeException(
+                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                )
             }
         }
         hiltRule.inject()
@@ -315,12 +331,14 @@ internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : Yo
     override val actualEndDateTime: Instant? = null
     override val description: String = ""
     override val viewerCount: BigInteger? = BigInteger.ONE
+    override val cacheControl: CacheControl get() = CacheControl.zero()
 }
 
 private fun playlistItem(
     id: Int,
     channelDetail: YouTubeChannelDetail,
     videoId: YouTubeVideo.Id,
+    fetchedAt: Instant = Instant.EPOCH,
 ): YouTubePlaylistItem = object : YouTubePlaylistItem {
     override val id: YouTubePlaylistItem.Id =
         YouTubePlaylistItem.Id("playlistItem_${channelDetail.id.value}_$id")
@@ -332,6 +350,8 @@ private fun playlistItem(
     override val description: String = ""
     override val videoOwnerChannelId: YouTubeChannel.Id? = null
     override val publishedAt: Instant = Instant.EPOCH
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
 }
 
 private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription =

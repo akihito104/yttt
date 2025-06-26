@@ -1,6 +1,8 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import androidx.annotation.VisibleForTesting
+import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
@@ -12,6 +14,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpResponseException
 import com.google.api.client.util.DateTime
@@ -27,7 +30,9 @@ import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
 import com.google.api.services.youtube.model.VideoLiveStreamingDetails
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
+import java.time.format.DateTimeFormatter
 
 interface YouTubeClient {
     fun fetchSubscription(
@@ -53,11 +58,17 @@ interface YouTubeClient {
     ): NetworkResponse<List<YouTubeChannelLog>>
 
     companion object {
-        fun create(youtube: YouTube): YouTubeClient = YouTubeClientImpl(youtube)
+        fun create(youtube: YouTube, dateTimeProvider: DateTimeProvider): YouTubeClient =
+            YouTubeClientImpl(youtube, dateTimeProvider)
+
+        val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(5)
     }
 }
 
-internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
+internal class YouTubeClientImpl(
+    private val youtube: YouTube,
+    private val dateTimeProvider: DateTimeProvider,
+) : YouTubeClient {
     override fun fetchSubscription(
         pageSize: Long,
         offset: Int,
@@ -83,7 +94,9 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
-        return NetworkResponse.create(item = res.items.map { YouTubeChannelImpl(it) })
+        val current = dateTimeProvider.now()
+        val cacheControl = CacheControl.create(current, MAX_AGE_DEFAULT)
+        return NetworkResponse.create(item = res.items.map { YouTubeChannelImpl(it, cacheControl) })
     }
 
     override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> {
@@ -93,8 +106,10 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
+        val current = dateTimeProvider.now()
+        val cacheControl = CacheControl.create(current, MAX_AGE_DEFAULT)
         return NetworkResponse.create(
-            item = res.items.map { YouTubePlaylistRemote(it) },
+            item = res.items.map { YouTubePlaylistRemote(it, cacheControl) },
             nextPageToken = res.nextPageToken,
         )
     }
@@ -109,8 +124,10 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
                 .setPlaylistId(id.value)
                 .setMaxResults(maxResult)
         }
+        val current = dateTimeProvider.now()
+        val cacheControl = PlaylistItemRemote.cacheControl(current)
         return NetworkResponse.create(
-            item = res.items.map { PlaylistItemRemote(it) },
+            item = res.items.map { PlaylistItemRemote(it, cacheControl) },
         )
     }
 
@@ -121,8 +138,9 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
+        val current = dateTimeProvider.now()
         return NetworkResponse.create(
-            item = res.items.map { YouTubeVideoRemote(it) },
+            item = res.items.map { YouTubeVideoRemote(it, current) },
             nextPageToken = res.nextPageToken,
         )
     }
@@ -170,9 +188,12 @@ internal class YouTubeClientImpl(private val youtube: YouTube) : YouTubeClient {
         private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
         private fun <T> YouTube.fetch(request: YouTube.() -> AbstractGoogleClientRequest<T>): T =
             try {
-                request().execute()
+                val req = request()
+                req.executeUnparsed().parseAs(req.responseClass)
             } catch (e: HttpResponseException) {
-                throw YouTubeException(e.statusCode, e.statusMessage, e)
+                val date = DateTimeFormatter.RFC_1123_DATE_TIME.parse(e.headers.date)
+                val cacheControl = CacheControl.create(Instant.from(date), MAX_AGE_DEFAULT)
+                throw YouTubeException(e.statusCode, e.statusMessage, e, cacheControl)
             }
     }
 }
@@ -181,6 +202,7 @@ class YouTubeException(
     override val statusCode: Int,
     private val statusMessage: String,
     throwable: Throwable? = null,
+    override val cacheControl: CacheControl,
 ) : NetworkResponse.Exception(throwable) {
     override val isQuotaExceeded: Boolean
         get() = statusCode == 403 && statusMessage == "quotaExceeded"
@@ -224,6 +246,7 @@ private data class YouTubeChannelLogEntity(
 @VisibleForTesting
 internal class YouTubeVideoRemote(
     private val video: Video,
+    private val fetchedAt: Instant,
 ) : YouTubeVideo {
     private val liveStreamingDetails: VideoLiveStreamingDetails? get() = video.liveStreamingDetails
     private val snippet get() = requireNotNull(video.snippet) { "json: $video" }
@@ -244,6 +267,7 @@ internal class YouTubeVideoRemote(
     override val viewerCount: BigInteger? get() = liveStreamingDetails?.concurrentViewers
     override val liveBroadcastContent: YouTubeVideo.BroadcastType =
         findBy(snippet.liveBroadcastContent)
+    override val cacheControl: CacheControl get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
 
     override fun toString(): String = video.toString()
 
@@ -276,6 +300,7 @@ private val ThumbnailDetails.iconUrl: String
 
 private data class YouTubeChannelImpl(
     private val channel: Channel,
+    override val cacheControl: CacheControl,
 ) : YouTubeChannelDetail {
     override val id: YouTubeChannel.Id
         get() = YouTubeChannel.Id(channel.id)
@@ -364,7 +389,10 @@ private data class YouTubeChannelSectionImpl(
     }
 }
 
-private class YouTubePlaylistRemote(private val playlist: Playlist) : YouTubePlaylist {
+private class YouTubePlaylistRemote(
+    private val playlist: Playlist,
+    override val cacheControl: CacheControl,
+) : YouTubePlaylist {
     override val id: YouTubePlaylist.Id get() = YouTubePlaylist.Id(playlist.id)
     override val title: String get() = playlist.snippet.title
     override val thumbnailUrl: String get() = playlist.snippet.thumbnails.url
@@ -373,7 +401,13 @@ private class YouTubePlaylistRemote(private val playlist: Playlist) : YouTubePla
 
 private class PlaylistItemRemote(
     private val item: PlaylistItem,
+    override val cacheControl: CacheControl,
 ) : YouTubePlaylistItem {
+    companion object {
+        fun cacheControl(fetchedAt: Instant): CacheControl =
+            CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
+    }
+
     override val id: YouTubePlaylistItem.Id get() = YouTubePlaylistItem.Id(item.id)
     override val playlistId: YouTubePlaylist.Id get() = YouTubePlaylist.Id(item.snippet.playlistId)
     override val title: String get() = item.snippet.title

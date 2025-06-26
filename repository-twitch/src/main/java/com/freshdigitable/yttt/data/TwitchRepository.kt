@@ -4,13 +4,16 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
+import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchStreams.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.TwitchUserDetail.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
@@ -38,6 +41,7 @@ class TwitchRepository @Inject constructor(
             return cacheRes
         }
         return remoteDataSource.findUsersById(remoteIds)
+            .map { u -> u.map { it.update(TwitchUserDetail.MAX_AGE_USER_DETAIL) } }
             .onSuccess { localDataSource.addUsers(it) }
             .map { it + cache }
     }
@@ -48,6 +52,7 @@ class TwitchRepository @Inject constructor(
             return me
         }
         return remoteDataSource.fetchMe()
+            .map { m -> m?.update(TwitchUserDetail.MAX_AGE_USER_DETAIL) }
             .onSuccess { if (it != null) localDataSource.setMe(it) }
     }
 
@@ -57,7 +62,7 @@ class TwitchRepository @Inject constructor(
             return cacheRes
         }
         val cache = checkNotNull(cacheRes.getOrNull())
-        if (dateTimeProvider.now() < cache.updatableAt) {
+        if (cache.isFresh(dateTimeProvider.now())) {
             return cacheRes
         }
         return remoteDataSource.fetchAllFollowings(userId)
@@ -72,7 +77,7 @@ class TwitchRepository @Inject constructor(
             return cacheRes
         }
         val cache = checkNotNull(cacheRes.getOrNull())
-        if (dateTimeProvider.now() < cache.updatableAt) {
+        if (cache.isFresh(dateTimeProvider.now())) {
             return cacheRes
         }
         return remoteDataSource.fetchFollowedStreams(id)
@@ -93,11 +98,12 @@ class TwitchRepository @Inject constructor(
     ): Result<TwitchChannelScheduleUpdatable> {
         val cache = localDataSource.fetchFollowedStreamSchedule(id)
         val current = dateTimeProvider.now()
-        if (cache.isSuccess && checkNotNull(cache.getOrNull()).updatableAt > current) {
+        if (cache.isSuccess && checkNotNull(cache.getOrNull()).isFresh(current)) {
             return cache
         }
         return remoteDataSource.fetchFollowedStreamSchedule(id, maxCount).onSuccess {
-            localDataSource.setFollowedStreamSchedule(id, it)
+            val updatable = it.update(TwitchChannelScheduleUpdatable.MAX_AGE_CHANNEL_SCHEDULE)
+            localDataSource.setFollowedStreamSchedule(id, updatable)
         }
     }
 

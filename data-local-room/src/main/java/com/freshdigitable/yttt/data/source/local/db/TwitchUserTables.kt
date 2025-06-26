@@ -13,6 +13,7 @@ import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
 import javax.inject.Inject
@@ -78,14 +79,17 @@ internal class TwitchUserDetailTable(
 }
 
 @DatabaseView(
-    value = "SELECT u.login_name, u.display_name, d.* FROM twitch_user_detail AS d " +
-        "INNER JOIN twitch_user AS u ON d.user_id = u.id",
+    value = "SELECT u.login_name, u.display_name, d.*, e.fetched_at, e.max_age " +
+        "FROM twitch_user_detail AS d " +
+        "INNER JOIN twitch_user AS u ON d.user_id = u.id " +
+        "LEFT OUTER JOIN twitch_user_detail_expire AS e ON d.user_id = e.user_id",
     viewName = "twitch_user_detail_view",
 )
 internal data class TwitchUserDetailDbView(
     @Embedded private val detail: TwitchUserDetailTable,
     @ColumnInfo("login_name") override val loginName: String,
     @ColumnInfo("display_name") override val displayName: String,
+    @Embedded override val cacheControl: CacheControlDb,
 ) : TwitchUserDetail {
     override val id: TwitchUser.Id get() = detail.id
     override val profileImageUrl: String get() = detail.profileImageUrl
@@ -99,7 +103,7 @@ internal data class TwitchUserDetailDbView(
 
         @Query(
             "SELECT v.* FROM (SELECT * FROM twitch_user_detail_view WHERE user_id IN (:ids)) AS v " +
-                "INNER JOIN (SELECT * FROM twitch_user_detail_expire WHERE :current < expired_at) AS e ON v.user_id = e.user_id"
+                "INNER JOIN (SELECT * FROM twitch_user_detail_expire WHERE :current < (fetched_at + max_age)) AS e ON v.user_id = e.user_id"
         )
         suspend fun findUserDetail(
             ids: Collection<TwitchUser.Id>,
@@ -122,9 +126,8 @@ internal class TwitchUserDetailExpireTable(
     @PrimaryKey
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
-    @ColumnInfo("expired_at", defaultValue = "null")
-    val expiredAt: Instant? = null,
-) {
+    @Embedded override val cacheControl: CacheControlDb,
+) : Updatable {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -197,9 +200,8 @@ internal class TwitchBroadcasterExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("follower_user_id", index = true)
     val followerId: TwitchUser.Id,
-    @ColumnInfo("expire_at")
-    val expireAt: Instant,
-) {
+    @Embedded override val cacheControl: CacheControlDb,
+) : Updatable {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert

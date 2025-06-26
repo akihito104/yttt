@@ -19,8 +19,6 @@ import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import kotlinx.coroutines.flow.Flow
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,13 +39,13 @@ internal class TwitchLocalDataSource @Inject constructor(
     }
 
     override suspend fun addUsers(users: Collection<TwitchUserDetail>) {
-        dao.addUserDetails(users, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
+        dao.addUserDetails(users)
     }
 
     override suspend fun fetchMe(): Result<TwitchUserDetail?> = ioScope.asResult { dao.findMe() }
 
     override suspend fun setMe(me: TwitchUserDetail) {
-        dao.setMe(me, expiredAt = dateTimeProvider.now() + MAX_AGE_USER_DETAIL)
+        dao.setMe(me)
     }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
@@ -77,10 +75,7 @@ internal class TwitchLocalDataSource @Inject constructor(
     ): Result<TwitchChannelScheduleUpdatable> = ioScope.asResult {
         val expire = dao.findChannelScheduleExpire(id)
         val schedule = dao.findChannelSchedule(id)
-        object : TwitchChannelScheduleUpdatable {
-            override val schedule: TwitchChannelSchedule? get() = schedule
-            override val updatableAt: Instant get() = expire?.expiredAt ?: Instant.EPOCH
-        }
+        TwitchChannelScheduleUpdatable.create(schedule, expire?.cacheControl)
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =
@@ -119,9 +114,5 @@ internal class TwitchLocalDataSource @Inject constructor(
         is TwitchStream.Id -> dao.findStream(id)
         is TwitchChannelSchedule.Stream.Id -> dao.findStreamSchedule(id)
         else -> throw AssertionError("unsupported id type: $id")
-    }
-
-    companion object {
-        private val MAX_AGE_USER_DETAIL = Duration.ofDays(1)
     }
 }

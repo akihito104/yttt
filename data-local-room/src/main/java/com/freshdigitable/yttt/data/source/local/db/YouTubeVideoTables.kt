@@ -8,12 +8,14 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -88,8 +90,8 @@ internal data class YouTubeVideoDb(
     override val channel: YouTubeChannelTable,
     @ColumnInfo("is_free_chat")
     override val isFreeChat: Boolean?,
-    @ColumnInfo("expired_at")
-    private val expiredAt: Instant?,
+    @Embedded
+    override val cacheControl: CacheControlDb,
 ) : YouTubeVideoExtended {
     override val id: YouTubeVideo.Id
         get() = video.id
@@ -111,14 +113,12 @@ internal data class YouTubeVideoDb(
         get() = video.viewerCount
     override val liveBroadcastContent: YouTubeVideo.BroadcastType?
         get() = video.broadcastContent
-    override val updatableAt: Instant
-        get() = expiredAt ?: Instant.EPOCH
 
     @androidx.room.Dao
     internal interface Dao {
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
-                " e.expired_at AS expired_at FROM video AS v " +
+                " e.fetched_at AS fetched_at, e.max_age AS max_age FROM video AS v " +
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
@@ -127,8 +127,8 @@ internal data class YouTubeVideoDb(
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideoDb>
 
         @Query(
-            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat, e.expired_at AS expired_at " +
-                "FROM video AS v " +
+            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
+                " e.fetched_at AS fetched_at, e.max_age AS max_age FROM video AS v " +
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
@@ -187,13 +187,16 @@ internal class YouTubeVideoExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "video_id")
     val videoId: YouTubeVideo.Id,
-    @ColumnInfo(name = "expired_at", defaultValue = "null")
-    val expiredAt: Instant? = null,
-) {
+    @Embedded
+    override val cacheControl: CacheControlDb,
+) : Updatable {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addLiveVideoExpire(expire: Collection<YouTubeVideoExpireTable>)
+
+        @Query("UPDATE video_expire SET max_age = :maxAge WHERE video_id IN (:id)")
+        suspend fun updateMaxAgeById(id: Collection<YouTubeVideo.Id>, maxAge: Duration)
 
         @Query("DELETE FROM video_expire WHERE video_id IN (:ids)")
         suspend fun removeLiveVideoExpire(ids: Collection<YouTubeVideo.Id>)

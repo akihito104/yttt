@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -16,6 +17,7 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import java.lang.reflect.Type
+import java.time.Duration
 import java.time.Instant
 
 internal class TwitchUserDetailRemote(
@@ -31,7 +33,10 @@ internal class TwitchUserDetailRemote(
     override val loginName: String,
     @SerializedName("description")
     override val description: String,
-) : TwitchUserDetail
+) : TwitchUserDetail {
+    override val cacheControl: CacheControl
+        get() = CacheControl.create(null, Duration.ofMinutes(5))
+}
 
 internal class TwitchUserRemote(
     override val id: TwitchUser.Id,

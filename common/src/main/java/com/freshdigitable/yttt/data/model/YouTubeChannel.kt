@@ -1,6 +1,8 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 
 interface YouTubeChannelTitle {
@@ -33,8 +35,18 @@ interface YouTubeChannelAddition {
     val uploadedPlayList: YouTubePlaylist.Id?
 }
 
-interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition {
+interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition, Updatable {
     override val iconUrl: String
+
+    companion object {
+        val MAX_AGE: Duration = Duration.ofDays(1)
+        fun YouTubeChannelDetail.update(maxAge: Duration): YouTubeChannelDetail {
+            val cacheControl = cacheControl.overrideMaxAge(maxAge)
+            return object : YouTubeChannelDetail by this {
+                override val cacheControl: CacheControl get() = cacheControl
+            }
+        }
+    }
 }
 
 interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {

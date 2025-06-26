@@ -9,6 +9,7 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.paging.testing.asSnapshot
 import com.freshdigitable.yttt.data.MediatorResultSubject.Companion.assertThat
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -16,6 +17,7 @@ import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchLiveSubscription
 import com.freshdigitable.yttt.data.source.remote.Broadcaster
@@ -59,6 +61,7 @@ import org.junit.Test
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -77,8 +80,11 @@ class TwitchRemoteMediatorTest {
     internal lateinit var pagerFactory: TwitchSubscriptionPagerFactory
 
     private val broadcaster = broadcaster(100)
+    private val fetchedAt = Instant.ofEpochMilli(20)
+    private val maxAge = Duration.ofMinutes(5)
+    private val updatableAt = fetchedAt + maxAge
     private val followings =
-        TwitchFollowings.createAtFetched(authUser.id, broadcaster, Instant.ofEpochMilli(20))
+        TwitchFollowings.create(authUser.id, broadcaster, CacheControl.create(fetchedAt, maxAge))
 
     @Before
     fun setup(): Unit = runBlocking {
@@ -89,9 +95,9 @@ class TwitchRemoteMediatorTest {
         val streams = object : TwitchStreams.Updated {
             override val followerId: TwitchUser.Id get() = authUser.id
             override val streams: List<TwitchStream> get() = stream
-            override val updatableAt: Instant get() = Instant.EPOCH
             override val updatableThumbnails: Set<String> get() = emptySet()
             override val deletedThumbnails: Set<String> get() = emptySet()
+            override val cacheControl: CacheControl get() = CacheControl.zero()
         }
         localSource.replaceFollowedStreams(streams)
         localSource.replaceAllFollowings(followings)
@@ -112,7 +118,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun firstTimeToLoadSubscriptionPage() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
+        FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
         // exercise
         val actual = sut.flow.asSnapshot()
         advanceUntilIdle()
@@ -124,8 +130,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun firstTimeToLoadSubscriptionPage_needsRefresh() = testScope.runTest {
         // setup
-        val base = followings.updatableAt
-        FakeDateTimeProviderModule.instant = base
+        FakeDateTimeProviderModule.instant = updatableAt
         FakeRemoteSourceModule.following = { followingResponse(100) }
         // exercise
         val actual = sut.flow.asSnapshot()
@@ -137,7 +142,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun firstTimeToLoadSubscriptionPage_scrollToLastItem() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
+        FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
         // exercise
         val actual = sut.flow.asSnapshot {
             appendScrollWhile { it.channel.id.value != "user99" } // footer
@@ -154,8 +159,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun failedToGetFollowingsAtRefresh_returnsError() = testScope.runTest {
         // setup
-        val base = followings.updatableAt
-        FakeDateTimeProviderModule.instant = base
+        FakeDateTimeProviderModule.instant = updatableAt
         FakeRemoteSourceModule.following =
             { Response.error(500, "internal error".toResponseBody()) }
         // exercise
@@ -173,8 +177,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun failedToGetUserDetailAtRefresh_returnsSuccess() = testScope.runTest {
         // setup
-        val base = followings.updatableAt
-        FakeDateTimeProviderModule.instant = base
+        FakeDateTimeProviderModule.instant = updatableAt
         FakeRemoteSourceModule.following = { followingResponse(100) }
         FakeRemoteSourceModule.userDetails =
             { Response.error(500, "internal error".toResponseBody()) }
@@ -191,7 +194,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun failedToGetFollowingsAtPrepend_returnsSuccess() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = followings.updatableAt.minusMillis(1)
+        FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
         FakeRemoteSourceModule.userDetails =
             { Response.error(500, "internal error".toResponseBody()) }
         // exercise
@@ -209,14 +212,17 @@ class TwitchRemoteMediatorTest {
     }
 
     private companion object {
-        val authUser = TwitchUserDetailRemote(
+        val authUser = object : TwitchUserDetail by TwitchUserDetailRemote(
             id = TwitchUser.Id("user.me"),
             loginName = "user.me",
             displayName = "user.me",
             description = "description",
             createdAt = Instant.EPOCH,
             profileImageUrl = "",
-        )
+        ) {
+            override val cacheControl: CacheControl
+                get() = CacheControl.create(Instant.EPOCH, Duration.ofMinutes(5))
+        }
 
         fun broadcaster(count: Int): List<Broadcaster> = (0..<count).map {
             Broadcaster(
