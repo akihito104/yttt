@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.checkUpdatableBy
-import com.freshdigitable.yttt.data.model.Updatable.Companion.overrideMaxAge
 import java.time.Duration
 import java.time.Instant
 
@@ -78,27 +77,10 @@ interface TwitchChannelSchedule {
         val startTime: Instant
         val endTime: Instant
     }
-}
-
-@Deprecated("Use Updatable<TwitchChannelSchedule>")
-interface TwitchChannelScheduleUpdatable : Updatable<TwitchChannelSchedule?> {
-    val schedule: TwitchChannelSchedule? get() = item
 
     companion object {
         val MAX_AGE_CHANNEL_SCHEDULE: Duration = Duration.ofDays(1)
-        fun create(
-            schedule: TwitchChannelSchedule?,
-            cacheControl: CacheControl?,
-        ): Updatable<TwitchChannelSchedule?> = Impl(schedule, cacheControl ?: CacheControl.empty())
-
-        fun Updatable<TwitchChannelSchedule?>.update(maxAge: Duration): Updatable<TwitchChannelSchedule?> =
-            overrideMaxAge(maxAge)
     }
-
-    private class Impl(
-        override val item: TwitchChannelSchedule?,
-        override val cacheControl: CacheControl,
-    ) : Updatable<TwitchChannelSchedule?>
 }
 
 interface TwitchCategory {

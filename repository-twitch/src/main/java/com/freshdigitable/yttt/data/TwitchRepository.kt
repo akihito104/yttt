@@ -3,8 +3,6 @@ package com.freshdigitable.yttt.data
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
-import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
-import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchFollowings.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchStreams
@@ -15,6 +13,7 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
+import com.freshdigitable.yttt.data.model.Updatable.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
@@ -105,7 +104,7 @@ class TwitchRepository @Inject constructor(
             return cache
         }
         return remoteDataSource.fetchFollowedStreamSchedule(id, maxCount).onSuccess {
-            val updatable = it.update(TwitchChannelScheduleUpdatable.MAX_AGE_CHANNEL_SCHEDULE)
+            val updatable = it.overrideMaxAge(TwitchChannelSchedule.MAX_AGE_CHANNEL_SCHEDULE)
             localDataSource.setFollowedStreamSchedule(id, updatable)
         }
     }

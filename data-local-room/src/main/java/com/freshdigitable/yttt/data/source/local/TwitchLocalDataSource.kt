@@ -1,9 +1,9 @@
 package com.freshdigitable.yttt.data.source.local
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
-import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
@@ -77,7 +77,7 @@ internal class TwitchLocalDataSource @Inject constructor(
     ): Result<Updatable<TwitchChannelSchedule?>> = ioScope.asResult {
         val expire = dao.findChannelScheduleExpire(id)
         val schedule = dao.findChannelSchedule(id)
-        TwitchChannelScheduleUpdatable.create(schedule, expire?.cacheControl)
+        Updatable.create(schedule, expire?.cacheControl ?: CacheControl.empty())
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =

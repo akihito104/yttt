@@ -4,7 +4,6 @@ import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
-import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
@@ -78,15 +77,15 @@ internal class TwitchRemoteDataSource @Inject constructor(
             override val broadcaster: TwitchUser get() = res.first().broadcaster
             override val vacation: TwitchChannelSchedule.Vacation? get() = res.first().vacation
         }
-        TwitchChannelScheduleUpdatable.create(
-            schedule = schedule,
+        Updatable.create<TwitchChannelSchedule?>(
+            item = schedule,
             cacheControl = CacheControl.create(dateTimeProvider.now(), MAX_AGE_DEFAULT)
         )
     }.recoverCatching {
         if (it is TwitchException && it.statusCode == 404) {
             // 404 Not Found: The broadcaster has not created a streaming schedule.
-            TwitchChannelScheduleUpdatable.create(
-                schedule = null,
+            Updatable.create(
+                item = null,
                 cacheControl = CacheControl.create(dateTimeProvider.now(), MAX_AGE_DEFAULT)
             )
         } else {
