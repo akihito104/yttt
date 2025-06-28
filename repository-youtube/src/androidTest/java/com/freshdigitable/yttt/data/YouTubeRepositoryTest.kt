@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -13,6 +14,7 @@ import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
+import com.freshdigitable.yttt.test.FakeYouTubeClient.Companion.updatable
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
@@ -59,15 +61,15 @@ class YouTubeRepositoryTest {
         FakeDateTimeProviderModule.instant = Instant.EPOCH
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         FakeYouTubeClientModule.client = FakeRemoteSource(
-            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail)) },
-            channelList = recorder.wrap(expected = 1) { listOf(channelDetail) },
+            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail).updatable()) },
+            channelList = recorder.wrap(expected = 1) { listOf(channelDetail.updatable()) },
         )
         hiltRule.inject()
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
         assertResultThat(actual).isSuccess { value ->
-            assertThat(value.first().channel.iconUrl).apply {
+            assertThat(value.first().item.channel.iconUrl).apply {
                 isNotNull()
                 isNotEmpty()
             }
@@ -84,18 +86,16 @@ class YouTubeRepositoryTest {
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         val video = video(1, channelDetail)
         hiltRule.inject()
-        localSource.addChannelList(listOf(channelDetail))
+        localSource.addChannelList(listOf(channelDetail.updatable()))
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
-            override val cacheControl: CacheControl
-                get() = CacheControl.create(Instant.ofEpochMilli(200), Duration.ofMillis(800))
-        }))
+        }.updatable(Instant.ofEpochMilli(200), Duration.ofMillis(800))))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
         assertResultThat(actual).isSuccess { value ->
-            assertThat(value.first().channel.iconUrl).apply {
+            assertThat(value.first().item.channel.iconUrl).apply {
                 isNotNull()
                 isNotEmpty()
             }
@@ -108,16 +108,16 @@ class YouTubeRepositoryTest {
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         FakeYouTubeClientModule.client = FakeRemoteSource(
-            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail)) },
+            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail).updatable()) },
         )
         hiltRule.inject()
-        localSource.addChannelList(listOf(channelDetail))
+        localSource.addChannelList(listOf(channelDetail.updatable()))
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
         assertResultThat(actual).isSuccess { value ->
-            assertThat(value.first().channel.iconUrl).apply {
+            assertThat(value.first().item.channel.iconUrl).apply {
                 isNotNull()
                 isNotEmpty()
             }
@@ -130,13 +130,13 @@ class YouTubeRepositoryTest {
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         FakeYouTubeClientModule.client = FakeRemoteSource(
-            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail)) },
+            videoList = recorder.wrap(expected = 1) { listOf(video(1, channelDetail).updatable()) },
             channelList = recorder.wrap(expected = 1) {
                 throw YouTubeException(500, "Internal error", cacheControl = CacheControl.empty())
             },
         )
         hiltRule.inject()
-        localSource.addChannelList(listOf(channelDetail))
+        localSource.addChannelList(listOf(channelDetail.updatable()))
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1) + Duration.ofDays(1)
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
@@ -153,21 +153,19 @@ class YouTubeRepositoryTest {
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         val video = video(1, channelDetail)
         FakeYouTubeClientModule.client = FakeRemoteSource(
-            videoList = recorder.wrap(expected = 1) { listOf(video) },
+            videoList = recorder.wrap(expected = 1) { listOf(video.updatable()) },
         )
         hiltRule.inject()
-        localSource.addChannelList(listOf(channelDetail))
+        localSource.addChannelList(listOf(channelDetail.updatable()))
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
-            override val cacheControl: CacheControl
-                get() = CacheControl.create(Instant.ofEpochMilli(200), Duration.ofMillis(800))
-        }))
+        }.updatable(Instant.ofEpochMilli(200), Duration.ofMillis(800))))
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
         assertResultThat(actual).isSuccess { value ->
-            assertThat(value.first().channel.iconUrl).apply {
+            assertThat(value.first().item.channel.iconUrl).apply {
                 isNotNull()
                 isNotEmpty()
             }
@@ -194,19 +192,18 @@ private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = YouTubeVideo
             scheduledStartTime = DateTime("2022-01-01T00:00:00Z")
         }
     },
-    fetchedAt = Instant.EPOCH,
 )
 
 private class FakeRemoteSource(
-    val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
-    val channelList: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
+    val videoList: ((Set<YouTubeVideo.Id>) -> List<Updatable<YouTubeVideo>>)? = null,
+    val channelList: ((Set<YouTubeChannel.Id>) -> List<Updatable<YouTubeChannelDetail>>)? = null,
 ) : FakeYouTubeClient() {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<Updatable<YouTubeVideo>>> {
         logD { "fetchVideoList: $ids" }
         return NetworkResponse.create(videoList!!.invoke(ids))
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<Updatable<YouTubeChannelDetail>>> {
         logD { "fetchChannelList: $ids" }
         return NetworkResponse.create(channelList!!.invoke(ids))
     }

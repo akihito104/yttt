@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
+import com.freshdigitable.yttt.test.FakeYouTubeClient.Companion.updatable
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
@@ -25,7 +26,8 @@ class YouTubeVideoTest {
             // setup
             val fetchedAt = Instant.ofEpochMilli(2000)
             // exercise
-            val sut = video.copy(fetchedAt = fetchedAt).extend(old = null, isFreeChat = false)
+            val sut = video.updatable<YouTubeVideo>(fetchedAt)
+                .extend(old = null, isFreeChat = false)
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(YouTubeVideo.MAX_AGE_DEFAULT)
         }
@@ -35,7 +37,8 @@ class YouTubeVideoTest {
             // setup
             val fetchedAt = Instant.ofEpochMilli(2001)
             // exercise
-            val sut = video.copy(fetchedAt = fetchedAt).extend(old = null, isFreeChat = false)
+            val sut = video.updatable<YouTubeVideo>(fetchedAt = fetchedAt)
+                .extend(old = null, isFreeChat = false)
             // verify
             assertThat(sut.cacheControl.maxAge)
                 .isEqualTo(Duration.between(fetchedAt, video.scheduledStartDateTime))
@@ -46,7 +49,8 @@ class YouTubeVideoTest {
             // setup
             val fetchedAt = scheduledStartDateTime + YouTubeVideo.MAX_AGE_LIMIT_SOON
             // exercise
-            val sut = video.copy(fetchedAt = fetchedAt).extend(old = null, isFreeChat = false)
+            val sut = video.updatable<YouTubeVideo>(fetchedAt = fetchedAt)
+                .extend(old = null, isFreeChat = false)
             // verify
             assertThat(sut.cacheControl.maxAge)
                 .isEqualTo(Duration.between(fetchedAt, video.scheduledStartDateTime))
@@ -58,7 +62,8 @@ class YouTubeVideoTest {
             val fetchedAt =
                 scheduledStartDateTime + YouTubeVideo.MAX_AGE_LIMIT_SOON.plusMillis(1)
             // exercise
-            val sut = video.copy(fetchedAt = fetchedAt).extend(old = null, isFreeChat = false)
+            val sut = video.updatable<YouTubeVideo>(fetchedAt = fetchedAt)
+                .extend(old = null, isFreeChat = false)
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(YouTubeVideo.MAX_AGE_DEFAULT)
         }
@@ -74,10 +79,9 @@ class YouTubeVideoTest {
                 title = "free chat",
                 liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
                 scheduledStartDateTime = Instant.ofEpochMilli(100000),
-                fetchedAt = fetchedAt,
             )
             // exercise
-            val sut = video.extend(old = null, isFreeChat = true)
+            val sut = video.updatable<YouTubeVideo>(fetchedAt).extend(old = null, isFreeChat = true)
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(YouTubeVideo.MAX_AGE_FREE_CHAT)
         }
@@ -89,10 +93,10 @@ class YouTubeVideoTest {
                 id = YouTubeVideo.Id("video"),
                 title = "uploaded video",
                 liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
-                fetchedAt = Instant.ofEpochMilli(2000),
             )
             // exercise
-            val sut = video.extend(old = null, isFreeChat = false)
+            val sut = video.updatable<YouTubeVideo>(Instant.ofEpochMilli(2000))
+                .extend(old = null, isFreeChat = false)
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(YouTubeVideo.MAX_AGE_NOT_UPDATABLE)
         }
@@ -105,10 +109,10 @@ class YouTubeVideoTest {
                 id = YouTubeVideo.Id("video"),
                 title = "unscheduled live",
                 liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-                fetchedAt = fetchedAt,
             )
             // exercise
-            val sut = video.extend(old = null, isFreeChat = false)
+            val sut = video.updatable<YouTubeVideo>(fetchedAt)
+                .extend(old = null, isFreeChat = false)
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(YouTubeVideo.MAX_AGE_DEFAULT)
         }
@@ -123,10 +127,10 @@ class YouTubeVideoTest {
                 liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE,
                 scheduledStartDateTime = Instant.ofEpochMilli(100),
                 actualStartDateTime = Instant.ofEpochMilli(100),
-                fetchedAt = fetchedAt,
             )
             // exercise
-            val sut = video.extend(old = null, isFreeChat = false)
+            val sut = video.updatable<YouTubeVideo>(fetchedAt)
+                .extend(old = null, isFreeChat = false)
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(YouTubeVideo.MAX_AGE_ON_AIR)
         }

@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.TwitchDataSource
@@ -23,28 +24,28 @@ internal class TwitchRemoteDataSource @Inject constructor(
     private val ioScope: IoScope,
     private val dateTimeProvider: DateTimeProvider,
 ) : TwitchDataSource.Remote {
-    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<TwitchUserDetail>> =
+    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<Updatable<TwitchUserDetail>>> =
         fetch { getUser(ids = ids) }.map { u ->
             val now = dateTimeProvider.now()
             val cacheControl = CacheControl.create(now, MAX_AGE_DEFAULT)
             u.map { TwitchUserDetailImpl(it, cacheControl) }
         }
 
-    override suspend fun fetchMe(): Result<TwitchUserDetail?> = fetch { getMe() }.map {
+    override suspend fun fetchMe(): Result<Updatable<TwitchUserDetail>?> = fetch { getMe() }.map {
         if (it == null) return@map null
         val now = dateTimeProvider.now()
         val cacheControl = CacheControl.create(now, MAX_AGE_DEFAULT)
         TwitchUserDetailImpl(it, cacheControl)
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> =
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<Updatable<TwitchFollowings>> =
         fetchAll { getFollowing(userId = userId, itemsPerPage = 100, cursor = it) }.map {
             val cacheControl = CacheControl.create(dateTimeProvider.now(), MAX_AGE_DEFAULT)
             TwitchFollowings.create(userId, it, cacheControl)
         }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<TwitchStreams?> {
-        val id = me ?: fetchMe().getOrNull()?.id ?: return Result.success(null)
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<Updatable<TwitchStreams>?> {
+        val id = me ?: fetchMe().getOrNull()?.item?.id ?: return Result.success(null)
         return fetchAll { getFollowedStreams(id, cursor = it) }.map {
             val cacheControl = CacheControl.create(dateTimeProvider.now(), MAX_AGE_DEFAULT)
             TwitchStreams.create(id, it, cacheControl)
@@ -54,7 +55,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
-    ): Result<TwitchChannelScheduleUpdatable> = ioScope.asResult {
+    ): Result<Updatable<TwitchChannelSchedule?>> = ioScope.asResult {
         buildList {
             var cursor: String? = null
             var count = 0
@@ -99,7 +100,12 @@ internal class TwitchRemoteDataSource @Inject constructor(
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
-    ): Result<List<TwitchVideoDetail>> = fetch { getVideoByUserId(id = id, itemCount = itemCount) }
+    ): Result<List<Updatable<TwitchVideoDetail>>> = fetch {
+        getVideoByUserId(id = id, itemCount = itemCount)
+    }.map { r ->
+        val cacheControl = CacheControl.create(dateTimeProvider.now(), MAX_AGE_DEFAULT)
+        r.map { Updatable.create(it, cacheControl) }
+    }
 
     private suspend inline fun <T> fetch(crossinline task: suspend TwitchHelixClient.() -> NetworkResponse<T>): Result<T> =
         ioScope.asResult { helix.task().item }
@@ -124,6 +130,6 @@ internal class TwitchRemoteDataSource @Inject constructor(
 }
 
 internal class TwitchUserDetailImpl(
-    detail: TwitchUserDetail,
+    override val item: TwitchUserDetail,
     override val cacheControl: CacheControl,
-) : TwitchUserDetail by detail
+) : Updatable<TwitchUserDetail>

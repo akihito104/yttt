@@ -90,8 +90,6 @@ internal data class YouTubeVideoDb(
     override val channel: YouTubeChannelTable,
     @ColumnInfo("is_free_chat")
     override val isFreeChat: Boolean?,
-    @Embedded
-    override val cacheControl: CacheControlDb,
 ) : YouTubeVideoExtended {
     override val id: YouTubeVideo.Id
         get() = video.id
@@ -124,7 +122,7 @@ internal data class YouTubeVideoDb(
                 "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
                 "WHERE v.id IN (:ids)"
         )
-        suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<YouTubeVideoDb>
+        suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<UpdatableYouTubeVideoDb>
 
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
@@ -134,9 +132,14 @@ internal data class YouTubeVideoDb(
                 "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
                 "WHERE broadcast_content IS NOT 'none'"
         )
-        fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
+        fun watchAllUnfinishedVideos(): Flow<List<UpdatableYouTubeVideoDb>>
     }
 }
+
+internal data class UpdatableYouTubeVideoDb(
+    @Embedded override val item: YouTubeVideoDb,
+    @Embedded override val cacheControl: CacheControlDb,
+) : Updatable<YouTubeVideoExtended>
 
 @Entity(
     tableName = "free_chat",
@@ -188,8 +191,8 @@ internal class YouTubeVideoExpireTable(
     @ColumnInfo(name = "video_id")
     val videoId: YouTubeVideo.Id,
     @Embedded
-    override val cacheControl: CacheControlDb,
-) : Updatable {
+    val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert

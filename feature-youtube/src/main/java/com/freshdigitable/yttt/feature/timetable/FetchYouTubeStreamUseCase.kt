@@ -63,7 +63,8 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                     .chunked(MAX_BATCH_SIZE).map { ids ->
                         liveRepository.fetchVideoList(ids.toSet())
                             .onFailure { logE(throwable = it) { "ids: $ids" } }
-                            .onSuccess { v ->
+                            .onSuccess { video ->
+                                val v = video.map { it.item }
                                 val archived = v.filter { it.isArchived }.map { it.id }.toSet()
                                 val removed = ids - v.map { it.id }.toSet()
                                 val removing = archived + removed
@@ -78,7 +79,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                                     liveRepository.removeImageByUrl(url)
                                 }
 
-                                liveRepository.addVideo(v.filter { !it.isArchived })
+                                liveRepository.addVideo(video.filter { !it.item.isArchived })
                                 incrementMetric("new_stream", ids.size.toLong())
                             }
                     }.toList()
@@ -98,9 +99,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun updateCurrentVideos(videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>) {
         val current = dateTimeProvider.now()
         val currentItems = liveRepository.videos.value
-            .filter { it.isNowOnAir() || it.isUpcoming() || it.liveBroadcastContent == null }
+            .filter { it.item.isNowOnAir() || it.item.isUpcoming() || it.item.liveBroadcastContent == null }
             .filter { it.isUpdatable(current) }
-            .map { it.id }
+            .map { it.item.id }
         videoUpdateTaskChannel.send(currentItems)
     }
 
@@ -186,7 +187,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         return liveRepository.fetchChannelList(s.keys)
             .onFailure { logE(throwable = it) { "updateSummary: " } }
             .map { c ->
-                c.filter { it.uploadedPlayList != null }
+                c.map { it.item }.filter { it.uploadedPlayList != null }
                     .map {
                         val base = checkNotNull(s[it.id])
                         YouTubeSubscriptionSummary.create(base, it.uploadedPlayList)
@@ -206,7 +207,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                     throw it
                 }
             }
-            .map { playlist -> checkNotNull(playlist).addedItems.map { it.videoId } }
+            .map { playlist -> checkNotNull(playlist).item.addedItems.map { it.videoId } }
             .onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" } }
             .onSuccess {
                 if (it.isNotEmpty()) {

@@ -59,7 +59,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     private val detail: Flow<TwitchUserDetail?> = flowOf(id).map { i ->
         repository.findUsersById(setOf(i.mapTo()))
             .onFailureWithSnackbarMessage(errorMessageChannel)
-            .getOrNull()?.firstOrNull()
+            .getOrNull()?.firstOrNull()?.item
     }
     override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
         d?.let { LiveChannelDetailTwitch(it) }
@@ -73,7 +73,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).mapNotNull { i ->
         repository.fetchVideosByUserId(i.mapTo())
             .onFailureWithSnackbarMessage(errorMessageChannel)
-            .getOrNull()
+            .getOrNull()?.map { it.item }
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
     override val debug: Flow<Map<TwitchChannelDetailPagerContent.DebugId, String>> = combine(
         listOf(

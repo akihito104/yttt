@@ -13,7 +13,6 @@ import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.CacheControl
-import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -32,7 +31,7 @@ internal class YouTubePlaylistTable(
     @ColumnInfo(name = "id")
     override val id: YouTubePlaylist.Id,
     @Embedded
-    override val cacheControl: YouTubePlaylistCacheControlDb = YouTubePlaylistCacheControlDb(),
+    val cacheControl: YouTubePlaylistCacheControlDb = YouTubePlaylistCacheControlDb(),
 ) : YouTubePlaylist {
     @Ignore
     override val thumbnailUrl: String = "" // TODO: implement for all_playlist with paging
@@ -161,7 +160,7 @@ internal class YouTubePlaylistWithItemSummariesDb(
         entityColumn = "playlist_id",
     )
     override val summary: List<YouTubePlaylistItemSummaryDb>,
-) : YouTubePlaylistWithItemSummaries, Updatable by playlist {
+) : YouTubePlaylistWithItemSummaries {
     @androidx.room.Dao
     internal interface Dao {
         @Transaction
@@ -190,7 +189,7 @@ internal data class YouTubePlaylistItemDb(
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
     @Embedded
-    override val cacheControl: CacheControlDb,
+    val cacheControl: CacheControlDb,
 ) : YouTubePlaylistItem {
     @androidx.room.Dao
     internal interface Dao {

@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.db.DateTimeProviderFake
@@ -38,9 +39,9 @@ class TwitchLiveLocalDataSourceTest {
 
         @Before
         fun setup() = rule.runWithLocalSource {
-            dataSource.setMe(me)
+            dataSource.setMe(Updatable.create(me, CacheControl.zero()))
             dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
-            dataSource.addUsers(listOf(broadcaster))
+            dataSource.addUsers(listOf(Updatable.create(broadcaster, CacheControl.zero())))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
             val updatable = TwitchChannelScheduleUpdatable.create(schedule, CacheControl.zero())
             dao.replaceChannelSchedules(broadcaster.id, updatable)
@@ -90,7 +91,7 @@ class TwitchLiveLocalDataSourceTest {
                 me1 to listOf(broadcaster(broadcaster)),
                 me2 to listOf(broadcaster(broadcaster), broadcaster(me1))
             ).forEach { (me, broadcasters) ->
-                dataSource.setMe(me)
+                dataSource.setMe(Updatable.create(me, CacheControl.zero()))
                 dataSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
@@ -179,7 +180,6 @@ internal fun userDetail(
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
     override val createdAt: Instant get() = Instant.EPOCH
-    override val cacheControl: CacheControl get() = CacheControl.zero()
 }
 
 private fun channelSchedule(
@@ -210,7 +210,7 @@ internal fun followings(
     followerId: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
     fetchedAt: Instant = Instant.EPOCH,
-): TwitchFollowings =
+): Updatable<TwitchFollowings> =
     TwitchFollowings.create(followerId, followings, CacheControl.create(fetchedAt, Duration.ZERO))
 
 private fun broadcaster(

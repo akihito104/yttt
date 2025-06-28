@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.feature.timetable
 import app.cash.turbine.test
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -14,7 +15,6 @@ import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
@@ -331,14 +331,12 @@ internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : Yo
     override val actualEndDateTime: Instant? = null
     override val description: String = ""
     override val viewerCount: BigInteger? = BigInteger.ONE
-    override val cacheControl: CacheControl get() = CacheControl.zero()
 }
 
 private fun playlistItem(
     id: Int,
     channelDetail: YouTubeChannelDetail,
     videoId: YouTubeVideo.Id,
-    fetchedAt: Instant = Instant.EPOCH,
 ): YouTubePlaylistItem = object : YouTubePlaylistItem {
     override val id: YouTubePlaylistItem.Id =
         YouTubePlaylistItem.Id("playlistItem_${channelDetail.id.value}_$id")
@@ -350,8 +348,6 @@ private fun playlistItem(
     override val description: String = ""
     override val videoOwnerChannelId: YouTubeChannel.Id? = null
     override val publishedAt: Instant = Instant.EPOCH
-    override val cacheControl: CacheControl
-        get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
 }
 
 private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription =
@@ -364,19 +360,24 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
 
 private class FakeYouTubeClientImpl(
     var subscription: ((Int, String?) -> NetworkResponse<List<YouTubeSubscription>>)? = null,
-    var channel: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
-    var playlistItem: ((YouTubePlaylist.Id) -> List<YouTubePlaylistItem>)? = null,
-    var video: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
+    var channel: ((Set<YouTubeChannel.Id>) -> List<Updatable<YouTubeChannelDetail>>)? = null,
+    var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItem>>)? = null,
+    var video: ((Set<YouTubeVideo.Id>) -> List<Updatable<YouTubeVideo>>)? = null,
 ) : FakeYouTubeClient() {
     companion object {
         fun FakeYouTubeClientImpl.setup(
             subscriptionCount: Int,
             itemsPerPlaylist: Int,
         ) {
-            val channelDetail = (1..subscriptionCount).map { channelDetail(it) }
-            val videos = channelDetail.flatMap { c -> (1..itemsPerPlaylist).map { video(it, c) } }
+            val channelDetail = (1..subscriptionCount).map { channelDetail(it).updatable() }
+            val videos = channelDetail
+                .flatMap { c ->
+                    (1..itemsPerPlaylist).map {
+                        video(it, c.item).updatable(maxAge = Duration.ZERO)
+                    }
+                }
             channel = { id ->
-                val c = channelDetail.associateBy { it.id }
+                val c = channelDetail.associateBy { it.item.id }
                 id.mapNotNull { c[it] }
             }
             val chunked = channelDetail.chunked(50)
@@ -384,15 +385,16 @@ private class FakeYouTubeClientImpl(
                 val tokenMatcher = if (i == 0) null else "token$i"
                 val nextToken = if (i == chunked.size - 1) null else "token${i + 1}"
                 (i * 50 to tokenMatcher) to NetworkResponse.create(
-                    c.mapIndexed { j, s -> subscription(j, s) }, nextToken
+                    c.mapIndexed { j, s -> subscription(j, s.item) }, nextToken
                 )
             }.toMap()
             subscription = { offset, token -> subs[offset to token]!! }
-            val v = videos.associateBy { it.id }
+            val v = videos.associateBy { it.item.id }
             video = { id -> id.mapNotNull { v[it] } }
             val pi = channelDetail.associate { c ->
-                c.uploadedPlayList!! to videos.filter { it.channel.id == c.id }
-                    .mapIndexed { i, v -> playlistItem(i, c, v.id) }
+                c.item.uploadedPlayList!! to videos.filter { it.item.channel.id == c.item.id }
+                    .mapIndexed { i, v -> playlistItem(i, c.item, v.item.id) }
+                    .updatable()
             }
             playlistItem = { pi[it]!! }
         }
@@ -407,13 +409,13 @@ private class FakeYouTubeClientImpl(
         return subscription!!.invoke(offset, token)
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<Updatable<YouTubeChannelDetail>>> {
         logD { "fetchChannelList: $ids" }
         check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
         return NetworkResponse.create(item = channel!!.invoke(ids))
     }
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<Updatable<YouTubeVideo>>> {
         logD { "fetchVideoList: $ids" }
         check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
         return NetworkResponse.create(item = video!!.invoke(ids))
@@ -422,7 +424,7 @@ private class FakeYouTubeClientImpl(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItem>> {
+    ): NetworkResponse<Updatable<List<YouTubePlaylistItem>>> {
         logD { "fetchPlaylistItems: $id, $maxResult" }
         return NetworkResponse.create(playlistItem!!.invoke(id))
     }

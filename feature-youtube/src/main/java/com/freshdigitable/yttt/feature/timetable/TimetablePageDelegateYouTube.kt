@@ -13,7 +13,7 @@ internal class FetchYouTubeOnAirItemSourceUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
     override fun invoke(): Flow<List<LiveVideo<*>>> = repository.videos.map { v ->
-        v.filter { it.isNowOnAir() }.map { LiveVideo.create(it) }
+        v.map { it.item }.filter { it.isNowOnAir() }.map { LiveVideo.create(it) }
     }
 }
 
@@ -23,7 +23,7 @@ internal class FetchYouTubeUpcomingItemSourceUseCase @Inject constructor(
 ) : FetchTimetableItemSourceUseCase {
     override fun invoke(): Flow<List<LiveVideo<*>>> = repository.videos.map { v ->
         val current = dateTimeProvider.now()
-        v.filter {
+        v.map { it.item }.filter {
             it.isUpcoming() && it.isFreeChat != true && it.scheduledStartDateTime != null &&
                 it.isUpcomingWithinPublicationDeadline(current)
         }.map { LiveVideo.create(it) }
@@ -34,6 +34,7 @@ internal class FetchYouTubeFreeChatItemSourceUseCase @Inject constructor(
     private val repository: YouTubeRepository,
 ) : FetchTimetableItemSourceUseCase {
     override fun invoke(): Flow<List<LiveVideo<*>>> = repository.videos.map { v ->
-        v.filter { it.isFreeChat == true && !it.isNowOnAir() }.map { LiveVideo.create(it) }
+        v.map { it.item }.filter { it.isFreeChat == true && !it.isNowOnAir() }
+            .map { LiveVideo.create(it) }
     }
 }

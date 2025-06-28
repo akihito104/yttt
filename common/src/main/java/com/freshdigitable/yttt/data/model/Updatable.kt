@@ -2,18 +2,30 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.checkUpdatableBy
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import java.time.Duration
 import java.time.Instant
 
-interface Updatable {
+interface Updatable<T> {
+    val item: T
     val cacheControl: CacheControl
 
     companion object {
-        fun Updatable.isUpdatable(current: Instant): Boolean = cacheControl.isUpdatable(current)
-        fun Updatable.isFresh(current: Instant): Boolean = !isUpdatable(current)
-        fun Updatable.checkUpdatableBy(new: Updatable) =
+        fun <T> create(item: T, cacheControl: CacheControl): Updatable<T> = Impl(item, cacheControl)
+        fun Updatable<*>.isUpdatable(current: Instant): Boolean = cacheControl.isUpdatable(current)
+        fun Updatable<*>.isFresh(current: Instant): Boolean = !isUpdatable(current)
+        fun Updatable<*>.checkUpdatableBy(new: Updatable<*>) =
             this.cacheControl.checkUpdatableBy(new.cacheControl)
+
+        fun <T> Updatable<T>.overrideMaxAge(maxAge: Duration): Updatable<T> =
+            Impl(this.item, this.cacheControl.overrideMaxAge(maxAge))
+
+        fun <T, R> Updatable<T>.map(mapper: (T) -> R): Updatable<R> =
+            Impl(mapper(this.item), this.cacheControl)
     }
+
+    private class Impl<T>(override val item: T, override val cacheControl: CacheControl) :
+        Updatable<T>
 }
 
 interface CacheControl {

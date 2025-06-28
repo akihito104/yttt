@@ -13,7 +13,6 @@ import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
-import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -149,8 +148,8 @@ internal class TwitchChannelScheduleStream(
 internal class TwitchChannelScheduleExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("user_id") val userId: TwitchUser.Id,
-    @Embedded override val cacheControl: CacheControlDb,
-) : Updatable {
+    @Embedded val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -197,7 +196,7 @@ internal class TwitchCategoryTable(
 
 internal class TwitchLiveScheduleDb(
     @Embedded
-    override val user: TwitchUserDetailDbView,
+    override val user: TwitchUserDetailDb,
     @Embedded
     override val schedule: TwitchChannelScheduleStream,
 ) : TwitchLiveSchedule {
@@ -207,8 +206,9 @@ internal class TwitchLiveScheduleDb(
     internal interface Dao {
         companion object {
             private const val SQL_LIVE_SCHEDULE =
-                "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base, " +
-                    "c.igdb_id AS category_igdb_id, u.* " +
+                "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base," +
+                    " c.igdb_id AS category_igdb_id, u.login_name, u.display_name, u.user_id, u.profile_image_url," +
+                    " u.created_at, u.description " +
                     "FROM twitch_channel_schedule_stream AS s " +
                     "LEFT OUTER JOIN twitch_category AS c ON s.category_id = c.id " +
                     "INNER JOIN twitch_user_detail_view AS u ON s.user_id = u.user_id"

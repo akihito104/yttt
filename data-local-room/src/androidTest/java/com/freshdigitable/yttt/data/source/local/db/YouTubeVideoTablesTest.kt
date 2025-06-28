@@ -72,7 +72,7 @@ class YouTubeVideoTablesTest {
                 .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
             assertThat(actual).hasSize(1)
-            assertThat(actual.first().id).isEqualTo(target)
+            assertThat(actual.first().item.id).isEqualTo(target)
         }
 
         @Test
@@ -95,8 +95,8 @@ class YouTubeVideoTablesTest {
                 .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
             assertThat(actual).hasSize(1)
-            assertThat(actual.first().id).isEqualTo(target)
-            assertThat(actual.first().isFreeChat).isTrue()
+            assertThat(actual.first().item.id).isEqualTo(target)
+            assertThat(actual.first().item.isFreeChat).isTrue()
         }
 
         @Test
@@ -118,7 +118,7 @@ class YouTubeVideoTablesTest {
             val actual = dao.findVideosById(target)
                 .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
-            assertThat(actual.map { it.id }).containsExactlyInAnyOrder(simple)
+            assertThat(actual.map { it.item.id }).containsExactlyInAnyOrder(simple)
         }
 
         @Test
@@ -164,8 +164,8 @@ class YouTubeVideoTablesTest {
             actual.test {
                 val item = awaitItem()
                 assertThat(item).hasSize(5)
-                    .allMatch { it.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
-                assertThat(item.map { it.id }).containsExactlyInAnyOrder(
+                    .allMatch { it.item.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
+                assertThat(item.map { it.item.id }).containsExactlyInAnyOrder(
                     simple, freechat, hasNoExpire, live, upcoming,
                 )
             }

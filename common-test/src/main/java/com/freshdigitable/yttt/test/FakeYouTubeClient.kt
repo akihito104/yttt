@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.test
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -20,6 +21,7 @@ import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Singleton
 
@@ -56,18 +58,18 @@ abstract class FakeYouTubeClient : YouTubeClient {
         token: String?
     ): NetworkResponse<List<YouTubeSubscription>> = throw NotImplementedError()
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<Updatable<YouTubeChannelDetail>>> =
         throw NotImplementedError()
 
-    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
+    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<Updatable<YouTubePlaylist>>> =
         throw NotImplementedError()
 
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
+    ): NetworkResponse<Updatable<List<YouTubePlaylistItem>>> = throw NotImplementedError()
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<Updatable<YouTubeVideo>>> =
         throw NotImplementedError()
 
     override fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>> =
@@ -83,7 +85,6 @@ abstract class FakeYouTubeClient : YouTubeClient {
     companion object {
         fun channelDetail(
             id: Int,
-            fetchedAt: Instant = Instant.EPOCH,
         ): YouTubeChannelDetail = object : YouTubeChannelDetail {
             override val id: YouTubeChannel.Id = YouTubeChannel.Id("channel_$id")
             override val uploadedPlayList: YouTubePlaylist.Id =
@@ -99,8 +100,11 @@ abstract class FakeYouTubeClient : YouTubeClient {
             override val customUrl: String = ""
             override val keywords: Collection<String> = emptyList()
             override val description: String = ""
-            override val cacheControl: CacheControl
-                get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
         }
+
+        fun <T> T.updatable(
+            fetchedAt: Instant? = Instant.EPOCH,
+            maxAge: Duration? = MAX_AGE_DEFAULT,
+        ): Updatable<T> = Updatable.create(this, CacheControl.create(fetchedAt, maxAge))
     }
 }

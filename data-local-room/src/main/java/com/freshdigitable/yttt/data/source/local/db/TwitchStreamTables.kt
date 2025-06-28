@@ -11,7 +11,6 @@ import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
-import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -79,14 +78,14 @@ internal data class TwitchStreamDbView(
     @ColumnInfo(name = "started_at") override val startedAt: Instant,
     @ColumnInfo(name = "tags") override val tags: List<String>,
     @ColumnInfo(name = "is_mature") override val isMature: Boolean,
-    @Embedded override val user: TwitchUserDetailDbView,
+    @Embedded override val user: TwitchUserDetailDb,
 ) : TwitchLiveStream {
     @androidx.room.Dao
     internal interface Dao {
         companion object {
             private const val SQL_STREAM =
                 "SELECT s.*, u.created_at AS created_at, u.description AS description, u.display_name AS display_name, " +
-                    "u.login_name AS login_name, u.profile_image_url AS profile_image_url, u.fetched_at AS fetched_at, u.max_age AS max_age, " +
+                    "u.login_name AS login_name, u.profile_image_url AS profile_image_url, " +
                     "c.name AS game_name FROM twitch_stream AS s " +
                     "INNER JOIN twitch_user_detail_view AS u ON u.user_id = s.user_id " +
                     "INNER JOIN twitch_category AS c ON c.id = s.game_id"
@@ -118,8 +117,8 @@ internal class TwitchStreamExpireTable(
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
     @Embedded
-    override val cacheControl: CacheControlDb,
-) : Updatable {
+    val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Query("SELECT * FROM twitch_stream_expire WHERE user_id = :me")

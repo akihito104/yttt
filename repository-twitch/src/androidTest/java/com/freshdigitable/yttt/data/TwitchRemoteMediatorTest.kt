@@ -34,6 +34,7 @@ import com.freshdigitable.yttt.data.source.remote.TwitchUserResponse
 import com.freshdigitable.yttt.data.source.remote.TwitchVideosResponse
 import com.freshdigitable.yttt.di.TwitchModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
+import com.freshdigitable.yttt.test.FakeYouTubeClient.Companion.updatable
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
@@ -90,16 +91,15 @@ class TwitchRemoteMediatorTest {
     fun setup(): Unit = runBlocking {
         hiltRule.inject()
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(10)
-        localSource.setMe(authUser)
+        localSource.setMe(authUser.updatable())
         val stream = broadcaster.take(10).map { stream(it) }
         val streams = object : TwitchStreams.Updated {
             override val followerId: TwitchUser.Id get() = authUser.id
             override val streams: List<TwitchStream> get() = stream
             override val updatableThumbnails: Set<String> get() = emptySet()
             override val deletedThumbnails: Set<String> get() = emptySet()
-            override val cacheControl: CacheControl get() = CacheControl.zero()
         }
-        localSource.replaceFollowedStreams(streams)
+        localSource.replaceFollowedStreams(streams.updatable(maxAge = Duration.ZERO))
         localSource.replaceAllFollowings(followings)
         FakeRemoteSourceModule.userDetails =
             { Response.success(TwitchUserResponse(broadcaster.map { it.toUserDetail() })) }
@@ -219,10 +219,7 @@ class TwitchRemoteMediatorTest {
             description = "description",
             createdAt = Instant.EPOCH,
             profileImageUrl = "",
-        ) {
-            override val cacheControl: CacheControl
-                get() = CacheControl.create(Instant.EPOCH, Duration.ofMinutes(5))
-        }
+        ) {}
 
         fun broadcaster(count: Int): List<Broadcaster> = (0..<count).map {
             Broadcaster(

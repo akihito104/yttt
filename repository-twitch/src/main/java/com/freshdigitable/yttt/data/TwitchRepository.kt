@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchUserDetail.Companion.update
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.TwitchDataSource
@@ -26,7 +27,7 @@ class TwitchRepository @Inject constructor(
     private val localDataSource: TwitchDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
 ) : TwitchDataSource, ImageDataSource by localDataSource {
-    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<TwitchUserDetail>> {
+    override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<Updatable<TwitchUserDetail>>> {
         if (ids == null) {
             val me = fetchMe()
             return me.map { listOfNotNull(it) }
@@ -36,7 +37,9 @@ class TwitchRepository @Inject constructor(
             return cacheRes
         }
         val cache = cacheRes.getOrDefault(emptyList())
-        val remoteIds = ids - cache.filter { it.profileImageUrl.isNotEmpty() }.map { it.id }.toSet()
+        val remoteIds =
+            ids - cache.map { it.item }.filter { it.profileImageUrl.isNotEmpty() }.map { it.id }
+                .toSet()
         if (remoteIds.isEmpty()) {
             return cacheRes
         }
@@ -46,7 +49,7 @@ class TwitchRepository @Inject constructor(
             .map { it + cache }
     }
 
-    override suspend fun fetchMe(): Result<TwitchUserDetail?> {
+    override suspend fun fetchMe(): Result<Updatable<TwitchUserDetail>?> {
         val me = localDataSource.fetchMe()
         if (me.isSuccess && me.getOrNull() != null) {
             return me
@@ -56,7 +59,7 @@ class TwitchRepository @Inject constructor(
             .onSuccess { if (it != null) localDataSource.setMe(it) }
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<TwitchFollowings> {
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<Updatable<TwitchFollowings>> {
         val cacheRes = localDataSource.fetchAllFollowings(userId)
         if (cacheRes.isFailure) {
             return cacheRes
@@ -67,11 +70,11 @@ class TwitchRepository @Inject constructor(
         }
         return remoteDataSource.fetchAllFollowings(userId)
             .onSuccess { localDataSource.replaceAllFollowings(it) }
-            .map { cache.update(it) }
+            .map { cache.update(it) as Updatable<TwitchFollowings> }
     }
 
-    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<TwitchStreams?> {
-        val id = me ?: fetchMe().getOrNull()?.id ?: return Result.success(null)
+    override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<Updatable<TwitchStreams>?> {
+        val id = me ?: fetchMe().getOrNull()?.item?.id ?: return Result.success(null)
         val cacheRes = localDataSource.fetchFollowedStreams(id)
         if (cacheRes.isFailure) {
             return cacheRes
@@ -84,7 +87,7 @@ class TwitchRepository @Inject constructor(
             .map { cache.update(checkNotNull(it)) }
     }
 
-    override suspend fun replaceFollowedStreams(followedStreams: TwitchStreams.Updated) {
+    override suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>) {
         localDataSource.replaceFollowedStreams(followedStreams)
     }
 
@@ -95,7 +98,7 @@ class TwitchRepository @Inject constructor(
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
-    ): Result<TwitchChannelScheduleUpdatable> {
+    ): Result<Updatable<TwitchChannelSchedule?>> {
         val cache = localDataSource.fetchFollowedStreamSchedule(id)
         val current = dateTimeProvider.now()
         if (cache.isSuccess && checkNotNull(cache.getOrNull()).isFresh(current)) {
@@ -126,7 +129,8 @@ class TwitchRepository @Inject constructor(
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,
         itemCount: Int,
-    ): Result<List<TwitchVideoDetail>> = remoteDataSource.fetchVideosByUserId(id, itemCount)
+    ): Result<List<Updatable<TwitchVideoDetail>>> =
+        remoteDataSource.fetchVideosByUserId(id, itemCount)
 
     override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>) {
         localDataSource.cleanUpByUserId(ids)

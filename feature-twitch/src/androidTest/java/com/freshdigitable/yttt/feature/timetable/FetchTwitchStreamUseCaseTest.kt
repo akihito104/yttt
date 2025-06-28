@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.feature.timetable
 
 import app.cash.turbine.test
-import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
@@ -396,8 +395,8 @@ class FetchTwitchStreamUseCaseTest {
 
         private val current = Instant.parse("2025-04-29T00:00:00Z")
         private val category = category("1")
-        private val streamUser = userDetail("10", fetchedAt = current)
-        private val scheduleUser = userDetail("11", fetchedAt = current)
+        private val streamUser = userDetail("10")
+        private val scheduleUser = userDetail("11")
         private val streamSchedule =
             streamSchedule("1", category, Instant.parse("2025-04-30T00:00:00Z"))
 
@@ -513,7 +512,6 @@ private val me = userDetail("1", "me")
 
 private fun userDetail(
     id: String, name: String = "user_$id",
-    fetchedAt: Instant = Instant.EPOCH,
 ) = object : TwitchUserDetail {
     override val id: TwitchUser.Id get() = TwitchUser.Id(id)
     override val loginName: String get() = name
@@ -521,8 +519,6 @@ private fun userDetail(
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
     override val createdAt: Instant get() = Instant.EPOCH
-    override val cacheControl: CacheControl
-        get() = CacheControl.create(fetchedAt, Duration.ZERO)
 }
 
 private fun broadcaster(user: TwitchUser, followedAt: Instant = Instant.EPOCH) =

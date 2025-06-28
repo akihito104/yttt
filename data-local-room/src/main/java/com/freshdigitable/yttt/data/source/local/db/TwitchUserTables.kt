@@ -86,15 +86,9 @@ internal class TwitchUserDetailTable(
     viewName = "twitch_user_detail_view",
 )
 internal data class TwitchUserDetailDbView(
-    @Embedded private val detail: TwitchUserDetailTable,
-    @ColumnInfo("login_name") override val loginName: String,
-    @ColumnInfo("display_name") override val displayName: String,
+    @Embedded override val item: TwitchUserDetailDb,
     @Embedded override val cacheControl: CacheControlDb,
-) : TwitchUserDetail {
-    override val id: TwitchUser.Id get() = detail.id
-    override val profileImageUrl: String get() = detail.profileImageUrl
-    override val createdAt: Instant get() = detail.createdAt
-    override val description: String get() = detail.description
+) : Updatable<TwitchUserDetail> {
 
     @androidx.room.Dao
     internal interface Dao {
@@ -112,6 +106,17 @@ internal data class TwitchUserDetailDbView(
     }
 }
 
+internal data class TwitchUserDetailDb(
+    @Embedded private val detail: TwitchUserDetailTable,
+    @ColumnInfo("login_name") override val loginName: String,
+    @ColumnInfo("display_name") override val displayName: String,
+) : TwitchUserDetail {
+    override val id: TwitchUser.Id get() = detail.id
+    override val profileImageUrl: String get() = detail.profileImageUrl
+    override val createdAt: Instant get() = detail.createdAt
+    override val description: String get() = detail.description
+}
+
 @Entity(
     tableName = "twitch_user_detail_expire",
     foreignKeys = [
@@ -126,8 +131,8 @@ internal class TwitchUserDetailExpireTable(
     @PrimaryKey
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
-    @Embedded override val cacheControl: CacheControlDb,
-) : Updatable {
+    @Embedded val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -200,8 +205,8 @@ internal class TwitchBroadcasterExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("follower_user_id", index = true)
     val followerId: TwitchUser.Id,
-    @Embedded override val cacheControl: CacheControlDb,
-) : Updatable {
+    @Embedded val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
