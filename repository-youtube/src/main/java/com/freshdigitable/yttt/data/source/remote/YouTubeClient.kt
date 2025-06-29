@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.remote
 import androidx.annotation.VisibleForTesting
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
@@ -93,7 +94,7 @@ internal class YouTubeClientImpl(
                 .setMaxResults(ids.size.toLong())
         }
         return NetworkResponse.create(item = res.item.items.map {
-            Updatable.create(YouTubeChannelImpl(it), res.cacheControl)
+            YouTubeChannelImpl(it).toUpdatable(res.cacheControl)
         })
     }
 
@@ -105,9 +106,7 @@ internal class YouTubeClientImpl(
                 .setMaxResults(ids.size.toLong())
         }
         return NetworkResponse.create(
-            item = res.item.items.map {
-                Updatable.create(YouTubePlaylistRemote(it), res.cacheControl)
-            },
+            item = res.item.items.map { YouTubePlaylistRemote(it).toUpdatable(res.cacheControl) },
             nextPageToken = res.item.nextPageToken,
         )
     }
@@ -123,10 +122,7 @@ internal class YouTubeClientImpl(
                 .setMaxResults(maxResult)
         }
         return NetworkResponse.create(
-            item = Updatable.create(
-                res.item.items.map { PlaylistItemRemote(it) },
-                res.cacheControl,
-            ),
+            item = res.item.items.map { PlaylistItemRemote(it) }.toUpdatable(res.cacheControl),
         )
     }
 
@@ -138,9 +134,7 @@ internal class YouTubeClientImpl(
                 .setMaxResults(ids.size.toLong())
         }
         return NetworkResponse.create(
-            item = res.item.items.map {
-                Updatable.create(YouTubeVideoRemote(it), res.cacheControl)
-            },
+            item = res.item.items.map { YouTubeVideoRemote(it).toUpdatable(res.cacheControl) },
             nextPageToken = res.item.nextPageToken,
         )
     }
@@ -191,10 +185,8 @@ internal class YouTubeClientImpl(
                 val req = request()
                 val res = req.executeUnparsed()
                 val date = DateTimeFormatter.RFC_1123_DATE_TIME.parse(res.headers.date)
-                Updatable.create(
-                    item = res.parseAs(req.responseClass),
-                    cacheControl = CacheControl.create(Instant.from(date), MAX_AGE_DEFAULT),
-                )
+                res.parseAs(req.responseClass)
+                    .toUpdatable(Instant.from(date), MAX_AGE_DEFAULT)
             } catch (e: HttpResponseException) {
                 val date = DateTimeFormatter.RFC_1123_DATE_TIME.parse(e.headers.date)
                 val cacheControl = CacheControl.create(Instant.from(date), MAX_AGE_DEFAULT)

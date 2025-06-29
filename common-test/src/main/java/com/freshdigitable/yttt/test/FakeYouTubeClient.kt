@@ -21,7 +21,6 @@ import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import java.math.BigInteger
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Singleton
 
@@ -101,10 +100,8 @@ abstract class FakeYouTubeClient : YouTubeClient {
             override val keywords: Collection<String> = emptyList()
             override val description: String = ""
         }
-
-        fun <T> T.updatable(
-            fetchedAt: Instant? = Instant.EPOCH,
-            maxAge: Duration? = MAX_AGE_DEFAULT,
-        ): Updatable<T> = Updatable.create(this, CacheControl.create(fetchedAt, maxAge))
     }
 }
+
+fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
+    CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)

@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.local
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -103,7 +104,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         maxResult: Long,
     ): Result<Updatable<List<YouTubePlaylistItem>>> = ioScope.asResult {
         val p = dao.findPlaylistItemByPlaylistId(id)
-        Updatable.create(p, p.firstOrNull()?.cacheControl ?: CacheControl.empty())
+        p.toUpdatable(p.firstOrNull()?.cacheControl ?: CacheControl.empty())
     }
 
     override suspend fun fetchPlaylistWithItems(
@@ -115,8 +116,8 @@ internal class YouTubeLocalDataSource @Inject constructor(
             val playlist = dao.findPlaylistById(id) ?: return@withTransaction null
             val items = dao.findPlaylistItemByPlaylistId(playlist.id)
             YouTubePlaylistWithItems.create(
-                Updatable.create(playlist, playlist.cacheControl),
-                Updatable.create(items, items.firstOrNull()?.cacheControl ?: CacheControl.empty()),
+                playlist.toUpdatable(playlist.cacheControl),
+                items.toUpdatable(items.firstOrNull()?.cacheControl ?: CacheControl.empty()),
             )
         }
     }

@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import java.time.Duration
 import java.time.Instant
 import kotlin.math.pow
@@ -15,30 +16,25 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
         fun YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>.update(
             newItems: List<YouTubePlaylistItem>?,
             fetchedAt: Instant,
-        ): Updatable<YouTubePlaylistWithItems> = Updatable.create(
-            item = ForUpdate(
-                newItems = newItems,
-                cachedPlaylistWithItems = this,
-            ),
-            cacheControl = ForUpdate.CacheControlImpl(fetchedAt, newItems ?: emptyList(), this),
-        )
+        ): Updatable<YouTubePlaylistWithItems> = ForUpdate(
+            newItems = newItems,
+            cachedPlaylistWithItems = this,
+        ).toUpdatable(ForUpdate.CacheControlImpl(fetchedAt, newItems ?: emptyList(), this))
 
         fun newPlaylist(
             playlist: Updatable<YouTubePlaylist>,
             items: Updatable<List<YouTubePlaylistItem>?>,
-        ): Updatable<YouTubePlaylistWithItems> = Updatable.create(
-            item = NewPlaylist(playlist.item, items.item),
-            cacheControl = Updatable.latest(playlist, items).cacheControl
-                .overrideMaxAge(if (items.item.isNullOrEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT),
-        )
+        ): Updatable<YouTubePlaylistWithItems> = NewPlaylist(playlist.item, items.item)
+            .toUpdatable(
+                Updatable.latest(playlist, items).cacheControl
+                    .overrideMaxAge(if (items.item.isNullOrEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
+            )
 
         fun create(
             playlist: Updatable<YouTubePlaylist>,
             items: Updatable<List<YouTubePlaylistItem>>,
-        ): Updatable<YouTubePlaylistWithItems> = Updatable.create(
-            item = CachedPlaylist(playlist.item, items.item),
-            cacheControl = Updatable.latest(playlist, items).cacheControl,
-        )
+        ): Updatable<YouTubePlaylistWithItems> = CachedPlaylist(playlist.item, items.item)
+            .toUpdatable(Updatable.latest(playlist, items).cacheControl)
 
         internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
         val MAX_AGE_DEFAULT: Duration = MAX_AGE_MAX.dividedBy(2.0.pow(n = 7).toLong())

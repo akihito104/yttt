@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.TwitchDataSource
@@ -27,14 +28,13 @@ internal class TwitchRemoteDataSource @Inject constructor(
         fetch { getUser(ids = ids) }.map { u ->
             val now = dateTimeProvider.now()
             val cacheControl = CacheControl.create(now, MAX_AGE_DEFAULT)
-            u.map { TwitchUserDetailImpl(it, cacheControl) }
+            u.map { it.toUpdatable(cacheControl) }
         }
 
     override suspend fun fetchMe(): Result<Updatable<TwitchUserDetail>?> = fetch { getMe() }.map {
         if (it == null) return@map null
         val now = dateTimeProvider.now()
-        val cacheControl = CacheControl.create(now, MAX_AGE_DEFAULT)
-        TwitchUserDetailImpl(it, cacheControl)
+        it.toUpdatable(now, MAX_AGE_DEFAULT)
     }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<Updatable<TwitchFollowings>> =
@@ -71,16 +71,13 @@ internal class TwitchRemoteDataSource @Inject constructor(
             } while (cursor != null && count < maxCount)
         }
     }.map { res ->
-        val schedule = object : TwitchChannelSchedule {
+        val schedule: TwitchChannelSchedule? = object : TwitchChannelSchedule {
             override val segments: List<TwitchChannelSchedule.Stream>
                 get() = res.mapNotNull { it.segments }.flatten()
             override val broadcaster: TwitchUser get() = res.first().broadcaster
             override val vacation: TwitchChannelSchedule.Vacation? get() = res.first().vacation
         }
-        Updatable.create<TwitchChannelSchedule?>(
-            item = schedule,
-            cacheControl = CacheControl.create(dateTimeProvider.now(), MAX_AGE_DEFAULT)
-        )
+        schedule.toUpdatable(dateTimeProvider.now(), MAX_AGE_DEFAULT)
     }.recoverCatching {
         if (it is TwitchException && it.statusCode == 404) {
             // 404 Not Found: The broadcaster has not created a streaming schedule.
@@ -103,7 +100,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
         getVideoByUserId(id = id, itemCount = itemCount)
     }.map { r ->
         val cacheControl = CacheControl.create(dateTimeProvider.now(), MAX_AGE_DEFAULT)
-        r.map { Updatable.create(it, cacheControl) }
+        r.map { it.toUpdatable(cacheControl) }
     }
 
     private suspend inline fun <T> fetch(crossinline task: suspend TwitchHelixClient.() -> NetworkResponse<T>): Result<T> =
@@ -127,8 +124,3 @@ internal class TwitchRemoteDataSource @Inject constructor(
         private val MAX_AGE_DEFAULT = Duration.ofMinutes(5)
     }
 }
-
-internal class TwitchUserDetailImpl(
-    override val item: TwitchUserDetail,
-    override val cacheControl: CacheControl,
-) : Updatable<TwitchUserDetail>

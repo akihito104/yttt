@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.db.DateTimeProviderFake
@@ -38,11 +39,11 @@ class TwitchLiveLocalDataSourceTest {
 
         @Before
         fun setup() = rule.runWithLocalSource {
-            dataSource.setMe(Updatable.create(me, CacheControl.zero()))
+            dataSource.setMe(me.toUpdatable(CacheControl.zero()))
             dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
-            dataSource.addUsers(listOf(Updatable.create(broadcaster, CacheControl.zero())))
+            dataSource.addUsers(listOf(broadcaster.toUpdatable(CacheControl.zero())))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            val updatable = Updatable.create<TwitchChannelSchedule?>(schedule, CacheControl.zero())
+            val updatable = schedule.toUpdatable<TwitchChannelSchedule?>(CacheControl.zero())
             dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
@@ -90,11 +91,11 @@ class TwitchLiveLocalDataSourceTest {
                 me1 to listOf(broadcaster(broadcaster)),
                 me2 to listOf(broadcaster(broadcaster), broadcaster(me1))
             ).forEach { (me, broadcasters) ->
-                dataSource.setMe(Updatable.create(me, CacheControl.zero()))
+                dataSource.setMe(me.toUpdatable(CacheControl.zero()))
                 dataSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            val updatable = Updatable.create<TwitchChannelSchedule?>(schedule, CacheControl.zero())
+            val updatable = schedule.toUpdatable<TwitchChannelSchedule?>(CacheControl.zero())
             dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)

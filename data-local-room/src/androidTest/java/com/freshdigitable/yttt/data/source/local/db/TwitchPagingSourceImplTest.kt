@@ -2,7 +2,7 @@ package com.freshdigitable.yttt.data.source.local.db
 
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.local.TwitchDataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.userDetail
 import org.assertj.core.api.Assertions.assertThat
@@ -26,7 +26,7 @@ class TwitchPagingSourceImplTest {
     @Test
     fun isUpdatable_returnsFalse() = rule.runWithLocalSource {
         // setup
-        dataSource.setMe(Updatable.create(me, CacheControl.zero()))
+        dataSource.setMe(me.toUpdatable(CacheControl.zero()))
         dataSource.replaceAllFollowings(followings)
         val sut = TwitchPagingSourceImpl(rule.database)
         // exercise
@@ -38,7 +38,7 @@ class TwitchPagingSourceImplTest {
     @Test
     fun isUpdatable_returnsTrue() = rule.runWithLocalSource {
         // setup
-        dataSource.setMe(Updatable.create(me, CacheControl.zero()))
+        dataSource.setMe(me.toUpdatable(CacheControl.zero()))
         dataSource.replaceAllFollowings(followings)
         val sut = TwitchPagingSourceImpl(rule.database)
         // exercise

@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_FREE_CHAT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_NOT_UPDATABLE
@@ -67,12 +68,12 @@ interface YouTubeVideo {
             isFreeChat: Boolean? = null,
         ): Updatable<YouTubeVideoExtended> = when (this.item) {
             is YouTubeVideoExtended -> this as Updatable<YouTubeVideoExtended>
-            else -> Updatable.create(
-                item = YouTubeVideoExtendedImpl(old = old, video = this, isFreeChat),
-                cacheControl = this.cacheControl.overrideMaxAge(
-                    YouTubeVideoExtendedImpl.maxAge(old, this, isFreeChat),
-                ),
-            )
+            else -> YouTubeVideoExtendedImpl(old = old, video = this, isFreeChat)
+                .toUpdatable(
+                    this.cacheControl.overrideMaxAge(
+                        YouTubeVideoExtendedImpl.maxAge(old, this, isFreeChat),
+                    ),
+                )
         }
 
         /**

@@ -12,6 +12,13 @@ interface Updatable<T> {
 
     companion object {
         fun <T> create(item: T, cacheControl: CacheControl): Updatable<T> = Impl(item, cacheControl)
+        fun <T> T.toUpdatable(
+            fetchedAt: Instant? = Instant.EPOCH,
+            maxAge: Duration? = Duration.ZERO,
+        ): Updatable<T> = this.toUpdatable(CacheControl.create(fetchedAt, maxAge))
+
+        fun <T> T.toUpdatable(cacheControl: CacheControl): Updatable<T> = create(this, cacheControl)
+
         fun Updatable<*>.isUpdatable(current: Instant): Boolean = cacheControl.isUpdatable(current)
         fun Updatable<*>.isFresh(current: Instant): Boolean = !isUpdatable(current)
         fun Updatable<*>.checkUpdatableBy(new: Updatable<*>) =

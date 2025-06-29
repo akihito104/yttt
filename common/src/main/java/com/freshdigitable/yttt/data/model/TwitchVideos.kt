@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.checkUpdatableBy
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import java.time.Duration
 import java.time.Instant
 
@@ -129,10 +130,8 @@ interface TwitchStreams {
 
         fun Updatable<TwitchStreams>.update(new: Updatable<TwitchStreams>): Updatable<TwitchStreams> {
             this.checkUpdatableBy(new)
-            return Updatable.create(
-                item = this.item.update(new.item),
-                cacheControl = new.cacheControl.overrideMaxAge(MAX_AGE_STREAM),
-            )
+            return this.item.update(new.item)
+                .toUpdatable(new.cacheControl.overrideMaxAge(MAX_AGE_STREAM))
         }
 
         private fun TwitchStream.mayUpdateThumbnail(other: TwitchStream): Boolean =

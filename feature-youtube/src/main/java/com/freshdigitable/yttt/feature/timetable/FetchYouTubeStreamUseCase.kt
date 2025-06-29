@@ -125,9 +125,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                     }
                 }
             val summary = summaryRes.getOrNull() ?: throw AssertionError()
-            val tasks = summary.map {
+            val tasks = summary.map { s ->
                 coroutineScope.async(start = CoroutineStart.LAZY) {
-                    fetchVideoByPlaylistIdTask(it).onSuccess {
+                    fetchVideoByPlaylistIdTask(s).onSuccess {
                         if (it.isNotEmpty()) {
                             videoUpdateTaskChannel.send(it)
                         }

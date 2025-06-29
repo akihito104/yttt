@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -28,6 +29,7 @@ import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
+import com.freshdigitable.yttt.test.fromRemote
 import com.google.common.truth.Truth.assertThat
 import dagger.Binds
 import dagger.Module
@@ -369,13 +371,14 @@ private class FakeYouTubeClientImpl(
             subscriptionCount: Int,
             itemsPerPlaylist: Int,
         ) {
-            val channelDetail = (1..subscriptionCount).map { channelDetail(it).updatable() }
-            val videos = channelDetail
-                .flatMap { c ->
-                    (1..itemsPerPlaylist).map {
-                        video(it, c.item).updatable(maxAge = Duration.ZERO)
-                    }
+            val channelDetail = (1..subscriptionCount).map {
+                channelDetail(it).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+            }
+            val videos = channelDetail.flatMap { c ->
+                (1..itemsPerPlaylist).map {
+                    video(it, c.item).toUpdatable()
                 }
+            }
             channel = { id ->
                 val c = channelDetail.associateBy { it.item.id }
                 id.mapNotNull { c[it] }
@@ -394,7 +397,7 @@ private class FakeYouTubeClientImpl(
             val pi = channelDetail.associate { c ->
                 c.item.uploadedPlayList!! to videos.filter { it.item.channel.id == c.item.id }
                     .mapIndexed { i, v -> playlistItem(i, c.item, v.item.id) }
-                    .updatable()
+                    .toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             }
             playlistItem = { pi[it]!! }
         }

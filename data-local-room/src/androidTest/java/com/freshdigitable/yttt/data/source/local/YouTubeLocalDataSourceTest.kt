@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.local
 import app.cash.turbine.test
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -16,6 +17,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import com.freshdigitable.yttt.data.source.local.db.toDbEntity
+import com.freshdigitable.yttt.test.fromRemote
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
@@ -79,9 +81,8 @@ class YouTubeLocalDataSourceTest {
             val id = YouTubePlaylist.Id("test")
             val updatable = YouTubePlaylistWithItems.newPlaylist(
                 playlist = playlist(id, dateTimeProvider.now()),
-                items = Updatable.create(
-                    emptyList(), CacheControl.fromRemote(dateTimeProvider.now()),
-                ),
+                items = emptyList<YouTubePlaylistItem>()
+                    .toUpdatable(CacheControl.fromRemote(dateTimeProvider.now())),
             )
             // exercise
             dataSource.updatePlaylistWithItems(updatable)
@@ -118,14 +119,13 @@ class YouTubeLocalDataSourceTest {
                     id = YouTubePlaylistItem.Id("playlist"),
                     playlistId = playlistId,
                     videoId = YouTubeVideo.Id("video"),
-                    fetchedAt = dateTimeProvider.now(),
                 ),
             )
             val channel = items.map { it.channel.toDbEntity() }.distinctBy { it.id }
             dao.addChannels(channel)
             val updatable = YouTubePlaylistWithItems.newPlaylist(
                 playlist = playlist(playlistId, dateTimeProvider.now()),
-                items = Updatable.create(items, CacheControl.fromRemote(dateTimeProvider.now())),
+                items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now()))
             )
             // exercise
             dataSource.updatePlaylistWithItems(updatable)
@@ -166,8 +166,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchVideo_returnsAllItems() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchVideoList(video.map { it.item.id }.toSet()).getOrNull()
-                ?: throw AssertionError()
+            val actual = dataSource.fetchVideoList(video.map { it.item.id }.toSet()).getOrThrow()
             // verify
             actual.containsVideoIdInAnyOrderElementsOf(video)
         }
@@ -217,7 +216,6 @@ class YouTubeLocalDataSourceTest {
                     id = YouTubePlaylistItem.Id("playlist"),
                     playlistId = simple,
                     videoId = YouTubeVideo.Id("video"),
-                    fetchedAt = rule.dateTimeProvider.now(),
                 ),
             ),
             privatePlaylist to null,
@@ -225,10 +223,7 @@ class YouTubeLocalDataSourceTest {
         ).map { (playlistId, items) ->
             playlistId to YouTubePlaylistWithItems.newPlaylist(
                 playlist = playlist(playlistId, rule.dateTimeProvider.now()),
-                items = Updatable.create(
-                    items,
-                    CacheControl.fromRemote(rule.dateTimeProvider.now()),
-                )
+                items = items.toUpdatable(CacheControl.fromRemote(rule.dateTimeProvider.now()))
             )
         }.toMap()
         private val channel = items.values.map { it.item.items }.flatten()
@@ -269,7 +264,6 @@ class YouTubeLocalDataSourceTest {
                     id = YouTubePlaylistItem.Id("item2"),
                     playlistId = simple,
                     videoId = YouTubeVideo.Id("video_item2"),
-                    fetchedAt = dateTimeProvider.now(),
                 )
             ) + checkNotNull(items[simple]!!.item.items)
             val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
@@ -343,12 +337,11 @@ class YouTubeLocalDataSourceTest {
                     id = YouTubePlaylistItem.Id(it.item.id.value),
                     playlistId = playlistId,
                     videoId = it.item.id,
-                    fetchedAt = rule.dateTimeProvider.now(),
                 )
             }
             val updatable = YouTubePlaylistWithItems.newPlaylist(
                 playlist = playlist(playlistId, dateTimeProvider.now()),
-                items = Updatable.create(items, CacheControl.fromRemote(dateTimeProvider.now()))
+                items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now())),
             )
             dataSource.updatePlaylistWithItems(updatable)
             val channels = videos.map { it.item.channel.toDbEntity() }
@@ -422,13 +415,11 @@ private data class YouTubeVideoEntity(
         fun uploadedVideo(
             id: String = "uploaded_video",
             fetchedAt: Instant = Instant.EPOCH,
-        ): Updatable<YouTubeVideoExtended> = Updatable.create<YouTubeVideo>(
-            YouTubeVideoEntity(
-                id = YouTubeVideo.Id(id),
-                liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
-            ),
-            CacheControl.fromRemote(fetchedAt),
-        ).extend(old = null, isFreeChat = false)
+        ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
+            id = YouTubeVideo.Id(id),
+            liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
+        ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(fetchedAt))
+            .extend(old = null, isFreeChat = false)
 
         fun archivedStream(
             id: String = "archived_stream",
@@ -436,31 +427,27 @@ private data class YouTubeVideoEntity(
             actualStartDateTime: Instant = scheduledStartDateTime,
             actualEndDateTime: Instant = Instant.ofEpochSecond(10 * 60),
             fetchedAt: Instant = Instant.EPOCH,
-        ): Updatable<YouTubeVideoExtended> = Updatable.create<YouTubeVideo>(
-            YouTubeVideoEntity(
-                id = YouTubeVideo.Id(id),
-                scheduledStartDateTime = scheduledStartDateTime,
-                actualStartDateTime = actualStartDateTime,
-                actualEndDateTime = actualEndDateTime,
-                liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
-            ),
-            CacheControl.fromRemote(fetchedAt),
-        ).extend(old = null, isFreeChat = false)
+        ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
+            id = YouTubeVideo.Id(id),
+            scheduledStartDateTime = scheduledStartDateTime,
+            actualStartDateTime = actualStartDateTime,
+            actualEndDateTime = actualEndDateTime,
+            liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
+        ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(fetchedAt))
+            .extend(old = null, isFreeChat = false)
 
         fun liveStreaming(
             id: String = "live_streaming",
             scheduledStartDateTime: Instant = Instant.ofEpochSecond(1000),
             actualStartDateTime: Instant = scheduledStartDateTime,
             fetchedAt: Instant = Instant.EPOCH,
-        ): Updatable<YouTubeVideoExtended> = Updatable.create<YouTubeVideo>(
-            YouTubeVideoEntity(
-                id = YouTubeVideo.Id(id),
-                scheduledStartDateTime = scheduledStartDateTime,
-                actualStartDateTime = actualStartDateTime,
-                liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE
-            ),
-            CacheControl.fromRemote(fetchedAt = fetchedAt),
-        ).extend(old = null, isFreeChat = false)
+        ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
+            id = YouTubeVideo.Id(id),
+            scheduledStartDateTime = scheduledStartDateTime,
+            actualStartDateTime = actualStartDateTime,
+            liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE
+        ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(fetchedAt))
+            .extend(old = null, isFreeChat = false)
 
         fun YouTubeVideo.liveFinished(
             duration: Duration = Duration.ofHours(1),
@@ -480,39 +467,33 @@ private data class YouTubeVideoEntity(
             id: String = "upcoming_stream",
             scheduledStartDateTime: Instant = Instant.ofEpochSecond(5000),
             fetchedAt: Instant = Instant.EPOCH,
-        ): Updatable<YouTubeVideoExtended> = Updatable.create<YouTubeVideo>(
-            YouTubeVideoEntity(
-                id = YouTubeVideo.Id(id),
-                scheduledStartDateTime = scheduledStartDateTime,
-                liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING
-            ),
-            CacheControl.fromRemote(fetchedAt = fetchedAt),
-        ).extend(old = null, isFreeChat = false)
+        ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
+            id = YouTubeVideo.Id(id),
+            scheduledStartDateTime = scheduledStartDateTime,
+            liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
+        ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(fetchedAt))
+            .extend(old = null, isFreeChat = false)
 
         fun unscheduledUpcoming(
             id: String = "unscheduled_upcoming",
             fetchedAt: Instant = Instant.EPOCH,
-        ): Updatable<YouTubeVideoExtended> = Updatable.create<YouTubeVideo>(
-            YouTubeVideoEntity(
-                id = YouTubeVideo.Id(id),
-                liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING
-            ),
-            CacheControl.fromRemote(fetchedAt = fetchedAt),
-        ).extend(old = null, isFreeChat = false)
+        ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
+            id = YouTubeVideo.Id(id),
+            liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
+        ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(fetchedAt))
+            .extend(old = null, isFreeChat = false)
 
         fun freeChat(
             id: String = "free_chat",
             scheduledStartDateTime: Instant = Instant.EPOCH + Duration.ofDays(30),
             fetchedAt: Instant = Instant.EPOCH,
-        ): Updatable<YouTubeVideoExtended> = Updatable.create<YouTubeVideo>(
-            YouTubeVideoEntity(
-                id = YouTubeVideo.Id(id),
-                title = "free chat",
-                scheduledStartDateTime = scheduledStartDateTime,
-                liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING
-            ),
-            CacheControl.fromRemote(fetchedAt = fetchedAt),
-        ).extend(old = null, isFreeChat = true)
+        ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
+            id = YouTubeVideo.Id(id),
+            title = "free chat",
+            scheduledStartDateTime = scheduledStartDateTime,
+            liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING
+        ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(fetchedAt))
+            .extend(old = null, isFreeChat = true)
     }
 }
 
@@ -525,14 +506,11 @@ private fun channelTable(
 private fun playlist(
     playlistId: YouTubePlaylist.Id,
     fetchedAt: Instant = Instant.EPOCH,
-): Updatable<YouTubePlaylist> = Updatable.create(
-    item = object : YouTubePlaylist {
-        override val id: YouTubePlaylist.Id = playlistId
-        override val title: String = ""
-        override val thumbnailUrl: String = ""
-    },
-    cacheControl = CacheControl.fromRemote(fetchedAt),
-)
+): Updatable<YouTubePlaylist> = object : YouTubePlaylist {
+    override val id: YouTubePlaylist.Id = playlistId
+    override val title: String = ""
+    override val thumbnailUrl: String = ""
+}.toUpdatable(cacheControl = CacheControl.fromRemote(fetchedAt))
 
 private data class YouTubePlaylistItemEntity(
     override val id: YouTubePlaylistItem.Id,
@@ -544,9 +522,4 @@ private data class YouTubePlaylistItemEntity(
     override val description: String = "",
     override val videoOwnerChannelId: YouTubeChannel.Id? = null,
     override val publishedAt: Instant = Instant.EPOCH,
-    private val maxAge: Duration? = Duration.ofMinutes(5),
-    private val fetchedAt: Instant?,
 ) : YouTubePlaylistItem
-
-private fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
-    CacheControl.create(fetchedAt, Duration.ofMinutes(5))

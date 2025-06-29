@@ -18,6 +18,7 @@ import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchLiveSubscription
 import com.freshdigitable.yttt.data.source.remote.Broadcaster
@@ -34,10 +35,10 @@ import com.freshdigitable.yttt.data.source.remote.TwitchUserResponse
 import com.freshdigitable.yttt.data.source.remote.TwitchVideosResponse
 import com.freshdigitable.yttt.di.TwitchModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
-import com.freshdigitable.yttt.test.FakeYouTubeClient.Companion.updatable
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
+import com.freshdigitable.yttt.test.fromRemote
 import com.google.common.truth.FailureMetadata
 import com.google.common.truth.Subject
 import com.google.common.truth.ThrowableSubject
@@ -91,7 +92,7 @@ class TwitchRemoteMediatorTest {
     fun setup(): Unit = runBlocking {
         hiltRule.inject()
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(10)
-        localSource.setMe(authUser.updatable())
+        localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
         val stream = broadcaster.take(10).map { stream(it) }
         val streams = object : TwitchStreams.Updated {
             override val followerId: TwitchUser.Id get() = authUser.id
@@ -99,7 +100,7 @@ class TwitchRemoteMediatorTest {
             override val updatableThumbnails: Set<String> get() = emptySet()
             override val deletedThumbnails: Set<String> get() = emptySet()
         }
-        localSource.replaceFollowedStreams(streams.updatable(maxAge = Duration.ZERO))
+        localSource.replaceFollowedStreams(streams.toUpdatable())
         localSource.replaceAllFollowings(followings)
         FakeRemoteSourceModule.userDetails =
             { Response.success(TwitchUserResponse(broadcaster.map { it.toUserDetail() })) }

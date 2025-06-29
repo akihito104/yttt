@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.model
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.checkUpdatableBy
 import com.freshdigitable.yttt.data.model.Updatable.Companion.overrideMaxAge
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import java.time.Duration
 import java.time.Instant
 
@@ -40,10 +41,8 @@ interface TwitchFollowings {
             follower: TwitchUser.Id,
             followings: List<TwitchBroadcaster>,
             cacheControl: CacheControl?,
-        ): Updatable<TwitchFollowings> = Updatable.create(
-            item = Impl(follower, followings),
-            cacheControl = cacheControl ?: CacheControl.empty(),
-        )
+        ): Updatable<TwitchFollowings> = Impl(follower, followings)
+            .toUpdatable(cacheControl ?: CacheControl.empty())
 
         private fun TwitchFollowings.update(new: TwitchFollowings): Updated {
             require(this.followerId == new.followerId) { "followerId must be same." }
@@ -55,10 +54,8 @@ interface TwitchFollowings {
 
         fun Updatable<TwitchFollowings>.update(new: Updatable<TwitchFollowings>): Updatable<Updated> {
             this.checkUpdatableBy(new)
-            return Updatable.create(
-                item = this.item.update(new.item),
-                cacheControl = new.cacheControl.overrideMaxAge(MAX_AGE_BROADCASTER),
-            )
+            return this.item.update(new.item)
+                .toUpdatable(new.cacheControl.overrideMaxAge(MAX_AGE_BROADCASTER))
         }
 
         private fun getRemovedFollowingIds(
