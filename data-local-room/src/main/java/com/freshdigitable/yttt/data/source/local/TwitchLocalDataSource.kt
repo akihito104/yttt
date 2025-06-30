@@ -1,7 +1,5 @@
 package com.freshdigitable.yttt.data.source.local
 
-import com.freshdigitable.yttt.data.model.CacheControl
-import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
@@ -15,7 +13,6 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.model.Updatable
-import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.TwitchDataSource
@@ -27,7 +24,6 @@ import javax.inject.Singleton
 @Singleton
 internal class TwitchLocalDataSource @Inject constructor(
     private val dao: TwitchDao,
-    private val dateTimeProvider: DateTimeProvider,
     private val ioScope: IoScope,
     imageDataSource: ImageDataSource,
 ) : TwitchDataSource.Local, ImageDataSource by imageDataSource {
@@ -35,9 +31,7 @@ internal class TwitchLocalDataSource @Inject constructor(
         if (ids == null) {
             return fetchMe().map { listOfNotNull(it) }
         }
-        return ioScope.asResult {
-            dao.findUserDetail(ids, current = dateTimeProvider.now())
-        }
+        return ioScope.asResult { dao.findUserDetail(ids) }
     }
 
     override suspend fun addUsers(users: Collection<Updatable<TwitchUserDetail>>) {
@@ -76,9 +70,7 @@ internal class TwitchLocalDataSource @Inject constructor(
         id: TwitchUser.Id,
         maxCount: Int, // ignore
     ): Result<Updatable<TwitchChannelSchedule?>> = ioScope.asResult {
-        val expire = dao.findChannelScheduleExpire(id)
-        val schedule = dao.findChannelSchedule(id)
-        schedule.toUpdatable(expire?.cacheControl ?: CacheControl.empty())
+        dao.findChannelSchedule(id)
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =

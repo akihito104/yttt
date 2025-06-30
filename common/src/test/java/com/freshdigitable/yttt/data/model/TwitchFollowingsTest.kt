@@ -48,7 +48,7 @@ class TwitchFollowingsTest {
             val sut = followings(me, params.old.broadcasters(), 99)
                 .update(followings(me, params.new.broadcasters(), 100))
             // exercise
-            val actual = sut.item.removed
+            val actual = (sut.item as? TwitchFollowings.Updated)?.removed
             // verify
             assertThat(actual).isEmpty()
         }
@@ -99,7 +99,7 @@ class TwitchFollowingsTest {
             val sut = followings(me, params.oldBroadcasters, 99)
                 .update(followings(me, params.new.broadcasters(), 100))
             // exercise
-            val actual = sut.item.removed
+            val actual = (sut.item as? TwitchFollowings.Updated)?.removed
             // verify
             assertThat(actual).containsExactlyInAnyOrderElementsOf(params.expected)
         }

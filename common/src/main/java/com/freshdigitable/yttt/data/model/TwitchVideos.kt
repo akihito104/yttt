@@ -102,10 +102,8 @@ interface TwitchStreams {
             followerId: TwitchUser.Id,
             streams: List<TwitchStream>,
             cacheControl: CacheControl?,
-        ): Updatable<TwitchStreams> = Updatable.create(
-            item = Impl(followerId, streams),
-            cacheControl = cacheControl ?: CacheControl.empty(),
-        )
+        ): Updatable<TwitchStreams> = Impl(followerId, streams)
+            .toUpdatable(cacheControl ?: CacheControl.empty())
 
         private val MAX_AGE_STREAM = Duration.ofMinutes(10)
 

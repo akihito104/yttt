@@ -35,10 +35,11 @@ class TwitchRepository @Inject constructor(
         if (cacheRes.isFailure) {
             return cacheRes
         }
+        val current = dateTimeProvider.now()
         val cache = cacheRes.getOrDefault(emptyList())
-        val remoteIds =
-            ids - cache.map { it.item }.filter { it.profileImageUrl.isNotEmpty() }.map { it.id }
-                .toSet()
+            .filter { it.isFresh(current) }
+            .filter { it.item.profileImageUrl.isNotEmpty() }
+        val remoteIds = ids - cache.map { it.item.id }
         if (remoteIds.isEmpty()) {
             return cacheRes
         }
@@ -69,7 +70,7 @@ class TwitchRepository @Inject constructor(
         }
         return remoteDataSource.fetchAllFollowings(userId)
             .onSuccess { localDataSource.replaceAllFollowings(it) }
-            .map { cache.update(it) as Updatable<TwitchFollowings> }
+            .map { cache.update(it) }
     }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<Updatable<TwitchStreams>?> {

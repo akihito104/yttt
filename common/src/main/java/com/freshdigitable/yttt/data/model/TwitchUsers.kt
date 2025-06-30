@@ -52,7 +52,7 @@ interface TwitchFollowings {
             }
         }
 
-        fun Updatable<TwitchFollowings>.update(new: Updatable<TwitchFollowings>): Updatable<Updated> {
+        fun Updatable<TwitchFollowings>.update(new: Updatable<TwitchFollowings>): Updatable<TwitchFollowings> {
             this.checkUpdatableBy(new)
             return this.item.update(new.item)
                 .toUpdatable(new.cacheControl.overrideMaxAge(MAX_AGE_BROADCASTER))

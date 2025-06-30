@@ -78,7 +78,7 @@ internal data class TwitchStreamDbView(
     @ColumnInfo(name = "started_at") override val startedAt: Instant,
     @ColumnInfo(name = "tags") override val tags: List<String>,
     @ColumnInfo(name = "is_mature") override val isMature: Boolean,
-    @Embedded override val user: TwitchUserDetailDb,
+    @Embedded override val user: TwitchUserDetailDbView,
 ) : TwitchLiveStream {
     @androidx.room.Dao
     internal interface Dao {

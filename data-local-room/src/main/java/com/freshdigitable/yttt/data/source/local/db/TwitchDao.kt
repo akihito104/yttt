@@ -1,20 +1,20 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.withTransaction
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.TwitchLiveChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
-import java.time.Instant
 import javax.inject.Inject
 
 internal class TwitchDao @Inject constructor(
@@ -102,16 +102,15 @@ internal class TwitchDao @Inject constructor(
 
     suspend fun findChannelSchedule(
         userId: TwitchUser.Id,
-    ): TwitchChannelSchedule? = db.withTransaction {
-        val user = findUserDetail(setOf(userId), Instant.EPOCH).firstOrNull()
-            ?: return@withTransaction null
-        val vacation = findVacationById(userId)
+    ): Updatable<TwitchChannelSchedule?> = db.withTransaction {
+        val vacation = findChannelVacationUpdatable(userId)
+            ?: return@withTransaction Updatable.create(null, CacheControl.empty())
         val schedule = findStreamScheduleByUserId(userId)
-        TwitchChannelScheduleDb(
-            segments = schedule,
-            broadcaster = user.item,
-            vacation = vacation?.vacation,
-        )
+        object : TwitchChannelSchedule {
+            override val segments: List<TwitchChannelSchedule.Stream>? get() = schedule
+            override val broadcaster: TwitchUser get() = vacation.user
+            override val vacation: TwitchChannelSchedule.Vacation? get() = vacation.vacation
+        }.toUpdatable(vacation.cacheControl)
     }
 
     suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> =
@@ -198,12 +197,6 @@ private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
     type = type,
     viewCount = viewCount,
 )
-
-private class TwitchChannelScheduleDb(
-    override val segments: List<TwitchChannelSchedule.Stream>?,
-    override val broadcaster: TwitchUserDetailDb,
-    override val vacation: TwitchChannelVacationSchedule?,
-) : TwitchLiveChannelSchedule
 
 internal interface TwitchDaoProviders : TwitchUserDaoProviders, TwitchStreamDaoProviders,
     TwitchScheduleDaoProviders, TwitchPageSourceDaoProviders

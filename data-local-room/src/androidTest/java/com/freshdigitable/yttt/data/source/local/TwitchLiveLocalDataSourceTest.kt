@@ -159,8 +159,7 @@ internal class TwitchDataSourceTestRule(
 
     override fun createTestScope(testScope: TestScope): DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
         val dataSource = TwitchLocalDataSource(
-            dao, dateTimeProvider,
-            IoScope(StandardTestDispatcher(testScope.testScheduler)), NopImageDataSource
+            dao, IoScope(StandardTestDispatcher(testScope.testScheduler)), NopImageDataSource,
         )
         return object : DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
             override val testScope: TestScope get() = testScope
