@@ -4,12 +4,12 @@ import com.freshdigitable.yttt.AppPerformance.Companion.trace
 import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary.Companion.needsUpdatePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
@@ -115,8 +115,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                     if (it is YouTubeSubscriptions.Paged) {
                         liveRepository.addSubscribes(it)
                     }
-                }
-                .getOrNull() ?: throw AssertionError()
+                }.getOrThrow()
             val summaryRes = fetchSubscriptionSummary(acc, subs)
                 .onFailure { return@fold acc.apply { failureResults.add(it) } }
                 .onSuccess {
@@ -161,7 +160,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
         val current = dateTimeProvider.now()
         val summary = liveRepository.findSubscriptionSummaries(added)
-            .filter { it.needsUpdatePlaylist(current) }
+            .filter { it.cacheControl.isUpdatable(current) }
         val needsPlaylist = summary.filter { it.uploadedPlaylistId == null }
         if (needsPlaylist.isEmpty()) {
             return Result.success(summary)

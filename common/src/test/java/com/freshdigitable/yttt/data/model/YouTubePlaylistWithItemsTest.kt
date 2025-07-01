@@ -249,7 +249,7 @@ private fun playlistWithItems(
     maxAge: Duration = Duration.ZERO,
     items: List<YouTubePlaylistItem>,
     fetchedAt: Instant = Instant.EPOCH,
-): Updatable<YouTubePlaylistWithItems> = YouTubePlaylistWithItems.create(
+): Updatable<YouTubePlaylistWithItems> = YouTubePlaylistWithItems.fromCache(
     playlist = playlist(playlistId, fetchedAt),
     items = items.toUpdatable(fetchedAt, maxAge),
 )

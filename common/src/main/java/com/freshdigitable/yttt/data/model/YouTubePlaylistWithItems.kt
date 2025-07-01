@@ -30,7 +30,7 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
                     .overrideMaxAge(if (items.item.isNullOrEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
             )
 
-        fun create(
+        fun fromCache(
             playlist: Updatable<YouTubePlaylist>,
             items: Updatable<List<YouTubePlaylistItem>>,
         ): Updatable<YouTubePlaylistWithItems> = CachedPlaylist(playlist.item, items.item)

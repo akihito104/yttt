@@ -5,7 +5,6 @@ import androidx.room.DatabaseView
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
-import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
@@ -13,32 +12,25 @@ import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
 @Entity(tableName = "playlist")
 internal class YouTubePlaylistTable(
     @PrimaryKey(autoGenerate = false)
-    @ColumnInfo(name = "id")
-    override val id: YouTubePlaylist.Id,
-    @Embedded
-    val cacheControl: YouTubePlaylistCacheControlDb = YouTubePlaylistCacheControlDb(),
+    @ColumnInfo(name = "id") override val id: YouTubePlaylist.Id,
+    @ColumnInfo(name = "title", defaultValue = "") override val title: String = "",
+    @ColumnInfo(name = "thumbnail_url", defaultValue = "") override val thumbnailUrl: String = "",
 ) : YouTubePlaylist {
-    @Ignore
-    override val thumbnailUrl: String = "" // TODO: implement for all_playlist with paging
-
-    @Ignore
-    override val title: String = "" // TODO
-
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -50,21 +42,47 @@ internal class YouTubePlaylistTable(
         @Query("SELECT * FROM playlist WHERE id = :id")
         suspend fun findPlaylistById(id: YouTubePlaylist.Id): YouTubePlaylistTable?
 
-        @Query("SELECT * FROM playlist WHERE id IN (:id)")
-        suspend fun findPlaylistsById(id: Collection<YouTubePlaylist.Id>): List<YouTubePlaylistTable>
-
-        @Query("UPDATE playlist SET last_modified = :lastModified, max_age = :maxAge WHERE id = :id")
-        suspend fun updatePlaylist(id: YouTubePlaylist.Id, lastModified: Instant, maxAge: Duration)
-
         @Query("DELETE FROM playlist")
         override suspend fun deleteTable()
     }
 }
 
-internal class YouTubePlaylistCacheControlDb(
-    @ColumnInfo(name = "last_modified") override val fetchedAt: Instant = Instant.EPOCH,
-    @ColumnInfo(name = "max_age") override val maxAge: Duration = MAX_AGE_DEFAULT,
-) : CacheControl
+@Entity(
+    tableName = "playlist_expire",
+    foreignKeys = [
+        ForeignKey(
+            entity = YouTubePlaylistTable::class,
+            parentColumns = ["id"],
+            childColumns = ["playlist_id"],
+        ),
+    ],
+)
+internal class YouTubePlaylistExpireTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo(name = "playlist_id") val id: YouTubePlaylist.Id,
+    @Embedded val cacheControl: CacheControlDb,
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addPlaylistExpire(playlist: YouTubePlaylistExpireTable)
+
+        @Query(
+            "SELECT p.*, e.fetched_at AS fetched_at, e.max_age AS max_age FROM playlist AS p " +
+                "LEFT OUTER JOIN playlist_expire AS e ON p.id = e.playlist_id " +
+                "WHERE p.id = :id"
+        )
+        suspend fun findUpdatablePlaylistById(id: YouTubePlaylist.Id): YouTubePlaylistUpdatableDb?
+
+        @Query("DELETE FROM playlist_expire")
+        override suspend fun deleteTable()
+    }
+}
+
+internal class YouTubePlaylistUpdatableDb(
+    @Embedded override val item: YouTubePlaylistTable,
+    @Embedded override val cacheControl: CacheControlDb,
+) : Updatable<YouTubePlaylist>
 
 @Entity(
     tableName = "playlist_item",
@@ -133,14 +151,11 @@ internal class YouTubePlaylistItemSummaryDb(
     override val videoId: YouTubeVideo.Id,
     @ColumnInfo("is_archived")
     override val isArchived: Boolean?,
-    @ColumnInfo("fetched_at")
-    private val fetchedAt: Instant?,
-    @ColumnInfo("max_age")
-    private val maxAge: Duration?,
+    @Embedded
+    private val cacheControl: CacheControlDb?,
 ) : YouTubePlaylistItemSummary {
-    @get:Ignore
-    override val videoExpiredAt: Instant?
-        get() = fetchedAt?.plus(maxAge ?: YouTubeVideo.MAX_AGE_DEFAULT)
+    override val videoCacheControl: CacheControl?
+        get() = if (isArchived != true) cacheControl ?: CacheControl.empty() else null
 
     @androidx.room.Dao
     internal interface Dao {
@@ -188,37 +203,45 @@ internal data class YouTubePlaylistItemDb(
     override val videoOwnerChannelId: YouTubeChannel.Id?,
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
-    @Embedded
-    val cacheControl: CacheControlDb,
 ) : YouTubePlaylistItem {
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT p.*, c.id AS channel_id, c.title AS channel_title, l.last_modified AS fetched_at, l.max_age AS max_age " +
-                "FROM playlist_item AS p " +
+            "SELECT p.*, c.id AS channel_id, c.title AS channel_title FROM playlist_item AS p " +
                 "INNER JOIN channel AS c ON c.id = p.channel_id " +
-                "LEFT OUTER JOIN playlist AS l ON l.id = p.playlist_id " +
                 "WHERE p.playlist_id = :id"
         )
         suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDb>
+
+        @Query("SELECT p.fetched_at, p.max_age FROM playlist_expire AS p WHERE p.playlist_id = :id")
+        suspend fun findPlaylistItemCacheControlByPlaylistId(id: YouTubePlaylist.Id): CacheControlDb?
+
+        @Transaction
+        suspend fun findUpdatablePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id): Updatable<List<YouTubePlaylistItem>> {
+            val p = findPlaylistItemByPlaylistId(id)
+            val cacheControl = findPlaylistItemCacheControlByPlaylistId(id) ?: CacheControl.empty()
+            return p.toUpdatable(cacheControl)
+        }
     }
 }
 
 internal interface YouTubePlaylistDaoProviders {
     val youTubePlaylistDao: YouTubePlaylistTable.Dao
+    val youTubePlaylistExpireDao: YouTubePlaylistExpireTable.Dao
     val youTubePlaylistItemDao: YouTubePlaylistItemTable.Dao
     val youTubePlaylistItemSummaryDbDao: YouTubePlaylistItemSummaryDb.Dao
     val youTubePlaylistItemDbDao: YouTubePlaylistItemDb.Dao
     val youTubePlaylistWithItemSummariesDbDao: YouTubePlaylistWithItemSummariesDb.Dao
 }
 
-internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistItemTable.Dao,
-    YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao,
+internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistExpireTable.Dao,
+    YouTubePlaylistItemTable.Dao, YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao,
     YouTubePlaylistWithItemSummariesDb.Dao
 
 internal class YouTubePlaylistDaoImpl @Inject constructor(
     private val db: YouTubePlaylistDaoProviders
 ) : YouTubePlaylistDao, YouTubePlaylistTable.Dao by db.youTubePlaylistDao,
+    YouTubePlaylistExpireTable.Dao by db.youTubePlaylistExpireDao,
     YouTubePlaylistItemTable.Dao by db.youTubePlaylistItemDao,
     YouTubePlaylistItemSummaryDb.Dao by db.youTubePlaylistItemSummaryDbDao,
     YouTubePlaylistItemDb.Dao by db.youTubePlaylistItemDbDao,
@@ -226,6 +249,7 @@ internal class YouTubePlaylistDaoImpl @Inject constructor(
     override suspend fun deleteTable() {
         listOf(
             db.youTubePlaylistDao,
+            db.youTubePlaylistExpireDao,
             db.youTubePlaylistItemDao
         ).forEach { it.deleteTable() }
     }
