@@ -17,6 +17,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import com.freshdigitable.yttt.data.source.local.db.toDbEntity
+import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
@@ -115,13 +116,15 @@ class YouTubeLocalDataSourceTest {
             // setup
             val playlistId = YouTubePlaylist.Id("test")
             val items = listOf(
-                YouTubePlaylistItemEntity(
+                FakeYouTubeClient.playlistItem(
                     id = YouTubePlaylistItem.Id("playlist"),
                     playlistId = playlistId,
                     videoId = YouTubeVideo.Id("video"),
+                    channel = channelTable(),
                 ),
             )
-            val channel = items.map { it.channel.toDbEntity() }.distinctBy { it.id }
+            val channel = items.map { (it.channel as YouTubeChannel).toDbEntity() }
+                .distinctBy { it.id }
             dao.addChannels(channel)
             val updatable = YouTubePlaylistWithItems.newPlaylist(
                 playlist = playlist(playlistId, dateTimeProvider.now()),
@@ -212,10 +215,11 @@ class YouTubeLocalDataSourceTest {
         private val empty = YouTubePlaylist.Id("empty")
         private val items = mapOf(
             simple to listOf(
-                YouTubePlaylistItemEntity(
+                FakeYouTubeClient.playlistItem(
                     id = YouTubePlaylistItem.Id("playlist"),
                     playlistId = simple,
                     videoId = YouTubeVideo.Id("video"),
+                    channel = channelTable(),
                 ),
             ),
             privatePlaylist to null,
@@ -260,10 +264,11 @@ class YouTubeLocalDataSourceTest {
         fun fetchPlaylistWithItems_simple_addNewItems_returns2Items() = rule.runWithLocalSource {
             // setup
             val newItems = listOf(
-                YouTubePlaylistItemEntity(
+                FakeYouTubeClient.playlistItem(
                     id = YouTubePlaylistItem.Id("item2"),
                     playlistId = simple,
                     videoId = YouTubeVideo.Id("video_item2"),
+                    channel = channelTable(),
                 )
             ) + checkNotNull(items[simple]!!.item.items)
             val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
@@ -333,10 +338,11 @@ class YouTubeLocalDataSourceTest {
         fun setup() = rule.runWithLocalSource {
             val playlistId = YouTubePlaylist.Id("playlist")
             val items = videosInPlaylist.map {
-                YouTubePlaylistItemEntity(
+                FakeYouTubeClient.playlistItem(
                     id = YouTubePlaylistItem.Id(it.item.id.value),
                     playlistId = playlistId,
                     videoId = it.item.id,
+                    channel = channelTable(),
                 )
             }
             val updatable = YouTubePlaylistWithItems.newPlaylist(
@@ -506,20 +512,5 @@ private fun channelTable(
 private fun playlist(
     playlistId: YouTubePlaylist.Id,
     fetchedAt: Instant = Instant.EPOCH,
-): Updatable<YouTubePlaylist> = object : YouTubePlaylist {
-    override val id: YouTubePlaylist.Id = playlistId
-    override val title: String = ""
-    override val thumbnailUrl: String = ""
-}.toUpdatable(cacheControl = CacheControl.fromRemote(fetchedAt))
-
-private data class YouTubePlaylistItemEntity(
-    override val id: YouTubePlaylistItem.Id,
-    override val playlistId: YouTubePlaylist.Id,
-    override val title: String = "title",
-    override val channel: YouTubeChannel = channelTable(),
-    override val thumbnailUrl: String = "",
-    override val videoId: YouTubeVideo.Id,
-    override val description: String = "",
-    override val videoOwnerChannelId: YouTubeChannel.Id? = null,
-    override val publishedAt: Instant = Instant.EPOCH,
-) : YouTubePlaylistItem
+): Updatable<YouTubePlaylist> = FakeYouTubeClient.playlist(playlistId)
+    .toUpdatable(cacheControl = CacheControl.fromRemote(fetchedAt))

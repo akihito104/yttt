@@ -204,6 +204,27 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @Test
+    fun getPlaylistItemReceivesNotFound_resultIsRecovered() = testScope.runTest {
+        // setup
+        FakeYouTubeAccountModule.account = "account"
+        FakeYouTubeClientModule.setup(10, 2).apply {
+            val base = playlistItem!!
+            playlistItem = { id ->
+                if (id.value.contains("1")) throw YouTubeException(
+                    404, "Not Found", cacheControl = CacheControl.create(current, null),
+                )
+                else base.invoke(id)
+            }
+        }
+        hiltRule.inject()
+        // exercise
+        val actual = sut.invoke()
+        advanceUntilIdle()
+        // verify
+        assertResultThat(actual).isSuccess()
+    }
+
+    @Test
     fun failedToGetVideoDetail_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
@@ -339,18 +360,11 @@ private fun playlistItem(
     id: Int,
     channelDetail: YouTubeChannelDetail,
     videoId: YouTubeVideo.Id,
-): YouTubePlaylistItem = object : YouTubePlaylistItem {
-    override val id: YouTubePlaylistItem.Id =
-        YouTubePlaylistItem.Id("playlistItem_${channelDetail.id.value}_$id")
-    override val playlistId: YouTubePlaylist.Id = channelDetail.uploadedPlayList!!
-    override val channel: YouTubeChannel = channelDetail
-    override val videoId: YouTubeVideo.Id = videoId
-    override val title: String = "title"
-    override val thumbnailUrl: String = ""
-    override val description: String = ""
-    override val videoOwnerChannelId: YouTubeChannel.Id? = null
-    override val publishedAt: Instant = Instant.EPOCH
-}
+): YouTubePlaylistItem = FakeYouTubeClient.playlistItem(
+    id = YouTubePlaylistItem.Id("playlistItem_${channelDetail.id.value}_$id"),
+    playlistId = channelDetail.uploadedPlayList!!,
+    videoId = videoId,
+)
 
 private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription =
     object : YouTubeSubscription {

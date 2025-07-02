@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_MAX
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
+import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
@@ -238,11 +239,8 @@ class YouTubePlaylistWithItemsTest {
 private fun playlist(
     playlistId: YouTubePlaylist.Id,
     fetchedAt: Instant = Instant.EPOCH,
-): Updatable<YouTubePlaylist> = object : YouTubePlaylist {
-    override val id: YouTubePlaylist.Id = playlistId
-    override val title: String = ""
-    override val thumbnailUrl: String = ""
-}.toUpdatable(CacheControl.fromRemote(fetchedAt))
+): Updatable<YouTubePlaylist> = FakeYouTubeClient.playlist(playlistId)
+    .toUpdatable(CacheControl.fromRemote(fetchedAt))
 
 private fun playlistWithItems(
     playlistId: YouTubePlaylist.Id,
@@ -258,30 +256,8 @@ private fun playlistItem(
     playlistId: YouTubePlaylist.Id,
     itemId: YouTubePlaylistItem.Id,
     publishedAt: Instant = Instant.EPOCH,
-): YouTubePlaylistItem = YouTubePlaylistItemEntity(
+): YouTubePlaylistItem = FakeYouTubeClient.playlistItem(
     playlistId = playlistId,
     id = itemId,
-    title = "",
-    thumbnailUrl = "",
-    description = "",
-    channel = YouTubeChannelEntity(
-        id = YouTubeChannel.Id("channel"),
-        title = "channel",
-        iconUrl = "",
-    ),
-    videoId = YouTubeVideo.Id("video"),
-    videoOwnerChannelId = null,
     publishedAt = publishedAt,
 )
-
-data class YouTubePlaylistItemEntity(
-    override val id: YouTubePlaylistItem.Id,
-    override val playlistId: YouTubePlaylist.Id,
-    override val title: String,
-    override val channel: YouTubeChannel,
-    override val thumbnailUrl: String,
-    override val videoId: YouTubeVideo.Id,
-    override val description: String,
-    override val videoOwnerChannelId: YouTubeChannel.Id?,
-    override val publishedAt: Instant,
-) : YouTubePlaylistItem

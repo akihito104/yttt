@@ -3,12 +3,16 @@ package com.freshdigitable.yttt.data.source.remote
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -60,6 +64,36 @@ internal class YouTubeRemoteDataSource(
 
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>> =
         fetchList(ids) { fetchPlaylist(it) }
+
+    override suspend fun fetchPlaylistWithItems(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?,
+    ): Result<Updatable<YouTubePlaylistWithItems>> = fetch {
+        if (cache != null) {
+            val res = fetchPlaylistItems(id, maxResult).item
+            cache.update(res.item, checkNotNull(res.cacheControl.fetchedAt))
+        } else {
+            val playlist = fetchPlaylist(setOf(id)).item.first()
+            val items = fetchPlaylistItems(id, maxResult).item
+            @Suppress("UNCHECKED_CAST")
+            YouTubePlaylistWithItems.newPlaylist(
+                playlist = playlist,
+                items = items as Updatable<List<YouTubePlaylistItem>?>,
+            )
+        }
+    }.recoverCatching {
+        if ((it as? NetworkResponse.Exception)?.statusCode == 404) {
+            val cacheControl = it.cacheControl
+            cache?.update(emptyList(), checkNotNull(cacheControl.fetchedAt))
+                ?: YouTubePlaylistWithItems.newPlaylist(
+                    playlist = YouTubePlaylistNotFound(id).toUpdatable(cacheControl),
+                    items = Updatable.create(null, cacheControl),
+                )
+        } else {
+            throw it
+        }
+    }
 
     private suspend inline fun <E> fetchAllItems(
         crossinline request: YouTubeClient.(String?) -> NetworkResponse<List<E>>,
@@ -113,4 +147,11 @@ private data class PagedSubscription(
         nextPageToken = nextPageToken,
         updatedAt = updatedAt,
     )
+}
+
+private class YouTubePlaylistNotFound(
+    override val id: YouTubePlaylist.Id,
+) : YouTubePlaylist {
+    override val title: String get() = ""
+    override val thumbnailUrl: String get() = ""
 }

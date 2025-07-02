@@ -42,6 +42,12 @@ interface YouTubeDataSource {
         maxResult: Long,
     ): Result<Updatable<List<YouTubePlaylistItem>>>
 
+    suspend fun fetchPlaylistWithItems(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>? = null,
+    ): Result<Updatable<YouTubePlaylistWithItems>?>
+
     interface Local : YouTubeDataSource, YouTubeLiveDataSource, ImageDataSource {
         suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id>
 
@@ -59,6 +65,11 @@ interface YouTubeDataSource {
     interface Remote : YouTubeDataSource {
         override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>>
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideo>>>
+        override suspend fun fetchPlaylistWithItems(
+            id: YouTubePlaylist.Id,
+            maxResult: Long,
+            cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?,
+        ): Result<Updatable<YouTubePlaylistWithItems>>
     }
 }
 
@@ -78,11 +89,6 @@ interface YouTubeLiveDataSource {
 
     suspend fun updatePlaylistWithItems(updatable: Updatable<YouTubePlaylistWithItems>)
     suspend fun fetchPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummaries?
-    suspend fun fetchPlaylistWithItems(
-        id: YouTubePlaylist.Id,
-        maxResult: Long,
-        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>? = null,
-    ): Result<Updatable<YouTubePlaylistWithItems>?>
 
     suspend fun cleanUp()
     suspend fun deleteAllTables()

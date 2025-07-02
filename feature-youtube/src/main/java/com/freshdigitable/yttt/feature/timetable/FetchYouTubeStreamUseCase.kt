@@ -8,12 +8,10 @@ import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource.Companion.MAX_BATCH_SIZE
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.logE
@@ -198,14 +196,6 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val id = checkNotNull(summary.uploadedPlaylistId)
         val cache = liveRepository.fetchPlaylistWithItemSummaries(id)
         return liveRepository.fetchPlaylistWithItems(id, maxResult = 10, cache)
-            .recoverCatching {
-                if (cache != null && (it as? NetworkResponse.Exception)?.statusCode == 404) {
-                    cache.update(emptyList(), checkNotNull(it.cacheControl.fetchedAt))
-                        .also { i -> liveRepository.updatePlaylistWithItems(i) }
-                } else {
-                    throw it
-                }
-            }
             .map { playlist -> checkNotNull(playlist).item.addedItems.map { it.videoId } }
             .onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" } }
             .onSuccess {
