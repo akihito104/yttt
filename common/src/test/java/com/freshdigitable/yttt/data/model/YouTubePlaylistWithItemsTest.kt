@@ -74,7 +74,7 @@ class YouTubePlaylistWithItemsTest {
                 ),
             )
             val sut = playlistWithItems.item.update(
-                newItems = listOf(
+                listOf(
                     playlistItem(
                         playlistId = playlistId,
                         itemId = YouTubePlaylistItem.Id("item_id_02"),
@@ -83,8 +83,7 @@ class YouTubePlaylistWithItemsTest {
                         playlistId = playlistId,
                         itemId = YouTubePlaylistItem.Id("item_id_01")
                     ),
-                ),
-                fetchedAt = Instant.EPOCH,
+                ).toUpdatable(),
             )
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_DEFAULT)
@@ -105,8 +104,7 @@ class YouTubePlaylistWithItemsTest {
                 ),
             )
             val sut = playlistWithItems.item.update(
-                newItems = emptyList(),
-                fetchedAt = Instant.EPOCH,
+                emptyList<YouTubePlaylistItem>().toUpdatable(),
             )
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
@@ -140,8 +138,9 @@ class YouTubePlaylistWithItemsTest {
             val maxAge = MAX_AGE_DEFAULT
             // exercise
             val sut = playlistWithItems(maxAge).item.update(
-                newItems = items,
-                fetchedAt = latestModified + Duration.ofDays(1).minusMillis(1),
+                items.toUpdatable(
+                    fetchedAt = latestModified + Duration.ofDays(1).minusMillis(1)
+                ),
             )
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_DEFAULT)
@@ -153,8 +152,7 @@ class YouTubePlaylistWithItemsTest {
             val maxAge = MAX_AGE_DEFAULT
             // exercise
             val sut = playlistWithItems(maxAge).item.update(
-                newItems = items,
-                fetchedAt = latestModified + Duration.ofDays(1),
+                items.toUpdatable(fetchedAt = latestModified + Duration.ofDays(1)),
             )
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_DEFAULT.multipliedBy(2))
@@ -166,8 +164,7 @@ class YouTubePlaylistWithItemsTest {
             val maxAge = MAX_AGE_DEFAULT
             // exercise
             val sut = playlistWithItems(maxAge).item.update(
-                newItems = items,
-                fetchedAt = latestModified + Duration.ofDays(7),
+                items.toUpdatable(fetchedAt = latestModified + Duration.ofDays(7)),
             )
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
@@ -179,8 +176,7 @@ class YouTubePlaylistWithItemsTest {
             val maxAge = MAX_AGE_DEFAULT
             // exercise
             val sut = playlistWithItems(maxAge).item.update(
-                newItems = items,
-                fetchedAt = latestModified + Duration.ofDays(30),
+                items.toUpdatable(fetchedAt = latestModified + Duration.ofDays(30)),
             )
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
@@ -201,8 +197,8 @@ class YouTubePlaylistWithItemsTest {
             }.values
             // exercise
             val sut = playlistWithItems(maxAge).item.update(
-                newItems = newItems.toList(),
-                fetchedAt = updatedLatest + Duration.ofDays(3).minusMillis(1),
+                newItems.toList()
+                    .toUpdatable(fetchedAt = updatedLatest + Duration.ofDays(3).minusMillis(1)),
             )
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(
@@ -225,8 +221,7 @@ class YouTubePlaylistWithItemsTest {
             }.values
             // exercise
             val sut = playlistWithItems(maxAge).item.update(
-                newItems = newItems.toList(),
-                fetchedAt = updatedLatest + Duration.ofDays(3),
+                newItems.toList().toUpdatable(fetchedAt = updatedLatest + Duration.ofDays(3)),
             )
             // verify
             assertThat(sut.cacheControl.maxAge).isEqualTo(
@@ -247,10 +242,11 @@ private fun playlistWithItems(
     maxAge: Duration = Duration.ZERO,
     items: List<YouTubePlaylistItem>,
     fetchedAt: Instant = Instant.EPOCH,
-): Updatable<YouTubePlaylistWithItems> = YouTubePlaylistWithItems.fromCache(
-    playlist = playlist(playlistId, fetchedAt),
-    items = items.toUpdatable(fetchedAt, maxAge),
-)
+): Updatable<YouTubePlaylistWithItems> = object : YouTubePlaylistWithItems {
+    override val playlist: YouTubePlaylist get() = FakeYouTubeClient.playlist(playlistId)
+    override val items: List<YouTubePlaylistItem> get() = items
+    override val addedItems: List<YouTubePlaylistItem> get() = emptyList()
+}.toUpdatable(CacheControl.create(fetchedAt, maxAge))
 
 private fun playlistItem(
     playlistId: YouTubePlaylist.Id,

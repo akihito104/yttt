@@ -1,7 +1,9 @@
 package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -111,8 +113,8 @@ internal class YouTubeLocalDataSource @Inject constructor(
     ): Result<Updatable<YouTubePlaylistWithItems>?> = ioScope.asResult {
         database.withTransaction {
             val playlist = dao.findUpdatablePlaylistById(id) ?: return@withTransaction null
-            val items = dao.findUpdatablePlaylistItemsByPlaylistId(id)
-            YouTubePlaylistWithItems.fromCache(playlist, items)
+            val items = dao.findPlaylistItemByPlaylistId(id)
+            YouTubePlaylistWithItems.fromCache(playlist.item, items, playlist.cacheControl)
         }
     }
 
@@ -205,4 +207,18 @@ internal class YouTubeLocalDataSource @Inject constructor(
             listOf(a).flatten()
         }
     }
+}
+
+internal fun YouTubePlaylistWithItems.Companion.fromCache(
+    playlist: YouTubePlaylist,
+    items: List<YouTubePlaylistItem>,
+    cacheControl: CacheControl,
+): Updatable<YouTubePlaylistWithItems> = PlaylistAndItemsLocal(playlist, items)
+    .toUpdatable(cacheControl)
+
+private class PlaylistAndItemsLocal(
+    override val playlist: YouTubePlaylist,
+    override val items: List<YouTubePlaylistItem>,
+) : YouTubePlaylistWithItems {
+    override val addedItems: List<YouTubePlaylistItem> get() = emptyList()
 }

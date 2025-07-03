@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.data.model
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import java.time.Duration
-import java.time.Instant
 import kotlin.math.pow
 
 interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id> {
@@ -14,12 +13,11 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
     companion object {
         fun YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>.update(
-            newItems: List<YouTubePlaylistItem>?,
-            fetchedAt: Instant,
+            newItems: Updatable<List<YouTubePlaylistItem>>,
         ): Updatable<YouTubePlaylistWithItems> = ForUpdate(
-            newItems = newItems,
+            newItems = newItems.item,
             cachedPlaylistWithItems = this,
-        ).toUpdatable(ForUpdate.CacheControlImpl(fetchedAt, newItems ?: emptyList(), this))
+        ).toUpdatable(ForUpdate.CacheControlImpl(newItems, this))
 
         fun newPlaylist(
             playlist: Updatable<YouTubePlaylist>,
@@ -29,12 +27,6 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
                 Updatable.latest(playlist, items).cacheControl
                     .overrideMaxAge(if (items.item.isNullOrEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
             )
-
-        fun fromCache(
-            playlist: Updatable<YouTubePlaylist>,
-            items: Updatable<List<YouTubePlaylistItem>>,
-        ): Updatable<YouTubePlaylistWithItems> = CachedPlaylist(playlist.item, items.item)
-            .toUpdatable(Updatable.latest(playlist, items).cacheControl)
 
         internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
         val MAX_AGE_DEFAULT: Duration = MAX_AGE_MAX.dividedBy(2.0.pow(n = 7).toLong())
@@ -56,19 +48,18 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
             }
 
         class CacheControlImpl(
-            override val fetchedAt: Instant,
-            private val items: List<YouTubePlaylistItem>,
+            private val items: Updatable<List<YouTubePlaylistItem>>,
             private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
-        ) : CacheControl {
+        ) : CacheControl by items.cacheControl {
             override val maxAge: Duration
-                get() = if (items.isEmpty()) {
+                get() = if (items.item.isEmpty()) {
                     MAX_AGE_MAX
                 } else {
                     val cachedIds = cachedPlaylistWithItems.itemId.toSet()
-                    val newIds = items.map { it.id }.toSet()
+                    val newIds = items.item.map { it.id }.toSet()
                     val isNotModified = cachedIds == newIds
                     if (isNotModified) {
-                        val latest = items.maxOf { it.publishedAt }
+                        val latest = items.item.maxOf { it.publishedAt }
                         val inactionDays =
                             Duration.between(latest, fetchedAt).toDays().coerceIn(0L..7)
                         val pow = 2.0.pow(inactionDays.toDouble())
@@ -88,14 +79,6 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
             get() = newItems ?: emptyList()
         override val addedItems: List<YouTubePlaylistItem>
             get() = items
-    }
-
-    private class CachedPlaylist(
-        override val playlist: YouTubePlaylist,
-        override val items: List<YouTubePlaylistItem>,
-    ) : YouTubePlaylistWithItems {
-        override val addedItems: List<YouTubePlaylistItem>
-            get() = emptyList()
     }
 }
 

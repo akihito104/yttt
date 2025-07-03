@@ -251,7 +251,7 @@ class YouTubeLocalDataSourceTest {
         fun fetchPlaylistWithItems_simple_addSameItem_returns1Item() = rule.runWithLocalSource {
             // setup
             val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
-                it?.item?.update(checkNotNull(items[simple]!!.item.items), dateTimeProvider.now())
+                it?.item?.update(items[simple]!!.item.items.toUpdatable(fetchedAt = dateTimeProvider.now()))
             }.getOrNull()
             dataSource.updatePlaylistWithItems(updatable!!)
             // exercise
@@ -272,7 +272,7 @@ class YouTubeLocalDataSourceTest {
                 )
             ) + checkNotNull(items[simple]!!.item.items)
             val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
-                it?.item?.update(newItems, dateTimeProvider.now())
+                it?.item?.update(newItems.toUpdatable(fetchedAt = dateTimeProvider.now()))
             }.getOrNull()
             dataSource.updatePlaylistWithItems(updatable!!)
             // exercise

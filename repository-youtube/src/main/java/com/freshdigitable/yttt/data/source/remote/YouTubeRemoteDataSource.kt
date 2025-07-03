@@ -72,7 +72,7 @@ internal class YouTubeRemoteDataSource(
     ): Result<Updatable<YouTubePlaylistWithItems>> = fetch {
         if (cache != null) {
             val res = fetchPlaylistItems(id, maxResult).item
-            cache.update(res.item, checkNotNull(res.cacheControl.fetchedAt))
+            cache.update(res)
         } else {
             val playlist = fetchPlaylist(setOf(id)).item.first()
             val items = fetchPlaylistItems(id, maxResult).item
@@ -85,7 +85,7 @@ internal class YouTubeRemoteDataSource(
     }.recoverCatching {
         if ((it as? NetworkResponse.Exception)?.statusCode == 404) {
             val cacheControl = it.cacheControl
-            cache?.update(emptyList(), checkNotNull(cacheControl.fetchedAt))
+            cache?.update(emptyList<YouTubePlaylistItem>().toUpdatable(cacheControl))
                 ?: YouTubePlaylistWithItems.newPlaylist(
                     playlist = YouTubePlaylistNotFound(id).toUpdatable(cacheControl),
                     items = Updatable.create(null, cacheControl),
