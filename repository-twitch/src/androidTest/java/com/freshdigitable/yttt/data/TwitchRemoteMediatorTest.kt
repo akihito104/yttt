@@ -53,6 +53,7 @@ import dagger.hilt.testing.TestInstallIn
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Timeout
@@ -132,7 +133,7 @@ class TwitchRemoteMediatorTest {
     fun firstTimeToLoadSubscriptionPage_needsRefresh() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        FakeRemoteSourceModule.following = { followingResponse(100) }
+        FakeRemoteSourceModule.following = { followingResponse(100, updatableAt) }
         // exercise
         val actual = sut.flow.asSnapshot()
         // verify
@@ -179,7 +180,7 @@ class TwitchRemoteMediatorTest {
     fun failedToGetUserDetailAtRefresh_returnsSuccess() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        FakeRemoteSourceModule.following = { followingResponse(100) }
+        FakeRemoteSourceModule.following = { followingResponse(100, updatableAt) }
         FakeRemoteSourceModule.userDetails =
             { Response.error(500, "internal error".toResponseBody()) }
         // exercise
@@ -231,13 +232,17 @@ class TwitchRemoteMediatorTest {
             )
         }
 
-        fun followingResponse(count: Int): Response<FollowedChannelsResponse> = Response.success(
-            FollowedChannelsResponse(
-                item = broadcaster(count),
-                pagination = Pagination(null),
-                total = count,
+        fun followingResponse(count: Int, date: Instant): Response<FollowedChannelsResponse> =
+            Response.success(
+                FollowedChannelsResponse(
+                    item = broadcaster(count),
+                    pagination = Pagination(null),
+                    total = count,
+                ),
+                Headers.Builder()
+                    .add("date", date)
+                    .build(),
             )
-        )
 
         fun stream(broadcaster: Broadcaster): FollowingStream = FollowingStream(
             id = TwitchStream.Id("stream_${broadcaster.id.value}"),

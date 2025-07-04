@@ -83,8 +83,7 @@ interface YouTubeRemoteDataSourceModule {
         fun provideRemoteDataSource(
             client: YouTubeClient,
             ioScope: IoScope,
-            dateTimeProvides: DateTimeProvider,
-        ): YouTubeDataSource.Remote = YouTubeRemoteDataSource(client, ioScope, dateTimeProvides)
+        ): YouTubeDataSource.Remote = YouTubeRemoteDataSource(client, ioScope)
     }
 }
 

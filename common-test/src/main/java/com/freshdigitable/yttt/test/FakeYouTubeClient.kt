@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.test
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.model.CacheControl
-import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -58,18 +57,18 @@ abstract class FakeYouTubeClient : YouTubeClient {
         token: String?
     ): NetworkResponse<List<YouTubeSubscription>> = throw NotImplementedError()
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<Updatable<YouTubeChannelDetail>>> =
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
         throw NotImplementedError()
 
-    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<Updatable<YouTubePlaylist>>> =
+    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
         throw NotImplementedError()
 
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<Updatable<List<YouTubePlaylistItem>>> = throw NotImplementedError()
+    ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<Updatable<YouTubeVideo>>> =
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
         throw NotImplementedError()
 
     override fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>> =

@@ -83,10 +83,10 @@ class AddStreamWorkerTest {
         val video = video(1, channelDetail)
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
             videoList = caller.wrap(expected = 1) {
-                listOf(video.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+                listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             },
             channelList = caller.wrap(expected = 1) {
-                listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+                listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             },
         )
         hiltRule.inject()
@@ -113,10 +113,10 @@ class AddStreamWorkerTest {
         val video = video(1, channelDetail)
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
             videoList = caller.wrap(expected = 1) {
-                listOf(video.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+                listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             },
             channelList = caller.wrap(expected = 1) {
-                listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+                listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             },
         )
         hiltRule.inject()
@@ -142,15 +142,15 @@ class AddStreamWorkerTest {
 }
 
 class FakeYouTubeClientImpl(
-    private val videoList: ((Set<YouTubeVideo.Id>) -> List<Updatable<YouTubeVideo>>)? = null,
-    private val channelList: ((Set<YouTubeChannel.Id>) -> List<Updatable<YouTubeChannelDetail>>)? = null,
+    private val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
+    private val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
 ) : FakeYouTubeClient() {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<Updatable<YouTubeVideo>>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
         return NetworkResponse.create(videoList!!.invoke(ids))
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<Updatable<YouTubeChannelDetail>>> {
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
         logD { "fetchChannelList: $ids" }
         return NetworkResponse.create(channelList!!.invoke(ids))
     }

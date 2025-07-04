@@ -17,6 +17,16 @@ import javax.inject.Singleton
 interface FakeDateTimeProviderModule {
     companion object {
         var instant: Instant? = null
+            set(value) {
+                field = value
+                if (field != null) onTimeAdvanced(checkNotNull(field))
+            }
+        var onTimeAdvanced: (Instant) -> Unit = {}
+
+        fun clear() {
+            onTimeAdvanced = {}
+            instant = null
+        }
 
         @Provides
         @Singleton

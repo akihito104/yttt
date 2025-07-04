@@ -99,7 +99,7 @@ class FetchYouTubeStreamUseCaseTest {
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
             subscription = { offset, token ->
                 if (offset == 0 && token == null) {
-                    NetworkResponse.create(emptyList())
+                    NetworkResponse.create(emptyList<YouTubeSubscription>().toUpdatable())
                 } else {
                     throw AssertionError()
                 }
@@ -145,7 +145,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun videoFromNewPlaylistItem_returns20Videos() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        FakeYouTubeClientModule.setup(10, 2)
+        FakeYouTubeClientModule.setup(10, 2, current)
         hiltRule.inject()
         // exercise
         val actual = sut.invoke()
@@ -161,7 +161,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun failedToGetChannelDetails_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        FakeYouTubeClientModule.setup(10, 2).apply {
+        FakeYouTubeClientModule.setup(10, 2, current).apply {
             channel = {
                 throw YouTubeException(
                     500, "Server Internal Error", cacheControl = CacheControl.empty(),
@@ -186,7 +186,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun failedToGetPlaylistItem_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        FakeYouTubeClientModule.setup(10, 2).apply {
+        FakeYouTubeClientModule.setup(10, 2, current).apply {
             val base = playlistItem!!
             playlistItem = { id ->
                 if (id.value.contains("1")) throw YouTubeException(
@@ -207,7 +207,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun getPlaylistItemReceivesNotFound_resultIsRecovered() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        FakeYouTubeClientModule.setup(10, 2).apply {
+        FakeYouTubeClientModule.setup(10, 2, current).apply {
             val base = playlistItem!!
             playlistItem = { id ->
                 if (id.value.contains("1")) throw YouTubeException(
@@ -228,7 +228,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun failedToGetVideoDetail_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        FakeYouTubeClientModule.setup(10, 2).apply {
+        FakeYouTubeClientModule.setup(10, 2, current).apply {
             val base = video!!
             video = { id ->
                 if (id.any { it.value.contains("1") })
@@ -250,7 +250,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun videoFromNewPlaylistItem_fetch2PagesOfSubscription_returns200Videos() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        FakeYouTubeClientModule.setup(100, 2)
+        FakeYouTubeClientModule.setup(100, 2, current)
         hiltRule.inject()
         // exercise
         val actual = sut.invoke()
@@ -267,7 +267,7 @@ class FetchYouTubeStreamUseCaseTest {
     fun failedToGetChannelDetailsAt2ndPageOfSubscription_returnsFailure() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        FakeYouTubeClientModule.setup(100, 2).apply {
+        FakeYouTubeClientModule.setup(100, 2, current).apply {
             val channel = channel
             var page = 0
             this.channel = {
@@ -294,12 +294,14 @@ class FetchYouTubeStreamUseCaseTest {
         testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            val fake = FakeYouTubeClientModule.setup(1, 2)
+            val fake = FakeYouTubeClientModule.setup(1, 2, current)
             hiltRule.inject()
             sut.invoke()
             advanceUntilIdle()
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
-            fake.setup(100, 2)
+            FakeDateTimeProviderModule.apply {
+                onTimeAdvanced = { fake.setup(100, 2, it) }
+                instant = current + Duration.ofHours(3)
+            }
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -315,13 +317,15 @@ class FetchYouTubeStreamUseCaseTest {
     fun videoFromNewPlaylistItem_update10Subscription() = testScope.runTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
-        val fakeClient = FakeYouTubeClientModule.setup(10, 2)
+        val fakeClient = FakeYouTubeClientModule.setup(10, 2, current)
         hiltRule.inject()
         sut.invoke()
         advanceUntilIdle()
 
-        FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
-        fakeClient.setup(10, 3)
+        FakeDateTimeProviderModule.apply {
+            onTimeAdvanced = { fakeClient.setup(10, 3, it) }
+            instant = current + Duration.ofHours(3)
+        }
         // exercise
         val actual = sut.invoke()
         advanceUntilIdle()
@@ -336,9 +340,10 @@ class FetchYouTubeStreamUseCaseTest {
 
 private fun FakeYouTubeClientModule.Companion.setup(
     subscriptionCount: Int,
-    itemsPerPlaylist: Int
+    itemsPerPlaylist: Int,
+    current: Instant,
 ): FakeYouTubeClientImpl = FakeYouTubeClientImpl()
-    .apply { setup(subscriptionCount, itemsPerPlaylist) }
+    .apply { setup(subscriptionCount, itemsPerPlaylist, current) }
     .also { client = it }
 
 internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : YouTubeVideo {
@@ -376,42 +381,40 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
 
 private class FakeYouTubeClientImpl(
     var subscription: ((Int, String?) -> NetworkResponse<List<YouTubeSubscription>>)? = null,
-    var channel: ((Set<YouTubeChannel.Id>) -> List<Updatable<YouTubeChannelDetail>>)? = null,
+    var channel: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
     var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItem>>)? = null,
-    var video: ((Set<YouTubeVideo.Id>) -> List<Updatable<YouTubeVideo>>)? = null,
+    var video: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
 ) : FakeYouTubeClient() {
     companion object {
         fun FakeYouTubeClientImpl.setup(
             subscriptionCount: Int,
             itemsPerPlaylist: Int,
+            current: Instant,
         ) {
-            val channelDetail = (1..subscriptionCount).map {
-                channelDetail(it).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-            }
+            val channelDetail = (1..subscriptionCount)
+                .map { channelDetail(it) }
             val videos = channelDetail.flatMap { c ->
-                (1..itemsPerPlaylist).map {
-                    video(it, c.item).toUpdatable()
-                }
+                (1..itemsPerPlaylist).map { video(it, c) }
             }
             channel = { id ->
-                val c = channelDetail.associateBy { it.item.id }
-                id.mapNotNull { c[it] }
+                val c = channelDetail.associateBy { it.id }
+                id.mapNotNull { c[it] }.toUpdatable(CacheControl.fromRemote(current))
             }
             val chunked = channelDetail.chunked(50)
             val subs = chunked.mapIndexed { i, c ->
                 val tokenMatcher = if (i == 0) null else "token$i"
                 val nextToken = if (i == chunked.size - 1) null else "token${i + 1}"
                 (i * 50 to tokenMatcher) to NetworkResponse.create(
-                    c.mapIndexed { j, s -> subscription(j, s.item) }, nextToken
+                    c.mapIndexed { j, s -> subscription(j, s) }.toUpdatable(current), nextToken
                 )
             }.toMap()
             subscription = { offset, token -> subs[offset to token]!! }
-            val v = videos.associateBy { it.item.id }
-            video = { id -> id.mapNotNull { v[it] } }
+            val v = videos.associateBy { it.id }
+            video = { id -> id.mapNotNull { v[it] }.toUpdatable(current) }
             val pi = channelDetail.associate { c ->
-                c.item.uploadedPlayList!! to videos.filter { it.item.channel.id == c.item.id }
-                    .mapIndexed { i, v -> playlistItem(i, c.item, v.item.id) }
-                    .toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+                c.uploadedPlayList!! to videos.filter { it.channel.id == c.id }
+                    .mapIndexed { i, v -> playlistItem(i, c, v.id) }
+                    .toUpdatable(CacheControl.fromRemote(current))
             }
             playlistItem = { pi[it]!! }
         }
@@ -426,22 +429,22 @@ private class FakeYouTubeClientImpl(
         return subscription!!.invoke(offset, token)
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<Updatable<YouTubeChannelDetail>>> {
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
         logD { "fetchChannelList: $ids" }
         check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-        return NetworkResponse.create(item = channel!!.invoke(ids))
+        return NetworkResponse.create(channel!!.invoke(ids))
     }
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<Updatable<YouTubeVideo>>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
         check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-        return NetworkResponse.create(item = video!!.invoke(ids))
+        return NetworkResponse.create(video!!.invoke(ids))
     }
 
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<Updatable<List<YouTubePlaylistItem>>> {
+    ): NetworkResponse<List<YouTubePlaylistItem>> {
         logD { "fetchPlaylistItems: $id, $maxResult" }
         return NetworkResponse.create(playlistItem!!.invoke(id))
     }

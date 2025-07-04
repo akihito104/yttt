@@ -1,8 +1,9 @@
 package com.freshdigitable.yttt.data.source.remote
 
-import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.flattenToList
+import com.freshdigitable.yttt.data.model.Updatable.Companion.map
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -27,14 +28,13 @@ import java.time.Instant
 internal class YouTubeRemoteDataSource(
     private val youtube: YouTubeClient,
     private val ioScope: IoScope,
-    private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource.Remote {
     override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>> =
         ioScope.asResultFlow {
             var paged = PagedSubscription()
             do {
                 val res = youtube.fetchSubscription(pageSize, paged.itemSize, paged.nextPageToken)
-                paged = paged.update(res.item, res.nextPageToken, dateTimeProvider.now())
+                paged = paged.update(res.item, res.nextPageToken, res.cacheControl.fetchedAt)
                 emit(Result.success(paged))
             } while (paged.nextPageToken != null)
         }
@@ -54,13 +54,12 @@ internal class YouTubeRemoteDataSource(
         fetchList(ids) { fetchChannelList(it) }
 
     override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> =
-        fetch { fetchChannelSection(id).item }
+        fetch { fetchChannelSection(id) }.map { it.item }
 
     override suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): Result<Updatable<List<YouTubePlaylistItem>>> =
-        fetch { fetchPlaylistItems(id, maxResult).item }
+    ): Result<Updatable<List<YouTubePlaylistItem>>> = fetch { fetchPlaylistItems(id, maxResult) }
 
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>> =
         fetchList(ids) { fetchPlaylist(it) }
@@ -71,11 +70,11 @@ internal class YouTubeRemoteDataSource(
         cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?,
     ): Result<Updatable<YouTubePlaylistWithItems>> = fetch {
         if (cache != null) {
-            val res = fetchPlaylistItems(id, maxResult).item
+            val res = fetchPlaylistItems(id, maxResult)
             cache.update(res)
         } else {
-            val playlist = fetchPlaylist(setOf(id)).item.first()
-            val items = fetchPlaylistItems(id, maxResult).item
+            val playlist = fetchPlaylist(setOf(id)).map { it.first() }
+            val items = fetchPlaylistItems(id, maxResult)
             @Suppress("UNCHECKED_CAST")
             YouTubePlaylistWithItems.newPlaylist(
                 playlist = playlist,
@@ -111,20 +110,20 @@ internal class YouTubeRemoteDataSource(
     private suspend inline fun <I : IdBase, E> fetchList(
         ids: Set<I>,
         crossinline request: YouTubeClient.(Set<I>) -> NetworkResponse<List<E>>,
-    ): Result<List<E>> = ioScope.asResult {
+    ): Result<List<Updatable<E>>> = ioScope.asResult {
         if (ids.isEmpty()) {
             emptyList()
         } else if (ids.size <= YouTubeDataSource.MAX_BATCH_SIZE) {
-            youtube.request(ids).item
+            youtube.request(ids).flattenToList()
         } else {
             ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE)
-                .map { async { youtube.request(it.toSet()).item } }
+                .map { async { youtube.request(it.toSet()).flattenToList() } }
                 .awaitAll()
                 .flatten()
         }
     }
 
-    private suspend inline fun <T> fetch(crossinline request: YouTubeClient.() -> T): Result<T> =
+    private suspend inline fun <T> fetch(crossinline request: YouTubeClient.() -> Updatable<T>): Result<Updatable<T>> =
         ioScope.asResult { youtube.request() }
 }
 

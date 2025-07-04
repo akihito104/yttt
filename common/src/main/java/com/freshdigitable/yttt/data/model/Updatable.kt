@@ -29,6 +29,9 @@ interface Updatable<T> {
 
         fun <T, R> Updatable<T>.map(mapper: (T) -> R): Updatable<R> =
             Impl(mapper(this.item), this.cacheControl)
+
+        fun <T> Updatable<List<T>>.flattenToList(): List<Updatable<T>> =
+            item.map { it.toUpdatable(cacheControl) }
     }
 
     private class Impl<T>(override val item: T, override val cacheControl: CacheControl) :

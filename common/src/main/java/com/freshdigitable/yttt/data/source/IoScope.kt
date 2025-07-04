@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source
 
 import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -20,13 +21,14 @@ class IoScope @Inject constructor(
 
     fun <T> asResultFlow(block: suspend FlowCollector<Result<T>>.() -> Unit): Flow<Result<T>> =
         flow {
-            runCatching { block(this) }.onFailure { emit(Result.failure<T>(it)) }
+            runCatching { block(this) }.onFailure { emit(Result.failure(it)) }
         }.flowOn(ioDispatcher)
 }
 
-interface NetworkResponse<T> {
-    val item: T
+interface NetworkResponse<T> : Updatable<T> {
+    override val item: T
     val nextPageToken: String? get() = null
+    override val cacheControl: CacheControl
 
     abstract class Exception(throwable: Throwable?) : kotlin.Exception(throwable) {
         abstract val statusCode: Int
@@ -35,10 +37,21 @@ interface NetworkResponse<T> {
     }
 
     companion object {
-        fun <T> create(item: T, nextPageToken: String? = null): NetworkResponse<T> =
-            Impl(item, nextPageToken)
+        fun <T> create(
+            item: T,
+            cacheControl: CacheControl,
+            nextPageToken: String? = null
+        ): NetworkResponse<T> = Impl(item, cacheControl, nextPageToken)
+
+        fun <T> create(
+            updatable: Updatable<T>,
+            nextPageToken: String? = null
+        ): NetworkResponse<T> = create(updatable.item, updatable.cacheControl, nextPageToken)
     }
 
-    private data class Impl<T>(override val item: T, override val nextPageToken: String?) :
-        NetworkResponse<T>
+    private data class Impl<T>(
+        override val item: T,
+        override val cacheControl: CacheControl,
+        override val nextPageToken: String?,
+    ) : NetworkResponse<T>
 }

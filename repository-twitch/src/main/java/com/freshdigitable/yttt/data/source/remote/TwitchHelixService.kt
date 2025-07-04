@@ -8,7 +8,6 @@ import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.google.gson.annotations.SerializedName
 import retrofit2.Call
 import retrofit2.Converter
@@ -91,9 +90,13 @@ internal interface TwitchHelixService {
     fun getGame(@Query("id") id: Set<TwitchCategory.Id>): Call<TwitchGameResponse>
 }
 
+internal interface HasItem<T> {
+    val item: T
+}
+
 internal class TwitchUserResponse(
     @SerializedName("data") override val item: List<TwitchUserDetailRemote>,
-) : NetworkResponse<List<TwitchUserDetail>>
+) : HasItem<List<TwitchUserDetail>>
 
 internal class FollowedChannelsResponse(
     @SerializedName("data")
@@ -105,10 +108,9 @@ internal class FollowedChannelsResponse(
 ) : Pageable<List<TwitchBroadcaster>>
 
 internal class Pagination(@SerializedName("cursor") val cursor: String?)
-internal interface Pageable<T> : NetworkResponse<T> {
+internal interface Pageable<T> : HasItem<T> {
     val pagination: Pagination
     override val item: T
-    override val nextPageToken: String? get() = pagination.cursor
 }
 
 internal class FollowingStreamsResponse(
@@ -134,7 +136,7 @@ internal class TwitchVideosResponse(
 
 internal class TwitchGameResponse(
     @SerializedName("data") override val item: List<TwitchGameRemote>,
-) : NetworkResponse<List<TwitchCategory>>
+) : HasItem<List<TwitchCategory>>
 
 internal class IdConverterFactory : Converter.Factory() {
     companion object {
