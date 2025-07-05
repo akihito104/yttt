@@ -213,7 +213,7 @@ internal data class YouTubePlaylistItemDb(
         )
         suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDb>
 
-        @Query("SELECT p.fetched_at, p.max_age FROM playlist_expire AS p WHERE p.playlist_id = :id")
+        @Query("SELECT p.fetched_at AS fetched_at, p.max_age AS max_age FROM playlist_expire AS p WHERE p.playlist_id = :id")
         suspend fun findPlaylistItemCacheControlByPlaylistId(id: YouTubePlaylist.Id): CacheControlDb?
 
         @Transaction

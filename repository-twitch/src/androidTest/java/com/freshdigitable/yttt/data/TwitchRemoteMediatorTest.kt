@@ -92,7 +92,19 @@ class TwitchRemoteMediatorTest {
     @Before
     fun setup(): Unit = runBlocking {
         hiltRule.inject()
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(10)
+        localSource.deleteAllTables()
+
+        FakeDateTimeProviderModule.apply {
+            onTimeAdvanced = { current ->
+                FakeRemoteSourceModule.userDetails = {
+                    Response.success(
+                        TwitchUserResponse(broadcaster.map { it.toUserDetail() }),
+                        Headers.Builder().add("date", current).build(),
+                    )
+                }
+            }
+            instant = Instant.ofEpochMilli(100)
+        }
         localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
         val stream = broadcaster.take(10).map { stream(it) }
         val streams = object : TwitchStreams.Updated {
@@ -103,13 +115,11 @@ class TwitchRemoteMediatorTest {
         }
         localSource.replaceFollowedStreams(streams.toUpdatable())
         localSource.replaceAllFollowings(followings)
-        FakeRemoteSourceModule.userDetails =
-            { Response.success(TwitchUserResponse(broadcaster.map { it.toUserDetail() })) }
     }
 
     @After
     fun tearDown() = runTest {
-        FakeDateTimeProviderModule.instant = null
+        FakeDateTimeProviderModule.clear()
         FakeRemoteSourceModule.clear()
     }
 

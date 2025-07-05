@@ -47,7 +47,8 @@ internal class TwitchChannelVacationScheduleTable(
         override suspend fun deleteTable()
 
         @Query(
-            "SELECT u.*, v.vacation_start, v.vacation_end, e.fetched_at, e.max_age " +
+            "SELECT u.*, v.vacation_start AS vacation_start, v.vacation_end AS vacation_end," +
+                " e.fetched_at AS fetched_at, e.max_age AS max_age " +
                 "FROM twitch_channel_schedule_vacation AS v " +
                 "INNER JOIN twitch_user AS u ON u.id = :userId " +
                 "LEFT OUTER JOIN twitch_channel_schedule_expire AS e ON e.user_id = :userId " +

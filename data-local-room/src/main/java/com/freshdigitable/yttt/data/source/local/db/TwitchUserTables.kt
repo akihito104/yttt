@@ -101,7 +101,7 @@ internal data class TwitchUserDetailDbUpdatable(
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT u.*, e.fetched_at, e.max_age FROM twitch_auth_user AS a " +
+            "SELECT u.*, e.fetched_at AS fetched_at, e.max_age AS max_age FROM twitch_auth_user AS a " +
                 "INNER JOIN twitch_user_detail_view AS u ON a.user_id = u.user_id " +
                 "LEFT OUTER JOIN twitch_user_detail_expire AS e ON u.user_id = e.user_id " +
                 "LIMIT 1"
@@ -109,7 +109,8 @@ internal data class TwitchUserDetailDbUpdatable(
         suspend fun findMe(): TwitchUserDetailDbUpdatable?
 
         @Query(
-            "SELECT v.*, e.fetched_at, e.max_age FROM (SELECT * FROM twitch_user_detail_view WHERE user_id IN (:ids)) AS v " +
+            "SELECT v.*, e.fetched_at AS fetched_at, e.max_age AS max_age " +
+                "FROM (SELECT * FROM twitch_user_detail_view WHERE user_id IN (:ids)) AS v " +
                 "LEFT OUTER JOIN twitch_user_detail_expire AS e ON v.user_id = e.user_id"
         )
         suspend fun findUserDetail(ids: Collection<TwitchUser.Id>): List<TwitchUserDetailDbUpdatable>

@@ -90,7 +90,8 @@ internal data class YouTubeSubscriptionSummaryDb(
             "SELECT s.id AS subscription_id, s.channel_id, c.uploaded_playlist_id," +
                 " c.fetched_at AS fetched_at, c.max_age AS max_age FROM subscription AS s " +
                 "LEFT OUTER JOIN ( " +
-                " SELECT c.id, c.uploaded_playlist_id, p.max_age, p.fetched_at FROM channel_addition AS c " +
+                " SELECT c.id, c.uploaded_playlist_id, p.max_age AS max_age, p.fetched_at AS fetched_at" +
+                " FROM channel_addition AS c " +
                 " INNER JOIN playlist_expire AS p ON c.uploaded_playlist_id = p.playlist_id " +
                 ") AS c ON s.channel_id = c.id " +
                 "WHERE subscription_id IN (:ids)"
