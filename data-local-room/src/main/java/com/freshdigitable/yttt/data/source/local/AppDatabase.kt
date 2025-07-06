@@ -107,6 +107,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         ),
         AutoMigration(from = 16, to = 17, spec = AppDatabase.MigrateRenameExpiredAt::class),
         AutoMigration(from = 17, to = 18),
+        AutoMigration(from = 19, to = 20),
     ]
 )
 @TypeConverters(
