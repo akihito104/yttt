@@ -114,7 +114,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
                 override val id: YouTubeChannel.Id get() = YouTubeChannel.Id("channel_0")
                 override val title: String get() = "Channel"
             },
-            videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_0"),
+            videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id.value}_${playlistId.value}"),
             publishedAt: Instant = Instant.EPOCH,
         ): YouTubePlaylistItem = YouTubePlaylistItemEntity(
             id = id,

@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem.Companion.isFromAnotherChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
@@ -113,7 +114,7 @@ class YouTubeRepository @Inject constructor(
     ): Result<Updatable<YouTubePlaylistWithItems>> =
         remoteSource.fetchPlaylistWithItems(id, maxResult, cache).onSuccess { u ->
             val uploadedAtAnotherChannel = u.item.items
-                .filter { it.channel.id != it.videoOwnerChannelId }
+                .filter { it.isFromAnotherChannel }
                 .mapNotNull { it.videoOwnerChannelId }
             if (uploadedAtAnotherChannel.isNotEmpty()) {
                 fetchChannelList(uploadedAtAnotherChannel.toSet())

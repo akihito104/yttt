@@ -34,12 +34,12 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
     private class ForUpdate(
         private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
-        private val newItems: List<YouTubePlaylistItem>?,
+        private val newItems: List<YouTubePlaylistItem>,
     ) : YouTubePlaylistWithItems {
         override val playlist: YouTubePlaylist
             get() = cachedPlaylistWithItems.playlist
         override val items: List<YouTubePlaylistItem>
-            get() = newItems ?: emptyList()
+            get() = newItems
         override val addedItems: List<YouTubePlaylistItem>
             get() {
                 val i = items.associateBy { it.id }

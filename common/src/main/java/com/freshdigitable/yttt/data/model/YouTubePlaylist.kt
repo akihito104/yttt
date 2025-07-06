@@ -22,4 +22,8 @@ interface YouTubePlaylistItem {
     val publishedAt: Instant
 
     data class Id(override val value: String) : YouTubeId
+
+    companion object {
+        val YouTubePlaylistItem.isFromAnotherChannel: Boolean get() = channel.id != videoOwnerChannelId
+    }
 }

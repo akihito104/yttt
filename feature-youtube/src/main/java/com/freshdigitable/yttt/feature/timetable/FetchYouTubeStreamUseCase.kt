@@ -196,7 +196,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val id = checkNotNull(summary.uploadedPlaylistId)
         val cache = liveRepository.fetchPlaylistWithItemSummaries(id)
         return liveRepository.fetchPlaylistWithItems(id, maxResult = 10, cache)
-            .map { playlist -> checkNotNull(playlist).item.addedItems.map { it.videoId } }
+            .map { playlist -> playlist.item.addedItems.map { it.videoId } }
             .onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" } }
             .onSuccess {
                 if (it.isNotEmpty()) {
