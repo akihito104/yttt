@@ -70,7 +70,7 @@ class YouTubeLocalDataSourceTest {
             val found = dao.findVideosById(video.map { it.item.id })
             found.containsVideoIdInAnyOrderElementsOf(video)
             dao.watchAllUnfinishedVideos().test {
-                awaitItem().containsVideoIdInAnyOrderElementsOf(unfinished)
+                awaitItem().containsVideoIdInAnyOrder(*unfinished.map { it.item }.toTypedArray())
             }
             assertThat(dao.findAllArchivedVideos()).containsExactlyInAnyOrderElementsOf(inactive.map { it.item.id })
             assertThat(dao.findUnusedVideoIds()).containsExactlyInAnyOrderElementsOf(inactive.map { it.item.id })
@@ -202,8 +202,12 @@ class YouTubeLocalDataSourceTest {
         }
 
         private fun List<Updatable<YouTubeVideoExtended>>.containsVideoIdInAnyOrder(vararg expected: Updatable<YouTubeVideoExtended>) {
+            this.map { it.item }.containsVideoIdInAnyOrder(*expected.map { it.item }.toTypedArray())
+        }
+
+        private fun List<YouTubeVideoExtended>.containsVideoIdInAnyOrder(vararg expected: YouTubeVideoExtended) {
             assertThat(this).hasSize(expected.size)
-            assertThat(this.map { it.item.id }).containsExactlyInAnyOrderElementsOf(expected.map { it.item.id })
+            assertThat(this.map { it.id }).containsExactlyInAnyOrderElementsOf(expected.map { it.id })
         }
     }
 

@@ -164,8 +164,8 @@ class YouTubeVideoTablesTest {
             actual.test {
                 val item = awaitItem()
                 assertThat(item).hasSize(5)
-                    .allMatch { it.item.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
-                assertThat(item.map { it.item.id }).containsExactlyInAnyOrder(
+                    .allMatch { it.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
+                assertThat(item.map { it.id }).containsExactlyInAnyOrder(
                     simple, freechat, hasNoExpire, live, upcoming,
                 )
             }

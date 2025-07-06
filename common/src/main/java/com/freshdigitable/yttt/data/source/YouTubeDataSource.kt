@@ -74,7 +74,7 @@ interface YouTubeDataSource {
 }
 
 interface YouTubeLiveDataSource {
-    val videos: Flow<List<Updatable<YouTubeVideoExtended>>>
+    val videos: Flow<List<YouTubeVideoExtended>>
     suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>>
     suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>)
     suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
@@ -89,6 +89,7 @@ interface YouTubeLiveDataSource {
 
     suspend fun updatePlaylistWithItems(updatable: Updatable<YouTubePlaylistWithItems>)
     suspend fun fetchPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummaries?
+    suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
 
     suspend fun cleanUp()
     suspend fun deleteAllTables()

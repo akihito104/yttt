@@ -76,6 +76,15 @@ internal class YouTubeVideoTable(
         @Query("SELECT id FROM video WHERE broadcast_content = 'none'")
         suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
 
+        @Query(
+            "SELECT v.id FROM video AS v " +
+                "LEFT OUTER JOIN yt_video_is_archived AS a ON a.video_id = v.id " +
+                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
+                "WHERE (a.is_archived IS NULL OR a.is_archived = 0)" +
+                " AND (e.fetched_at IS NULL OR e.max_age IS NULL OR (e.fetched_at + e.max_age) < :current)"
+        )
+        suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
+
         @Query("DELETE FROM video")
         override suspend fun deleteTable()
     }
@@ -125,14 +134,13 @@ internal data class YouTubeVideoDb(
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<UpdatableYouTubeVideoDb>
 
         @Query(
-            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
-                " e.fetched_at AS fetched_at, e.max_age AS max_age FROM video AS v " +
-                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
+            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat " +
+                "FROM video AS v " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
                 "WHERE broadcast_content IS NOT 'none'"
         )
-        fun watchAllUnfinishedVideos(): Flow<List<UpdatableYouTubeVideoDb>>
+        fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
     }
 }
 

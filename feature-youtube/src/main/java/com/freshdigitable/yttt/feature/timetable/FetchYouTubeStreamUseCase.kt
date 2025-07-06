@@ -6,7 +6,6 @@ import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
@@ -96,10 +95,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
     private suspend fun updateCurrentVideos(videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>) {
         val current = dateTimeProvider.now()
-        val currentItems = liveRepository.videos.value
-            .filter { it.item.isNowOnAir() || it.item.isUpcoming() || it.item.liveBroadcastContent == null }
-            .filter { it.isUpdatable(current) }
-            .map { it.item.id }
+        val currentItems = liveRepository.fetchUpdatableVideoIds(current)
         videoUpdateTaskChannel.send(currentItems)
     }
 

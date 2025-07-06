@@ -299,7 +299,7 @@ class FetchYouTubeStreamUseCaseTest {
             sut.invoke()
             advanceUntilIdle()
             FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = { fake.setup(100, 2, it) }
+                onTimeAdvanced = { fake.setup(100, 2, it, ::video) }
                 instant = current + Duration.ofHours(3)
             }
             // exercise
@@ -323,7 +323,11 @@ class FetchYouTubeStreamUseCaseTest {
         advanceUntilIdle()
 
         FakeDateTimeProviderModule.apply {
-            onTimeAdvanced = { fakeClient.setup(10, 3, it) }
+            onTimeAdvanced = {
+                fakeClient.setup(10, 3, it) { i, c ->
+                    video(i, c, YouTubeVideo.BroadcastType.LIVE)
+                }
+            }
             instant = current + Duration.ofHours(3)
         }
         // exercise
@@ -332,7 +336,9 @@ class FetchYouTubeStreamUseCaseTest {
         // verify
         assertResultThat(actual).isSuccess()
         localSource.videos.test {
-            assertThat(awaitItem()).hasSize(30)
+            val a = awaitItem()
+            assertThat(a).hasSize(30)
+            assertThat(a.map { it.isNowOnAir() }.all { it }).isTrue()
         }
         assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
     }
@@ -343,19 +349,23 @@ private fun FakeYouTubeClientModule.Companion.setup(
     itemsPerPlaylist: Int,
     current: Instant,
 ): FakeYouTubeClientImpl = FakeYouTubeClientImpl()
-    .apply { setup(subscriptionCount, itemsPerPlaylist, current) }
+    .apply { setup(subscriptionCount, itemsPerPlaylist, current) { i, c -> video(i, c) } }
     .also { client = it }
 
-internal fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = object : YouTubeVideo {
+internal fun video(
+    id: Int,
+    channel: YouTubeChannel,
+    liveBroadcastContent: YouTubeVideo.BroadcastType = YouTubeVideo.BroadcastType.UPCOMING,
+): YouTubeVideo = object : YouTubeVideo {
     override val id: YouTubeVideo.Id = YouTubeVideo.Id("${channel.id.value}-video_$id")
     override val channel: YouTubeChannel = channel
-    override val liveBroadcastContent: YouTubeVideo.BroadcastType =
-        YouTubeVideo.BroadcastType.UPCOMING
+    override val liveBroadcastContent: YouTubeVideo.BroadcastType = liveBroadcastContent
     override val title: String = ""
     override val thumbnailUrl: String = ""
     override val scheduledStartDateTime: Instant? = Instant.EPOCH
     override val scheduledEndDateTime: Instant? = null
-    override val actualStartDateTime: Instant? = null
+    override val actualStartDateTime: Instant? =
+        if (liveBroadcastContent == YouTubeVideo.BroadcastType.LIVE) Instant.EPOCH else null
     override val actualEndDateTime: Instant? = null
     override val description: String = ""
     override val viewerCount: BigInteger? = BigInteger.ONE
@@ -390,11 +400,12 @@ private class FakeYouTubeClientImpl(
             subscriptionCount: Int,
             itemsPerPlaylist: Int,
             current: Instant,
+            videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo,
         ) {
             val channelDetail = (1..subscriptionCount)
                 .map { channelDetail(it) }
             val videos = channelDetail.flatMap { c ->
-                (1..itemsPerPlaylist).map { video(it, c) }
+                (1..itemsPerPlaylist).map { videoFactory(it, c) }
             }
             channel = { id ->
                 val c = channelDetail.associateBy { it.id }

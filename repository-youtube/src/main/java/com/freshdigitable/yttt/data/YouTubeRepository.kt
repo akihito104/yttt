@@ -21,12 +21,8 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import java.time.Duration
 import java.time.Instant
 import java.time.Period
@@ -38,7 +34,6 @@ class YouTubeRepository @Inject constructor(
     private val remoteSource: YouTubeDataSource.Remote,
     private val localSource: YouTubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
-    coroutineScope: CoroutineScope,
 ) : YouTubeDataSource, YouTubeLiveDataSource by localSource {
     override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions>> {
         if (dateTimeProvider.now() < localSource.subscriptionsFetchedAt + SUBSCRIPTION_FETCH_PERIOD) {
@@ -162,9 +157,6 @@ class YouTubeRepository @Inject constructor(
         private val ACTIVITY_MAX_PERIOD = Period.ofDays(7)
         private val SUBSCRIPTION_FETCH_PERIOD = Duration.ofHours(2)
     }
-
-    override val videos: StateFlow<List<Updatable<YouTubeVideoExtended>>> = localSource.videos
-        .stateIn(coroutineScope, SharingStarted.Eagerly, emptyList())
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>> {
         if (ids.isEmpty()) {

@@ -37,8 +37,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     imageDataSource: ImageDataSource,
     private val ioScope: IoScope,
 ) : YouTubeDataSource.Local, ImageDataSource by imageDataSource {
-    override val videos: Flow<List<Updatable<YouTubeVideoExtended>>> =
-        dao.watchAllUnfinishedVideos()
+    override val videos: Flow<List<YouTubeVideoExtended>> = dao.watchAllUnfinishedVideos()
 
     override suspend fun findSubscriptionSummaries(
         ids: Collection<YouTubeSubscription.Id>,
@@ -90,6 +89,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
         playlistId: YouTubePlaylist.Id,
         maxResult: Long,
     ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(playlistId, maxResult)
+
+    override suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id> =
+        dao.fetchUpdatableVideoIds(current)
 
     private val playlist = mutableMapOf<YouTubePlaylist.Id, Updatable<YouTubePlaylist>>()
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>> =
