@@ -14,7 +14,4 @@ interface YouTubeSubscriptionSummary {
 interface YouTubePlaylistItemSummary {
     val playlistId: YouTubePlaylist.Id
     val playlistItemId: YouTubePlaylistItem.Id
-    val videoId: YouTubeVideo.Id
-    val isArchived: Boolean?
-    val videoCacheControl: CacheControl?
 }

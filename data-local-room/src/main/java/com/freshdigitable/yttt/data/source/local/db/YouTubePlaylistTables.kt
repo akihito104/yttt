@@ -136,10 +136,7 @@ internal class YouTubePlaylistItemTable(
 }
 
 @DatabaseView(
-    "SELECT i.playlist_id, i.id AS playlist_item_id, i.video_id, v.is_archived," +
-        " e.fetched_at AS fetched_at, e.max_age AS max_age FROM playlist_item AS i " +
-        "LEFT OUTER JOIN yt_video_is_archived AS v ON i.video_id = v.video_id " +
-        "LEFT OUTER JOIN video_expire AS e ON i.video_id = e.video_id",
+    "SELECT i.playlist_id, i.id AS playlist_item_id FROM playlist_item AS i",
     viewName = "yt_playlist_item_summary",
 )
 internal class YouTubePlaylistItemSummaryDb(
@@ -147,16 +144,7 @@ internal class YouTubePlaylistItemSummaryDb(
     override val playlistId: YouTubePlaylist.Id,
     @ColumnInfo("playlist_item_id")
     override val playlistItemId: YouTubePlaylistItem.Id,
-    @ColumnInfo("video_id")
-    override val videoId: YouTubeVideo.Id,
-    @ColumnInfo("is_archived")
-    override val isArchived: Boolean?,
-    @Embedded
-    private val cacheControl: CacheControlDb?,
 ) : YouTubePlaylistItemSummary {
-    override val videoCacheControl: CacheControl?
-        get() = if (isArchived != true) cacheControl ?: CacheControl.empty() else null
-
     @androidx.room.Dao
     internal interface Dao {
         @Query("SELECT * FROM yt_playlist_item_summary AS s WHERE s.playlist_id = :id LIMIT :maxResult")
