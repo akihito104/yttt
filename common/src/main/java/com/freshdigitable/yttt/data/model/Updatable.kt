@@ -43,8 +43,7 @@ interface CacheControl {
     val maxAge: Duration?
 
     companion object {
-        fun empty(): CacheControl = Impl(null, null)
-        fun zero(): CacheControl = Impl(Instant.EPOCH, Duration.ZERO)
+        val EMPTY: CacheControl = Impl(null, null)
         fun create(fetchedAt: Instant?, maxAge: Duration?): CacheControl = Impl(fetchedAt, maxAge)
 
         fun CacheControl.isUpdatable(current: Instant): Boolean {

@@ -123,7 +123,7 @@ class FetchYouTubeStreamUseCaseTest {
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
             subscription = { _, _ ->
                 throw YouTubeException(
-                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                    500, "Server Internal Error", cacheControl = CacheControl.EMPTY,
                 )
             },
         )
@@ -164,7 +164,7 @@ class FetchYouTubeStreamUseCaseTest {
         FakeYouTubeClientModule.setup(10, 2, current).apply {
             channel = {
                 throw YouTubeException(
-                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                    500, "Server Internal Error", cacheControl = CacheControl.EMPTY,
                 )
             }
         }
@@ -233,7 +233,7 @@ class FetchYouTubeStreamUseCaseTest {
             video = { id ->
                 if (id.any { it.value.contains("1") })
                     throw YouTubeException(
-                        500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                        500, "Server Internal Error", cacheControl = CacheControl.EMPTY,
                     )
                 else base.invoke(id)
             }
@@ -275,7 +275,7 @@ class FetchYouTubeStreamUseCaseTest {
                     page++
                     channel!!.invoke(it)
                 } else throw YouTubeException(
-                    500, "Server Internal Error", cacheControl = CacheControl.empty(),
+                    500, "Server Internal Error", cacheControl = CacheControl.EMPTY,
                 )
             }
         }

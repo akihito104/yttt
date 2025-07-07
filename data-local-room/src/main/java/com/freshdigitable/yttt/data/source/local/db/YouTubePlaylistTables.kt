@@ -207,7 +207,7 @@ internal data class YouTubePlaylistItemDb(
         @Transaction
         suspend fun findUpdatablePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id): Updatable<List<YouTubePlaylistItem>> {
             val p = findPlaylistItemByPlaylistId(id)
-            val cacheControl = findPlaylistItemCacheControlByPlaylistId(id) ?: CacheControl.empty()
+            val cacheControl = findPlaylistItemCacheControlByPlaylistId(id) ?: CacheControl.EMPTY
             return p.toUpdatable(cacheControl)
         }
     }

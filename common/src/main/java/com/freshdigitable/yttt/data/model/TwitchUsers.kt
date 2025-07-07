@@ -42,7 +42,7 @@ interface TwitchFollowings {
             followings: List<TwitchBroadcaster>,
             cacheControl: CacheControl?,
         ): Updatable<TwitchFollowings> = Impl(follower, followings)
-            .toUpdatable(cacheControl ?: CacheControl.empty())
+            .toUpdatable(cacheControl ?: CacheControl.EMPTY)
 
         private fun TwitchFollowings.update(new: TwitchFollowings): Updated {
             require(this.followerId == new.followerId) { "followerId must be same." }

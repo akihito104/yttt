@@ -143,7 +143,7 @@ class YouTubeRepositoryTest {
                 listOf(video(1, channelDetail)).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             },
             channelList = recorder.wrap(expected = 1) {
-                throw YouTubeException(500, "Internal error", cacheControl = CacheControl.empty())
+                throw YouTubeException(500, "Internal error", cacheControl = CacheControl.EMPTY)
             },
         )
         hiltRule.inject()

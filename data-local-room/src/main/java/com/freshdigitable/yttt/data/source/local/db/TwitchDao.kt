@@ -104,7 +104,7 @@ internal class TwitchDao @Inject constructor(
         userId: TwitchUser.Id,
     ): Updatable<TwitchChannelSchedule?> = db.withTransaction {
         val vacation = findChannelVacationUpdatable(userId)
-            ?: return@withTransaction Updatable.create(null, CacheControl.empty())
+            ?: return@withTransaction Updatable.create(null, CacheControl.EMPTY)
         val schedule = findStreamScheduleByUserId(userId)
         object : TwitchChannelSchedule {
             override val segments: List<TwitchChannelSchedule.Stream>? get() = schedule

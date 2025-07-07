@@ -1,11 +1,13 @@
 package com.freshdigitable.yttt.test
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.di.DateTimeModule
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Singleton
 
@@ -35,3 +37,5 @@ interface FakeDateTimeProviderModule {
         }
     }
 }
+
+fun CacheControl.Companion.zero(): CacheControl = CacheControl.create(Instant.EPOCH, Duration.ZERO)

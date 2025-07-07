@@ -61,7 +61,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
                 cacheControl = res.cacheControl
                 cursor = res.nextPageToken
             } while (cursor != null && count < maxCount)
-        }.toUpdatable(cacheControl ?: CacheControl.empty())
+        }.toUpdatable(cacheControl ?: CacheControl.EMPTY)
     }.map { updatable ->
         val schedule: TwitchChannelSchedule? = object : TwitchChannelSchedule {
             override val segments: List<TwitchChannelSchedule.Stream>
@@ -106,6 +106,6 @@ internal class TwitchRemoteDataSource @Inject constructor(
                 addAll(body.item)
                 cursor = body.nextPageToken
             } while (cursor != null && (maxCount == null || maxCount < size))
-        }.toUpdatable(cacheControl ?: CacheControl.empty())
+        }.toUpdatable(cacheControl ?: CacheControl.EMPTY)
     }
 }

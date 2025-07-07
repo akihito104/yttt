@@ -32,7 +32,7 @@ interface NetworkResponse<T> : Updatable<T> {
 
     abstract class Exception(throwable: Throwable?) : kotlin.Exception(throwable) {
         abstract val statusCode: Int
-        open val cacheControl: CacheControl get() = CacheControl.empty()
+        open val cacheControl: CacheControl get() = CacheControl.EMPTY
         open val isQuotaExceeded: Boolean get() = false
     }
 

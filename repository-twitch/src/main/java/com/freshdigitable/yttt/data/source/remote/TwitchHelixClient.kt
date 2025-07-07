@@ -51,7 +51,7 @@ interface TwitchHelixClient {
 class TwitchException(
     override val statusCode: Int,
     override val message: String?,
-    override val cacheControl: CacheControl = CacheControl.empty(),
+    override val cacheControl: CacheControl = CacheControl.EMPTY,
 ) : NetworkResponse.Exception(null) {
     override val isQuotaExceeded: Boolean
         get() = statusCode == 429 // Too Many Requests

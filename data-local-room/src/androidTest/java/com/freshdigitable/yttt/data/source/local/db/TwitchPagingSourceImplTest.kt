@@ -5,6 +5,7 @@ import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.local.TwitchDataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.userDetail
+import com.freshdigitable.yttt.test.zero
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.Test
