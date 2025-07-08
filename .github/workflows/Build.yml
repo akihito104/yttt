@@ -21,9 +21,6 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
 
-      - name: validate gradle wrapper
-        uses: gradle/actions/wrapper-validation@v4
-
       - name: set up JDK
         uses: actions/setup-java@v4
         with:
@@ -33,7 +30,11 @@ jobs:
       - name: setup gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: assemble
+        run: ./gradlew compileDebugSources
+
       - name: check license
+        if: always()
         run: ./gradlew :app:licensee
 
       - name: upload licensee reports
@@ -42,10 +43,6 @@ jobs:
         with:
           name: licensee-reports
           path: 'app/build/reports/licensee'
-
-      - name: assemble
-        if: always()
-        run: ./gradlew compileDebugSources
 
       - name: android lint
         if: always()
