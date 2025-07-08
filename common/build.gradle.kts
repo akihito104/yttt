@@ -35,6 +35,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
 
+    testImplementation(project(":common-test"))
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.assertj.core)

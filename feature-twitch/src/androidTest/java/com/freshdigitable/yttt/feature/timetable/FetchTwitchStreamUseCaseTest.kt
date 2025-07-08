@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.TwitchDataSource
@@ -24,6 +25,7 @@ import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
+import com.freshdigitable.yttt.test.zero
 import com.google.common.truth.Truth.assertThat
 import dagger.Module
 import dagger.Provides
@@ -116,9 +118,10 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.apply {
                 hasAccount = true
 
-                meResponse = { NetworkResponse.create(item = me) }
-                streamResponse = { NetworkResponse.create(item = emptyList()) }
-                followingsResponse = { NetworkResponse.create(item = emptyList()) }
+                meResponse = { NetworkResponse.create(me.toUpdatable()) }
+                streamResponse = { NetworkResponse.create(emptyList<TwitchStream>().toUpdatable()) }
+                followingsResponse =
+                    { NetworkResponse.create(emptyList<TwitchBroadcaster>().toUpdatable()) }
             }
             // exercise
             val actual = sut.invoke()
@@ -144,8 +147,8 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.apply {
                 hasAccount = true
 
-                meResponse = { NetworkResponse.create(item = me) }
-                streamResponse = { NetworkResponse.create(item = emptyList()) }
+                meResponse = { NetworkResponse.create(item = me, CacheControl.zero()) }
+                streamResponse = { NetworkResponse.create(item = emptyList(), CacheControl.zero()) }
                 followingsResponse = { throw TwitchException(400, "Bad request.") }
             }
             // exercise
@@ -172,14 +175,15 @@ class FetchTwitchStreamUseCaseTest {
 
                 val userDetail = userDetail("10")
                 val category = category("1")
-                meResponse = { NetworkResponse.create(item = me) }
+                meResponse = { NetworkResponse.create(me.toUpdatable()) }
                 streamResponse = {
-                    NetworkResponse.create(item = listOf(stream("1", category, userDetail)))
+                    NetworkResponse.create(listOf(stream("1", category, userDetail)).toUpdatable())
                 }
-                followingsResponse =
-                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
+                followingsResponse = {
+                    NetworkResponse.create(listOf(broadcaster(userDetail)).toUpdatable())
+                }
                 scheduleResponse = { throw TwitchException(404, "Not found") }
-                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
+                userResponse = { NetworkResponse.create(listOf(userDetail).toUpdatable()) }
             }
             // exercise
             val actual = sut.invoke()
@@ -207,20 +211,20 @@ class FetchTwitchStreamUseCaseTest {
 
                 val userDetail = userDetail("10")
                 val category = category("1")
-                meResponse = { NetworkResponse.create(item = me) }
-                streamResponse = { NetworkResponse.create(item = emptyList()) }
+                meResponse = { NetworkResponse.create(item = me, CacheControl.zero()) }
+                streamResponse = { NetworkResponse.create(item = emptyList(), CacheControl.zero()) }
                 followingsResponse =
-                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
+                    { NetworkResponse.create(listOf(broadcaster(userDetail)).toUpdatable()) }
                 scheduleResponse = {
                     NetworkResponse.create(
-                        item = schedule(
+                        schedule(
                             streamSchedule = listOf(streamSchedule("1", category)),
                             broadcaster = broadcaster(userDetail),
-                        ),
+                        ).toUpdatable(),
                     )
                 }
-                categoryResponse = { NetworkResponse.create(item = listOf(category)) }
-                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
+                categoryResponse = { NetworkResponse.create(listOf(category).toUpdatable()) }
+                userResponse = { NetworkResponse.create(listOf(userDetail).toUpdatable()) }
             }
             // exercise
             val actual = sut.invoke()
@@ -247,20 +251,22 @@ class FetchTwitchStreamUseCaseTest {
                 hasAccount = true
 
                 val userDetail = userDetail("10")
-                meResponse = { NetworkResponse.create(item = me) }
-                streamResponse = { NetworkResponse.create(item = emptyList()) }
-                followingsResponse =
-                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
+                meResponse = { NetworkResponse.create(me.toUpdatable()) }
+                streamResponse = { NetworkResponse.create(item = emptyList(), CacheControl.zero()) }
+                followingsResponse = {
+                    NetworkResponse.create(listOf(broadcaster(userDetail)).toUpdatable())
+                }
                 scheduleResponse = {
                     NetworkResponse.create(
-                        item = schedule(
+                        schedule(
                             streamSchedule = listOf(streamSchedule("1", category("1"))),
                             broadcaster = broadcaster(userDetail),
-                        ),
+                        ).toUpdatable()
                     )
                 }
                 categoryResponse = { throw TwitchException(400, "Bad request.") }
-                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
+                userResponse =
+                    { NetworkResponse.create(listOf(userDetail).toUpdatable()) }
             }
             // exercise
             val actual = sut.invoke()
@@ -287,12 +293,13 @@ class FetchTwitchStreamUseCaseTest {
                 hasAccount = true
 
                 val userDetail = userDetail("10")
-                meResponse = { NetworkResponse.create(item = me) }
-                streamResponse = { NetworkResponse.create(item = emptyList()) }
-                followingsResponse =
-                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
+                meResponse = { NetworkResponse.create(item = me, CacheControl.zero()) }
+                streamResponse = { NetworkResponse.create(item = emptyList(), CacheControl.zero()) }
+                followingsResponse = {
+                    NetworkResponse.create(listOf(broadcaster(userDetail)).toUpdatable())
+                }
                 scheduleResponse = { throw TwitchException(400, "Bad request.") }
-                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
+                userResponse = { NetworkResponse.create(listOf(userDetail).toUpdatable()) }
             }
             // exercise
             val actual = sut.invoke()
@@ -320,12 +327,13 @@ class FetchTwitchStreamUseCaseTest {
 
                 val userDetail = userDetail("10")
                 val category = category("1")
-                meResponse = { NetworkResponse.create(item = me) }
+                meResponse = { NetworkResponse.create(item = me, CacheControl.zero()) }
                 streamResponse = {
-                    NetworkResponse.create(item = listOf(stream("1", category, userDetail)))
+                    NetworkResponse.create(listOf(stream("1", category, userDetail)).toUpdatable())
                 }
-                followingsResponse =
-                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
+                followingsResponse = {
+                    NetworkResponse.create(listOf(broadcaster(userDetail)).toUpdatable())
+                }
                 scheduleResponse = { throw TwitchException(404, "Not found") }
                 userResponse = { throw TwitchException(400, "Bad request") }
             }
@@ -356,12 +364,13 @@ class FetchTwitchStreamUseCaseTest {
                 hasAccount = true
 
                 val userDetail = userDetail("10")
-                meResponse = { NetworkResponse.create(item = me) }
+                meResponse = { NetworkResponse.create(item = me, CacheControl.zero()) }
                 streamResponse = { throw TwitchException(400, "Bad request.") }
-                followingsResponse =
-                    { NetworkResponse.create(item = listOf(broadcaster(userDetail))) }
+                followingsResponse = {
+                    NetworkResponse.create(listOf(broadcaster(userDetail)).toUpdatable())
+                }
                 scheduleResponse = { throw TwitchException(404, "Not found") }
-                userResponse = { NetworkResponse.create(item = listOf(userDetail)) }
+                userResponse = { NetworkResponse.create(listOf(userDetail).toUpdatable()) }
             }
             // exercise
             val actual = sut.invoke()
@@ -396,8 +405,8 @@ class FetchTwitchStreamUseCaseTest {
 
         private val current = Instant.parse("2025-04-29T00:00:00Z")
         private val category = category("1")
-        private val streamUser = userDetail("10", fetchedAt = current)
-        private val scheduleUser = userDetail("11", fetchedAt = current)
+        private val streamUser = userDetail("10")
+        private val scheduleUser = userDetail("11")
         private val streamSchedule =
             streamSchedule("1", category, Instant.parse("2025-04-30T00:00:00Z"))
 
@@ -406,30 +415,45 @@ class FetchTwitchStreamUseCaseTest {
             hilt.inject()
             localSource.deleteAllTables()
 
-            FakeDateTimeProviderModule.instant = current
             val followings = listOf(streamUser, scheduleUser).map { broadcaster(it) }
             FakeTwitchHelixClient.apply {
                 hasAccount = true
-
-                meResponse = { NetworkResponse.create(item = me) }
-                streamResponse = {
-                    NetworkResponse.create(item = listOf(stream("1", category("2"), streamUser)))
+                onTimeAdvanced = { current ->
+                    meResponse = { NetworkResponse.create(me.toUpdatable(fetchedAt = current)) }
+                    streamResponse = {
+                        NetworkResponse.create(
+                            listOf(stream("1", category("2"), streamUser))
+                                .toUpdatable(fetchedAt = current)
+                        )
+                    }
+                    categoryResponse =
+                        { NetworkResponse.create(listOf(category).toUpdatable(current)) }
+                    followingsResponse = { NetworkResponse.create(followings.toUpdatable(current)) }
+                    scheduleResponse = {
+                        NetworkResponse.create(
+                            schedule(listOf(streamSchedule), broadcaster(scheduleUser))
+                                .toUpdatable(current)
+                        )
+                    }
+                    userResponse = {
+                        NetworkResponse.create(
+                            listOf(streamUser, scheduleUser).toUpdatable(current)
+                        )
+                    }
                 }
-                categoryResponse = { NetworkResponse.create(item = listOf(category)) }
-                followingsResponse = { NetworkResponse.create(item = followings) }
-                scheduleResponse = {
-                    NetworkResponse.create(
-                        item = schedule(listOf(streamSchedule), broadcaster(scheduleUser))
-                    )
+            }
+            FakeDateTimeProviderModule.apply {
+                onTimeAdvanced = {
+                    FakeTwitchHelixClient.onTimeAdvanced(it)
                 }
-                userResponse = { NetworkResponse.create(item = listOf(streamUser, scheduleUser)) }
+                instant = current
             }
         }
 
         @After
         fun tearDown() {
             FakeTwitchHelixClient.clear()
-            FakeDateTimeProviderModule.instant = null
+            FakeDateTimeProviderModule.clear()
         }
 
         private suspend fun TestScope.initialLoad() {
@@ -446,6 +470,7 @@ class FetchTwitchStreamUseCaseTest {
         fun hasOnAirAndUpcomingItems() = testScope.runTest {
             // setup
             initialLoad()
+            FakeDateTimeProviderModule.instant = current + Duration.ofMinutes(3)
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -465,9 +490,15 @@ class FetchTwitchStreamUseCaseTest {
         fun onAirStreamIsFinished_onAirIsEmpty() = testScope.runTest {
             // setup
             initialLoad()
-            FakeDateTimeProviderModule.instant = current + Duration.ofMinutes(10)
+            val now = current + Duration.ofMinutes(10)
+            FakeDateTimeProviderModule.instant = now
             FakeTwitchHelixClient.apply {
-                streamResponse = { NetworkResponse.create(item = emptyList()) }
+                streamResponse = {
+                    NetworkResponse.create(
+                        emptyList(),
+                        CacheControl.create(fetchedAt = now, maxAge = Duration.ofMinutes(5)),
+                    )
+                }
                 meResponse = null
                 categoryResponse = null
             }
@@ -513,16 +544,13 @@ private val me = userDetail("1", "me")
 
 private fun userDetail(
     id: String, name: String = "user_$id",
-    fetchedAt: Instant = Instant.EPOCH,
-) = object : TwitchUserDetail {
+): TwitchUserDetail = object : TwitchUserDetail {
     override val id: TwitchUser.Id get() = TwitchUser.Id(id)
     override val loginName: String get() = name
     override val displayName: String get() = name
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
     override val createdAt: Instant get() = Instant.EPOCH
-    override val cacheControl: CacheControl
-        get() = CacheControl.create(fetchedAt, Duration.ZERO)
 }
 
 private fun broadcaster(user: TwitchUser, followedAt: Instant = Instant.EPOCH) =
@@ -595,6 +623,7 @@ private fun schedule(
 )
 interface FakeTwitchHelixClient {
     companion object {
+        var onTimeAdvanced: (Instant) -> Unit = {}
         var meResponse: (() -> NetworkResponse<TwitchUserDetail?>)? = null
         var followingsResponse: (() -> NetworkResponse<List<TwitchBroadcaster>>)? = null
         var scheduleResponse: ((TwitchUser.Id) -> NetworkResponse<TwitchChannelSchedule>)? =

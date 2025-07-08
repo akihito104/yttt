@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.remote
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -10,6 +11,7 @@ import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
 import retrofit2.Call
+import java.time.Duration
 
 interface TwitchHelixClient {
     suspend fun getFollowing(
@@ -49,6 +51,7 @@ interface TwitchHelixClient {
 class TwitchException(
     override val statusCode: Int,
     override val message: String?,
+    override val cacheControl: CacheControl = CacheControl.EMPTY,
 ) : NetworkResponse.Exception(null) {
     override val isQuotaExceeded: Boolean
         get() = statusCode == 429 // Too Many Requests
@@ -98,7 +101,7 @@ private class Impl(
 
     override suspend fun getMe(): NetworkResponse<TwitchUserDetail?> {
         val res = service.fetch { getMe() }
-        return object : NetworkResponse<TwitchUserDetail?> {
+        return object : NetworkResponse<TwitchUserDetail?> by res {
             override val item: TwitchUserDetail? = res.item.firstOrNull()
         }
     }
@@ -114,12 +117,21 @@ private class Impl(
         service.fetch { getUser(id = ids) }
 
     companion object {
-        private inline fun <T> TwitchHelixService.fetch(query: TwitchHelixService.() -> Call<T>): T {
+        private val MAX_AGE_DEFAULT = Duration.ofMinutes(5)
+
+        private inline fun <T : HasItem<E>, E> TwitchHelixService.fetch(query: TwitchHelixService.() -> Call<T>): NetworkResponse<E> {
             val response = query().execute()
+            val fetchedAt = response.headers().getDate("date")?.toInstant()
+            val cacheControl = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
             if (response.isSuccessful) {
-                return checkNotNull(response.body())
+                val item = checkNotNull(response.body())
+                return NetworkResponse.create(
+                    item = item.item,
+                    cacheControl = cacheControl,
+                    nextPageToken = (item as? Pageable<*>)?.pagination?.cursor,
+                )
             } else {
-                throw TwitchException(response.code(), response.errorBody()?.string())
+                throw TwitchException(response.code(), response.errorBody()?.string(), cacheControl)
             }
         }
     }

@@ -1,6 +1,9 @@
 package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
+import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -35,6 +38,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     private val ioScope: IoScope,
 ) : YouTubeDataSource.Local, ImageDataSource by imageDataSource {
     override val videos: Flow<List<YouTubeVideoExtended>> = dao.watchAllUnfinishedVideos()
+
     override suspend fun findSubscriptionSummaries(
         ids: Collection<YouTubeSubscription.Id>,
     ): List<YouTubeSubscriptionSummary> = ioScope.asResult {
@@ -86,39 +90,44 @@ internal class YouTubeLocalDataSource @Inject constructor(
         maxResult: Long,
     ): List<YouTubePlaylistItemSummary> = dao.findPlaylistItemSummary(playlistId, maxResult)
 
-    private val playlist = mutableMapOf<YouTubePlaylist.Id, YouTubePlaylist>()
-    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<YouTubePlaylist>> =
+    override suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id> =
+        dao.fetchUpdatableVideoIds(current)
+
+    private val playlist = mutableMapOf<YouTubePlaylist.Id, Updatable<YouTubePlaylist>>()
+    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>> =
         Result.success(ids.mapNotNull { playlist[it] })
 
-    override suspend fun addPlaylist(playlist: Collection<YouTubePlaylist>) {
-        this.playlist.putAll(playlist.associateBy { it.id })
+    override suspend fun addPlaylist(playlist: Collection<Updatable<YouTubePlaylist>>) {
+        this.playlist.putAll(playlist.associateBy { it.item.id })
     }
 
     override suspend fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): Result<List<YouTubePlaylistItem>> = ioScope.asResult { dao.findPlaylistItemByPlaylistId(id) }
+    ): Result<Updatable<List<YouTubePlaylistItem>>> = ioScope.asResult {
+        dao.findUpdatablePlaylistItemsByPlaylistId(id)
+    }
 
     override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?,
-    ): Result<YouTubePlaylistWithItems?> = ioScope.asResult {
+    ): Result<Updatable<YouTubePlaylistWithItems>?> = ioScope.asResult {
         database.withTransaction {
-            val playlist = dao.findPlaylistById(id) ?: return@withTransaction null
-            val items = dao.findPlaylistItemByPlaylistId(playlist.id)
-            YouTubePlaylistWithItems.create(playlist, items)
+            val playlist = dao.findUpdatablePlaylistById(id) ?: return@withTransaction null
+            val items = dao.findPlaylistItemByPlaylistId(id)
+            YouTubePlaylistWithItems.fromCache(playlist.item, items, playlist.cacheControl)
         }
     }
 
     override suspend fun fetchPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummaries? =
         dao.findPlaylistWithItemSummaries(id)
 
-    override suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems) {
+    override suspend fun updatePlaylistWithItems(updatable: Updatable<YouTubePlaylistWithItems>) {
         dao.updatePlaylistWithItems(updatable)
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<YouTubeVideoExtended>> =
+    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>> =
         ioScope.asResult {
             fetchByIds(ids) { findVideosById(it) }.flatten()
         }
@@ -131,9 +140,8 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.addFreeChatItems(ids, false, YouTubeVideo.MAX_AGE_DEFAULT)
     }
 
-    override suspend fun addVideo(
-        video: Collection<YouTubeVideoExtended>,
-    ) = ioScope.asResult { dao.addVideos(video) }.getOrThrow()
+    override suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>) =
+        ioScope.asResult { dao.addVideos(video) }.getOrThrow()
 
     override suspend fun cleanUp() {
         database.youTubeChannelLogDao.deleteTable()
@@ -163,10 +171,10 @@ internal class YouTubeLocalDataSource @Inject constructor(
         removeImageByUrl(thumbs)
     }.getOrThrow()
 
-    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelDetail>> =
+    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> =
         ioScope.asResult { dao.findChannelDetail(ids) }
 
-    override suspend fun addChannelList(channelDetail: Collection<YouTubeChannelDetail>) {
+    override suspend fun addChannelList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>) {
         dao.addChannelDetails(channelDetail)
     }
 
@@ -201,4 +209,18 @@ internal class YouTubeLocalDataSource @Inject constructor(
             listOf(a).flatten()
         }
     }
+}
+
+internal fun YouTubePlaylistWithItems.Companion.fromCache(
+    playlist: YouTubePlaylist,
+    items: List<YouTubePlaylistItem>,
+    cacheControl: CacheControl,
+): Updatable<YouTubePlaylistWithItems> = PlaylistAndItemsLocal(playlist, items)
+    .toUpdatable(cacheControl)
+
+private class PlaylistAndItemsLocal(
+    override val playlist: YouTubePlaylist,
+    override val items: List<YouTubePlaylistItem>,
+) : YouTubePlaylistWithItems {
+    override val addedItems: List<YouTubePlaylistItem> get() = emptyList()
 }

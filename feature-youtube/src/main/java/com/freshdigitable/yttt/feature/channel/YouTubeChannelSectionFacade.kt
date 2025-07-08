@@ -36,7 +36,7 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
             return emptyFlow()
         }
         return flowOf(item).map { p ->
-            repository.fetchPlaylist(p).map { r -> r.associateBy { it.id } }
+            repository.fetchPlaylist(p).map { r -> r.map { it.item }.associateBy { it.id } }
         }
     }
 
@@ -47,7 +47,9 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
         }
         return flow {
             val res = item.map { i ->
-                flowOf(i).map { it to repository.fetchPlaylistItems(it, ITEM_SIZE.toLong()) }
+                flowOf(i).map {
+                    it to repository.fetchPlaylistItems(it, ITEM_SIZE.toLong()).map { p -> p.item }
+                }
             }
             emitAll(combine(res) { it.toMap() })
         }
@@ -59,7 +61,7 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
             return emptyFlow()
         }
         return flowOf(item).map { c ->
-            repository.fetchChannelList(c).map { res -> res.associateBy { it.id } }
+            repository.fetchChannelList(c).map { res -> res.map { it.item }.associateBy { it.id } }
         }
     }
 

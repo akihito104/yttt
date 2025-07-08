@@ -1,7 +1,8 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import java.time.Duration
-import java.time.Instant
 import kotlin.math.pow
 
 interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id> {
@@ -12,26 +13,20 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
     companion object {
         fun YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>.update(
-            newItems: List<YouTubePlaylistItem>?,
-            fetchedAt: Instant,
-        ): YouTubePlaylistWithItems = ForUpdate(
-            newItems = newItems,
+            newItems: Updatable<List<YouTubePlaylistItem>>,
+        ): Updatable<YouTubePlaylistWithItems> = ForUpdate(
+            newItems = newItems.item,
             cachedPlaylistWithItems = this,
-            fetchedAt = fetchedAt,
-        )
+        ).toUpdatable(ForUpdate.CacheControlImpl(newItems, this))
 
         fun newPlaylist(
-            playlist: YouTubePlaylist,
-            items: List<YouTubePlaylistItem>?,
-        ): YouTubePlaylistWithItems = NewPlaylist(
-            playlist = playlist,
-            newItems = items,
-        )
-
-        fun create(
-            playlist: YouTubePlaylist,
-            items: List<YouTubePlaylistItem>,
-        ): YouTubePlaylistWithItems = CachedPlaylist(playlist, items)
+            playlist: Updatable<YouTubePlaylist>,
+            items: Updatable<List<YouTubePlaylistItem>?>,
+        ): Updatable<YouTubePlaylistWithItems> = NewPlaylist(playlist.item, items.item)
+            .toUpdatable(
+                Updatable.latest(playlist, items).cacheControl
+                    .overrideMaxAge(if (items.item.isNullOrEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
+            )
 
         internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
         val MAX_AGE_DEFAULT: Duration = MAX_AGE_MAX.dividedBy(2.0.pow(n = 7).toLong())
@@ -39,36 +34,32 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
     private class ForUpdate(
         private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
-        private val newItems: List<YouTubePlaylistItem>?,
-        private val fetchedAt: Instant,
+        private val newItems: List<YouTubePlaylistItem>,
     ) : YouTubePlaylistWithItems {
         override val playlist: YouTubePlaylist
             get() = cachedPlaylistWithItems.playlist
         override val items: List<YouTubePlaylistItem>
-            get() = newItems ?: emptyList()
+            get() = newItems
         override val addedItems: List<YouTubePlaylistItem>
             get() {
                 val i = items.associateBy { it.id }
                 val addedId = i.keys - cachedPlaylistWithItems.itemId.toSet()
                 return addedId.mapNotNull { i[it] }
             }
-        override val cacheControl: CacheControl
-            get() = CacheControlImpl(fetchedAt, items, cachedPlaylistWithItems)
 
         class CacheControlImpl(
-            override val fetchedAt: Instant,
-            private val items: List<YouTubePlaylistItem>,
+            private val items: Updatable<List<YouTubePlaylistItem>>,
             private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
-        ) : CacheControl {
+        ) : CacheControl by items.cacheControl {
             override val maxAge: Duration
-                get() = if (items.isEmpty()) {
+                get() = if (items.item.isEmpty()) {
                     MAX_AGE_MAX
                 } else {
                     val cachedIds = cachedPlaylistWithItems.itemId.toSet()
-                    val newIds = items.map { it.id }.toSet()
+                    val newIds = items.item.map { it.id }.toSet()
                     val isNotModified = cachedIds == newIds
                     if (isNotModified) {
-                        val latest = items.maxOf { it.publishedAt }
+                        val latest = items.item.maxOf { it.publishedAt }
                         val inactionDays =
                             Duration.between(latest, fetchedAt).toDays().coerceIn(0L..7)
                         val pow = 2.0.pow(inactionDays.toDouble())
@@ -88,27 +79,6 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
             get() = newItems ?: emptyList()
         override val addedItems: List<YouTubePlaylistItem>
             get() = items
-        override val cacheControl: CacheControl
-            get() = CacheControlImpl(playlist, items)
-
-        class CacheControlImpl(
-            private val playlist: YouTubePlaylist,
-            private val items: List<YouTubePlaylistItem>,
-        ) : CacheControl {
-            override val fetchedAt: Instant
-                get() = items.firstOrNull()?.let { checkNotNull(it.cacheControl.fetchedAt) }
-                    ?: checkNotNull(playlist.cacheControl.fetchedAt)
-            override val maxAge: Duration
-                get() = if (items.isEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT
-        }
-    }
-
-    private class CachedPlaylist(
-        override val playlist: YouTubePlaylist,
-        override val items: List<YouTubePlaylistItem>,
-    ) : YouTubePlaylistWithItems, Updatable by playlist {
-        override val addedItems: List<YouTubePlaylistItem>
-            get() = emptyList()
     }
 }
 
@@ -118,7 +88,14 @@ interface YouTubePlaylistWithItemSummaries : YouTubePlaylistWithItemIds<YouTubeP
         get() = summary.map { it.playlistItemId }
 }
 
-interface YouTubePlaylistWithItemIds<T : IdBase> : Updatable {
+interface YouTubePlaylistWithItemIds<T : IdBase> {
     val playlist: YouTubePlaylist
     val itemId: List<T>
+}
+
+internal fun Updatable.Companion.latest(u1: Updatable<*>, u2: Updatable<*>): Updatable<*> {
+    check(u1.cacheControl.fetchedAt != null || u2.cacheControl.fetchedAt != null)
+    val f1 = u1.cacheControl.fetchedAt ?: return u2
+    val f2 = u2.cacheControl.fetchedAt ?: return u1
+    return if (f1 < f2) u2 else u1
 }

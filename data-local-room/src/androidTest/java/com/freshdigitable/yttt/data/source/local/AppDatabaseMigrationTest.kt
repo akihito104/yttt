@@ -168,6 +168,114 @@ class AppDatabaseMigrationTest {
             }.isInstanceOf(SQLiteConstraintException::class.java)
         }
     }
+
+    @RunWith(AndroidJUnit4::class)
+    class From18To19 {
+        @get:Rule
+        val rule = AppMigrationTestRule(18, 19, MIGRATION_18_19)
+        private val playlist = (0..2).map { youtubePlaylist18(it) }
+
+        @Before
+        fun setup(): Unit = rule.oldDb.use {
+            rule.insertForSetup("playlist" to playlist)
+        }
+
+        @Test
+        fun init(): Unit = rule.run {
+            newDb.query("SELECT * FROM playlist").use { c ->
+                assertThat(c.count).isEqualTo(3)
+                playlist.forEachIndexed { i, value ->
+                    c.moveToNext()
+                    assertThat(c.getString(0)).isEqualTo(value.getAsString("id"))
+                    assertThat(c.getString(1)).isEmpty()
+                    assertThat(c.getString(2)).isEmpty()
+                }
+            }
+            newDb.query("SELECT * FROM playlist_expire").use { c ->
+                assertThat(c.count).isEqualTo(3)
+                playlist.forEachIndexed { i, value ->
+                    c.moveToNext()
+                    assertThat(c.getString(0)).isEqualTo(value.getAsString("id"))
+                    assertThat(c.getLong(1)).isEqualTo(value.getAsLong("last_modified"))
+                    assertThat(c.getLong(2)).isEqualTo(value.getAsLong("max_age"))
+                }
+            }
+        }
+
+        @Test
+        fun update(): Unit = rule.run {
+            // setup
+            val values = ContentValues().apply {
+                put("fetched_at", 30000)
+                put("max_age", 1000)
+            }
+            // exercise
+            val playlistId0 = playlist[0].getAsString("id")
+            val actual = newDb.update(
+                "playlist_expire",
+                SQLiteDatabase.CONFLICT_ABORT,
+                values,
+                "playlist_id = ?",
+                arrayOf(playlistId0),
+            )
+            // verify
+            assertThat(actual).isEqualTo(1)
+            newDb.query("SELECT * FROM playlist_expire WHERE playlist_id = $playlistId0").use { c ->
+                c.moveToNext()
+                assertThat(c.getLong(1)).isEqualTo(values.getAsLong("fetched_at"))
+                assertThat(c.getLong(2)).isEqualTo(values.getAsLong("max_age"))
+            }
+        }
+
+        @Test
+        fun insert(): Unit = rule.run {
+            // setup
+            val playlist = ContentValues().apply {
+                put("id", "10")
+                put("title", "")
+                put("thumbnail_url", "")
+            }
+            val playlistExpire = ContentValues().apply {
+                put("playlist_id", "10")
+                put("fetched_at", 30000)
+                put("max_age", 1000)
+            }
+            // exercise
+            val playlistActual = newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, playlist)
+            val playlistExpireActual =
+                newDb.insert("playlist_expire", SQLiteDatabase.CONFLICT_ABORT, playlistExpire)
+            // verify
+            assertThat(playlistActual).isGreaterThan(-1)
+            assertThat(playlistExpireActual).isGreaterThan(-1)
+            newDb.query("SELECT * FROM playlist WHERE id = '10'").use { c ->
+                c.moveToNext()
+                assertThat(c.getString(0)).isEqualTo(playlist.getAsString("id"))
+                assertThat(c.getString(1)).isEqualTo(playlist.getAsString("title"))
+                assertThat(c.getString(2)).isEqualTo(playlist.getAsString("thumbnail_url"))
+            }
+            newDb.query("SELECT * FROM playlist_expire WHERE playlist_id = '10'").use { c ->
+                c.moveToNext()
+                assertThat(c.getString(0)).isEqualTo(playlistExpire.getAsString("playlist_id"))
+                assertThat(c.getLong(1)).isEqualTo(playlistExpire.getAsLong("fetched_at"))
+                assertThat(c.getLong(2)).isEqualTo(playlistExpire.getAsLong("max_age"))
+            }
+        }
+
+        @Test
+        fun insert_throwsConstraintExceptionForPlaylistExpire(): Unit = rule.run {
+            // setup
+            val values = ContentValues().apply {
+                put("playlist_id", "99")
+                put("fetched_at", 30000)
+                put("max_age", 1000)
+            }
+            // exercise
+            assertThatThrownBy {
+                newDb.insert("playlist_expire", SQLiteDatabase.CONFLICT_ABORT, values)
+                // verify
+            }.isInstanceOf(SQLiteConstraintException::class.java)
+        }
+    }
 }
 
 fun twitchUser(id: Int): ContentValues = ContentValues().apply {
@@ -225,4 +333,10 @@ fun twitchCategory(id: Int): ContentValues = ContentValues().apply {
     put("name", "cname_0")
     put("art_url_base", "<url is here>")
     put("igdb_id", "0")
+}
+
+fun youtubePlaylist18(id: Int): ContentValues = ContentValues().apply {
+    put("id", "$id")
+    put("last_modified", 50 * id)
+    put("max_age", 5 * id)
 }

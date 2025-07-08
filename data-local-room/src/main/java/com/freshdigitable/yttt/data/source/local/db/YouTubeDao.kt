@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.withTransaction
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -36,7 +37,7 @@ internal class YouTubeDao @Inject constructor(
             .filter { findChannel(it) == null }
             .map { YouTubeChannelTable(id = it) }
         val vIds = logs.filter { it.videoId != null }.associateBy { it.videoId }
-        val found = findVideosById(vIds.keys.filterNotNull()).map { it.id }.toSet()
+        val found = findVideosById(vIds.keys.filterNotNull()).map { it.item.id }.toSet()
         val needed = vIds.keys.filterNotNull() - found
         val videos = needed.mapNotNull { vIds[it] }
             .map {
@@ -51,11 +52,13 @@ internal class YouTubeDao @Inject constructor(
         addChannelLogEntities(logs.filter { it.videoId != null }.map { it.toDbEntity() })
     }
 
-    suspend fun addVideos(videos: Collection<YouTubeVideoExtended>) = db.withTransaction {
-        val v = videos.filter { it !is YouTubeVideoDb }
-        val entity = v.map { it.toDbEntity() }
-        val freeChat = v.map { FreeChatTable(it.id, it.isFreeChat) }
-        val expiring = v.map { YouTubeVideoExpireTable(it.id, it.cacheControl.toDb()) }
+    suspend fun addVideos(
+        videos: Collection<Updatable<YouTubeVideoExtended>>,
+    ) = db.withTransaction {
+        val v = videos.filter { it.item !is YouTubeVideoDb }
+        val entity = v.map { it.item.toDbEntity() }
+        val freeChat = v.map { FreeChatTable(it.item.id, it.item.isFreeChat) }
+        val expiring = v.map { YouTubeVideoExpireTable(it.item.id, it.cacheControl.toDb()) }
         addVideoEntities(entity)
         addFreeChatItemEntities(freeChat)
         addLiveVideoExpire(expiring)
@@ -68,15 +71,15 @@ internal class YouTubeDao @Inject constructor(
     }
 
     suspend fun addChannelDetails(
-        channelDetail: Collection<YouTubeChannelDetail>,
+        channelDetail: Collection<Updatable<YouTubeChannelDetail>>,
     ) = db.withTransaction {
-        val channels = channelDetail.map { it.toDbEntity() }
-        val additions = channelDetail.map { it.toAddition() }
+        val channels = channelDetail.map { it.item.toDbEntity() }
+        val additions = channelDetail.map { it.item.toAddition() }
         val playlists = additions.mapNotNull { it.uploadedPlayList }
             .distinct()
             .map { YouTubePlaylistTable(it) }
         val expired = channelDetail
-            .map { YouTubeChannelAdditionExpireTable(it.id, it.cacheControl.toDb()) }
+            .map { YouTubeChannelAdditionExpireTable(it.item.id, it.cacheControl.toDb()) }
         addChannels(channels)
         addPlaylists(playlists)
         addChannelAddition(additions)
@@ -93,20 +96,18 @@ internal class YouTubeDao @Inject constructor(
         updateMaxAgeById(ids, maxAge)
     }
 
-    suspend fun updatePlaylistWithItems(updatable: YouTubePlaylistWithItems) = db.withTransaction {
-        if (updatable.playlist is YouTubePlaylistTable) {
-            updatePlaylist(
-                id = updatable.playlist.id,
-                lastModified = checkNotNull(updatable.cacheControl.fetchedAt),
-                maxAge = checkNotNull(updatable.cacheControl.maxAge),
-            )
-        } else {
-            addPlaylist(updatable.toEntity())
+    suspend fun updatePlaylistWithItems(
+        updatable: Updatable<YouTubePlaylistWithItems>,
+    ) = db.withTransaction {
+        if (updatable.item.playlist !is YouTubePlaylistTable) {
+            val p = updatable.item.playlist
+            addPlaylist(YouTubePlaylistTable(p.id, p.title, p.thumbnailUrl))
         }
-        if (updatable.items.any { it !is YouTubePlaylistItemDb }) {
-            removePlaylistItemsByPlaylistId(updatable.playlist.id)
-            if (updatable.items.isNotEmpty()) {
-                addPlaylistItems(updatable.items.map { it.toDbEntity() })
+        addPlaylistExpire(updatable.toEntity())
+        if (updatable.item.items.any { it !is YouTubePlaylistItemDb }) {
+            removePlaylistItemsByPlaylistId(updatable.item.playlist.id)
+            if (updatable.item.items.isNotEmpty()) {
+                addPlaylistItems(updatable.item.items.map { it.toDbEntity() })
             }
         }
     }
@@ -162,13 +163,11 @@ internal fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTa
     id = id, title = title, iconUrl = iconUrl,
 )
 
-private fun YouTubePlaylistWithItems.toEntity(): YouTubePlaylistTable = YouTubePlaylistTable(
-    id = playlist.id,
-    cacheControl = YouTubePlaylistCacheControlDb(
-        checkNotNull(cacheControl.fetchedAt),
-        checkNotNull(cacheControl.maxAge),
+private fun Updatable<YouTubePlaylistWithItems>.toEntity(): YouTubePlaylistExpireTable =
+    YouTubePlaylistExpireTable(
+        id = item.playlist.id,
+        cacheControl = cacheControl.toDb(),
     )
-)
 
 private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(
     id,

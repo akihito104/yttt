@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.feature.video
 
 import android.net.Uri
 import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.Updatable.Companion.map
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.asFreeChat
@@ -14,9 +15,9 @@ class AddStreamUseCase @Inject constructor(
     suspend operator fun invoke(data: Input): Result<YouTubeVideoExtended> =
         repository.fetchVideoList(setOf(data.id))
             .onFailure { logE(throwable = it) { "addVideoFromWorker: $data" } }
-            .map { v -> if (data.isFreeChat) v.map { it.asFreeChat() } else v }
+            .map { v -> if (data.isFreeChat) v.map { u -> u.map { it.asFreeChat() } } else v }
             .onSuccess { repository.addVideo(it) }
-            .map { it.first() }
+            .map { it.first().item }
 
     class Input private constructor(
         val id: YouTubeVideo.Id,

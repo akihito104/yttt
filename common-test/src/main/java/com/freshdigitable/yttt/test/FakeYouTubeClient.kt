@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
+import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -83,7 +84,6 @@ abstract class FakeYouTubeClient : YouTubeClient {
     companion object {
         fun channelDetail(
             id: Int,
-            fetchedAt: Instant = Instant.EPOCH,
         ): YouTubeChannelDetail = object : YouTubeChannelDetail {
             override val id: YouTubeChannel.Id = YouTubeChannel.Id("channel_$id")
             override val uploadedPlayList: YouTubePlaylist.Id =
@@ -99,8 +99,48 @@ abstract class FakeYouTubeClient : YouTubeClient {
             override val customUrl: String = ""
             override val keywords: Collection<String> = emptyList()
             override val description: String = ""
-            override val cacheControl: CacheControl
-                get() = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
         }
+
+        fun playlist(id: YouTubePlaylist.Id): YouTubePlaylist = object : YouTubePlaylist {
+            override val id: YouTubePlaylist.Id get() = id
+            override val title: String get() = "playlist_${id.value}"
+            override val thumbnailUrl: String get() = ""
+        }
+
+        fun playlistItem(
+            id: YouTubePlaylistItem.Id,
+            playlistId: YouTubePlaylist.Id,
+            channel: YouTubeChannelTitle = object : YouTubeChannelTitle {
+                override val id: YouTubeChannel.Id get() = YouTubeChannel.Id("channel_0")
+                override val title: String get() = "Channel"
+            },
+            videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id.value}_${playlistId.value}"),
+            publishedAt: Instant = Instant.EPOCH,
+        ): YouTubePlaylistItem = YouTubePlaylistItemEntity(
+            id = id,
+            playlistId = playlistId,
+            title = "title",
+            channel = channel,
+            thumbnailUrl = "",
+            videoId = videoId,
+            description = "",
+            videoOwnerChannelId = null,
+            publishedAt = publishedAt,
+        )
     }
 }
+
+fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
+    CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
+
+private data class YouTubePlaylistItemEntity(
+    override val id: YouTubePlaylistItem.Id,
+    override val playlistId: YouTubePlaylist.Id,
+    override val title: String,
+    override val channel: YouTubeChannelTitle,
+    override val thumbnailUrl: String,
+    override val videoId: YouTubeVideo.Id,
+    override val description: String,
+    override val videoOwnerChannelId: YouTubeChannel.Id?,
+    override val publishedAt: Instant,
+) : YouTubePlaylistItem

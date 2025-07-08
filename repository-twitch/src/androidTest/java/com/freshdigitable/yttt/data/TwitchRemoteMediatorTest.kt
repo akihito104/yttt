@@ -18,6 +18,7 @@ import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchLiveSubscription
 import com.freshdigitable.yttt.data.source.remote.Broadcaster
@@ -37,6 +38,7 @@ import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
+import com.freshdigitable.yttt.test.fromRemote
 import com.google.common.truth.FailureMetadata
 import com.google.common.truth.Subject
 import com.google.common.truth.ThrowableSubject
@@ -51,6 +53,7 @@ import dagger.hilt.testing.TestInstallIn
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Timeout
@@ -89,25 +92,34 @@ class TwitchRemoteMediatorTest {
     @Before
     fun setup(): Unit = runBlocking {
         hiltRule.inject()
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(10)
-        localSource.setMe(authUser)
+        localSource.deleteAllTables()
+
+        FakeDateTimeProviderModule.apply {
+            onTimeAdvanced = { current ->
+                FakeRemoteSourceModule.userDetails = {
+                    Response.success(
+                        TwitchUserResponse(broadcaster.map { it.toUserDetail() }),
+                        Headers.Builder().add("date", current).build(),
+                    )
+                }
+            }
+            instant = Instant.ofEpochMilli(100)
+        }
+        localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
         val stream = broadcaster.take(10).map { stream(it) }
         val streams = object : TwitchStreams.Updated {
             override val followerId: TwitchUser.Id get() = authUser.id
             override val streams: List<TwitchStream> get() = stream
             override val updatableThumbnails: Set<String> get() = emptySet()
             override val deletedThumbnails: Set<String> get() = emptySet()
-            override val cacheControl: CacheControl get() = CacheControl.zero()
         }
-        localSource.replaceFollowedStreams(streams)
+        localSource.replaceFollowedStreams(streams.toUpdatable())
         localSource.replaceAllFollowings(followings)
-        FakeRemoteSourceModule.userDetails =
-            { Response.success(TwitchUserResponse(broadcaster.map { it.toUserDetail() })) }
     }
 
     @After
     fun tearDown() = runTest {
-        FakeDateTimeProviderModule.instant = null
+        FakeDateTimeProviderModule.clear()
         FakeRemoteSourceModule.clear()
     }
 
@@ -131,7 +143,7 @@ class TwitchRemoteMediatorTest {
     fun firstTimeToLoadSubscriptionPage_needsRefresh() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        FakeRemoteSourceModule.following = { followingResponse(100) }
+        FakeRemoteSourceModule.following = { followingResponse(100, updatableAt) }
         // exercise
         val actual = sut.flow.asSnapshot()
         // verify
@@ -178,7 +190,7 @@ class TwitchRemoteMediatorTest {
     fun failedToGetUserDetailAtRefresh_returnsSuccess() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        FakeRemoteSourceModule.following = { followingResponse(100) }
+        FakeRemoteSourceModule.following = { followingResponse(100, updatableAt) }
         FakeRemoteSourceModule.userDetails =
             { Response.error(500, "internal error".toResponseBody()) }
         // exercise
@@ -219,10 +231,7 @@ class TwitchRemoteMediatorTest {
             description = "description",
             createdAt = Instant.EPOCH,
             profileImageUrl = "",
-        ) {
-            override val cacheControl: CacheControl
-                get() = CacheControl.create(Instant.EPOCH, Duration.ofMinutes(5))
-        }
+        ) {}
 
         fun broadcaster(count: Int): List<Broadcaster> = (0..<count).map {
             Broadcaster(
@@ -233,13 +242,17 @@ class TwitchRemoteMediatorTest {
             )
         }
 
-        fun followingResponse(count: Int): Response<FollowedChannelsResponse> = Response.success(
-            FollowedChannelsResponse(
-                item = broadcaster(count),
-                pagination = Pagination(null),
-                total = count,
+        fun followingResponse(count: Int, date: Instant): Response<FollowedChannelsResponse> =
+            Response.success(
+                FollowedChannelsResponse(
+                    item = broadcaster(count),
+                    pagination = Pagination(null),
+                    total = count,
+                ),
+                Headers.Builder()
+                    .add("date", date)
+                    .build(),
             )
-        )
 
         fun stream(broadcaster: Broadcaster): FollowingStream = FollowingStream(
             id = TwitchStream.Id("stream_${broadcaster.id.value}"),

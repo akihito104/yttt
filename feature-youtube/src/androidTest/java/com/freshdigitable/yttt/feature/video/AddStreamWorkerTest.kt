@@ -8,6 +8,9 @@ import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -22,6 +25,7 @@ import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
+import com.freshdigitable.yttt.test.fromRemote
 import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -78,8 +82,12 @@ class AddStreamWorkerTest {
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         val video = video(1, channelDetail)
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-            videoList = caller.wrap(expected = 1) { listOf(video) },
-            channelList = caller.wrap(expected = 1) { listOf(channelDetail) },
+            videoList = caller.wrap(expected = 1) {
+                listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+            },
+            channelList = caller.wrap(expected = 1) {
+                listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+            },
         )
         hiltRule.inject()
         initTestWorkManager()
@@ -92,7 +100,7 @@ class AddStreamWorkerTest {
         // verify
         assertThat(actual?.state).isEqualTo(WorkInfo.State.SUCCEEDED)
         val actualVideo = localSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
-        assertThat(actualVideo.isFreeChat).isFalse()
+        assertThat(actualVideo.item.isFreeChat).isFalse()
     }
 
     @Inject
@@ -104,8 +112,12 @@ class AddStreamWorkerTest {
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         val video = video(1, channelDetail)
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-            videoList = caller.wrap(expected = 1) { listOf(video) },
-            channelList = caller.wrap(expected = 1) { listOf(channelDetail) },
+            videoList = caller.wrap(expected = 1) {
+                listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+            },
+            channelList = caller.wrap(expected = 1) {
+                listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+            },
         )
         hiltRule.inject()
         initTestWorkManager()
@@ -118,7 +130,7 @@ class AddStreamWorkerTest {
         // verify
         assertThat(actual?.state).isEqualTo(WorkInfo.State.SUCCEEDED)
         val actualVideo = localSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
-        assertThat(actualVideo.isFreeChat).isTrue()
+        assertThat(actualVideo.item.isFreeChat).isTrue()
     }
 
     private fun initTestWorkManager() {
@@ -130,8 +142,8 @@ class AddStreamWorkerTest {
 }
 
 class FakeYouTubeClientImpl(
-    private val videoList: ((Set<YouTubeVideo.Id>) -> List<YouTubeVideo>)? = null,
-    private val channelList: ((Set<YouTubeChannel.Id>) -> List<YouTubeChannelDetail>)? = null,
+    private val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
+    private val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
 ) : FakeYouTubeClient() {
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }

@@ -122,8 +122,8 @@ internal data class YouTubeChannelAdditionExpireTable(
     @ColumnInfo(name = "channel_id")
     val channelId: YouTubeChannel.Id,
     @Embedded
-    override val cacheControl: CacheControlDb,
-) : Updatable {
+    val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -141,8 +141,6 @@ internal data class YouTubeChannelDetailDb(
     override val iconUrl: String,
     @Embedded
     val addition: YouTubeChannelAdditionTable,
-    @Embedded
-    override val cacheControl: CacheControlDb,
 ) : YouTubeChannelDetail, YouTubeChannel, YouTubeChannelAddition by addition {
     @get:Ignore
     override val id: YouTubeChannel.Id get() = addition.id
@@ -155,9 +153,14 @@ internal data class YouTubeChannelDetailDb(
                 "INNER JOIN channel_addition_expire AS e ON c.id = e.channel_id " +
                 "WHERE c.id IN (:id)"
         )
-        suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<YouTubeChannelDetailDb>
+        suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<UpdatableYouTubeChannelDetailDb>
     }
 }
+
+internal data class UpdatableYouTubeChannelDetailDb(
+    @Embedded override val item: YouTubeChannelDetailDb,
+    @Embedded override val cacheControl: CacheControlDb,
+) : Updatable<YouTubeChannelDetail>
 
 @Entity(
     tableName = "channel_log",

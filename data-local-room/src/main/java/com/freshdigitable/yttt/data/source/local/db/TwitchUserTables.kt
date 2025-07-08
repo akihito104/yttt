@@ -79,36 +79,41 @@ internal class TwitchUserDetailTable(
 }
 
 @DatabaseView(
-    value = "SELECT u.login_name, u.display_name, d.*, e.fetched_at, e.max_age " +
-        "FROM twitch_user_detail AS d " +
-        "INNER JOIN twitch_user AS u ON d.user_id = u.id " +
-        "LEFT OUTER JOIN twitch_user_detail_expire AS e ON d.user_id = e.user_id",
+    value = "SELECT u.login_name, u.display_name, d.* FROM twitch_user_detail AS d " +
+        "INNER JOIN twitch_user AS u ON d.user_id = u.id",
     viewName = "twitch_user_detail_view",
 )
 internal data class TwitchUserDetailDbView(
     @Embedded private val detail: TwitchUserDetailTable,
     @ColumnInfo("login_name") override val loginName: String,
     @ColumnInfo("display_name") override val displayName: String,
-    @Embedded override val cacheControl: CacheControlDb,
 ) : TwitchUserDetail {
     override val id: TwitchUser.Id get() = detail.id
     override val profileImageUrl: String get() = detail.profileImageUrl
     override val createdAt: Instant get() = detail.createdAt
     override val description: String get() = detail.description
+}
 
+internal data class TwitchUserDetailDbUpdatable(
+    @Embedded override val item: TwitchUserDetailDbView,
+    @Embedded override val cacheControl: CacheControlDb,
+) : Updatable<TwitchUserDetail> {
     @androidx.room.Dao
     internal interface Dao {
-        @Query("SELECT u.* FROM twitch_auth_user AS a INNER JOIN twitch_user_detail_view AS u ON a.user_id = u.user_id LIMIT 1")
-        suspend fun findMe(): TwitchUserDetailDbView?
+        @Query(
+            "SELECT u.*, e.fetched_at AS fetched_at, e.max_age AS max_age FROM twitch_auth_user AS a " +
+                "INNER JOIN twitch_user_detail_view AS u ON a.user_id = u.user_id " +
+                "LEFT OUTER JOIN twitch_user_detail_expire AS e ON u.user_id = e.user_id " +
+                "LIMIT 1"
+        )
+        suspend fun findMe(): TwitchUserDetailDbUpdatable?
 
         @Query(
-            "SELECT v.* FROM (SELECT * FROM twitch_user_detail_view WHERE user_id IN (:ids)) AS v " +
-                "INNER JOIN (SELECT * FROM twitch_user_detail_expire WHERE :current < (fetched_at + max_age)) AS e ON v.user_id = e.user_id"
+            "SELECT v.*, e.fetched_at AS fetched_at, e.max_age AS max_age " +
+                "FROM (SELECT * FROM twitch_user_detail_view WHERE user_id IN (:ids)) AS v " +
+                "LEFT OUTER JOIN twitch_user_detail_expire AS e ON v.user_id = e.user_id"
         )
-        suspend fun findUserDetail(
-            ids: Collection<TwitchUser.Id>,
-            current: Instant,
-        ): List<TwitchUserDetailDbView>
+        suspend fun findUserDetail(ids: Collection<TwitchUser.Id>): List<TwitchUserDetailDbUpdatable>
     }
 }
 
@@ -126,8 +131,8 @@ internal class TwitchUserDetailExpireTable(
     @PrimaryKey
     @ColumnInfo("user_id", index = true)
     val userId: TwitchUser.Id,
-    @Embedded override val cacheControl: CacheControlDb,
-) : Updatable {
+    @Embedded val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -200,8 +205,8 @@ internal class TwitchBroadcasterExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("follower_user_id", index = true)
     val followerId: TwitchUser.Id,
-    @Embedded override val cacheControl: CacheControlDb,
-) : Updatable {
+    @Embedded val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
@@ -271,12 +276,12 @@ internal interface TwitchUserDaoProviders {
     val twitchBroadcasterExpireDao: TwitchBroadcasterExpireTable.Dao
     val twitchAuthUserDao: TwitchAuthorizedUserTable.Dao
     val twitchBroadcasterDbDao: TwitchBroadcasterDb.Dao
-    val twitchUserDetailViewDao: TwitchUserDetailDbView.Dao
+    val twitchUserDetailViewDao: TwitchUserDetailDbUpdatable.Dao
 }
 
 internal interface TwitchUserDao : TwitchUserTable.Dao, TwitchUserDetailTable.Dao,
     TwitchUserDetailExpireTable.Dao, TwitchBroadcasterTable.Dao, TwitchBroadcasterExpireTable.Dao,
-    TwitchAuthorizedUserTable.Dao, TwitchBroadcasterDb.Dao, TwitchUserDetailDbView.Dao
+    TwitchAuthorizedUserTable.Dao, TwitchBroadcasterDb.Dao, TwitchUserDetailDbUpdatable.Dao
 
 internal class TwitchUserDaoImpl @Inject constructor(
     private val db: TwitchUserDaoProviders
@@ -287,7 +292,7 @@ internal class TwitchUserDaoImpl @Inject constructor(
     TwitchBroadcasterExpireTable.Dao by db.twitchBroadcasterExpireDao,
     TwitchAuthorizedUserTable.Dao by db.twitchAuthUserDao,
     TwitchBroadcasterDb.Dao by db.twitchBroadcasterDbDao,
-    TwitchUserDetailDbView.Dao by db.twitchUserDetailViewDao {
+    TwitchUserDetailDbUpdatable.Dao by db.twitchUserDetailViewDao {
     override suspend fun deleteTable() {
         listOf(
             db.twitchUserDao,

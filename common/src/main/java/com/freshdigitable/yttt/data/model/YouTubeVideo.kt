@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_FREE_CHAT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_NOT_UPDATABLE
@@ -16,7 +17,7 @@ import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 
-interface YouTubeVideo : Updatable {
+interface YouTubeVideo {
     val id: Id
     val title: String
     val channel: YouTubeChannelTitle
@@ -61,12 +62,18 @@ interface YouTubeVideo : Updatable {
                 && Duration.between(s, current) > MAX_AGE_LIMIT_SOON
         }
 
-        fun YouTubeVideo.extend(
-            old: YouTubeVideoExtended?,
+        @Suppress("UNCHECKED_CAST")
+        fun Updatable<YouTubeVideo>.extend(
+            old: Updatable<YouTubeVideoExtended>?,
             isFreeChat: Boolean? = null,
-        ): YouTubeVideoExtended = when (this) {
-            is YouTubeVideoExtended -> this
+        ): Updatable<YouTubeVideoExtended> = when (this.item) {
+            is YouTubeVideoExtended -> this as Updatable<YouTubeVideoExtended>
             else -> YouTubeVideoExtendedImpl(old = old, video = this, isFreeChat)
+                .toUpdatable(
+                    this.cacheControl.overrideMaxAge(
+                        YouTubeVideoExtendedImpl.maxAge(old, this, isFreeChat),
+                    ),
+                )
         }
 
         /**
@@ -119,31 +126,29 @@ interface YouTubeVideoExtended : YouTubeVideo {
 }
 
 private class YouTubeVideoExtendedImpl(
-    private val old: YouTubeVideoExtended?,
-    private val video: YouTubeVideo,
+    private val old: Updatable<YouTubeVideoExtended>?,
+    private val video: Updatable<YouTubeVideo>,
     private val _isFreeChat: Boolean?,
-) : YouTubeVideoExtended, YouTubeVideo by video {
+) : YouTubeVideoExtended, YouTubeVideo by video.item {
     override val channel: YouTubeChannel
-        get() = old?.channel?.update(video.channel) ?: video.channel.toChannel()
+        get() = old?.item?.channel?.update(video.item.channel) ?: video.item.channel.toChannel()
     override val isFreeChat: Boolean
-        get() = isFreeChat(old, video, _isFreeChat)
+        get() = isFreeChat(old?.item, video.item, _isFreeChat)
     override val isThumbnailUpdatable: Boolean
         get() {
             val o = old ?: return false
             return when {
                 isFreeChat -> o.isUpdatable(checkNotNull(video.cacheControl.fetchedAt)) // at same time of updating this entity
-                isLiveStream() -> (o.title != title || (o.isUpcoming() && isNowOnAir()))
+                isLiveStream() -> (o.item.title != title || (o.item.isUpcoming() && isNowOnAir()))
                 else -> false
             }
         }
-    override val cacheControl: CacheControl
-        get() = video.cacheControl.overrideMaxAge(maxAge(old, video, _isFreeChat))
 
     companion object {
         fun YouTubeVideoExtendedImpl.createAsFreeChat(): YouTubeVideoExtended =
             YouTubeVideoExtendedImpl(
                 old = this.old,
-                video = this,
+                video = this.video,
                 _isFreeChat = true,
             )
 
@@ -158,23 +163,23 @@ private class YouTubeVideoExtendedImpl(
         }
 
         fun maxAge(
-            old: YouTubeVideoExtended?,
-            new: YouTubeVideo,
+            old: Updatable<YouTubeVideoExtended>?,
+            new: Updatable<YouTubeVideo>,
             isNewVideoFreeChat: Boolean?,
         ): Duration {
             val defaultValue = MAX_AGE_DEFAULT
             val fetchedAt = checkNotNull(new.cacheControl.fetchedAt)
             return when {
-                isFreeChat(old, new, isNewVideoFreeChat) -> MAX_AGE_FREE_CHAT
-                new.isUnscheduledLive() -> defaultValue
-                new.isPostponedLive(fetchedAt) -> defaultValue
-                new.isUpcoming() -> Duration.between(
+                isFreeChat(old?.item, new.item, isNewVideoFreeChat) -> MAX_AGE_FREE_CHAT
+                new.item.isUnscheduledLive() -> defaultValue
+                new.item.isPostponedLive(fetchedAt) -> defaultValue
+                new.item.isUpcoming() -> Duration.between(
                     fetchedAt,
-                    (fetchedAt + defaultValue).coerceAtMost(checkNotNull(new.scheduledStartDateTime)),
+                    (fetchedAt + defaultValue).coerceAtMost(checkNotNull(new.item.scheduledStartDateTime)),
                 )
 
-                new.isNowOnAir() -> MAX_AGE_ON_AIR
-                new.isArchived -> MAX_AGE_NOT_UPDATABLE
+                new.item.isNowOnAir() -> MAX_AGE_ON_AIR
+                new.item.isArchived -> MAX_AGE_NOT_UPDATABLE
                 else -> defaultValue
             }
         }

@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logE
@@ -35,12 +36,12 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
                 .onFailure { return Result.failure(it) }
             val me = checkNotNull(meRes.getOrNull())
 
-            val streams = updateOnAirStreams(me)
+            val streams = updateOnAirStreams(me.item)
                 .onFailure { return Result.failure(it) }
                 .onSuccess { putMetric("streaming_channel", it.size.toLong()) }
                 .getOrDefault(emptyList())
 
-            val schedules = updateChannelSchedules(me, this)
+            val schedules = updateChannelSchedules(me.item, this)
                 .onFailure { return Result.failure(it) }
                 .onSuccess { putMetric("schedule", it.size.toLong()) }
                 .getOrDefault(emptyList())
@@ -54,16 +55,16 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
 
     private suspend fun updateOnAirStreams(me: TwitchUserDetail): Result<List<TwitchStream>> =
         twitchRepository.fetchFollowedStreams(me.id).onSuccess {
-            if (it is TwitchStreams.Updated) {
-                val updatableThumbnails = it.updatableThumbnails
-                if (updatableThumbnails.isNotEmpty()) {
-                    twitchRepository.removeImageByUrl(updatableThumbnails)
-                }
-                twitchRepository.replaceFollowedStreams(it)
+            val updated = it?.item as? TwitchStreams.Updated ?: return@onSuccess
+            val updatableThumbnails = updated.updatableThumbnails
+            if (updatableThumbnails.isNotEmpty()) {
+                twitchRepository.removeImageByUrl(updatableThumbnails)
             }
+            @Suppress("UNCHECKED_CAST")
+            twitchRepository.replaceFollowedStreams(it as Updatable<TwitchStreams.Updated>)
         }.onFailure {
             logE(throwable = it) { "updateOnAirStreams: " }
-        }.map { checkNotNull(it).streams }
+        }.map { checkNotNull(it).item.streams }
 
     private suspend fun updateChannelSchedules(
         me: TwitchUserDetail,
@@ -75,7 +76,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
                 if (it is TwitchFollowings.Updated) {
                     twitchRepository.cleanUpByUserId(it.removed)
                 }
-            }.map { it.followings }
+            }.map { it.item.followings }
             .getOrDefault(emptyList())
         t.putMetric("subs", followings.size.toLong())
         if (followings.isEmpty()) {
@@ -108,7 +109,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
 
     private suspend fun updateChannelSchedule(it: TwitchBroadcaster): Result<TwitchChannelSchedule?> =
         twitchRepository.fetchFollowedStreamSchedule(it.id).onSuccess { s ->
-            val segments = s.schedule?.segments ?: return@onSuccess
+            val segments = s.item?.segments ?: return@onSuccess
             val current = dateTimeProvider.now()
             val finished = segments.filter {
                 (it.startTime + Duration.ofHours(6)) < current ||
@@ -117,5 +118,5 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
             if (finished.isNotEmpty()) {
                 twitchRepository.removeStreamScheduleById(finished.toSet())
             }
-        }.onFailure { logE(throwable = it) { "updateChannelSchedule: " } }.map { it.schedule }
+        }.onFailure { logE(throwable = it) { "updateChannelSchedule: " } }.map { it.item }
 }

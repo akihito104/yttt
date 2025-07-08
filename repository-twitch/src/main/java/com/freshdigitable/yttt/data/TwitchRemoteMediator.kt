@@ -40,8 +40,8 @@ internal class TwitchRemoteMediator @Inject constructor(
             .getOrNull() ?: return MediatorResult.Success(endOfPaginationReached = true)
         when (loadType) {
             LoadType.REFRESH -> {
-                repository.fetchAllFollowings(me.id)
-                    .map { followings -> followings.followings.map { it.id } }
+                repository.fetchAllFollowings(me.item.id)
+                    .map { followings -> followings.item.followings.map { it.id } }
                     .onFailure {
                         logE(throwable = it) { "load(refresh):" }
                         return MediatorResult.Error(it)

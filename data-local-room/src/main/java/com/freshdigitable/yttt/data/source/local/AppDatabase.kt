@@ -41,6 +41,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDaoProviders
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemSummaryDb
@@ -66,6 +67,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         FreeChatTable::class,
         YouTubeVideoExpireTable::class,
         YouTubePlaylistTable::class,
+        YouTubePlaylistExpireTable::class,
         YouTubePlaylistItemTable::class,
         TwitchUserTable::class,
         TwitchUserDetailTable::class,
@@ -84,7 +86,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         YouTubePlaylistItemSummaryDb::class,
         TwitchUserDetailDbView::class,
     ],
-    version = 17,
+    version = 20,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -104,6 +106,8 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
             spec = AppDatabase.MigrateRemoveTwitchUserDetailViewsCount::class,
         ),
         AutoMigration(from = 16, to = 17, spec = AppDatabase.MigrateRenameExpiredAt::class),
+        AutoMigration(from = 17, to = 18),
+        AutoMigration(from = 19, to = 20),
     ]
 )
 @TypeConverters(
@@ -166,7 +170,7 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
         private const val DATABASE_NAME = "ytttdb"
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name)
-                .addMigrations(MIGRATION_13_14, MIGRATION_15_16)
+                .addMigrations(MIGRATION_13_14, MIGRATION_15_16, MIGRATION_18_19)
                 .build()
     }
 }
@@ -235,6 +239,34 @@ internal val MIGRATION_15_16 = object : Migration(15, 16) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_twitch_stream_user_id` ON `twitch_stream` (`user_id`)")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_twitch_stream_game_id` ON `twitch_stream` (`game_id`)")
         db.foreignKeyCheck("twitch_stream")
+    }
+}
+
+internal val MIGRATION_18_19 = object : Migration(18, 19) {
+    // playlist(18).id -> playlist(19).(id,title,thumbnail_url)
+    // playlist(18).(id,last_modified,max_age) -> playlist_expire.(playlist_id,fetched_at,max_age)
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `__playlist` (`id` TEXT NOT NULL, `title` TEXT NOT NULL DEFAULT '', " +
+                "`thumbnail_url` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`id`))"
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `__playlist_expire` (`playlist_id` TEXT NOT NULL, " +
+                "`fetched_at` INTEGER DEFAULT null, `max_age` INTEGER DEFAULT null, " +
+                "PRIMARY KEY(`playlist_id`), " +
+                "FOREIGN KEY(`playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+        )
+
+        db.execSQL("INSERT INTO __playlist (id) SELECT id FROM playlist")
+        db.execSQL(
+            "INSERT INTO __playlist_expire (playlist_id, fetched_at, max_age) " +
+                "SELECT id, last_modified, max_age FROM playlist"
+        )
+
+        db.execSQL("DROP TABLE playlist")
+        db.execSQL("ALTER TABLE __playlist RENAME TO playlist")
+        db.execSQL("ALTER TABLE __playlist_expire RENAME TO playlist_expire")
+        db.foreignKeyCheck("playlist_expire")
     }
 }
 

@@ -20,7 +20,3 @@ interface TwitchLiveSchedule : TwitchLiveVideo<TwitchChannelSchedule.Stream.Id> 
         }
     }
 }
-
-interface TwitchLiveChannelSchedule : TwitchChannelSchedule {
-    override val broadcaster: TwitchUserDetail
-}

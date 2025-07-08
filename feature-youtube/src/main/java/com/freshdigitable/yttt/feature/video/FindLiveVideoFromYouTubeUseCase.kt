@@ -17,7 +17,7 @@ internal class FindLiveVideoFromYouTubeUseCase @Inject constructor(
         return repository.fetchVideoList(setOf(id.mapTo()))
             .onFailure { logE(throwable = it) { "invoke: $id" } }
             .onSuccess { repository.addVideo(it) }
-            .map { v -> v.firstOrNull()?.let { LiveVideo.create(it) } }
+            .map { v -> v.firstOrNull()?.let { LiveVideo.create(it.item) } }
     }
 }
 

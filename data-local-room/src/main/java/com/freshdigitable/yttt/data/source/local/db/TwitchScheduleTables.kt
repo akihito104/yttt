@@ -13,7 +13,6 @@ import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
-import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -41,14 +40,21 @@ internal class TwitchChannelVacationScheduleTable(
         @Upsert
         suspend fun addChannelVacationSchedules(streams: Collection<TwitchChannelVacationScheduleTable>)
 
-        @Query("SELECT * FROM twitch_channel_schedule_vacation WHERE user_id = :userId")
-        suspend fun findVacationById(userId: TwitchUser.Id): TwitchChannelVacationScheduleTable?
-
         @Query("DELETE FROM twitch_channel_schedule_vacation WHERE user_id IN (:ids)")
         suspend fun removeChannelVacationSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
 
         @Query("DELETE FROM twitch_channel_schedule_vacation")
         override suspend fun deleteTable()
+
+        @Query(
+            "SELECT u.*, v.vacation_start AS vacation_start, v.vacation_end AS vacation_end," +
+                " e.fetched_at AS fetched_at, e.max_age AS max_age " +
+                "FROM twitch_channel_schedule_vacation AS v " +
+                "INNER JOIN twitch_user AS u ON u.id = :userId " +
+                "LEFT OUTER JOIN twitch_channel_schedule_expire AS e ON e.user_id = :userId " +
+                "WHERE v.user_id = :userId"
+        )
+        suspend fun findChannelVacationUpdatable(userId: TwitchUser.Id): TwitchChannelVacationUpdatableDb?
     }
 }
 
@@ -58,6 +64,12 @@ internal class TwitchChannelVacationSchedule(
     @ColumnInfo(name = "vacation_end")
     override val endTime: Instant,
 ) : TwitchChannelSchedule.Vacation
+
+internal class TwitchChannelVacationUpdatableDb(
+    @Embedded val vacation: TwitchChannelVacationSchedule?,
+    @Embedded val user: TwitchUserTable,
+    @Embedded val cacheControl: CacheControlDb,
+)
 
 @Entity(
     tableName = "twitch_channel_schedule_stream",
@@ -149,15 +161,12 @@ internal class TwitchChannelScheduleStream(
 internal class TwitchChannelScheduleExpireTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo("user_id") val userId: TwitchUser.Id,
-    @Embedded override val cacheControl: CacheControlDb,
-) : Updatable {
+    @Embedded val cacheControl: CacheControlDb,
+) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addChannelScheduleExpireEntity(schedule: Collection<TwitchChannelScheduleExpireTable>)
-
-        @Query("SELECT * FROM twitch_channel_schedule_expire WHERE user_id = :userId")
-        suspend fun findChannelScheduleExpire(userId: TwitchUser.Id): TwitchChannelScheduleExpireTable?
 
         @Query("DELETE FROM twitch_channel_schedule_expire WHERE user_id IN (:id)")
         suspend fun removeChannelScheduleExpireEntity(id: Collection<TwitchUser.Id>)
@@ -207,8 +216,8 @@ internal class TwitchLiveScheduleDb(
     internal interface Dao {
         companion object {
             private const val SQL_LIVE_SCHEDULE =
-                "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base, " +
-                    "c.igdb_id AS category_igdb_id, u.* " +
+                "SELECT s.*, c.name AS category_name, c.art_url_base AS category_art_url_base," +
+                    " c.igdb_id AS category_igdb_id, u.* " +
                     "FROM twitch_channel_schedule_stream AS s " +
                     "LEFT OUTER JOIN twitch_category AS c ON s.category_id = c.id " +
                     "INNER JOIN twitch_user_detail_view AS u ON s.user_id = u.user_id"

@@ -4,10 +4,11 @@ import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
-import com.freshdigitable.yttt.data.model.TwitchChannelScheduleUpdatable
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
+import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.db.DateTimeProviderFake
@@ -16,6 +17,7 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDaoImpl
+import com.freshdigitable.yttt.test.zero
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import org.assertj.core.api.Assertions.assertThat
@@ -38,11 +40,11 @@ class TwitchLiveLocalDataSourceTest {
 
         @Before
         fun setup() = rule.runWithLocalSource {
-            dataSource.setMe(me)
+            dataSource.setMe(me.toUpdatable(CacheControl.zero()))
             dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
-            dataSource.addUsers(listOf(broadcaster))
+            dataSource.addUsers(listOf(broadcaster.toUpdatable(CacheControl.zero())))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            val updatable = TwitchChannelScheduleUpdatable.create(schedule, CacheControl.zero())
+            val updatable = schedule.toUpdatable<TwitchChannelSchedule?>(CacheControl.zero())
             dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
@@ -90,11 +92,11 @@ class TwitchLiveLocalDataSourceTest {
                 me1 to listOf(broadcaster(broadcaster)),
                 me2 to listOf(broadcaster(broadcaster), broadcaster(me1))
             ).forEach { (me, broadcasters) ->
-                dataSource.setMe(me)
+                dataSource.setMe(me.toUpdatable(CacheControl.zero()))
                 dataSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
-            val updatable = TwitchChannelScheduleUpdatable.create(schedule, CacheControl.zero())
+            val updatable = schedule.toUpdatable<TwitchChannelSchedule?>(CacheControl.zero())
             dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
@@ -158,8 +160,7 @@ internal class TwitchDataSourceTestRule(
 
     override fun createTestScope(testScope: TestScope): DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
         val dataSource = TwitchLocalDataSource(
-            dao, dateTimeProvider,
-            IoScope(StandardTestDispatcher(testScope.testScheduler)), NopImageDataSource
+            dao, IoScope(StandardTestDispatcher(testScope.testScheduler)), NopImageDataSource,
         )
         return object : DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
             override val testScope: TestScope get() = testScope
@@ -179,7 +180,6 @@ internal fun userDetail(
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
     override val createdAt: Instant get() = Instant.EPOCH
-    override val cacheControl: CacheControl get() = CacheControl.zero()
 }
 
 private fun channelSchedule(
@@ -210,7 +210,7 @@ internal fun followings(
     followerId: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
     fetchedAt: Instant = Instant.EPOCH,
-): TwitchFollowings =
+): Updatable<TwitchFollowings> =
     TwitchFollowings.create(followerId, followings, CacheControl.create(fetchedAt, Duration.ZERO))
 
 private fun broadcaster(

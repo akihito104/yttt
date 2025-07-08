@@ -77,7 +77,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         repository.fetchChannelList(setOf(i.mapTo())).map { it.firstOrNull() }
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "detail:$i" } }
-            .getOrNull()
+            .getOrNull()?.item
     }
     override val channelDetailBody: Flow<LiveChannelDetailBody?> = detail.map { d ->
         d?.let { LiveChannelDetailYouTube(it) }
@@ -93,7 +93,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         repository.fetchPlaylistItems(pId, maxResult = 10)
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "detail:$d" } }
-            .getOrDefault(emptyList())
+            .getOrNull()?.item ?: emptyList()
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     @OptIn(FlowPreview::class)
