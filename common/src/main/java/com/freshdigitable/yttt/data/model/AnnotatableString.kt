@@ -115,6 +115,20 @@ interface AnnotatableString {
     }
 }
 
+private val module = SerializersModule {
+    polymorphic(LinkAnnotationRange::class) {
+        subclass(LinkAnnotationRange.Url::class)
+        subclass(LinkAnnotationRange.EllipsizedUrl::class)
+        subclass(LinkAnnotationRange.Hashtag::class)
+        subclass(LinkAnnotationRange.Account::class)
+    }
+    contextual(IntRange::class, IntRangeSerializer)
+}
+private val json = Json {
+    serializersModule = module
+}
+private val serializer = PolymorphicSerializer(LinkAnnotationRange::class)
+
 sealed interface LinkAnnotationRange {
     val range: IntRange
     val url: String
@@ -178,20 +192,6 @@ sealed interface LinkAnnotationRange {
     }
 
     companion object {
-        private val module = SerializersModule {
-            polymorphic(LinkAnnotationRange::class) {
-                subclass(Url.serializer())
-                subclass(EllipsizedUrl.serializer())
-                subclass(Hashtag.serializer())
-                subclass(Account.serializer())
-            }
-            contextual(IntRange::class, IntRangeSerializer)
-        }
-        private val json = Json {
-            serializersModule = module
-        }
-        private val serializer = PolymorphicSerializer(LinkAnnotationRange::class)
-
         fun createFromTag(tag: String): LinkAnnotationRange = json.decodeFromString(tag)
     }
 }

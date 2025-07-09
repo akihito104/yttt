@@ -228,7 +228,7 @@ private fun NavDrawerPreview() {
 
 @HiltViewModel(assistedFactory = MainViewModel.Factory::class)
 class MainViewModel @AssistedInject constructor(
-    @OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
+    @param:OssLicenseNavigationQualifier private val ossLicensePage: NavActivity,
     accountRepositories: LivePlatformMap<AccountRepository>,
     @Assisted private val messageBus: SnackbarMessageBus,
 ) : ViewModel() {

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 
 class GoogleService @Inject constructor(
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) {
     val googleApiAvailability: GoogleApiAvailability
         get() = GoogleApiAvailability.getInstance()

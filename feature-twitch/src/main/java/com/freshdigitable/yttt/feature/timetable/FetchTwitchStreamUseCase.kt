@@ -23,7 +23,7 @@ import javax.inject.Inject
 
 internal class FetchTwitchStreamUseCase @Inject constructor(
     private val twitchRepository: TwitchRepository,
-    @LivePlatformQualifier(Twitch::class) private val accountRepository: AccountRepository,
+    @param:LivePlatformQualifier(Twitch::class) private val accountRepository: AccountRepository,
     private val dateTimeProvider: DateTimeProvider,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke(): Result<Unit> {

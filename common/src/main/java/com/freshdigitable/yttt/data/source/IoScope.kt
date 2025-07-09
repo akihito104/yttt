@@ -47,6 +47,9 @@ interface NetworkResponse<T> : Updatable<T> {
             updatable: Updatable<T>,
             nextPageToken: String? = null
         ): NetworkResponse<T> = create(updatable.item, updatable.cacheControl, nextPageToken)
+
+        fun <T, R> NetworkResponse<T>.map(mapper: (T) -> R): NetworkResponse<R> =
+            Impl(mapper(this.item), this.cacheControl, this.nextPageToken)
     }
 
     private data class Impl<T>(
