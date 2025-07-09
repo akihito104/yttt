@@ -2,14 +2,12 @@ package com.freshdigitable.yttt.compose
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -55,6 +53,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Qualifier
@@ -176,19 +175,11 @@ private fun NavigationDrawerImpl(
 ) {
     ModalDrawerSheet {
         items().forEach {
-            ListItem(
-                headlineContent = {
-                    BadgedBox(
-                        badge = {
-                            if (it.showBadge) {
-                                Badge(containerColor = Color.Red)
-                            }
-                        }
-                    ) {
-                        Text(it.item.text())
-                    }
-                },
-                modifier = Modifier.clickable(onClick = { onClicked(it.item) }),
+            NavigationDrawerItem(
+                label = { Text(it.item.text()) },
+                badge = { if (it.showBadge) Badge(containerColor = Color.Red) },
+                selected = false,
+                onClick = { onClicked(it.item) },
             )
         }
     }
@@ -241,6 +232,7 @@ class MainViewModel @AssistedInject constructor(
     val startDestination = MainNavRoute.startDestination
     private val isTokenInvalid: Flow<Boolean?> =
         combine(accountRepositories.map { it.value.isTokenInvalid }) { i -> i.any { it == true } }
+            .onStart { emit(false) }
     internal val drawerMenuItems = combine<DrawerMenuListItem, List<DrawerMenuListItem>>(
         listOf(
             flowOf(DrawerMenuItem.SUBSCRIPTION.toListItem()),
