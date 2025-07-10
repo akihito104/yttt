@@ -9,6 +9,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.NetworkResponse
+import com.freshdigitable.yttt.data.source.NetworkResponse.Companion.map
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
 import retrofit2.Call
 import java.time.Duration
@@ -99,12 +100,8 @@ private class Impl(
         )
     }
 
-    override suspend fun getMe(): NetworkResponse<TwitchUserDetail?> {
-        val res = service.fetch { getMe() }
-        return object : NetworkResponse<TwitchUserDetail?> by res {
-            override val item: TwitchUserDetail? = res.item.firstOrNull()
-        }
-    }
+    override suspend fun getMe(): NetworkResponse<TwitchUserDetail?> =
+        service.fetch { getMe() }.map { it.firstOrNull() }
 
     override suspend fun getVideoByUserId(
         id: TwitchUser.Id,

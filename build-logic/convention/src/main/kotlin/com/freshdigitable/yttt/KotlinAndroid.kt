@@ -6,6 +6,7 @@ import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.provideDelegate
+import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinBaseExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
@@ -23,6 +24,7 @@ inline fun <reified T : KotlinBaseExtension> Project.configureKotlin() = configu
             // Enable experimental coroutines APIs, including Flow
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
         )
+        jvmDefault = JvmDefaultMode.NO_COMPATIBILITY
     }
 }
 
