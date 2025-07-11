@@ -17,8 +17,8 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemSummary
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemSummaries
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemIds
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
@@ -139,36 +139,36 @@ internal class YouTubePlaylistItemTable(
     "SELECT i.playlist_id, i.id AS playlist_item_id FROM playlist_item AS i",
     viewName = "yt_playlist_item_summary",
 )
-internal class YouTubePlaylistItemSummaryDb(
+internal class YouTubePlaylistItemIdDb(
     @ColumnInfo("playlist_id")
     override val playlistId: YouTubePlaylist.Id,
     @ColumnInfo("playlist_item_id")
-    override val playlistItemId: YouTubePlaylistItem.Id,
-) : YouTubePlaylistItemSummary {
+    override val id: YouTubePlaylistItem.Id,
+) : YouTubePlaylistItemIds {
     @androidx.room.Dao
     internal interface Dao {
         @Query("SELECT * FROM yt_playlist_item_summary AS s WHERE s.playlist_id = :id LIMIT :maxResult")
-        suspend fun findPlaylistItemSummary(
+        suspend fun findPlaylistItemIds(
             id: YouTubePlaylist.Id,
             maxResult: Long,
-        ): List<YouTubePlaylistItemSummaryDb>
+        ): List<YouTubePlaylistItemIdDb>
     }
 }
 
-internal class YouTubePlaylistWithItemSummariesDb(
+internal class YouTubePlaylistWithItemIdsDb(
     @Embedded
     override val playlist: YouTubePlaylistTable,
     @Relation(
         parentColumn = "id",
         entityColumn = "playlist_id",
     )
-    override val summary: List<YouTubePlaylistItemSummaryDb>,
-) : YouTubePlaylistWithItemSummaries {
+    override val items: List<YouTubePlaylistItemIdDb>,
+) : YouTubePlaylistWithItemIds {
     @androidx.room.Dao
     internal interface Dao {
         @Transaction
         @Query("SELECT * FROM playlist WHERE id = :id")
-        suspend fun findPlaylistWithItemSummaries(id: YouTubePlaylist.Id): YouTubePlaylistWithItemSummariesDb?
+        suspend fun findPlaylistWithItemIds(id: YouTubePlaylist.Id): YouTubePlaylistWithItemIdsDb?
     }
 }
 
@@ -217,23 +217,23 @@ internal interface YouTubePlaylistDaoProviders {
     val youTubePlaylistDao: YouTubePlaylistTable.Dao
     val youTubePlaylistExpireDao: YouTubePlaylistExpireTable.Dao
     val youTubePlaylistItemDao: YouTubePlaylistItemTable.Dao
-    val youTubePlaylistItemSummaryDbDao: YouTubePlaylistItemSummaryDb.Dao
+    val youTubePlaylistItemIdDao: YouTubePlaylistItemIdDb.Dao
     val youTubePlaylistItemDbDao: YouTubePlaylistItemDb.Dao
-    val youTubePlaylistWithItemSummariesDbDao: YouTubePlaylistWithItemSummariesDb.Dao
+    val youTubePlaylistWithItemIdsDao: YouTubePlaylistWithItemIdsDb.Dao
 }
 
 internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistExpireTable.Dao,
-    YouTubePlaylistItemTable.Dao, YouTubePlaylistItemSummaryDb.Dao, YouTubePlaylistItemDb.Dao,
-    YouTubePlaylistWithItemSummariesDb.Dao
+    YouTubePlaylistItemTable.Dao, YouTubePlaylistItemIdDb.Dao, YouTubePlaylistItemDb.Dao,
+    YouTubePlaylistWithItemIdsDb.Dao
 
 internal class YouTubePlaylistDaoImpl @Inject constructor(
     private val db: YouTubePlaylistDaoProviders
 ) : YouTubePlaylistDao, YouTubePlaylistTable.Dao by db.youTubePlaylistDao,
     YouTubePlaylistExpireTable.Dao by db.youTubePlaylistExpireDao,
     YouTubePlaylistItemTable.Dao by db.youTubePlaylistItemDao,
-    YouTubePlaylistItemSummaryDb.Dao by db.youTubePlaylistItemSummaryDbDao,
+    YouTubePlaylistItemIdDb.Dao by db.youTubePlaylistItemIdDao,
     YouTubePlaylistItemDb.Dao by db.youTubePlaylistItemDbDao,
-    YouTubePlaylistWithItemSummariesDb.Dao by db.youTubePlaylistWithItemSummariesDbDao {
+    YouTubePlaylistWithItemIdsDb.Dao by db.youTubePlaylistWithItemIdsDao {
     override suspend fun deleteTable() {
         listOf(
             db.youTubePlaylistDao,

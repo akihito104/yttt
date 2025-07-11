@@ -10,8 +10,3 @@ interface YouTubeSubscriptionSummary {
 
     companion object
 }
-
-interface YouTubePlaylistItemSummary {
-    val playlistId: YouTubePlaylist.Id
-    val playlistItemId: YouTubePlaylistItem.Id
-}

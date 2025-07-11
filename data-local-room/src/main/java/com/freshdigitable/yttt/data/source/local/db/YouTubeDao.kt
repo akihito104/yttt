@@ -6,7 +6,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -97,7 +97,7 @@ internal class YouTubeDao @Inject constructor(
     }
 
     suspend fun updatePlaylistWithItems(
-        updatable: Updatable<YouTubePlaylistWithItems>,
+        updatable: Updatable<YouTubePlaylistWithItemDetails>,
     ) = db.withTransaction {
         if (updatable.item.playlist !is YouTubePlaylistTable) {
             val p = updatable.item.playlist
@@ -163,23 +163,24 @@ internal fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTa
     id = id, title = title, iconUrl = iconUrl,
 )
 
-private fun Updatable<YouTubePlaylistWithItems>.toEntity(): YouTubePlaylistExpireTable =
+private fun Updatable<YouTubePlaylistWithItemDetails>.toEntity(): YouTubePlaylistExpireTable =
     YouTubePlaylistExpireTable(
         id = item.playlist.id,
         cacheControl = cacheControl.toDb(),
     )
 
-private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable = YouTubePlaylistItemTable(
-    id,
-    playlistId,
-    title,
-    channel.id,
-    thumbnailUrl,
-    videoId,
-    description,
-    videoOwnerChannelId,
-    publishedAt
-)
+private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable =
+    YouTubePlaylistItemTable(
+        id,
+        playlistId,
+        title,
+        channel.id,
+        thumbnailUrl,
+        videoId,
+        description,
+        videoOwnerChannelId,
+        publishedAt
+    )
 
 internal interface YouTubeDaoProviders : YouTubeChannelDaoProviders, YouTubeVideoDaoProviders,
     YouTubePlaylistDaoProviders, YouTubeSubscriptionDaoProviders, YouTubePageSourceDaoProviders

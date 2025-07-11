@@ -13,7 +13,8 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem.Companion.isFromAnotherChannel
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemIds
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -90,14 +91,13 @@ class YouTubeRepository @Inject constructor(
         id: YouTubePlaylist.Id,
         maxResult: Long,
     ): Result<Updatable<List<YouTubePlaylistItem>>> {
-        val cacheRes = localSource.fetchPlaylistWithItems(id, maxResult)
-        if (cacheRes.isFailure) {
-            return Result.failure(checkNotNull(cacheRes.exceptionOrNull()))
-        }
-        val cache = cacheRes.getOrNull()
-        if (cache?.isFresh(dateTimeProvider.now()) == true) {
-            return Result.success(cache.map { it.items })
-        }
+        val cache = localSource.fetchPlaylistWithItems(id, maxResult)
+            .onFailure { return Result.failure(it) }
+            .onSuccess { res ->
+                if (res?.isFresh(dateTimeProvider.now()) == true) {
+                    return Result.success(res.map { it.items })
+                }
+            }.getOrNull()
         return fetchPlaylistWithItems(id, maxResult, cache?.item)
             .map { u -> u.map { it.items } }
     }
@@ -105,8 +105,8 @@ class YouTubeRepository @Inject constructor(
     override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?,
-    ): Result<Updatable<YouTubePlaylistWithItems>> =
+        cache: YouTubePlaylistWithItems<out YouTubePlaylistItemIds>?
+    ): Result<Updatable<YouTubePlaylistWithItemDetails>> =
         remoteSource.fetchPlaylistWithItems(id, maxResult, cache).onSuccess { u ->
             val uploadedAtAnotherChannel = u.item.items
                 .filter { it.isFromAnotherChannel }

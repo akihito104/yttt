@@ -10,9 +10,12 @@ interface YouTubePlaylist {
     data class Id(override val value: String) : YouTubeId
 }
 
-interface YouTubePlaylistItem {
-    val id: Id
+interface YouTubePlaylistItemIds {
+    val id: YouTubePlaylistItem.Id
     val playlistId: YouTubePlaylist.Id
+}
+
+interface YouTubePlaylistItem : YouTubePlaylistItemIds {
     val title: String
     val channel: YouTubeChannelTitle
     val thumbnailUrl: String

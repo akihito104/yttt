@@ -5,16 +5,16 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import java.time.Duration
 import kotlin.math.pow
 
-interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id> {
-    val items: List<YouTubePlaylistItem>
-    val addedItems: List<YouTubePlaylistItem>
-    override val itemId: List<YouTubePlaylistItem.Id>
-        get() = items.map { it.id }
+interface YouTubePlaylistWithItems<T : YouTubePlaylistItemIds> {
+    val playlist: YouTubePlaylist
+    val items: List<T>
+    val addedItems: List<T> get() = emptyList()
+    val itemId: List<YouTubePlaylistItem.Id> get() = items.map { it.id }
 
     companion object {
-        fun YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>.update(
+        fun YouTubePlaylistWithItems<out YouTubePlaylistItemIds>.update(
             newItems: Updatable<List<YouTubePlaylistItem>>,
-        ): Updatable<YouTubePlaylistWithItems> = ForUpdate(
+        ): Updatable<YouTubePlaylistWithItemDetails> = ForUpdate(
             newItems = newItems.item,
             cachedPlaylistWithItems = this,
         ).toUpdatable(ForUpdate.CacheControlImpl(newItems, this))
@@ -22,7 +22,7 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
         fun newPlaylist(
             playlist: Updatable<YouTubePlaylist>,
             items: Updatable<List<YouTubePlaylistItem>?>,
-        ): Updatable<YouTubePlaylistWithItems> = NewPlaylist(playlist.item, items.item)
+        ): Updatable<YouTubePlaylistWithItemDetails> = NewPlaylist(playlist.item, items.item)
             .toUpdatable(
                 Updatable.latest(playlist, items).cacheControl
                     .overrideMaxAge(if (items.item.isNullOrEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
@@ -33,9 +33,9 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
     }
 
     private class ForUpdate(
-        private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
+        private val cachedPlaylistWithItems: YouTubePlaylistWithItems<out YouTubePlaylistItemIds>,
         private val newItems: List<YouTubePlaylistItem>,
-    ) : YouTubePlaylistWithItems {
+    ) : YouTubePlaylistWithItemDetails {
         override val playlist: YouTubePlaylist
             get() = cachedPlaylistWithItems.playlist
         override val items: List<YouTubePlaylistItem>
@@ -49,7 +49,7 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
         class CacheControlImpl(
             private val items: Updatable<List<YouTubePlaylistItem>>,
-            private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
+            private val cachedPlaylistWithItems: YouTubePlaylistWithItems<out YouTubePlaylistItemIds>,
         ) : CacheControl by items.cacheControl {
             override val maxAge: Duration
                 get() = if (items.item.isEmpty()) {
@@ -74,7 +74,7 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
     private class NewPlaylist(
         override val playlist: YouTubePlaylist,
         private val newItems: List<YouTubePlaylistItem>?,
-    ) : YouTubePlaylistWithItems {
+    ) : YouTubePlaylistWithItemDetails {
         override val items: List<YouTubePlaylistItem>
             get() = newItems ?: emptyList()
         override val addedItems: List<YouTubePlaylistItem>
@@ -82,16 +82,8 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
     }
 }
 
-interface YouTubePlaylistWithItemSummaries : YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id> {
-    val summary: Collection<YouTubePlaylistItemSummary>
-    override val itemId: List<YouTubePlaylistItem.Id>
-        get() = summary.map { it.playlistItemId }
-}
-
-interface YouTubePlaylistWithItemIds<T : IdBase> {
-    val playlist: YouTubePlaylist
-    val itemId: List<T>
-}
+typealias YouTubePlaylistWithItemIds = YouTubePlaylistWithItems<YouTubePlaylistItemIds>
+typealias YouTubePlaylistWithItemDetails = YouTubePlaylistWithItems<YouTubePlaylistItem>
 
 internal fun Updatable.Companion.latest(u1: Updatable<*>, u2: Updatable<*>): Updatable<*> {
     check(u1.cacheControl.fetchedAt != null || u2.cacheControl.fetchedAt != null)

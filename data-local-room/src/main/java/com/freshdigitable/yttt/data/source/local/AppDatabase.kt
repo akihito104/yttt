@@ -44,7 +44,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConverter
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemSummaryDb
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionIdConverter
@@ -83,7 +83,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         TwitchChannelScheduleExpireTable::class,
     ],
     views = [
-        YouTubePlaylistItemSummaryDb::class,
+        YouTubePlaylistItemIdDb::class,
         TwitchUserDetailDbView::class,
     ],
     version = 20,

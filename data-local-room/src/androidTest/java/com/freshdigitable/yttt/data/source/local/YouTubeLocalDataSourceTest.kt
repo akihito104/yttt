@@ -90,7 +90,7 @@ class YouTubeLocalDataSourceTest {
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(id)).isEmpty()
             assertThat(dao.findPlaylistById(id)?.id).isEqualTo(id)
-            assertThat(dao.findPlaylistItemSummary(id, 10)).isEmpty()
+            assertThat(dao.findPlaylistItemIds(id, 10)).isEmpty()
         }
 
         @Test
@@ -108,7 +108,7 @@ class YouTubeLocalDataSourceTest {
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(id)).isEmpty()
             assertThat(dao.findPlaylistById(id)?.id).isEqualTo(id)
-            assertThat(dao.findPlaylistItemSummary(id, 10)).isEmpty()
+            assertThat(dao.findPlaylistItemIds(id, 10)).isEmpty()
         }
 
         @Test
@@ -135,7 +135,7 @@ class YouTubeLocalDataSourceTest {
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(playlistId)).hasSize(1)
             assertThat(dao.findPlaylistById(playlistId)?.id).isEqualTo(playlistId)
-            assertThat(dao.findPlaylistItemSummary(playlistId, 10)).hasSize(1)
+            assertThat(dao.findPlaylistItemIds(playlistId, 10)).hasSize(1)
         }
     }
 
@@ -304,7 +304,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistItemSummary_simple_returns1Item() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchPlaylistItemSummary(simple, 10)
+            val actual = dataSource.fetchPlaylistItemIds(simple, 10)
             // verify
             assertThat(actual).hasSize(1)
         }
@@ -312,7 +312,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistItemSummary_private_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchPlaylistItemSummary(privatePlaylist, 10)
+            val actual = dataSource.fetchPlaylistItemIds(privatePlaylist, 10)
             // verify
             assertThat(actual).isEmpty()
         }
@@ -320,7 +320,7 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun fetchPlaylistItemSummary_empty_returnsEmpty() = rule.runWithLocalSource {
             // exercise
-            val actual = dataSource.fetchPlaylistItemSummary(empty, 10)
+            val actual = dataSource.fetchPlaylistItemIds(empty, 10)
             // verify
             assertThat(actual).isEmpty()
         }
