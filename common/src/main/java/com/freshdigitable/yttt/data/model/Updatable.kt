@@ -9,6 +9,7 @@ import java.time.Instant
 interface Updatable<T> {
     val item: T
     val cacheControl: CacheControl
+    val eTag: String? get() = null
 
     companion object {
         fun <T> create(item: T, cacheControl: CacheControl): Updatable<T> = Impl(item, cacheControl)

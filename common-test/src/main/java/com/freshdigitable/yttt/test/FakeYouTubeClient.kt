@@ -15,6 +15,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
+import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.YouTubeModule
 import dagger.Module
 import dagger.Provides
@@ -66,6 +67,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
+        eTag: String?,
     ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
@@ -144,3 +146,18 @@ private data class YouTubePlaylistItemEntity(
     override val videoOwnerChannelId: YouTubeChannel.Id?,
     override val publishedAt: Instant,
 ) : YouTubePlaylistItem
+
+fun YouTubeException.Companion.notModified(
+    throwable: Throwable? = null,
+    cacheControl: CacheControl = CacheControl.EMPTY,
+): YouTubeException = YouTubeException(304, "Not Modified", throwable, cacheControl)
+
+fun YouTubeException.Companion.notFound(
+    throwable: Throwable? = null,
+    cacheControl: CacheControl = CacheControl.EMPTY,
+): YouTubeException = YouTubeException(404, "Not Found", throwable, cacheControl)
+
+fun YouTubeException.Companion.internalServerError(
+    throwable: Throwable? = null,
+    cacheControl: CacheControl = CacheControl.EMPTY,
+): YouTubeException = YouTubeException(500, "Internal Server Error", throwable, cacheControl)

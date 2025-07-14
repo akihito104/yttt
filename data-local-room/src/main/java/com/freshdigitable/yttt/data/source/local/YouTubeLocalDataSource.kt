@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.source.local
 
 import androidx.room.withTransaction
-import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
@@ -13,7 +12,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemIds
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
@@ -24,6 +22,7 @@ import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistUpdatableDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -101,30 +100,32 @@ internal class YouTubeLocalDataSource @Inject constructor(
         this.playlist.putAll(playlist.associateBy { it.item.id })
     }
 
-    override suspend fun fetchPlaylistItems(
-        id: YouTubePlaylist.Id,
-        maxResult: Long,
-    ): Result<Updatable<List<YouTubePlaylistItem>>> = ioScope.asResult {
-        dao.findUpdatablePlaylistItemsByPlaylistId(id)
-    }
-
     override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        cache: YouTubePlaylistWithItems<out YouTubePlaylistItemIds>?
+        cache: YouTubePlaylistWithItems<*>?,
+        eTag: String?,
     ): Result<Updatable<YouTubePlaylistWithItemDetails>?> = ioScope.asResult {
         database.withTransaction {
             val playlist = dao.findUpdatablePlaylistById(id) ?: return@withTransaction null
             val items = dao.findPlaylistItemByPlaylistId(id)
-            YouTubePlaylistWithItems.fromCache(playlist.item, items, playlist.cacheControl)
+            YouTubePlaylistWithItems.fromCache(playlist, items)
         }
     }
 
-    override suspend fun fetchPlaylistWithItemIds(id: YouTubePlaylist.Id): YouTubePlaylistWithItemIds? =
+    override suspend fun fetchPlaylistWithItemIds(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): Result<YouTubePlaylistWithItems<*>?> = ioScope.asResult {
         dao.findPlaylistWithItemIds(id)
+    }
 
     override suspend fun updatePlaylistWithItems(updatable: Updatable<YouTubePlaylistWithItemDetails>) {
         dao.updatePlaylistWithItems(updatable)
+    }
+
+    override suspend fun updatePlaylistWithItemsCacheControl(updatable: Updatable<YouTubePlaylistWithItems<*>>) {
+        dao.updatePlaylistWithItemsCacheControl(updatable)
     }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>> =
@@ -212,13 +213,15 @@ internal class YouTubeLocalDataSource @Inject constructor(
 }
 
 internal fun YouTubePlaylistWithItems.Companion.fromCache(
-    playlist: YouTubePlaylist,
+    playlist: YouTubePlaylistUpdatableDb,
     items: List<YouTubePlaylistItem>,
-    cacheControl: CacheControl,
 ): Updatable<YouTubePlaylistWithItemDetails> =
-    PlaylistAndItemsLocal(playlist, items).toUpdatable(cacheControl)
+    PlaylistAndItemsLocal(playlist, items).toUpdatable(playlist.cacheControl)
 
 private class PlaylistAndItemsLocal(
-    override val playlist: YouTubePlaylist,
+    private val _playlist: YouTubePlaylistUpdatableDb,
     override val items: List<YouTubePlaylistItem>,
-) : YouTubePlaylistWithItemDetails
+) : YouTubePlaylistWithItemDetails {
+    override val playlist: YouTubePlaylist get() = _playlist.item
+    override val eTag: String? get() = _playlist.eTag
+}

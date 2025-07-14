@@ -156,9 +156,6 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         val summary = liveRepository.findSubscriptionSummaries(added)
             .filter { it.cacheControl.isUpdatable(current) }
         val needsPlaylist = summary.filter { it.uploadedPlaylistId == null }
-        if (needsPlaylist.isEmpty()) {
-            return Result.success(summary)
-        }
         taskCache.pendingSummary.addAll(needsPlaylist)
         val isSubscriptionsUpdatable = subs is YouTubeSubscriptions.Updated
         return if (taskCache.pendingSummary.size >= MAX_BATCH_SIZE || isSubscriptionsUpdatable) {
@@ -190,9 +187,8 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
     private suspend fun fetchVideoByPlaylistIdTask(summary: YouTubeSubscriptionSummary): Result<List<YouTubeVideo.Id>> {
         val id = checkNotNull(summary.uploadedPlaylistId)
-        val cache = liveRepository.fetchPlaylistWithItemIds(id)
-        return liveRepository.fetchPlaylistWithItems(id, maxResult = 10, cache)
-            .map { playlist -> playlist.item.addedItems.map { it.videoId } }
+        return liveRepository.fetchPlaylistWithItemIds(id, maxResult = 10)
+            .map { playlist -> playlist.addedItems.map { it.videoId } }
             .onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" } }
             .onSuccess {
                 if (it.isNotEmpty()) {
