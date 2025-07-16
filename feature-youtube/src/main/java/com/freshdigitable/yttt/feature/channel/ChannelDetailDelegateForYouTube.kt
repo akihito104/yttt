@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.STATS_SEPARATOR
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody.Companion.toStringWithComma
 import com.freshdigitable.yttt.data.model.LivePlatform
+import com.freshdigitable.yttt.data.model.Updatable.Companion.map
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -90,7 +91,8 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     }
     override val uploadedVideo: Flow<List<YouTubePlaylistItem>> = detail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
-        repository.fetchPlaylistItems(pId, maxResult = 10)
+        repository.fetchPlaylistWithItems(pId, maxResult = 10)
+            .map { u -> u.map { it.items } }
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "detail:$d" } }
             .getOrNull()?.item ?: emptyList()

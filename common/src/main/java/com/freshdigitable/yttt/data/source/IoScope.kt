@@ -40,12 +40,13 @@ interface NetworkResponse<T> : Updatable<T> {
         fun <T> create(
             item: T,
             cacheControl: CacheControl,
-            nextPageToken: String? = null
-        ): NetworkResponse<T> = Impl(item, cacheControl, nextPageToken)
+            nextPageToken: String? = null,
+            eTag: String? = null,
+        ): NetworkResponse<T> = Impl(item, cacheControl, nextPageToken, eTag)
 
         fun <T> create(
             updatable: Updatable<T>,
-            nextPageToken: String? = null
+            nextPageToken: String? = null,
         ): NetworkResponse<T> = create(updatable.item, updatable.cacheControl, nextPageToken)
 
         fun <T, R> NetworkResponse<T>.map(mapper: (T) -> R): NetworkResponse<R> =
@@ -56,5 +57,6 @@ interface NetworkResponse<T> : Updatable<T> {
         override val item: T,
         override val cacheControl: CacheControl,
         override val nextPageToken: String?,
+        override val eTag: String? = null,
     ) : NetworkResponse<T>
 }

@@ -11,7 +11,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemIds
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -56,25 +56,21 @@ internal class YouTubeRemoteDataSource(
     override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> =
         fetch { fetchChannelSection(id) }.map { it.item }
 
-    override suspend fun fetchPlaylistItems(
-        id: YouTubePlaylist.Id,
-        maxResult: Long,
-    ): Result<Updatable<List<YouTubePlaylistItem>>> = fetch { fetchPlaylistItems(id, maxResult) }
-
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>> =
         fetchList(ids) { fetchPlaylist(it) }
 
     override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        cache: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>?,
-    ): Result<Updatable<YouTubePlaylistWithItems>> = fetch {
+        cache: YouTubePlaylistWithItems<*>?,
+        eTag: String?,
+    ): Result<Updatable<YouTubePlaylistWithItemDetails>> = fetch {
         if (cache != null) {
-            val res = fetchPlaylistItems(id, maxResult)
+            val res = fetchPlaylistItems(id, maxResult, eTag)
             cache.update(res)
         } else {
             val playlist = fetchPlaylist(setOf(id)).map { it.first() }
-            val items = fetchPlaylistItems(id, maxResult)
+            val items = fetchPlaylistItems(id, maxResult, eTag)
             @Suppress("UNCHECKED_CAST")
             YouTubePlaylistWithItems.newPlaylist(
                 playlist = playlist,

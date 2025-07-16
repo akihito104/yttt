@@ -5,24 +5,25 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import java.time.Duration
 import kotlin.math.pow
 
-interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id> {
-    val items: List<YouTubePlaylistItem>
-    val addedItems: List<YouTubePlaylistItem>
-    override val itemId: List<YouTubePlaylistItem.Id>
-        get() = items.map { it.id }
+interface YouTubePlaylistWithItems<T : YouTubePlaylistItemIds> {
+    val playlist: YouTubePlaylist
+    val items: List<T>
+    val addedItems: List<T> get() = emptyList()
+    val eTag: String? get() = null
 
     companion object {
-        fun YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>.update(
+        private val YouTubePlaylistWithItems<*>.itemId: List<YouTubePlaylistItem.Id> get() = items.map { it.id }
+        fun YouTubePlaylistWithItems<*>.update(
             newItems: Updatable<List<YouTubePlaylistItem>>,
-        ): Updatable<YouTubePlaylistWithItems> = ForUpdate(
-            newItems = newItems.item,
+        ): Updatable<YouTubePlaylistWithItemDetails> = ForUpdate(
+            newItems = newItems,
             cachedPlaylistWithItems = this,
         ).toUpdatable(ForUpdate.CacheControlImpl(newItems, this))
 
         fun newPlaylist(
             playlist: Updatable<YouTubePlaylist>,
             items: Updatable<List<YouTubePlaylistItem>?>,
-        ): Updatable<YouTubePlaylistWithItems> = NewPlaylist(playlist.item, items.item)
+        ): Updatable<YouTubePlaylistWithItemDetails> = NewPlaylist(playlist.item, items)
             .toUpdatable(
                 Updatable.latest(playlist, items).cacheControl
                     .overrideMaxAge(if (items.item.isNullOrEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
@@ -33,23 +34,24 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
     }
 
     private class ForUpdate(
-        private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
-        private val newItems: List<YouTubePlaylistItem>,
-    ) : YouTubePlaylistWithItems {
+        private val cachedPlaylistWithItems: YouTubePlaylistWithItems<*>,
+        private val newItems: Updatable<List<YouTubePlaylistItem>>,
+    ) : YouTubePlaylistWithItemDetails {
         override val playlist: YouTubePlaylist
             get() = cachedPlaylistWithItems.playlist
         override val items: List<YouTubePlaylistItem>
-            get() = newItems
+            get() = newItems.item
         override val addedItems: List<YouTubePlaylistItem>
             get() {
                 val i = items.associateBy { it.id }
                 val addedId = i.keys - cachedPlaylistWithItems.itemId.toSet()
                 return addedId.mapNotNull { i[it] }
             }
+        override val eTag: String? get() = newItems.eTag
 
         class CacheControlImpl(
             private val items: Updatable<List<YouTubePlaylistItem>>,
-            private val cachedPlaylistWithItems: YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id>,
+            private val cachedPlaylistWithItems: YouTubePlaylistWithItems<*>,
         ) : CacheControl by items.cacheControl {
             override val maxAge: Duration
                 get() = if (items.item.isEmpty()) {
@@ -73,25 +75,16 @@ interface YouTubePlaylistWithItems : YouTubePlaylistWithItemIds<YouTubePlaylistI
 
     private class NewPlaylist(
         override val playlist: YouTubePlaylist,
-        private val newItems: List<YouTubePlaylistItem>?,
-    ) : YouTubePlaylistWithItems {
-        override val items: List<YouTubePlaylistItem>
-            get() = newItems ?: emptyList()
-        override val addedItems: List<YouTubePlaylistItem>
-            get() = items
+        private val newItems: Updatable<List<YouTubePlaylistItem>?>,
+    ) : YouTubePlaylistWithItemDetails {
+        override val items: List<YouTubePlaylistItem> get() = newItems.item ?: emptyList()
+        override val addedItems: List<YouTubePlaylistItem> get() = items
+        override val eTag: String? get() = newItems.eTag
     }
 }
 
-interface YouTubePlaylistWithItemSummaries : YouTubePlaylistWithItemIds<YouTubePlaylistItem.Id> {
-    val summary: Collection<YouTubePlaylistItemSummary>
-    override val itemId: List<YouTubePlaylistItem.Id>
-        get() = summary.map { it.playlistItemId }
-}
-
-interface YouTubePlaylistWithItemIds<T : IdBase> {
-    val playlist: YouTubePlaylist
-    val itemId: List<T>
-}
+typealias YouTubePlaylistWithItemIds = YouTubePlaylistWithItems<YouTubePlaylistItemIds>
+typealias YouTubePlaylistWithItemDetails = YouTubePlaylistWithItems<YouTubePlaylistItem>
 
 internal fun Updatable.Companion.latest(u1: Updatable<*>, u2: Updatable<*>): Updatable<*> {
     check(u1.cacheControl.fetchedAt != null || u2.cacheControl.fetchedAt != null)

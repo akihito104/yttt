@@ -15,6 +15,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
+import com.google.api.client.http.HttpHeaders
 import com.google.api.client.http.HttpResponseException
 import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.YouTube
@@ -52,6 +53,7 @@ interface YouTubeClient {
     fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
+        eTag: String? = null,
     ): NetworkResponse<List<YouTubePlaylistItem>>
 
     fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>>
@@ -105,11 +107,13 @@ internal class YouTubeClientImpl(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
+        eTag: String?,
     ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetch(PlaylistItemRemote.factory) {
         playlistItems()
-            .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS))
+            .list(listOf(PART_SNIPPET))
             .setPlaylistId(id.value)
             .setMaxResults(maxResult)
+            .apply { eTag?.let { requestHeaders = HttpHeaders().apply { setIfNoneMatch(it) } } }
     }
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
@@ -178,6 +182,8 @@ class YouTubeException(
 ) : NetworkResponse.Exception(throwable) {
     override val isQuotaExceeded: Boolean
         get() = statusCode == 403 && statusMessage == "quotaExceeded"
+
+    companion object
 }
 
 typealias ResponseFactory<R, T> = (R, CacheControl) -> NetworkResponse<T>
@@ -246,23 +252,24 @@ internal class YouTubeVideoRemote(
 ) : YouTubeVideo {
     private val liveStreamingDetails: VideoLiveStreamingDetails? get() = video.liveStreamingDetails
     private val snippet get() = requireNotNull(video.snippet) { "json: $video" }
-    override val id: YouTubeVideo.Id = YouTubeVideo.Id(video.id)
-    override val channel: YouTubeChannelTitle = YouTubeChannelTitleImpl(
-        id = YouTubeChannel.Id(snippet.channelId),
-        title = snippet.channelTitle,
-    )
+    override val id: YouTubeVideo.Id get() = YouTubeVideo.Id(video.id)
+    override val channel: YouTubeChannelTitle
+        get() = YouTubeChannelTitleImpl(
+            id = YouTubeChannel.Id(snippet.channelId),
+            title = snippet.channelTitle,
+        )
     override val title: String get() = snippet.title
-    override val scheduledStartDateTime: Instant? =
-        liveStreamingDetails?.scheduledStartTime?.toInstant()
-    override val scheduledEndDateTime: Instant? =
-        liveStreamingDetails?.scheduledEndTime?.toInstant()
-    override val actualStartDateTime: Instant? = liveStreamingDetails?.actualStartTime?.toInstant()
-    override val actualEndDateTime: Instant? = liveStreamingDetails?.actualEndTime?.toInstant()
+    override val scheduledStartDateTime: Instant?
+        get() = liveStreamingDetails?.scheduledStartTime?.toInstant()
+    override val scheduledEndDateTime: Instant?
+        get() = liveStreamingDetails?.scheduledEndTime?.toInstant()
+    override val actualStartDateTime: Instant? get() = liveStreamingDetails?.actualStartTime?.toInstant()
+    override val actualEndDateTime: Instant? get() = liveStreamingDetails?.actualEndTime?.toInstant()
     override val thumbnailUrl: String get() = snippet.thumbnails.url
     override val description: String get() = snippet.description
     override val viewerCount: BigInteger? get() = liveStreamingDetails?.concurrentViewers
-    override val liveBroadcastContent: YouTubeVideo.BroadcastType =
-        findBy(snippet.liveBroadcastContent)
+    override val liveBroadcastContent: YouTubeVideo.BroadcastType
+        get() = findBy(snippet.liveBroadcastContent)
 
     override fun toString(): String = video.toString()
 
@@ -435,15 +442,15 @@ private class PlaylistItemRemote(
     override val playlistId: YouTubePlaylist.Id get() = YouTubePlaylist.Id(item.snippet.playlistId)
     override val title: String get() = item.snippet.title
     override val thumbnailUrl: String get() = item.snippet.thumbnails?.url ?: ""
-    override val videoId: YouTubeVideo.Id get() = YouTubeVideo.Id(item.contentDetails.videoId)
+    override val videoId: YouTubeVideo.Id get() = YouTubeVideo.Id(item.snippet.resourceId.videoId)
     override val channel: YouTubeChannelTitle
         get() = YouTubeChannelTitleImpl(
             id = YouTubeChannel.Id(item.snippet.channelId),
             title = item.snippet.channelTitle,
         )
-    override val description: String = item.snippet.description
-    override val videoOwnerChannelId: YouTubeChannel.Id? =
-        item.snippet.videoOwnerChannelId?.let { YouTubeChannel.Id(it) }
+    override val description: String get() = item.snippet.description
+    override val videoOwnerChannelId: YouTubeChannel.Id?
+        get() = item.snippet.videoOwnerChannelId?.let { YouTubeChannel.Id(it) }
     override val publishedAt: Instant get() = item.snippet.publishedAt.toInstant()
     override fun toString(): String = item.toPrettyString()
 
@@ -454,6 +461,7 @@ private class PlaylistItemRemote(
                     item = res.items.map { PlaylistItemRemote(it) },
                     cacheControl = cc,
                     nextPageToken = res.nextPageToken,
+                    eTag = res.etag,
                 )
             }
     }

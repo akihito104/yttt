@@ -131,7 +131,7 @@ class YouTubePlaylistWithItemsTest {
             ),
         )
 
-        private fun playlistWithItems(): YouTubePlaylistWithItems =
+        private fun playlistWithItems(): YouTubePlaylistWithItemDetails =
             playlistWithItems(playlistId, items)
 
         @Test
@@ -236,7 +236,7 @@ private fun playlist(
 private fun playlistWithItems(
     playlistId: YouTubePlaylist.Id,
     items: List<YouTubePlaylistItem>,
-): YouTubePlaylistWithItems = object : YouTubePlaylistWithItems {
+): YouTubePlaylistWithItemDetails = object : YouTubePlaylistWithItemDetails {
     override val playlist: YouTubePlaylist get() = FakeYouTubeClient.playlist(playlistId)
     override val items: List<YouTubePlaylistItem> get() = items
     override val addedItems: List<YouTubePlaylistItem> get() = emptyList()
