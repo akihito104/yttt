@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
@@ -399,7 +400,7 @@ private fun playlistItem(
     id: Int,
     channelDetail: YouTubeChannelDetail,
     videoId: YouTubeVideo.Id,
-): YouTubePlaylistItem = FakeYouTubeClient.playlistItem(
+): YouTubePlaylistItemDetail = FakeYouTubeClient.playlistItem(
     id = YouTubePlaylistItem.Id("playlistItem_${channelDetail.id.value}_$id"),
     playlistId = channelDetail.uploadedPlayList!!,
     videoId = videoId,
@@ -416,7 +417,7 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
 private class FakeYouTubeClientImpl(
     var subscription: ((Int, String?) -> NetworkResponse<List<YouTubeSubscription>>)? = null,
     var channel: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
-    var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItem>>)? = null,
+    var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItemDetail>>)? = null,
     var video: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
 ) : FakeYouTubeClient() {
     companion object {
@@ -480,7 +481,7 @@ private class FakeYouTubeClientImpl(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItem>> {
+    ): NetworkResponse<List<YouTubePlaylistItemDetail>> {
         logD { "fetchPlaylistItems: $id, $maxResult" }
         return NetworkResponse.create(playlistItem!!.invoke(id))
     }

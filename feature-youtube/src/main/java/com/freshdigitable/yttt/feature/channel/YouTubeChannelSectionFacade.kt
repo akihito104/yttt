@@ -4,7 +4,7 @@ import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.feature.channel.YouTubeChannelSectionFacade.FetchTaskItems.Companion.ITEM_SIZE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -40,7 +40,7 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
         }
     }
 
-    private fun watchPlaylistItem(task: FetchTaskItems): Flow<Map<YouTubePlaylist.Id, Result<List<YouTubePlaylistItem>>>> {
+    private fun watchPlaylistItem(task: FetchTaskItems): Flow<Map<YouTubePlaylist.Id, Result<List<YouTubePlaylistItemDetail>>>> {
         val item = task.playlistItem
         if (item.isEmpty()) {
             return emptyFlow()
@@ -103,7 +103,7 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
 
     class FetchTaskResult(
         playlistResult: Result<Map<YouTubePlaylist.Id, YouTubePlaylist>>,
-        playlistItemResult: Map<YouTubePlaylist.Id, Result<List<YouTubePlaylistItem>>>,
+        playlistItemResult: Map<YouTubePlaylist.Id, Result<List<YouTubePlaylistItemDetail>>>,
         channelResult: Result<Map<YouTubeChannel.Id, YouTubeChannel>>,
     ) {
         val playlist = playlistResult.getOrDefault(emptyMap())
@@ -160,7 +160,7 @@ internal sealed interface ChannelSectionItem : Comparable<ChannelSectionItem> {
 internal data class SinglePlaylist(
     override val section: YouTubeChannelSection,
     val playlist: YouTubePlaylist?,
-    val item: List<YouTubePlaylistItem>,
+    val item: List<YouTubePlaylistItemDetail>,
 ) : ChannelSectionItem {
     override val title: String get() = playlist?.title ?: super.title
     override val size: Int get() = item.size

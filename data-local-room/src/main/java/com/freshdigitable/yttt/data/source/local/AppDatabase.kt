@@ -43,8 +43,8 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemAdditionTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConverter
-import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistWithItemsEtag
@@ -71,6 +71,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         YouTubePlaylistExpireTable::class,
         YouTubePlaylistWithItemsEtag::class,
         YouTubePlaylistItemTable::class,
+        YouTubePlaylistItemAdditionTable::class,
         TwitchUserTable::class,
         TwitchUserDetailTable::class,
         TwitchUserDetailExpireTable::class,
@@ -85,10 +86,9 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         TwitchChannelScheduleExpireTable::class,
     ],
     views = [
-        YouTubePlaylistItemIdDb::class,
         TwitchUserDetailDbView::class,
     ],
-    version = 21,
+    version = 22,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -111,6 +111,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 17, to = 18),
         AutoMigration(from = 19, to = 20),
         AutoMigration(from = 20, to = 21),
+        AutoMigration(from = 21, to = 22, spec = AppDatabase.MigrateSeparatePlaylistItem::class),
     ]
 )
 @TypeConverters(
@@ -169,6 +170,15 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
         ),
     )
     internal class MigrateRenameExpiredAt : AutoMigrationSpec
+
+    @DeleteColumn.Entries(
+        DeleteColumn(tableName = "playlist_item", columnName = "title"),
+        DeleteColumn(tableName = "playlist_item", columnName = "channel_id"),
+        DeleteColumn(tableName = "playlist_item", columnName = "thumbnail_url"),
+        DeleteColumn(tableName = "playlist_item", columnName = "description"),
+        DeleteColumn(tableName = "playlist_item", columnName = "video_owner_channel_id"),
+    )
+    internal class MigrateSeparatePlaylistItem : AutoMigrationSpec
     companion object {
         private const val DATABASE_NAME = "ytttdb"
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =

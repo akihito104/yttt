@@ -7,8 +7,9 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -80,9 +81,9 @@ class YouTubeLocalDataSourceTest {
         fun updatePlaylistWithItems_addedWithEmptyItems_returnsEmpty() = rule.runWithLocalSource {
             // setup
             val id = YouTubePlaylist.Id("test")
-            val updatable = YouTubePlaylistWithItems.newPlaylist(
+            val updatable = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(id, dateTimeProvider.now()),
-                items = emptyList<YouTubePlaylistItem>()
+                items = emptyList<YouTubePlaylistItemDetail>()
                     .toUpdatable(CacheControl.fromRemote(dateTimeProvider.now())),
             )
             // exercise
@@ -97,7 +98,7 @@ class YouTubeLocalDataSourceTest {
         fun updatePlaylistWithItems_addedWithNull_returnsEmpty() = rule.runWithLocalSource {
             // setup
             val id = YouTubePlaylist.Id("test")
-            val updatable = YouTubePlaylistWithItems.newPlaylist(
+            val updatable = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(id, dateTimeProvider.now()),
                 items = Updatable.create(
                     null, CacheControl.fromRemote(dateTimeProvider.now()),
@@ -126,7 +127,7 @@ class YouTubeLocalDataSourceTest {
             val channel = items.map { (it.channel as YouTubeChannel).toDbEntity() }
                 .distinctBy { it.id }
             dao.addChannels(channel)
-            val updatable = YouTubePlaylistWithItems.newPlaylist(
+            val updatable = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(playlistId, dateTimeProvider.now()),
                 items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now()))
             )
@@ -229,7 +230,7 @@ class YouTubeLocalDataSourceTest {
             privatePlaylist to null,
             empty to emptyList()
         ).map { (playlistId, items) ->
-            playlistId to YouTubePlaylistWithItems.newPlaylist(
+            playlistId to YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(playlistId, rule.dateTimeProvider.now()),
                 items = items.toUpdatable(CacheControl.fromRemote(rule.dateTimeProvider.now()))
             )
@@ -349,7 +350,7 @@ class YouTubeLocalDataSourceTest {
                     channel = channelTable(),
                 )
             }
-            val updatable = YouTubePlaylistWithItems.newPlaylist(
+            val updatable = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(playlistId, dateTimeProvider.now()),
                 items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now())),
             )

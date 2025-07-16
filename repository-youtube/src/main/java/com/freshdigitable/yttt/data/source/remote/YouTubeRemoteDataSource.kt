@@ -10,10 +10,10 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -62,7 +62,7 @@ internal class YouTubeRemoteDataSource(
     override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        cache: YouTubePlaylistWithItems<*>?,
+        cache: YouTubePlaylistWithItem<*>?,
         eTag: String?,
     ): Result<Updatable<YouTubePlaylistWithItemDetails>> = fetch {
         if (cache != null) {
@@ -72,16 +72,16 @@ internal class YouTubeRemoteDataSource(
             val playlist = fetchPlaylist(setOf(id)).map { it.first() }
             val items = fetchPlaylistItems(id, maxResult, eTag)
             @Suppress("UNCHECKED_CAST")
-            YouTubePlaylistWithItems.newPlaylist(
+            YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist,
-                items = items as Updatable<List<YouTubePlaylistItem>?>,
+                items = items as Updatable<List<YouTubePlaylistItemDetail>?>,
             )
         }
     }.recoverCatching {
         if ((it as? NetworkResponse.Exception)?.statusCode == 404) {
             val cacheControl = it.cacheControl
-            cache?.update(emptyList<YouTubePlaylistItem>().toUpdatable(cacheControl))
-                ?: YouTubePlaylistWithItems.newPlaylist(
+            cache?.update(emptyList<YouTubePlaylistItemDetail>().toUpdatable(cacheControl))
+                ?: YouTubePlaylistWithItem.newPlaylist(
                     playlist = YouTubePlaylistNotFound(id).toUpdatable(cacheControl),
                     items = Updatable.create(null, cacheControl),
                 )

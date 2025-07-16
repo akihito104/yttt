@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
@@ -68,7 +69,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
+    ): NetworkResponse<List<YouTubePlaylistItemDetail>> = throw NotImplementedError()
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
         throw NotImplementedError()
@@ -118,7 +119,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
             },
             videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id.value}_${playlistId.value}"),
             publishedAt: Instant = Instant.EPOCH,
-        ): YouTubePlaylistItem = YouTubePlaylistItemEntity(
+        ): YouTubePlaylistItemDetail = YouTubePlaylistItemDetailEntity(
             id = id,
             playlistId = playlistId,
             title = "title",
@@ -135,7 +136,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
 fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
     CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
 
-private data class YouTubePlaylistItemEntity(
+private data class YouTubePlaylistItemDetailEntity(
     override val id: YouTubePlaylistItem.Id,
     override val playlistId: YouTubePlaylist.Id,
     override val title: String,
@@ -145,7 +146,7 @@ private data class YouTubePlaylistItemEntity(
     override val description: String,
     override val videoOwnerChannelId: YouTubeChannel.Id?,
     override val publishedAt: Instant,
-) : YouTubePlaylistItem
+) : YouTubePlaylistItemDetail
 
 fun YouTubeException.Companion.notModified(
     throwable: Throwable? = null,

@@ -23,7 +23,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 
@@ -118,7 +118,7 @@ private fun ChannelSectionContent(content: ChannelSectionItem) {
 }
 
 @Composable
-private fun SinglePlaylistContent(item: YouTubePlaylistItem, modifier: Modifier = Modifier) {
+private fun SinglePlaylistContent(item: YouTubePlaylistItemDetail, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         ImageLoadableView.Thumbnail(url = item.thumbnailUrl)
         Text(

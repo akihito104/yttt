@@ -5,9 +5,9 @@ import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -105,20 +105,24 @@ internal class YouTubeDao @Inject constructor(
             addPlaylist(YouTubePlaylistTable(p.id, p.title, p.thumbnailUrl))
         }
         @Suppress("UNCHECKED_CAST")
-        addPlaylistExpire((updatable as Updatable<YouTubePlaylistWithItems<*>>).toEntity())
+        addPlaylistExpire((updatable as Updatable<YouTubePlaylistWithItem<*>>).toEntity())
         updatable.item.eTag?.let {
             addPlaylistWithItemsEtag(YouTubePlaylistWithItemsEtag(p.id, it))
         }
-        if (updatable.item.items.any { it !is YouTubePlaylistItemDb }) {
+        if (updatable.item.items.any { it !is YouTubePlaylistItemDetailDb }) {
+            removePlaylistItemsByPlaylistItemIds(updatable.item.items.map { it.id })
             removePlaylistItemsByPlaylistId(p.id)
             if (updatable.item.items.isNotEmpty()) {
                 val items = updatable.item.items.map { it.toDbEntity() }
                 addPlaylistItems(items)
+                addPlaylistItemAdditions(
+                    updatable.item.items.map { YouTubePlaylistItemAdditionTable(it) }
+                )
             }
         }
     }
 
-    suspend fun updatePlaylistWithItemsCacheControl(updatable: Updatable<YouTubePlaylistWithItems<*>>) {
+    suspend fun updatePlaylistWithItemsCacheControl(updatable: Updatable<YouTubePlaylistWithItem<*>>) {
         addPlaylistExpire(updatable.toEntity())
     }
 
@@ -173,24 +177,14 @@ internal fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTa
     id = id, title = title, iconUrl = iconUrl,
 )
 
-private fun Updatable<YouTubePlaylistWithItems<*>>.toEntity(): YouTubePlaylistExpireTable =
+private fun Updatable<YouTubePlaylistWithItem<*>>.toEntity(): YouTubePlaylistExpireTable =
     YouTubePlaylistExpireTable(
         id = item.playlist.id,
         cacheControl = cacheControl.toDb(),
     )
 
-private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable =
-    YouTubePlaylistItemTable(
-        id,
-        playlistId,
-        title,
-        channel.id,
-        thumbnailUrl,
-        videoId,
-        description,
-        videoOwnerChannelId,
-        publishedAt
-    )
+private fun YouTubePlaylistItemDetail.toDbEntity(): YouTubePlaylistItemTable =
+    YouTubePlaylistItemTable(this)
 
 internal interface YouTubeDaoProviders : YouTubeChannelDaoProviders, YouTubeVideoDaoProviders,
     YouTubePlaylistDaoProviders, YouTubeSubscriptionDaoProviders, YouTubePageSourceDaoProviders

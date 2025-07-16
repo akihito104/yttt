@@ -12,9 +12,9 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem.Companion.isFromAnotherChannel
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail.Companion.isFromAnotherChannel
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
@@ -90,7 +90,7 @@ class YouTubeRepository @Inject constructor(
     override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        cache: YouTubePlaylistWithItems<*>?,
+        cache: YouTubePlaylistWithItem<*>?,
         eTag: String?,
     ): Result<Updatable<YouTubePlaylistWithItemDetails>> {
         val cache = localSource.fetchPlaylistWithItems(id, maxResult)
@@ -115,7 +115,7 @@ class YouTubeRepository @Inject constructor(
     override suspend fun fetchPlaylistWithItemIds(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): Result<YouTubePlaylistWithItems<*>> {
+    ): Result<YouTubePlaylistWithItem<*>> {
         val cache = localSource.fetchPlaylistWithItemIds(id, maxResult).getOrNull()
         return remoteSource.fetchPlaylistWithItems(id, maxResult, cache, cache?.eTag)
             .onSuccess { localSource.updatePlaylistWithItems(it) }

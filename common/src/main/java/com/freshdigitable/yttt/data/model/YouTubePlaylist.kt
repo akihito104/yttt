@@ -10,23 +10,23 @@ interface YouTubePlaylist {
     data class Id(override val value: String) : YouTubeId
 }
 
-interface YouTubePlaylistItemIds {
-    val id: YouTubePlaylistItem.Id
+interface YouTubePlaylistItem {
+    val id: Id
     val playlistId: YouTubePlaylist.Id
     val videoId: YouTubeVideo.Id
+    val publishedAt: Instant
+
+    data class Id(override val value: String) : YouTubeId
 }
 
-interface YouTubePlaylistItem : YouTubePlaylistItemIds {
+interface YouTubePlaylistItemDetail : YouTubePlaylistItem {
     val title: String
     val channel: YouTubeChannelTitle
     val thumbnailUrl: String
     val description: String
     val videoOwnerChannelId: YouTubeChannel.Id?
-    val publishedAt: Instant
-
-    data class Id(override val value: String) : YouTubeId
 
     companion object {
-        val YouTubePlaylistItem.isFromAnotherChannel: Boolean get() = channel.id != videoOwnerChannelId
+        val YouTubePlaylistItemDetail.isFromAnotherChannel: Boolean get() = channel.id != videoOwnerChannelId
     }
 }

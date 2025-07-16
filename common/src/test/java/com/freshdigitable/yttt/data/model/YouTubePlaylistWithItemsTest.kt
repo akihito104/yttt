@@ -1,9 +1,9 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_DEFAULT
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.MAX_AGE_MAX
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.MAX_AGE_DEFAULT
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.MAX_AGE_MAX
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.update
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
 import org.assertj.core.api.Assertions.assertThat
@@ -23,7 +23,7 @@ class YouTubePlaylistWithItemsTest {
         fun create_newItemIsNull_returnsMaxDuration() {
             // setup
             // exercise
-            val actual = YouTubePlaylistWithItems.newPlaylist(
+            val actual = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(playlistId, Instant.EPOCH),
                 items = Updatable.create(null, CacheControl.fromRemote(Instant.EPOCH)),
             )
@@ -36,9 +36,10 @@ class YouTubePlaylistWithItemsTest {
         fun create_newItemIsEmpty_returnsMaxDuration() {
             // setup
             // exercise
-            val actual = YouTubePlaylistWithItems.newPlaylist(
+            val actual = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(playlistId, Instant.EPOCH),
-                items = emptyList<YouTubePlaylistItem>().toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
+                items = emptyList<YouTubePlaylistItemDetail>()
+                    .toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
             )
             // verify
             assertThat(actual.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
@@ -53,7 +54,7 @@ class YouTubePlaylistWithItemsTest {
                 itemId = YouTubePlaylistItem.Id("item_id_01"),
             )
             // exercise
-            val actual = YouTubePlaylistWithItems.newPlaylist(
+            val actual = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(playlistId, Instant.EPOCH),
                 items = listOf(playlistItem).toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
             )
@@ -108,7 +109,8 @@ class YouTubePlaylistWithItemsTest {
                 ),
             )
             // exercise
-            val actual = playlistWithItems.update(emptyList<YouTubePlaylistItem>().toUpdatable())
+            val actual =
+                playlistWithItems.update(emptyList<YouTubePlaylistItemDetail>().toUpdatable())
             // verify
             assertThat(actual.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
             assertThat(actual.item.addedItems.map { it.videoId }).isEmpty()
@@ -235,18 +237,18 @@ private fun playlist(
 
 private fun playlistWithItems(
     playlistId: YouTubePlaylist.Id,
-    items: List<YouTubePlaylistItem>,
+    items: List<YouTubePlaylistItemDetail>,
 ): YouTubePlaylistWithItemDetails = object : YouTubePlaylistWithItemDetails {
     override val playlist: YouTubePlaylist get() = FakeYouTubeClient.playlist(playlistId)
-    override val items: List<YouTubePlaylistItem> get() = items
-    override val addedItems: List<YouTubePlaylistItem> get() = emptyList()
+    override val items: List<YouTubePlaylistItemDetail> get() = items
+    override val addedItems: List<YouTubePlaylistItemDetail> get() = emptyList()
 }
 
 private fun playlistItem(
     playlistId: YouTubePlaylist.Id,
     itemId: YouTubePlaylistItem.Id,
     publishedAt: Instant = Instant.EPOCH,
-): YouTubePlaylistItem = FakeYouTubeClient.playlistItem(
+): YouTubePlaylistItemDetail = FakeYouTubeClient.playlistItem(
     playlistId = playlistId,
     id = itemId,
     publishedAt = publishedAt,

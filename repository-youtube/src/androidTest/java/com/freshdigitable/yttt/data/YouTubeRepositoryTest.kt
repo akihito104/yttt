@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -256,7 +257,7 @@ class YouTubeRepositoryTest {
         localSource.updatePlaylistWithItems(
             (object : YouTubePlaylistWithItemDetails {
                 override val playlist: YouTubePlaylist get() = FakeYouTubeClient.playlist(playlistId)
-                override val items: List<YouTubePlaylistItem> get() = listOf(item)
+                override val items: List<YouTubePlaylistItemDetail> get() = listOf(item)
                 override val eTag: String? get() = "valid_eTag"
             } as YouTubePlaylistWithItemDetails).toUpdatable()
         )
@@ -298,7 +299,7 @@ private class FakeRemoteSource(
     val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
     val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
     val playlist: ((Set<YouTubePlaylist.Id>) -> Updatable<List<YouTubePlaylist>>)? = null,
-    val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItem>>)? = null,
+    val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItemDetail>>)? = null,
 ) : FakeYouTubeClient() {
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
@@ -319,7 +320,7 @@ private class FakeRemoteSource(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItem>> {
+    ): NetworkResponse<List<YouTubePlaylistItemDetail>> {
         logD { "fetchPlaylistItems: $id" }
         return NetworkResponse.create(playlistItems!!.invoke(id)(eTag))
     }
