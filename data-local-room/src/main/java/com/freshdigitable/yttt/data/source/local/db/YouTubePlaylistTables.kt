@@ -103,7 +103,7 @@ internal class YouTubePlaylistItemTable(
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
 ) : YouTubePlaylistItem {
-    constructor(item: YouTubePlaylistItemDetail) : this(
+    constructor(item: YouTubePlaylistItem) : this(
         item.id,
         item.playlistId,
         item.videoId,

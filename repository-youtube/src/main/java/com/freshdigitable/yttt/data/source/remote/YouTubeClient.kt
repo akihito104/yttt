@@ -55,6 +55,11 @@ interface YouTubeClient {
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String? = null,
+    ): NetworkResponse<List<YouTubePlaylistItem>>
+
+    fun fetchPlaylistItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
     ): NetworkResponse<List<YouTubePlaylistItemDetail>>
 
     fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>>
@@ -108,14 +113,24 @@ internal class YouTubeClientImpl(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        eTag: String?,
+        eTag: String?
+    ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetch(PlaylistItemRemote.factory(id)) {
+        playlistItems()
+            .list(listOf(PART_CONTENT_DETAILS))
+            .setPlaylistId(id.value)
+            .setMaxResults(maxResult)
+            .apply { eTag?.let { requestHeaders = HttpHeaders().apply { setIfNoneMatch(it) } } }
+    }
+
+    override fun fetchPlaylistItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
     ): NetworkResponse<List<YouTubePlaylistItemDetail>> =
         youtube.fetch(PlaylistItemDetailRemote.factory) {
             playlistItems()
                 .list(listOf(PART_SNIPPET))
                 .setPlaylistId(id.value)
                 .setMaxResults(maxResult)
-                .apply { eTag?.let { requestHeaders = HttpHeaders().apply { setIfNoneMatch(it) } } }
         }
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
@@ -434,6 +449,29 @@ private class YouTubePlaylistRemote(
                 nextPageToken = res.nextPageToken,
             )
         }
+    }
+}
+
+private class PlaylistItemRemote(
+    private val item: PlaylistItem,
+    override val playlistId: YouTubePlaylist.Id,
+) : YouTubePlaylistItem {
+    override val id: YouTubePlaylistItem.Id get() = YouTubePlaylistItem.Id(item.id)
+    override val videoId: YouTubeVideo.Id get() = YouTubeVideo.Id(item.contentDetails.videoId)
+    override val publishedAt: Instant get() = item.contentDetails.videoPublishedAt.toInstant()
+
+    companion object {
+        val factory: (YouTubePlaylist.Id) -> ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItem>> =
+            { id ->
+                { res, cc ->
+                    NetworkResponse.create(
+                        item = res.items.map { PlaylistItemRemote(item = it, playlistId = id) },
+                        cacheControl = cc,
+                        nextPageToken = res.nextPageToken,
+                        eTag = res.etag,
+                    )
+                }
+            }
     }
 }
 

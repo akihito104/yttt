@@ -69,6 +69,11 @@ abstract class FakeYouTubeClient : YouTubeClient {
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
+    ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
+
+    override fun fetchPlaylistItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
     ): NetworkResponse<List<YouTubePlaylistItemDetail>> = throw NotImplementedError()
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =

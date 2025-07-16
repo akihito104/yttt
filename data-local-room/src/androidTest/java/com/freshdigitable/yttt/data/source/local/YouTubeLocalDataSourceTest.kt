@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.update
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -87,7 +88,7 @@ class YouTubeLocalDataSourceTest {
                     .toUpdatable(CacheControl.fromRemote(dateTimeProvider.now())),
             )
             // exercise
-            dataSource.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(id)).isEmpty()
             assertThat(dao.findPlaylistById(id)?.id).isEqualTo(id)
@@ -98,14 +99,13 @@ class YouTubeLocalDataSourceTest {
         fun updatePlaylistWithItems_addedWithNull_returnsEmpty() = rule.runWithLocalSource {
             // setup
             val id = YouTubePlaylist.Id("test")
-            val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(id, dateTimeProvider.now()),
-                items = Updatable.create(
-                    null, CacheControl.fromRemote(dateTimeProvider.now()),
-                ),
-            )
+            val updatable: Updatable<YouTubePlaylistWithItems> =
+                YouTubePlaylistWithItem.newPlaylist(
+                    playlist = playlist(id, dateTimeProvider.now()),
+                    items = Updatable.create(null, CacheControl.fromRemote(dateTimeProvider.now())),
+                )
             // exercise
-            dataSource.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(id)).isEmpty()
             assertThat(dao.findPlaylistById(id)?.id).isEqualTo(id)
@@ -132,7 +132,7 @@ class YouTubeLocalDataSourceTest {
                 items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now()))
             )
             // exercise
-            dataSource.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // verify
             assertThat(dao.findPlaylistItemByPlaylistId(playlistId)).hasSize(1)
             assertThat(dao.findPlaylistById(playlistId)?.id).isEqualTo(playlistId)
@@ -241,7 +241,7 @@ class YouTubeLocalDataSourceTest {
         @Before
         fun setup() = rule.runWithLocalSource {
             dao.addChannels(channel)
-            items.values.forEach { dataSource.updatePlaylistWithItems(it) }
+            items.values.forEach { dataSource.updatePlaylistWithItems(it.item, it.cacheControl) }
         }
 
         @Test
@@ -249,7 +249,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             val actual = dataSource.fetchPlaylistWithItemIds(simple, 10).getOrNull()
             // verify
-            assertThat(actual?.items).hasSize(1)
+            assertThat(actual?.item?.items).hasSize(1)
         }
 
         @Test
@@ -258,11 +258,11 @@ class YouTubeLocalDataSourceTest {
             val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
                 it?.item?.update(items[simple]!!.item.items.toUpdatable(fetchedAt = dateTimeProvider.now()))
             }.getOrNull()
-            dataSource.updatePlaylistWithItems(updatable!!)
+            dataSource.updatePlaylistWithItems(updatable!!.item, updatable.cacheControl)
             // exercise
             val actual = dataSource.fetchPlaylistWithItemIds(simple, 10).getOrNull()
             // verify
-            assertThat(actual?.items).hasSize(1)
+            assertThat(actual?.item?.items).hasSize(1)
         }
 
         @Test
@@ -277,13 +277,13 @@ class YouTubeLocalDataSourceTest {
                 )
             ) + checkNotNull(items[simple]!!.item.items)
             val updatable = dataSource.fetchPlaylistWithItemIds(simple, 10).map {
-                it?.update(newItems.toUpdatable(fetchedAt = dateTimeProvider.now()))
+                it?.item?.update(newItems.toUpdatable(fetchedAt = dateTimeProvider.now()))
             }.getOrNull()
-            dataSource.updatePlaylistWithItems(updatable!!)
+            dataSource.updatePlaylistWithItems(updatable!!.item, updatable.cacheControl)
             // exercise
             val actual = dataSource.fetchPlaylistWithItemIds(simple, 10).getOrNull()
             // verify
-            assertThat(actual?.items).hasSize(2)
+            assertThat(actual?.item?.items).hasSize(2)
         }
 
         @Test
@@ -291,7 +291,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             val actual = dataSource.fetchPlaylistWithItemIds(privatePlaylist, 10).getOrNull()
             // verify
-            assertThat(actual?.items).isEmpty()
+            assertThat(actual?.item?.items).isEmpty()
         }
 
         @Test
@@ -299,7 +299,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             val actual = dataSource.fetchPlaylistWithItemIds(empty, 10).getOrNull()
             // verify
-            assertThat(actual?.items).isEmpty()
+            assertThat(actual?.item?.items).isEmpty()
         }
 
         @Test
@@ -354,7 +354,7 @@ class YouTubeLocalDataSourceTest {
                 playlist = playlist(playlistId, dateTimeProvider.now()),
                 items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now())),
             )
-            dataSource.updatePlaylistWithItems(updatable)
+            dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             val channels = videos.map { it.item.channel.toDbEntity() }
                 .distinctBy { it.id }.toList()
             dao.addChannels(channels)

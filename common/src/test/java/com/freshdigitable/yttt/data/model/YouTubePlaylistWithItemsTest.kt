@@ -23,7 +23,7 @@ class YouTubePlaylistWithItemsTest {
         fun create_newItemIsNull_returnsMaxDuration() {
             // setup
             // exercise
-            val actual = YouTubePlaylistWithItem.newPlaylist(
+            val actual = YouTubePlaylistWithItem.newPlaylist<YouTubePlaylistItem>(
                 playlist = playlist(playlistId, Instant.EPOCH),
                 items = Updatable.create(null, CacheControl.fromRemote(Instant.EPOCH)),
             )

@@ -15,6 +15,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail.Companion.isFromAnotherChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
@@ -91,7 +92,6 @@ class YouTubeRepository @Inject constructor(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         cache: YouTubePlaylistWithItem<*>?,
-        eTag: String?,
     ): Result<Updatable<YouTubePlaylistWithItemDetails>> {
         val cache = localSource.fetchPlaylistWithItems(id, maxResult)
             .onFailure { return Result.failure(it) }
@@ -108,28 +108,30 @@ class YouTubeRepository @Inject constructor(
                 if (uploadedAtAnotherChannel.isNotEmpty()) {
                     fetchChannelList(uploadedAtAnotherChannel.toSet())
                 }
-                localSource.updatePlaylistWithItems(u)
+                localSource.updatePlaylistWithItems(u.item, u.cacheControl)
             }
     }
 
     override suspend fun fetchPlaylistWithItemIds(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): Result<YouTubePlaylistWithItem<*>> {
-        val cache = localSource.fetchPlaylistWithItemIds(id, maxResult).getOrNull()
-        return remoteSource.fetchPlaylistWithItems(id, maxResult, cache, cache?.eTag)
-            .onSuccess { localSource.updatePlaylistWithItems(it) }
+        cache: YouTubePlaylistWithItem<*>?,
+        eTag: String?,
+    ): Result<Updatable<YouTubePlaylistWithItems>?> {
+        val cache = localSource.fetchPlaylistWithItemIds(id, maxResult).getOrNull()?.item
+        return remoteSource.fetchPlaylistWithItemIds(id, maxResult, cache, cache?.eTag)
+            .onSuccess { localSource.updatePlaylistWithItems(it.item, it.cacheControl) }
             .recoverCatching { throwable ->
                 val t = throwable as? NetworkResponse.Exception
                 if (t?.statusCode == 304) {
                     checkNotNull(cache).toUpdatable(t.cacheControl).also {
-                        localSource.updatePlaylistWithItemsCacheControl(it)
+                        localSource.updatePlaylistWithItemsCacheControl(it.item, it.cacheControl)
                     }
                 } else {
                     throw throwable
                 }
             }
-            .map { it.item }
+            .map { it }
     }
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> {

@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.test
 
 import com.google.common.truth.FailureMetadata
 import com.google.common.truth.Subject
-import com.google.common.truth.Subject.Factory
 import com.google.common.truth.ThrowableSubject
 import com.google.common.truth.Truth
 

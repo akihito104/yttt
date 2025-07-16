@@ -8,7 +8,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.NetworkResponse
@@ -199,11 +199,9 @@ class YouTubeRepositoryTest {
                 ids.map { FakeYouTubeClient.playlist(it) }
                     .toUpdatable(CacheControl.fromRemote(Instant.ofEpochMilli(1000)))
             },
-            playlistItems = recorder.wrap(expected = 1) { ids ->
-                {
-                    listOf(FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), ids))
-                        .toUpdatable()
-                }
+            playlistItemDetails = recorder.wrap(expected = 1) { ids ->
+                listOf(FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), ids))
+                    .toUpdatable()
             }
         )
         hiltRule.inject()
@@ -255,21 +253,23 @@ class YouTubeRepositoryTest {
         localSource.addChannelList(listOf(channel.toUpdatable()))
         val item = FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), playlistId, channel)
         localSource.updatePlaylistWithItems(
-            (object : YouTubePlaylistWithItemDetails {
+            object : YouTubePlaylistWithItems {
                 override val playlist: YouTubePlaylist get() = FakeYouTubeClient.playlist(playlistId)
-                override val items: List<YouTubePlaylistItemDetail> get() = listOf(item)
+                override val items: List<YouTubePlaylistItem> get() = listOf(item)
                 override val eTag: String? get() = "valid_eTag"
-            } as YouTubePlaylistWithItemDetails).toUpdatable()
+            },
+            CacheControl.fromRemote(Instant.EPOCH),
         )
         val cache = checkNotNull(localSource.fetchPlaylistWithItemIds(playlistId, 10).getOrNull())
+        assertThat(cache.item.eTag).isEqualTo("valid_eTag")
         // exercise
         val actual = sut.fetchPlaylistWithItemIds(playlistId, 10)
         // verify
         assertResultThat(actual).isSuccess {
-            assertThat(it.playlist.id).isEqualTo(cache.playlist.id)
-            assertThat(it.items).hasSize(1)
-            assertThat(it.addedItems).isEmpty()
-            assertThat(it.eTag).isEqualTo("valid_eTag")
+            assertThat(it!!.item.playlist.id).isEqualTo(cache.item.playlist.id)
+            assertThat(it.item.items).hasSize(1)
+            assertThat(it.item.addedItems).isEmpty()
+            assertThat(it.item.eTag).isEqualTo("valid_eTag")
         }
     }
 }
@@ -299,7 +299,8 @@ private class FakeRemoteSource(
     val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
     val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
     val playlist: ((Set<YouTubePlaylist.Id>) -> Updatable<List<YouTubePlaylist>>)? = null,
-    val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItemDetail>>)? = null,
+    val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItem>>)? = null,
+    val playlistItemDetails: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItemDetail>>)? = null,
 ) : FakeYouTubeClient() {
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
@@ -319,10 +320,18 @@ private class FakeRemoteSource(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItemDetail>> {
+        eTag: String?
+    ): NetworkResponse<List<YouTubePlaylistItem>> {
         logD { "fetchPlaylistItems: $id" }
         return NetworkResponse.create(playlistItems!!.invoke(id)(eTag))
+    }
+
+    override fun fetchPlaylistItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): NetworkResponse<List<YouTubePlaylistItemDetail>> {
+        logD { "fetchPlaylistItemDetails: $id" }
+        return NetworkResponse.create(playlistItemDetails!!.invoke(id))
     }
 }
 
