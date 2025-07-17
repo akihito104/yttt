@@ -501,7 +501,6 @@ private class PlaylistItemDetailRemote(
                     item = res.items.map { PlaylistItemDetailRemote(it) },
                     cacheControl = cc,
                     nextPageToken = res.nextPageToken,
-                    eTag = res.etag,
                 )
             }
     }
