@@ -48,7 +48,7 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
         return flow {
             val res = item.map { i ->
                 flowOf(i).map { id ->
-                    id to repository.fetchPlaylistWithItems(id, ITEM_SIZE.toLong())
+                    id to repository.fetchPlaylistWithItemDetails(id, ITEM_SIZE.toLong())
                         .map { u -> u.item.items }
                 }
             }

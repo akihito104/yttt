@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.TwitchDataSource
+import com.freshdigitable.yttt.data.source.recoverFromNotFoundError
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -70,13 +71,9 @@ internal class TwitchRemoteDataSource @Inject constructor(
             override val vacation: TwitchChannelSchedule.Vacation? get() = updatable.item.first().vacation
         }
         schedule.toUpdatable(updatable.cacheControl)
-    }.recoverCatching {
-        if (it is TwitchException && it.statusCode == 404) {
-            // 404 Not Found: The broadcaster has not created a streaming schedule.
-            Updatable.create(item = null, cacheControl = it.cacheControl)
-        } else {
-            throw it
-        }
+    }.recoverFromNotFoundError { cacheControl ->
+        // 404 Not Found: The broadcaster has not created a streaming schedule.
+        Updatable.create(item = null, cacheControl = cacheControl)
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =

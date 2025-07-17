@@ -7,7 +7,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -199,17 +198,19 @@ class YouTubeRepositoryTest {
                 ids.map { FakeYouTubeClient.playlist(it) }
                     .toUpdatable(CacheControl.fromRemote(Instant.ofEpochMilli(1000)))
             },
-            playlistItemDetails = recorder.wrap(expected = 1) { ids ->
-                listOf(FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), ids))
-                    .toUpdatable()
+            playlistItems = recorder.wrap(expected = 1) { ids ->
+                {
+                    listOf(FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), ids))
+                        .toUpdatable()
+                }
             }
         )
         hiltRule.inject()
         // exercise
-        val actual = sut.fetchPlaylistWithItems(YouTubePlaylist.Id("0"), 10, null)
+        val actual = sut.fetchPlaylistWithItems(YouTubePlaylist.Id("0"), 10)
         // verify
         assertResultThat(actual).isSuccess {
-            assertThat(it.item.items).hasSize(1)
+            assertThat(it!!.item.items).hasSize(1)
         }
     }
 
@@ -219,23 +220,23 @@ class YouTubeRepositoryTest {
         val current = Instant.ofEpochMilli(1000)
         FakeDateTimeProviderModule.instant = current
         FakeYouTubeClientModule.client = FakeRemoteSource(
-            playlist = recorder.wrap(expected = 1) { ids ->
+            playlistItems = recorder.wrap(expected = 1) { ids ->
                 val cacheControl = CacheControl.fromRemote(current)
                 throw YouTubeException.notFound(cacheControl = cacheControl)
             }
         )
         hiltRule.inject()
         // exercise
-        val actual = sut.fetchPlaylistWithItems(YouTubePlaylist.Id("0"), 10, null)
+        val actual = sut.fetchPlaylistWithItems(YouTubePlaylist.Id("0"), 10)
         // verify
         assertResultThat(actual).isSuccess {
-            assertThat(it.item.playlist.id).isEqualTo(YouTubePlaylist.Id("0"))
+            assertThat(it!!.item.playlist.id).isEqualTo(YouTubePlaylist.Id("0"))
             assertThat(it.cacheControl.fetchedAt).isEqualTo(current)
         }
     }
 
     @Test
-    fun fetchPlaylistWithItemIds_receiveNotModified_returnsSuccess() = testScope.runTest {
+    fun fetchPlaylistWithItems_receiveNotModified_returnsSuccess() = testScope.runTest {
         // setup
         val current = Instant.ofEpochMilli(1000)
         FakeDateTimeProviderModule.instant = current
@@ -251,7 +252,7 @@ class YouTubeRepositoryTest {
         val playlistId = YouTubePlaylist.Id("0")
         val channel = FakeYouTubeClient.channelDetail(1)
         localSource.addChannelList(listOf(channel.toUpdatable()))
-        val item = FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), playlistId, channel)
+        val item = FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), playlistId)
         localSource.updatePlaylistWithItems(
             object : YouTubePlaylistWithItems {
                 override val playlist: YouTubePlaylist get() = FakeYouTubeClient.playlist(playlistId)
@@ -260,10 +261,10 @@ class YouTubeRepositoryTest {
             },
             CacheControl.fromRemote(Instant.EPOCH),
         )
-        val cache = checkNotNull(localSource.fetchPlaylistWithItemIds(playlistId, 10).getOrNull())
+        val cache = checkNotNull(localSource.fetchPlaylistWithItems(playlistId, 10).getOrNull())
         assertThat(cache.item.eTag).isEqualTo("valid_eTag")
         // exercise
-        val actual = sut.fetchPlaylistWithItemIds(playlistId, 10)
+        val actual = sut.fetchPlaylistWithItems(playlistId, 10)
         // verify
         assertResultThat(actual).isSuccess {
             assertThat(it!!.item.playlist.id).isEqualTo(cache.item.playlist.id)
@@ -300,7 +301,6 @@ private class FakeRemoteSource(
     val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
     val playlist: ((Set<YouTubePlaylist.Id>) -> Updatable<List<YouTubePlaylist>>)? = null,
     val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItem>>)? = null,
-    val playlistItemDetails: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItemDetail>>)? = null,
 ) : FakeYouTubeClient() {
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
@@ -324,14 +324,6 @@ private class FakeRemoteSource(
     ): NetworkResponse<List<YouTubePlaylistItem>> {
         logD { "fetchPlaylistItems: $id" }
         return NetworkResponse.create(playlistItems!!.invoke(id)(eTag))
-    }
-
-    override fun fetchPlaylistItemDetails(
-        id: YouTubePlaylist.Id,
-        maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItemDetail>> {
-        logD { "fetchPlaylistItemDetails: $id" }
-        return NetworkResponse.create(playlistItemDetails!!.invoke(id))
     }
 }
 

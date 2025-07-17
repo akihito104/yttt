@@ -20,9 +20,9 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
+import com.freshdigitable.yttt.data.source.recoverFromNotModified
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Duration
@@ -88,19 +88,19 @@ class YouTubeRepository @Inject constructor(
         }.map { it + cache }
     }
 
-    override suspend fun fetchPlaylistWithItems(
+    override suspend fun fetchPlaylistWithItemDetails(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         cache: YouTubePlaylistWithItem<*>?,
     ): Result<Updatable<YouTubePlaylistWithItemDetails>> {
-        val cache = localSource.fetchPlaylistWithItems(id, maxResult)
+        val cache = localSource.fetchPlaylistWithItemDetails(id, maxResult)
             .onFailure { return Result.failure(it) }
             .onSuccess { res ->
                 if (res?.isFresh(dateTimeProvider.now()) == true) {
                     return Result.success(res)
                 }
             }.getOrNull()
-        return remoteSource.fetchPlaylistWithItems(id, maxResult, cache?.item)
+        return remoteSource.fetchPlaylistWithItemDetails(id, maxResult, cache?.item)
             .onSuccess { u ->
                 val uploadedAtAnotherChannel = u.item.items
                     .filter { it.isFromAnotherChannel }
@@ -112,23 +112,17 @@ class YouTubeRepository @Inject constructor(
             }
     }
 
-    override suspend fun fetchPlaylistWithItemIds(
+    override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         cache: YouTubePlaylistWithItem<*>?,
-        eTag: String?,
     ): Result<Updatable<YouTubePlaylistWithItems>?> {
-        val cache = localSource.fetchPlaylistWithItemIds(id, maxResult).getOrNull()?.item
-        return remoteSource.fetchPlaylistWithItemIds(id, maxResult, cache, cache?.eTag)
+        val c = localSource.fetchPlaylistWithItems(id, maxResult).getOrNull()?.item
+        return remoteSource.fetchPlaylistWithItems(id, maxResult, c)
             .onSuccess { localSource.updatePlaylistWithItems(it.item, it.cacheControl) }
-            .recoverCatching { throwable ->
-                val t = throwable as? NetworkResponse.Exception
-                if (t?.statusCode == 304) {
-                    checkNotNull(cache).toUpdatable(t.cacheControl).also {
-                        localSource.updatePlaylistWithItemsCacheControl(it.item, it.cacheControl)
-                    }
-                } else {
-                    throw throwable
+            .recoverFromNotModified { cacheControl ->
+                checkNotNull(c).toUpdatable(cacheControl).also {
+                    localSource.updatePlaylistWithItemsCacheControl(it.item, it.cacheControl)
                 }
             }
             .map { it }

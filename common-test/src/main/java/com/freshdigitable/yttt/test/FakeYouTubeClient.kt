@@ -118,6 +118,18 @@ abstract class FakeYouTubeClient : YouTubeClient {
         fun playlistItem(
             id: YouTubePlaylistItem.Id,
             playlistId: YouTubePlaylist.Id,
+            videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id.value}_${playlistId.value}"),
+            publishedAt: Instant = Instant.EPOCH,
+        ): YouTubePlaylistItem = object : YouTubePlaylistItem {
+            override val id: YouTubePlaylistItem.Id get() = id
+            override val playlistId: YouTubePlaylist.Id get() = playlistId
+            override val videoId: YouTubeVideo.Id get() = videoId
+            override val publishedAt: Instant get() = publishedAt
+        }
+
+        fun playlistItemDetail(
+            id: YouTubePlaylistItem.Id,
+            playlistId: YouTubePlaylist.Id,
             channel: YouTubeChannelTitle = object : YouTubeChannelTitle {
                 override val id: YouTubeChannel.Id get() = YouTubeChannel.Id("channel_0")
                 override val title: String get() = "Channel"

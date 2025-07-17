@@ -22,11 +22,11 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
 
         fun <T : YouTubePlaylistItem> newPlaylist(
             playlist: Updatable<YouTubePlaylist>,
-            items: Updatable<List<T>?>,
+            items: Updatable<List<T>>,
         ): Updatable<YouTubePlaylistWithItem<T>> = NewPlaylist(playlist.item, items)
             .toUpdatable(
                 Updatable.latest(playlist, items).cacheControl
-                    .overrideMaxAge(if (items.item.isNullOrEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
+                    .overrideMaxAge(if (items.item.isEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
             )
 
         internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
@@ -76,9 +76,9 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
 
     private class NewPlaylist<T : YouTubePlaylistItem>(
         override val playlist: YouTubePlaylist,
-        private val newItems: Updatable<List<T>?>,
+        private val newItems: Updatable<List<T>>,
     ) : YouTubePlaylistWithItem<T> {
-        override val items: List<T> get() = newItems.item ?: emptyList()
+        override val items: List<T> get() = newItems.item
         override val addedItems: List<T> get() = items
         override val eTag: String? get() = newItems.eTag
     }

@@ -118,12 +118,6 @@ internal class YouTubePlaylistItemTable(
         @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
         suspend fun removePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id)
 
-        @Query("SELECT * FROM playlist_item AS s WHERE s.playlist_id = :id LIMIT :maxResult")
-        suspend fun findPlaylistItemIds(
-            id: YouTubePlaylist.Id,
-            maxResult: Long,
-        ): List<YouTubePlaylistItemTable>
-
         @Query("DELETE FROM playlist_item")
         override suspend fun deleteTable()
     }

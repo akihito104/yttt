@@ -20,19 +20,6 @@ class YouTubePlaylistWithItemsTest {
         private val playlistId = YouTubePlaylist.Id("playlist")
 
         @Test
-        fun create_newItemIsNull_returnsMaxDuration() {
-            // setup
-            // exercise
-            val actual = YouTubePlaylistWithItem.newPlaylist<YouTubePlaylistItem>(
-                playlist = playlist(playlistId, Instant.EPOCH),
-                items = Updatable.create(null, CacheControl.fromRemote(Instant.EPOCH)),
-            )
-            // verify
-            assertThat(actual.cacheControl.maxAge).isEqualTo(MAX_AGE_MAX)
-            assertThat(actual.item.addedItems).isEmpty()
-        }
-
-        @Test
         fun create_newItemIsEmpty_returnsMaxDuration() {
             // setup
             // exercise
@@ -248,7 +235,7 @@ private fun playlistItem(
     playlistId: YouTubePlaylist.Id,
     itemId: YouTubePlaylistItem.Id,
     publishedAt: Instant = Instant.EPOCH,
-): YouTubePlaylistItemDetail = FakeYouTubeClient.playlistItem(
+): YouTubePlaylistItemDetail = FakeYouTubeClient.playlistItemDetail(
     playlistId = playlistId,
     id = itemId,
     publishedAt = publishedAt,

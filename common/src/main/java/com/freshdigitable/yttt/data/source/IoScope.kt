@@ -25,6 +25,20 @@ class IoScope @Inject constructor(
         }.flowOn(ioDispatcher)
 }
 
+inline fun <R, T : R> Result<T>.recoverFromNotModified(block: (CacheControl) -> R): Result<R> =
+    recoverFromNetworkErrorResponse(304, block)
+
+inline fun <R, T : R> Result<T>.recoverFromNotFoundError(block: (CacheControl) -> R): Result<R> =
+    recoverFromNetworkErrorResponse(404, block)
+
+inline fun <R, T : R> Result<T>.recoverFromNetworkErrorResponse(
+    statusCode: Int,
+    block: (CacheControl) -> R,
+): Result<R> = recoverCatching {
+    if ((it as? NetworkResponse.Exception)?.statusCode == statusCode) block(it.cacheControl)
+    else throw it
+}
+
 interface NetworkResponse<T> : Updatable<T> {
     override val item: T
     val nextPageToken: String? get() = null
