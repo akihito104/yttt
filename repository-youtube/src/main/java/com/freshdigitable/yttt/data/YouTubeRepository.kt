@@ -12,16 +12,17 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem.Companion.isFromAnotherChannel
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail.Companion.isFromAnotherChannel
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
+import com.freshdigitable.yttt.data.source.recoverFromNotModified
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Duration
@@ -87,20 +88,19 @@ class YouTubeRepository @Inject constructor(
         }.map { it + cache }
     }
 
-    override suspend fun fetchPlaylistWithItems(
+    override suspend fun fetchPlaylistWithItemDetails(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        cache: YouTubePlaylistWithItems<*>?,
-        eTag: String?,
+        cache: YouTubePlaylistWithItem<*>?,
     ): Result<Updatable<YouTubePlaylistWithItemDetails>> {
-        val cache = localSource.fetchPlaylistWithItems(id, maxResult)
+        val cache = localSource.fetchPlaylistWithItemDetails(id, maxResult)
             .onFailure { return Result.failure(it) }
             .onSuccess { res ->
                 if (res?.isFresh(dateTimeProvider.now()) == true) {
                     return Result.success(res)
                 }
             }.getOrNull()
-        return remoteSource.fetchPlaylistWithItems(id, maxResult, cache?.item)
+        return remoteSource.fetchPlaylistWithItemDetails(id, maxResult, cache?.item)
             .onSuccess { u ->
                 val uploadedAtAnotherChannel = u.item.items
                     .filter { it.isFromAnotherChannel }
@@ -108,28 +108,24 @@ class YouTubeRepository @Inject constructor(
                 if (uploadedAtAnotherChannel.isNotEmpty()) {
                     fetchChannelList(uploadedAtAnotherChannel.toSet())
                 }
-                localSource.updatePlaylistWithItems(u)
+                localSource.updatePlaylistWithItems(u.item, u.cacheControl)
             }
     }
 
-    override suspend fun fetchPlaylistWithItemIds(
+    override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): Result<YouTubePlaylistWithItems<*>> {
-        val cache = localSource.fetchPlaylistWithItemIds(id, maxResult).getOrNull()
-        return remoteSource.fetchPlaylistWithItems(id, maxResult, cache, cache?.eTag)
-            .onSuccess { localSource.updatePlaylistWithItems(it) }
-            .recoverCatching { throwable ->
-                val t = throwable as? NetworkResponse.Exception
-                if (t?.statusCode == 304) {
-                    checkNotNull(cache).toUpdatable(t.cacheControl).also {
-                        localSource.updatePlaylistWithItemsCacheControl(it)
-                    }
-                } else {
-                    throw throwable
+        cache: YouTubePlaylistWithItem<*>?,
+    ): Result<Updatable<YouTubePlaylistWithItems>?> {
+        val c = localSource.fetchPlaylistWithItems(id, maxResult).getOrNull()?.item
+        return remoteSource.fetchPlaylistWithItems(id, maxResult, c)
+            .onSuccess { localSource.updatePlaylistWithItems(it.item, it.cacheControl) }
+            .recoverFromNotModified { cacheControl ->
+                checkNotNull(c).toUpdatable(cacheControl).also {
+                    localSource.updatePlaylistWithItemsCacheControl(it.item, it.cacheControl)
                 }
             }
-            .map { it.item }
+            .map { it }
     }
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> {

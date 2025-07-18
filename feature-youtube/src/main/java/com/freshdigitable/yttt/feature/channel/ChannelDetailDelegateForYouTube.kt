@@ -18,7 +18,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeId
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
@@ -89,9 +89,9 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         val desc = d?.description ?: return@map AnnotatableString.empty()
         AnnotatableString.createForYouTube(desc)
     }
-    override val uploadedVideo: Flow<List<YouTubePlaylistItem>> = detail.map { d ->
+    override val uploadedVideo: Flow<List<YouTubePlaylistItemDetail>> = detail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()
-        repository.fetchPlaylistWithItems(pId, maxResult = 10)
+        repository.fetchPlaylistWithItemDetails(pId, maxResult = 10)
             .map { u -> u.map { it.items } }
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "detail:$d" } }
@@ -143,7 +143,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
 }
 
 internal interface YouTubeChannelDetailPagerContent : ChannelDetailDelegate.PagerContent {
-    val uploadedVideo: Flow<List<YouTubePlaylistItem>>
+    val uploadedVideo: Flow<List<YouTubePlaylistItemDetail>>
     val sections: Flow<List<ChannelSectionItem>>
     val activities: Flow<List<YouTubeChannelLog>>
     val debug: Flow<Map<DebugId, String>>

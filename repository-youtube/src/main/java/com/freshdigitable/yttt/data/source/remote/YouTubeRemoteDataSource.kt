@@ -11,15 +11,18 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
-import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
+import com.freshdigitable.yttt.data.source.recoverFromNotFoundError
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
@@ -62,32 +65,41 @@ internal class YouTubeRemoteDataSource(
     override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        cache: YouTubePlaylistWithItems<*>?,
-        eTag: String?,
-    ): Result<Updatable<YouTubePlaylistWithItemDetails>> = fetch {
+        cache: YouTubePlaylistWithItem<*>?,
+    ): Result<Updatable<YouTubePlaylistWithItems>> = fetch {
+        val items = fetchPlaylistItems(id, maxResult, cache?.eTag)
         if (cache != null) {
-            val res = fetchPlaylistItems(id, maxResult, eTag)
-            cache.update(res)
+            cache.update(items)
         } else {
             val playlist = fetchPlaylist(setOf(id)).map { it.first() }
-            val items = fetchPlaylistItems(id, maxResult, eTag)
-            @Suppress("UNCHECKED_CAST")
-            YouTubePlaylistWithItems.newPlaylist(
-                playlist = playlist,
-                items = items as Updatable<List<YouTubePlaylistItem>?>,
+            YouTubePlaylistWithItem.newPlaylist(playlist = playlist, items = items)
+        }
+    }.recoverFromNotFoundError { cacheControl ->
+        cache?.update(emptyList<YouTubePlaylistItem>().toUpdatable(cacheControl))
+            ?: YouTubePlaylistWithItem.newPlaylist(
+                playlist = YouTubePlaylistNotFound(id).toUpdatable(cacheControl),
+                items = Updatable.create(emptyList(), cacheControl),
             )
-        }
-    }.recoverCatching {
-        if ((it as? NetworkResponse.Exception)?.statusCode == 404) {
-            val cacheControl = it.cacheControl
-            cache?.update(emptyList<YouTubePlaylistItem>().toUpdatable(cacheControl))
-                ?: YouTubePlaylistWithItems.newPlaylist(
-                    playlist = YouTubePlaylistNotFound(id).toUpdatable(cacheControl),
-                    items = Updatable.create(null, cacheControl),
-                )
+    }
+
+    override suspend fun fetchPlaylistWithItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        cache: YouTubePlaylistWithItem<*>?,
+    ): Result<Updatable<YouTubePlaylistWithItemDetails>> = fetch {
+        val items = fetchPlaylistItemDetails(id, maxResult)
+        if (cache != null) {
+            cache.update(items)
         } else {
-            throw it
+            val playlist = fetchPlaylist(setOf(id)).map { it.first() }
+            YouTubePlaylistWithItem.newPlaylist(playlist = playlist, items = items)
         }
+    }.recoverFromNotFoundError { cacheControl ->
+        cache?.update(emptyList<YouTubePlaylistItemDetail>().toUpdatable(cacheControl))
+            ?: YouTubePlaylistWithItem.newPlaylist(
+                playlist = YouTubePlaylistNotFound(id).toUpdatable(cacheControl),
+                items = Updatable.create(emptyList(), cacheControl),
+            )
     }
 
     private suspend inline fun <E> fetchAllItems(

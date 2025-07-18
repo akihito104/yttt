@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
@@ -55,6 +56,11 @@ interface YouTubeClient {
         maxResult: Long,
         eTag: String? = null,
     ): NetworkResponse<List<YouTubePlaylistItem>>
+
+    fun fetchPlaylistItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): NetworkResponse<List<YouTubePlaylistItemDetail>>
 
     fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>>
     fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>>
@@ -107,14 +113,25 @@ internal class YouTubeClientImpl(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetch(PlaylistItemRemote.factory) {
+        eTag: String?
+    ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetch(PlaylistItemRemote.factory(id)) {
         playlistItems()
-            .list(listOf(PART_SNIPPET))
+            .list(listOf(PART_CONTENT_DETAILS))
             .setPlaylistId(id.value)
             .setMaxResults(maxResult)
             .apply { eTag?.let { requestHeaders = HttpHeaders().apply { setIfNoneMatch(it) } } }
     }
+
+    override fun fetchPlaylistItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+    ): NetworkResponse<List<YouTubePlaylistItemDetail>> =
+        youtube.fetch(PlaylistItemDetailRemote.factory) {
+            playlistItems()
+                .list(listOf(PART_SNIPPET))
+                .setPlaylistId(id.value)
+                .setMaxResults(maxResult)
+        }
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
         youtube.fetch(YouTubeVideoRemote.factory) {
@@ -437,7 +454,30 @@ private class YouTubePlaylistRemote(
 
 private class PlaylistItemRemote(
     private val item: PlaylistItem,
+    override val playlistId: YouTubePlaylist.Id,
 ) : YouTubePlaylistItem {
+    override val id: YouTubePlaylistItem.Id get() = YouTubePlaylistItem.Id(item.id)
+    override val videoId: YouTubeVideo.Id get() = YouTubeVideo.Id(item.contentDetails.videoId)
+    override val publishedAt: Instant get() = item.contentDetails.videoPublishedAt.toInstant()
+
+    companion object {
+        val factory: (YouTubePlaylist.Id) -> ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItem>> =
+            { id ->
+                { res, cc ->
+                    NetworkResponse.create(
+                        item = res.items.map { PlaylistItemRemote(item = it, playlistId = id) },
+                        cacheControl = cc,
+                        nextPageToken = res.nextPageToken,
+                        eTag = res.etag,
+                    )
+                }
+            }
+    }
+}
+
+private class PlaylistItemDetailRemote(
+    private val item: PlaylistItem,
+) : YouTubePlaylistItemDetail {
     override val id: YouTubePlaylistItem.Id get() = YouTubePlaylistItem.Id(item.id)
     override val playlistId: YouTubePlaylist.Id get() = YouTubePlaylist.Id(item.snippet.playlistId)
     override val title: String get() = item.snippet.title
@@ -455,13 +495,12 @@ private class PlaylistItemRemote(
     override fun toString(): String = item.toPrettyString()
 
     companion object {
-        val factory: ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItem>> =
+        val factory: ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItemDetail>> =
             { res, cc ->
                 NetworkResponse.create(
-                    item = res.items.map { PlaylistItemRemote(it) },
+                    item = res.items.map { PlaylistItemDetailRemote(it) },
                     cacheControl = cc,
                     nextPageToken = res.nextPageToken,
-                    eTag = res.etag,
                 )
             }
     }
