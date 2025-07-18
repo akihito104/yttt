@@ -111,7 +111,7 @@ internal class YouTubeDao @Inject constructor(
             addPlaylistWithItemsEtag(YouTubePlaylistWithItemsEtag(p.id, it))
         }
         if (item.items.any { it !is YouTubePlaylistItemDetailDb }) {
-            removePlaylistItemsByPlaylistItemIds(item.items.map { it.id })
+            removePlaylistItemAdditionsByPlaylistId(p.id)
             removePlaylistItemsByPlaylistId(p.id)
             if (item.items.isNotEmpty()) {
                 addPlaylistItems(item.items.map { it.toDbEntity() })

@@ -118,6 +118,43 @@ class YouTubeLocalDataSourceTest {
             assertThat(dao.findPlaylistItemByPlaylistId(playlistId)).hasSize(1)
             assertThat(dao.findPlaylistById(playlistId)?.id).isEqualTo(playlistId)
         }
+
+        @Test
+        fun updatePlaylistWithItems_itemWasReplaced_returnsItems() = rule.runWithLocalSource {
+            // setup
+            val playlistId = YouTubePlaylist.Id("test")
+            val items = listOf(
+                FakeYouTubeClient.playlistItemDetail(
+                    id = YouTubePlaylistItem.Id("playlist"),
+                    playlistId = playlistId,
+                    videoId = YouTubeVideo.Id("video"),
+                    channel = channelTable(),
+                ),
+            )
+            val channel = items.map { (it.channel as YouTubeChannel).toDbEntity() }
+                .distinctBy { it.id }
+            dao.addChannels(channel)
+            val updatable = YouTubePlaylistWithItem.newPlaylist(
+                playlist = playlist(playlistId, dateTimeProvider.now()),
+                items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now()))
+            )
+            dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
+            // exercise
+            val u = YouTubePlaylistWithItem.newPlaylist(
+                playlist = playlist(playlistId, dateTimeProvider.now()),
+                items = listOf(
+                    FakeYouTubeClient.playlistItemDetail(
+                        id = YouTubePlaylistItem.Id("playlist_1"),
+                        playlistId = playlistId,
+                        channel = channelTable(),
+                    )
+                ).toUpdatable(dateTimeProvider.now())
+            )
+            dataSource.updatePlaylistWithItems(u.item, u.cacheControl)
+            // verify
+            assertThat(dao.findPlaylistItemByPlaylistId(playlistId)).hasSize(1)
+            assertThat(dao.findPlaylistById(playlistId)?.id).isEqualTo(playlistId)
+        }
     }
 
     class SimpleFindVideo {

@@ -157,8 +157,11 @@ class YouTubePlaylistItemAdditionTable(
         @Upsert
         suspend fun addPlaylistItemAdditions(item: Collection<YouTubePlaylistItemAdditionTable>)
 
-        @Query("DELETE FROM playlist_item_addition WHERE item_id IN (:id)")
-        suspend fun removePlaylistItemsByPlaylistItemIds(id: Collection<YouTubePlaylistItem.Id>)
+        @Query(
+            "DELETE FROM playlist_item_addition WHERE item_id IN" +
+                " (SELECT i.id FROM playlist_item AS i WHERE i.playlist_id = :id)"
+        )
+        suspend fun removePlaylistItemAdditionsByPlaylistId(id: YouTubePlaylist.Id)
 
         @Query("DELETE FROM playlist_item_addition")
         override suspend fun deleteTable()
