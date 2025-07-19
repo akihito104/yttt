@@ -6,9 +6,12 @@ interface YouTubeSubscription {
     val id: Id
     val subscribeSince: Instant
     val channel: YouTubeChannel
-    val order: Int
 
     data class Id(override val value: String) : YouTubeId
+}
+
+interface YouTubeSubscriptionRelevanceOrdered : YouTubeSubscription {
+    val order: Int
 }
 
 interface YouTubeSubscriptions {
@@ -39,4 +42,10 @@ interface YouTubeSubscriptions {
         val deleted: Set<YouTubeSubscription.Id>
             get() = cache - remote.items.map { it.id }.toSet()
     }
+}
+
+interface YouTubeSubscriptionQuery {
+    val offset: Int
+    val nextPageToken: String?
+    val eTag: String
 }

@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
@@ -32,6 +33,11 @@ internal class YouTubeDao @Inject constructor(
             .map { it.toDbEntity() }
         addChannels(channels)
         addSubscriptionEntities(subscriptions.map { it.toDbEntity() })
+        val orders = subscriptions.filterIsInstance<YouTubeSubscriptionRelevanceOrdered>()
+            .map { YouTubeSubscriptionRelevanceOrderTable(it.id, it.order) }
+        if (orders.isNotEmpty()) {
+            addSubscriptionRelevanceOrders(orders)
+        }
     }
 
     suspend fun addChannelLogs(logs: Collection<YouTubeChannelLog>) = db.withTransaction {
@@ -137,7 +143,7 @@ internal class YouTubeDao @Inject constructor(
 }
 
 private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTubeSubscriptionTable(
-    id = id, subscribeSince = subscribeSince, channelId = channel.id, order = order,
+    id = id, subscribeSince = subscribeSince, channelId = channel.id,
 )
 
 private fun YouTubeChannelLog.toDbEntity(): YouTubeChannelLogTable = YouTubeChannelLogTable(

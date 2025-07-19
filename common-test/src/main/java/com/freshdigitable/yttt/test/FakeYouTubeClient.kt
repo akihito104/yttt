@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
@@ -55,9 +56,15 @@ interface FakeYouTubeClientModule {
 abstract class FakeYouTubeClient : YouTubeClient {
     override fun fetchSubscription(
         pageSize: Long,
-        offset: Int,
-        token: String?
+        token: String?,
+        eTag: String?,
     ): NetworkResponse<List<YouTubeSubscription>> = throw NotImplementedError()
+
+    override fun fetchSubscriptionRelevanceOrdered(
+        pageSize: Long,
+        offset: Int,
+        token: String?,
+    ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>> = throw NotImplementedError()
 
     override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
         throw NotImplementedError()

@@ -100,8 +100,8 @@ class FetchYouTubeStreamUseCaseTest {
         // setup
         FakeYouTubeAccountModule.account = "account"
         FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-            subscription = { offset, token ->
-                if (offset == 0 && token == null) {
+            subscription = { token, _ ->
+                if (token == null) {
                     NetworkResponse.create(emptyList<YouTubeSubscription>().toUpdatable())
                 } else {
                     throw AssertionError()
@@ -344,7 +344,7 @@ class FetchYouTubeStreamUseCaseTest {
 
         FakeDateTimeProviderModule.apply {
             onTimeAdvanced = {
-                fakeClient.setup(10, 3, it) { i, c -> video(i, c) }
+                fakeClient.setup(10, 3, it, ::video)
                 val base = fakeClient.playlistItem!!
                 fakeClient.playlistItem = { id ->
                     if (id.value.contains("1")) throw YouTubeException.notModified(
@@ -409,12 +409,11 @@ private fun subscription(id: Int, channel: YouTubeChannel): YouTubeSubscription 
     object : YouTubeSubscription {
         override val id: YouTubeSubscription.Id = YouTubeSubscription.Id("$id")
         override val channel: YouTubeChannel = channel
-        override val order: Int = id
         override val subscribeSince: Instant = Instant.EPOCH
     }
 
 private class FakeYouTubeClientImpl(
-    var subscription: ((Int, String?) -> NetworkResponse<List<YouTubeSubscription>>)? = null,
+    var subscription: ((String?, String?) -> NetworkResponse<List<YouTubeSubscription>>)? = null,
     var channel: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
     var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItem>>)? = null,
     var video: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
@@ -439,11 +438,11 @@ private class FakeYouTubeClientImpl(
             val subs = chunked.mapIndexed { i, c ->
                 val tokenMatcher = if (i == 0) null else "token$i"
                 val nextToken = if (i == chunked.size - 1) null else "token${i + 1}"
-                (i * 50 to tokenMatcher) to NetworkResponse.create(
+                tokenMatcher to NetworkResponse.create(
                     c.mapIndexed { j, s -> subscription(j, s) }.toUpdatable(current), nextToken
                 )
             }.toMap()
-            subscription = { offset, token -> subs[offset to token]!! }
+            subscription = { token, _ -> subs[token]!! }
             val v = videos.associateBy { it.id }
             video = { id -> id.mapNotNull { v[it] }.toUpdatable(current) }
             val pi = channelDetail.associate { c ->
@@ -457,11 +456,11 @@ private class FakeYouTubeClientImpl(
 
     override fun fetchSubscription(
         pageSize: Long,
-        offset: Int,
         token: String?,
+        eTag: String?
     ): NetworkResponse<List<YouTubeSubscription>> {
-        logD { "fetchSubscription: $offset, $token" }
-        return subscription!!.invoke(offset, token)
+        logD { "fetchSubscription: $token, $eTag" }
+        return subscription!!.invoke(token, eTag)
     }
 
     override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {

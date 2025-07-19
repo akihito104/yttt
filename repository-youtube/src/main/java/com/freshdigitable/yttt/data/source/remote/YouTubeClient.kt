@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
@@ -45,9 +46,15 @@ import java.time.format.DateTimeFormatter
 interface YouTubeClient {
     fun fetchSubscription(
         pageSize: Long,
+        token: String?,
+        eTag: String?,
+    ): NetworkResponse<List<YouTubeSubscription>>
+
+    fun fetchSubscriptionRelevanceOrdered(
+        pageSize: Long,
         offset: Int,
         token: String?,
-    ): NetworkResponse<List<YouTubeSubscription>>
+    ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>>
 
     fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>>
     fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>>
@@ -83,10 +90,25 @@ internal class YouTubeClientImpl(
 ) : YouTubeClient {
     override fun fetchSubscription(
         pageSize: Long,
+        token: String?,
+        eTag: String?,
+    ): NetworkResponse<List<YouTubeSubscription>> =
+        youtube.fetch(YouTubeSubscriptionRemote.factory) {
+            subscriptions()
+                .list(listOf(PART_SNIPPET))
+                .setMine(true)
+                .setMaxResults(pageSize)
+                .setPageToken(token)
+                .setOrder("alphabetical")
+                .apply { eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
+        }
+
+    override fun fetchSubscriptionRelevanceOrdered(
+        pageSize: Long,
         offset: Int,
         token: String?,
-    ): NetworkResponse<List<YouTubeSubscription>> =
-        youtube.fetch(YouTubeSubscriptionRemote.factory(offset)) {
+    ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>> =
+        youtube.fetch(YouTubeSubscriptionRelevanceOrderedRemote.factory(offset)) {
             subscriptions()
                 .list(listOf(PART_SNIPPET))
                 .setMine(true)
@@ -119,7 +141,7 @@ internal class YouTubeClientImpl(
             .list(listOf(PART_CONTENT_DETAILS))
             .setPlaylistId(id.value)
             .setMaxResults(maxResult)
-            .apply { eTag?.let { requestHeaders = HttpHeaders().apply { setIfNoneMatch(it) } } }
+            .apply { eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
     }
 
     override fun fetchPlaylistItemDetails(
@@ -205,9 +227,8 @@ class YouTubeException(
 
 typealias ResponseFactory<R, T> = (R, CacheControl) -> NetworkResponse<T>
 
-private data class YouTubeSubscriptionRemote(
+private class YouTubeSubscriptionRemote(
     private val subscription: Subscription,
-    override val order: Int,
 ) : YouTubeSubscription {
     override val id: YouTubeSubscription.Id
         get() = YouTubeSubscription.Id(subscription.id)
@@ -221,11 +242,29 @@ private data class YouTubeSubscriptionRemote(
         )
 
     companion object {
-        fun factory(orderOffset: Int): ResponseFactory<SubscriptionListResponse, List<YouTubeSubscription>> =
+        val factory: ResponseFactory<SubscriptionListResponse, List<YouTubeSubscription>> =
+            { res, cacheControl ->
+                NetworkResponse.create(
+                    item = res.items.map { s -> YouTubeSubscriptionRemote(s) },
+                    cacheControl = cacheControl,
+                    nextPageToken = res.nextPageToken,
+                    eTag = res.etag,
+                )
+            }
+    }
+}
+
+private class YouTubeSubscriptionRelevanceOrderedRemote(
+    subscription: Subscription,
+    override val order: Int,
+) : YouTubeSubscriptionRelevanceOrdered,
+    YouTubeSubscription by YouTubeSubscriptionRemote(subscription) {
+    companion object {
+        fun factory(orderOffset: Int): ResponseFactory<SubscriptionListResponse, List<YouTubeSubscriptionRelevanceOrdered>> =
             { res, cacheControl ->
                 NetworkResponse.create(
                     item = res.items.mapIndexed { i, s ->
-                        YouTubeSubscriptionRemote(s, orderOffset + i)
+                        YouTubeSubscriptionRelevanceOrderedRemote(s, orderOffset + i)
                     },
                     cacheControl = cacheControl,
                     nextPageToken = res.nextPageToken,

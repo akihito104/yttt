@@ -36,8 +36,8 @@ internal class YouTubeRemoteDataSource(
         ioScope.asResultFlow {
             var paged = PagedSubscription()
             do {
-                val res = youtube.fetchSubscription(pageSize, paged.itemSize, paged.nextPageToken)
-                paged = paged.update(res.item, res.nextPageToken, res.cacheControl.fetchedAt)
+                val res = youtube.fetchSubscription(pageSize, paged.nextPageToken, null)
+                paged = paged.update(res)
                 emit(Result.success(paged))
             } while (paged.nextPageToken != null)
         }
@@ -146,13 +146,11 @@ private data class PagedSubscription(
     override val hasNextPage: Boolean get() = nextPageToken != null
     val itemSize: Int get() = pages.sumOf { it.size }
     fun update(
-        items: List<YouTubeSubscription>,
-        nextPageToken: String?,
-        updatedAt: Instant? = null,
+        res: NetworkResponse<List<YouTubeSubscription>>,
     ): PagedSubscription = copy(
-        pages = pages + listOf(items),
-        nextPageToken = nextPageToken,
-        updatedAt = updatedAt,
+        pages = pages + listOf(res.item),
+        nextPageToken = res.nextPageToken,
+        updatedAt = res.cacheControl.fetchedAt,
     )
 }
 
