@@ -50,15 +50,12 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
 import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Timeout
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import retrofit2.Call
@@ -73,9 +70,6 @@ class TwitchRemoteMediatorTest {
     @get:Rule(order = 0)
     var hiltRule = HiltAndroidRule(this)
 
-    @get:Rule(order = 1)
-    val testScope = TestCoroutineScopeRule()
-
     @Inject
     lateinit var localSource: TwitchDataSource.Local
 
@@ -89,36 +83,38 @@ class TwitchRemoteMediatorTest {
     private val followings =
         TwitchFollowings.create(authUser.id, broadcaster, CacheControl.create(fetchedAt, maxAge))
 
-    @Before
-    fun setup(): Unit = runBlocking {
-        hiltRule.inject()
-        localSource.deleteAllTables()
+    @get:Rule(order = 1)
+    val testScope = TestCoroutineScopeRule(
+        setup = {
+            hiltRule.inject()
+            localSource.deleteAllTables()
 
-        FakeDateTimeProviderModule.apply {
-            onTimeAdvanced = { current ->
-                FakeRemoteSourceModule.userDetails = {
-                    Response.success(
-                        TwitchUserResponse(broadcaster.map { it.toUserDetail() }),
-                        Headers.Builder().add("date", current).build(),
-                    )
+            FakeDateTimeProviderModule.apply {
+                onTimeAdvanced = { current ->
+                    FakeRemoteSourceModule.userDetails = {
+                        Response.success(
+                            TwitchUserResponse(broadcaster.map { it.toUserDetail() }),
+                            Headers.Builder().add("date", current).build(),
+                        )
+                    }
                 }
+                instant = Instant.ofEpochMilli(100)
             }
-            instant = Instant.ofEpochMilli(100)
-        }
-        localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
-        val stream = broadcaster.take(10).map { stream(it) }
-        val streams = object : TwitchStreams.Updated {
-            override val followerId: TwitchUser.Id get() = authUser.id
-            override val streams: List<TwitchStream> get() = stream
-            override val updatableThumbnails: Set<String> get() = emptySet()
-            override val deletedThumbnails: Set<String> get() = emptySet()
-        }
-        localSource.replaceFollowedStreams(streams.toUpdatable())
-        localSource.replaceAllFollowings(followings)
-    }
+            localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+            val stream = broadcaster.take(10).map { stream(it) }
+            val streams = object : TwitchStreams.Updated {
+                override val followerId: TwitchUser.Id get() = authUser.id
+                override val streams: List<TwitchStream> get() = stream
+                override val updatableThumbnails: Set<String> get() = emptySet()
+                override val deletedThumbnails: Set<String> get() = emptySet()
+            }
+            localSource.replaceFollowedStreams(streams.toUpdatable())
+            localSource.replaceAllFollowings(followings)
+        },
+    )
 
     @After
-    fun tearDown() = runTest {
+    fun tearDown() {
         FakeDateTimeProviderModule.clear()
         FakeRemoteSourceModule.clear()
     }

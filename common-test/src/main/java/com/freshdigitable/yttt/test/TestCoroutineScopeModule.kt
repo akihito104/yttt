@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
@@ -40,13 +41,25 @@ interface TestCoroutineScopeModule {
     }
 }
 
-class TestCoroutineScopeRule : TestWatcher() {
+class TestCoroutineScopeRule(
+    private val setup: (suspend TestScope.() -> Unit)? = null,
+    private val tearDown: (suspend TestScope.() -> Unit)? = null,
+) : TestWatcher() {
     private val testScope = TestScope()
     fun runTest(timeout: Duration? = null, testBody: suspend TestScope.() -> Unit) {
+        val body: suspend TestScope.() -> Unit = {
+            if (setup != null) {
+                setup(this)
+                this.advanceUntilIdle()
+            }
+            testBody()
+            this.advanceUntilIdle()
+            tearDown?.invoke(this)
+        }
         if (timeout == null) {
-            testScope.runTest(testBody = testBody)
+            testScope.runTest(testBody = body)
         } else {
-            testScope.runTest(timeout = timeout, testBody = testBody)
+            testScope.runTest(timeout = timeout, testBody = body)
         }
     }
 
