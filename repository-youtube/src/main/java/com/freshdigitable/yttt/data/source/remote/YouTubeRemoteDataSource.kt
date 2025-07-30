@@ -42,6 +42,14 @@ internal class YouTubeRemoteDataSource(
             } while (paged.nextPageToken != null)
         }
 
+    override suspend fun fetchPagedSubscription(
+        pageSize: Long,
+        nextPageToken: String?,
+        eTag: String?
+    ): Result<NetworkResponse<List<YouTubeSubscription>>> = ioScope.asResult {
+        youtube.fetchSubscription(pageSize, nextPageToken, eTag)
+    }
+
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,

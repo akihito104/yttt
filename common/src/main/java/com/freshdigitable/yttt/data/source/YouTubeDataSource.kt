@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -26,6 +27,12 @@ interface YouTubeDataSource {
     }
 
     fun fetchSubscriptions(pageSize: Long = MAX_PAGE_SIZE): Flow<Result<YouTubeSubscriptions>>
+    suspend fun fetchPagedSubscription(
+        pageSize: Long = MAX_PAGE_SIZE,
+        nextPageToken: String?,
+        eTag: String?,
+    ): Result<NetworkResponse<List<YouTubeSubscription>>>
+
     suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant? = null,
@@ -84,10 +91,22 @@ interface YouTubeLiveDataSource {
     suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
 
-    val subscriptionsFetchedAt: Instant
+    var subscriptionsFetchedAt: Instant
     suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
+    suspend fun findSubscriptionSummariesByOffset(
+        offset: Int,
+        pageSize: Int,
+    ): List<YouTubeSubscriptionSummary>
+
     suspend fun addSubscribes(subscriptions: YouTubeSubscriptions)
-    suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>)
+    suspend fun addPagedSubscription(
+        subscription: Collection<YouTubeSubscription>,
+        fetchedAt: Instant?,
+    )
+
+    suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String)
+    suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionQuery?
+    suspend fun removeSubscribesByRemainingIds(subscriptions: Set<YouTubeSubscription.Id>)
 
     suspend fun updatePlaylistWithItems(
         item: YouTubePlaylistWithItem<*>,

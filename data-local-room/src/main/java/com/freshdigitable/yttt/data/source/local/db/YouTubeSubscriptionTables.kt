@@ -46,6 +46,9 @@ internal class YouTubeSubscriptionTable(
         @Query("DELETE FROM subscription WHERE id IN (:removed)")
         suspend fun removeSubscriptions(removed: Collection<YouTubeSubscription.Id>)
 
+        @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
+        suspend fun removeSubscriptionsByRemainingIds(id: Collection<YouTubeSubscription.Id>)
+
         @Query("SELECT id FROM subscription")
         suspend fun fetchAllSubscriptionIds(): List<YouTubeSubscription.Id>
 
@@ -63,16 +66,13 @@ internal class YouTubeSubscriptionEtagTable(
     @ColumnInfo(name = "next_page_token") override val nextPageToken: String?,
     @ColumnInfo(name = "etag") override val eTag: String,
 ) : YouTubeSubscriptionQuery {
-    constructor(query: YouTubeSubscriptionQuery) : this(
-        query.offset,
-        query.nextPageToken,
-        query.eTag,
-    )
-
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addSubscriptionEtag(etag: YouTubeSubscriptionEtagTable)
+
+        @Query("SELECT * FROM subscription_alphabetical_order_etag AS e WHERE `offset` = :offset")
+        suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionEtagTable?
 
         @Query("DELETE FROM subscription_alphabetical_order_etag")
         override suspend fun deleteTable()
@@ -152,6 +152,23 @@ internal data class YouTubeSubscriptionSummaryDb(
                 "WHERE subscription_id IN (:ids)"
         )
         fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummaryDb>
+
+        @Query(
+            "SELECT s.id AS subscription_id, s.channel_id, c.uploaded_playlist_id," +
+                " c.fetched_at AS fetched_at, c.max_age AS max_age FROM subscription AS s " +
+                "LEFT OUTER JOIN ( " +
+                " SELECT c.id, channel.title, c.uploaded_playlist_id, p.max_age AS max_age, p.fetched_at AS fetched_at" +
+                " FROM channel_addition AS c " +
+                " INNER JOIN channel ON channel.id = c.id " +
+                " INNER JOIN playlist_expire AS p ON c.uploaded_playlist_id = p.playlist_id " +
+                ") AS c ON s.channel_id = c.id " +
+                "ORDER BY LOWER(c.title) ASC " +
+                "LIMIT :pageSize OFFSET :offset"
+        )
+        fun findSubscriptionSummariesByOffset(
+            offset: Int,
+            pageSize: Int,
+        ): List<YouTubeSubscriptionSummaryDb>
     }
 }
 

@@ -4,6 +4,7 @@ import com.google.common.truth.FailureMetadata
 import com.google.common.truth.Subject
 import com.google.common.truth.ThrowableSubject
 import com.google.common.truth.Truth
+import kotlin.reflect.KClass
 
 class ResultSubject<T>(
     metadata: FailureMetadata,
@@ -29,6 +30,18 @@ class ResultSubject<T>(
         check("isFailure").that(actual?.isFailure).isTrue()
         if (actual?.isFailure == true) {
             subjectScope?.invoke(throwable())
+        }
+    }
+
+    fun <T : Throwable> isFailureOf(
+        clz: KClass<T>,
+        subjectScope: ((T) -> Unit)? = null,
+    ) {
+        check("isFailure").that(actual?.isFailure).isTrue()
+        if (actual?.isFailure == true) {
+            check("exceptionOrNull").that(actual.exceptionOrNull()).isInstanceOf(clz.java)
+            @Suppress("UNCHECKED_CAST")
+            subjectScope?.invoke(actual.exceptionOrNull() as T)
         }
     }
 

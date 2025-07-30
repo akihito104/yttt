@@ -16,10 +16,12 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail.Companion.is
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotModified
@@ -44,10 +46,26 @@ class YouTubeRepository @Inject constructor(
         return remoteSource.fetchSubscriptions(pageSize).map { r ->
             r.map {
                 if (it.hasNextPage) it
-                else YouTubeSubscriptions.Updated(localSource.fetchSubscriptionIds(), it)
+                else YouTubeSubscriptions.Updated(it)
             }
         }
     }
+
+    override suspend fun fetchPagedSubscription(
+        pageSize: Long,
+        nextPageToken: String?,
+        eTag: String?,
+    ): Result<NetworkResponse<List<YouTubeSubscription>>> =
+        remoteSource.fetchPagedSubscription(pageSize, nextPageToken, eTag).onSuccess {
+            localSource.addPagedSubscription(
+                it.item,
+                if (it.nextPageToken == null) it.cacheControl.fetchedAt else null,
+            )
+        }.onFailure {
+            if ((it as? NetworkResponse.Exception)?.statusCode == 304) {
+                localSource.subscriptionsFetchedAt = it.cacheControl.fetchedAt!!
+            }
+        }
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,

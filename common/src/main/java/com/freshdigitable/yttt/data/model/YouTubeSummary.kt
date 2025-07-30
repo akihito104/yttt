@@ -1,5 +1,8 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
+import java.time.Instant
+
 interface YouTubeSubscriptionSummary {
     val subscriptionId: YouTubeSubscription.Id
     val channelId: YouTubeChannel.Id
@@ -8,5 +11,8 @@ interface YouTubeSubscriptionSummary {
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
 
-    companion object
+    companion object {
+        fun YouTubeSubscriptionSummary.isPlaylistItemUpdatable(current: Instant): Boolean =
+            cacheControl.isUpdatable(current)
+    }
 }

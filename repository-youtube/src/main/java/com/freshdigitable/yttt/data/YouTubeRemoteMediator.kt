@@ -46,7 +46,7 @@ internal class YouTubeRemoteMediator @Inject constructor(
                     .onSuccess { s ->
                         (s as? YouTubeSubscriptions.Updated)?.let {
                             repository.addSubscribes(it)
-                            repository.removeSubscribes(it.deleted)
+                            repository.removeSubscribesByRemainingIds(it.ids)
                         }
                         return MediatorResult.Success(endOfPaginationReached = true)
                     }
