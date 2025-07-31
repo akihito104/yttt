@@ -39,7 +39,7 @@ class YouTubeRepository @Inject constructor(
     private val localSource: YouTubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource, YouTubeLiveDataSource by localSource {
-    override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions>> {
+    override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions>> {
         if (dateTimeProvider.now() < localSource.subscriptionsFetchedAt + SUBSCRIPTION_FETCH_PERIOD) {
             return localSource.fetchSubscriptions(pageSize)
         }
@@ -52,7 +52,7 @@ class YouTubeRepository @Inject constructor(
     }
 
     override suspend fun fetchPagedSubscription(
-        pageSize: Long,
+        pageSize: Int,
         nextPageToken: String?,
         eTag: String?,
     ): Result<NetworkResponse<List<YouTubeSubscription>>> =
@@ -61,10 +61,6 @@ class YouTubeRepository @Inject constructor(
                 it.item,
                 if (it.nextPageToken == null) it.cacheControl.fetchedAt else null,
             )
-        }.onFailure {
-            if ((it as? NetworkResponse.Exception)?.statusCode == 304) {
-                localSource.subscriptionsFetchedAt = it.cacheControl.fetchedAt!!
-            }
         }
 
     override suspend fun fetchLiveChannelLogs(

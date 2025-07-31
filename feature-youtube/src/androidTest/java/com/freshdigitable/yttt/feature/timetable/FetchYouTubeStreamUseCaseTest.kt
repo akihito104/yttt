@@ -514,6 +514,38 @@ class FetchYouTubeStreamUseCaseTest {
             assertResultThat(networkRes[1]).isFailureOfYouTubeException(statusCode = 304)
             assertResultThat(networkRes[2]).isSuccess()
         }
+
+        @Test
+        fun failedToFetchLastPage_returnFailure() = testScope.runTest {
+            // setup
+            fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
+            FakeDateTimeProviderModule.apply {
+                onTimeAdvanced = { fakeClient.update(3, it, ::video) }
+                instant = current + Duration.ofHours(3)
+            }
+            val s = checkNotNull(fakeClient.subscription)
+            fakeClient.subscription = { t, e ->
+                val res = s(t, e)
+                if (res.nextPageToken != null) res
+                else throw YouTubeException.internalServerError(
+                    cacheControl = CacheControl.fromRemote(FakeDateTimeProviderModule.instant!!),
+                )
+            }
+            val networkRes = fakeClient.wrapSubscriptionAsResult()
+            // exercise
+            val actual = sut.invoke()
+            advanceUntilIdle()
+            // verify
+            assertResultThat(actual).isFailureOfYouTubeException(statusCode = 500)
+            localSource.videos.test {
+                assertThat(awaitItem().size).isGreaterThan(300)
+            }
+            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(current)
+            assertThat(networkRes).hasSize(3)
+            assertResultThat(networkRes[0]).isFailureOfYouTubeException(statusCode = 304)
+            assertResultThat(networkRes[1]).isFailureOfYouTubeException(statusCode = 304)
+            assertResultThat(networkRes[2]).isFailureOfYouTubeException(statusCode = 500)
+        }
     }
 }
 
@@ -646,7 +678,7 @@ private class FakeYouTubeClientImpl(
     }
 
     override fun fetchSubscription(
-        pageSize: Long,
+        pageSize: Int,
         token: String?,
         eTag: String?
     ): NetworkResponse<List<YouTubeSubscription>> {

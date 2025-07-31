@@ -45,13 +45,13 @@ import java.time.format.DateTimeFormatter
 
 interface YouTubeClient {
     fun fetchSubscription(
-        pageSize: Long,
+        pageSize: Int,
         token: String?,
         eTag: String?,
     ): NetworkResponse<List<YouTubeSubscription>>
 
     fun fetchSubscriptionRelevanceOrdered(
-        pageSize: Long,
+        pageSize: Int,
         offset: Int,
         token: String?,
     ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>>
@@ -89,7 +89,7 @@ internal class YouTubeClientImpl(
     private val youtube: YouTube,
 ) : YouTubeClient {
     override fun fetchSubscription(
-        pageSize: Long,
+        pageSize: Int,
         token: String?,
         eTag: String?,
     ): NetworkResponse<List<YouTubeSubscription>> =
@@ -97,14 +97,14 @@ internal class YouTubeClientImpl(
             subscriptions()
                 .list(listOf(PART_SNIPPET))
                 .setMine(true)
-                .setMaxResults(pageSize)
+                .setMaxResults(pageSize.toLong())
                 .setPageToken(token)
                 .setOrder("alphabetical")
                 .apply { eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
         }
 
     override fun fetchSubscriptionRelevanceOrdered(
-        pageSize: Long,
+        pageSize: Int,
         offset: Int,
         token: String?,
     ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>> =
@@ -112,7 +112,7 @@ internal class YouTubeClientImpl(
             subscriptions()
                 .list(listOf(PART_SNIPPET))
                 .setMine(true)
-                .setMaxResults(pageSize)
+                .setMaxResults(pageSize.toLong())
                 .setPageToken(token)
         }
 

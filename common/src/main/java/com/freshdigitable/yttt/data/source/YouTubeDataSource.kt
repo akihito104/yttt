@@ -23,12 +23,12 @@ interface YouTubeDataSource {
     companion object {
         // https://developers.google.com/youtube/v3/docs/videos/list#parameters
         const val MAX_BATCH_SIZE = 50
-        const val MAX_PAGE_SIZE: Long = 50
+        const val MAX_PAGE_SIZE = 50
     }
 
-    fun fetchSubscriptions(pageSize: Long = MAX_PAGE_SIZE): Flow<Result<YouTubeSubscriptions>>
+    fun fetchSubscriptions(pageSize: Int = MAX_PAGE_SIZE): Flow<Result<YouTubeSubscriptions>>
     suspend fun fetchPagedSubscription(
-        pageSize: Long = MAX_PAGE_SIZE,
+        pageSize: Int = MAX_PAGE_SIZE,
         nextPageToken: String?,
         eTag: String?,
     ): Result<NetworkResponse<List<YouTubeSubscription>>>
@@ -66,7 +66,7 @@ interface YouTubeDataSource {
     }
 
     interface Remote : YouTubeDataSource {
-        override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>>
+        override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions.Paged>>
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideo>>>
         override suspend fun fetchPlaylistWithItems(
             id: YouTubePlaylist.Id,

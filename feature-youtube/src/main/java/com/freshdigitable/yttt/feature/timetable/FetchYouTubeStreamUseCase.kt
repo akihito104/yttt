@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import java.time.Instant
 import javax.inject.Inject
 
 internal class FetchYouTubeStreamUseCase @Inject constructor(
@@ -246,29 +247,48 @@ internal class YouTubeSubscriptionSummaryImpl(
 
 internal fun YouTubeRepository.fetchAllSubscription(): Flow<Result<YouTubeSubscriptionSummaries>> =
     flow {
-        var offset = 0
-        val query: YouTubeSubscriptionQuery? = findSubscriptionQuery(offset)
-        var token: String? = query?.nextPageToken
-        var eTag: String? = query?.eTag
+        var summary = YouTubeSubscriptionSummaries(query = findSubscriptionQuery(0))
         do {
-            val res = fetchPagedSubscription(MAX_BATCH_SIZE.toLong(), token, eTag)
-                .onSuccess { addSubscriptionEtag(offset, token, checkNotNull(it.eTag)) }
-            val summary = res.map { findSubscriptionSummaries(it.item.map { i -> i.id }) }
-                .recoverFromNotModified {
-                    findSubscriptionSummariesByOffset(offset, MAX_BATCH_SIZE)
+            val s = fetchPagedSubscription(MAX_BATCH_SIZE, summary.token, summary.eTag)
+                .onSuccess {
+                    addSubscriptionEtag(summary.offset, summary.token, checkNotNull(it.eTag))
+                }.map {
+                    val o = summary.offset + MAX_BATCH_SIZE
+                    YouTubeSubscriptionSummaries(
+                        item = findSubscriptionSummaries(it.item.map { i -> i.id }),
+                        offset = o,
+                        query = findSubscriptionQuery(o),
+                        _token = it.nextPageToken,
+                        fetchedAt = it.cacheControl.fetchedAt,
+                    )
+                }.recoverFromNotModified {
+                    val o = summary.offset + MAX_BATCH_SIZE
+                    YouTubeSubscriptionSummaries(
+                        item = findSubscriptionSummariesByOffset(summary.offset, MAX_BATCH_SIZE),
+                        offset = o,
+                        query = findSubscriptionQuery(o),
+                        fetchedAt = it.fetchedAt,
+                    )
                 }.onFailure {
                     emit(Result.failure(it))
-                    break
+                    return@flow
                 }
-            offset += MAX_BATCH_SIZE
-            val q = findSubscriptionQuery(offset)
-            token = res.fold(onSuccess = { it.nextPageToken }, onFailure = { q?.nextPageToken })
-            eTag = q?.eTag
-            emit(summary.map { YouTubeSubscriptionSummaries(it, token != null) })
-        } while (token != null)
+            emit(s)
+            summary = s.getOrThrow()
+        } while (summary.token != null)
+        if (summary.fetchedAt != null) {
+            subscriptionsFetchedAt = summary.fetchedAt
+        }
     }
 
 internal class YouTubeSubscriptionSummaries(
-    val item: List<YouTubeSubscriptionSummary>,
-    val hasNextToken: Boolean,
-)
+    val offset: Int = 0,
+    val item: List<YouTubeSubscriptionSummary> = emptyList(),
+    private val query: YouTubeSubscriptionQuery? = null,
+    private val _token: String? = null,
+    val fetchedAt: Instant? = null,
+) {
+    val token: String? get() = _token ?: query?.nextPageToken
+    val eTag: String? get() = query?.eTag
+    val hasNextToken: Boolean get() = (token ?: query?.nextPageToken) != null
+}

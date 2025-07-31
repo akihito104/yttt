@@ -32,7 +32,7 @@ internal class YouTubeRemoteDataSource(
     private val youtube: YouTubeClient,
     private val ioScope: IoScope,
 ) : YouTubeDataSource.Remote {
-    override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>> =
+    override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions.Paged>> =
         ioScope.asResultFlow {
             var paged = PagedSubscription()
             do {
@@ -43,7 +43,7 @@ internal class YouTubeRemoteDataSource(
         }
 
     override suspend fun fetchPagedSubscription(
-        pageSize: Long,
+        pageSize: Int,
         nextPageToken: String?,
         eTag: String?
     ): Result<NetworkResponse<List<YouTubeSubscription>>> = ioScope.asResult {

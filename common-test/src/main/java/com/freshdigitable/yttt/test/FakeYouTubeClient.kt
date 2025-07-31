@@ -55,13 +55,13 @@ interface FakeYouTubeClientModule {
 
 abstract class FakeYouTubeClient : YouTubeClient {
     override fun fetchSubscription(
-        pageSize: Long,
+        pageSize: Int,
         token: String?,
         eTag: String?,
     ): NetworkResponse<List<YouTubeSubscription>> = throw NotImplementedError()
 
     override fun fetchSubscriptionRelevanceOrdered(
-        pageSize: Long,
+        pageSize: Int,
         offset: Int,
         token: String?,
     ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>> = throw NotImplementedError()

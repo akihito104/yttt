@@ -55,7 +55,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.findSubscriptionSummariesByOffset(offset, pageSize)
     }.getOrThrow()
 
-    override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions>> =
+    override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions>> =
         ioScope.asResultFlow {
             val items = dao.findAllSubscriptions()
             val subs = YouTubeSubscriptions.create(items, subscriptionsFetchedAt)
@@ -63,7 +63,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
 
     override suspend fun fetchPagedSubscription(
-        pageSize: Long,
+        pageSize: Int,
         nextPageToken: String?,
         eTag: String?,
     ): Result<NetworkResponse<List<YouTubeSubscription>>> = ioScope.asResult {
