@@ -4,6 +4,8 @@ import androidx.paging.ExperimentalPagingApi
 import androidx.paging.LoadType
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
+import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.YouTube
@@ -11,6 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
+import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.flow.last
@@ -23,9 +26,14 @@ internal class YouTubeRemoteMediator @Inject constructor(
     private val accountRepository: YouTubeAccountRepository,
     private val dateTimeProvider: DateTimeProvider,
 ) : RemoteMediator<Int, LiveSubscription>() {
+    companion object {
+        private val MAX_AGE_SUBSCRIPTION = Duration.ofHours(2)
+        private val YouTubeLiveDataSource.subscriptionsOrderedCacheControl: CacheControl
+            get() = CacheControl.create(subscriptionsOrderedFetchedAt, MAX_AGE_SUBSCRIPTION)
+    }
+
     override suspend fun initialize(): InitializeAction {
-        val subscriptionFetchedAt = repository.subscriptionsFetchedAt
-        if (subscriptionFetchedAt + Duration.ofMinutes(30) <= dateTimeProvider.now()) {
+        if (repository.subscriptionsOrderedCacheControl.isUpdatable(dateTimeProvider.now())) {
             return InitializeAction.LAUNCH_INITIAL_REFRESH
         }
         return InitializeAction.SKIP_INITIAL_REFRESH
@@ -46,6 +54,7 @@ internal class YouTubeRemoteMediator @Inject constructor(
                     .onSuccess { s ->
                         (s as? YouTubeSubscriptions.Updated)?.let {
                             repository.addSubscribes(it)
+                            repository.subscriptionsOrderedFetchedAt = it.lastUpdatedAt
                             repository.removeSubscribesByRemainingIds(it.ids)
                         }
                         return MediatorResult.Success(endOfPaginationReached = true)

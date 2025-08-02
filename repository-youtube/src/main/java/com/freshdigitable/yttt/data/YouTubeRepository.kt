@@ -27,7 +27,6 @@ import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotModified
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.time.Duration
 import java.time.Instant
 import java.time.Period
 import javax.inject.Inject
@@ -39,17 +38,13 @@ class YouTubeRepository @Inject constructor(
     private val localSource: YouTubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource, YouTubeLiveDataSource by localSource {
-    override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions>> {
-        if (dateTimeProvider.now() < localSource.subscriptionsFetchedAt + SUBSCRIPTION_FETCH_PERIOD) {
-            return localSource.fetchSubscriptions(pageSize)
-        }
-        return remoteSource.fetchSubscriptions(pageSize).map { r ->
+    override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions>> =
+        remoteSource.fetchSubscriptions(pageSize).map { r ->
             r.map {
                 if (it.hasNextPage) it
                 else YouTubeSubscriptions.Updated(it)
             }
         }
-    }
 
     override suspend fun fetchPagedSubscription(
         pageSize: Int,
@@ -180,7 +175,6 @@ class YouTubeRepository @Inject constructor(
 
     companion object {
         private val ACTIVITY_MAX_PERIOD = Period.ofDays(7)
-        private val SUBSCRIPTION_FETCH_PERIOD = Duration.ofHours(2)
     }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>> {

@@ -57,6 +57,11 @@ interface YouTubeDataSource {
 
     interface Local : YouTubeDataSource, YouTubeLiveDataSource, ImageDataSource {
         suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id>
+        override suspend fun fetchPagedSubscription(
+            pageSize: Int,
+            nextPageToken: String?,
+            eTag: String?
+        ): Result<NetworkResponse<List<YouTubeSubscription>>> = throw NotImplementedError()
 
         suspend fun addPlaylist(playlist: Collection<Updatable<YouTubePlaylist>>)
 
@@ -92,6 +97,7 @@ interface YouTubeLiveDataSource {
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
 
     var subscriptionsFetchedAt: Instant
+    var subscriptionsOrderedFetchedAt: Instant
     suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
     suspend fun findSubscriptionSummariesByOffset(
         offset: Int,

@@ -3,6 +3,8 @@ package com.freshdigitable.yttt.test
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -97,6 +99,15 @@ abstract class FakeYouTubeClient : YouTubeClient {
     ): NetworkResponse<List<YouTubeChannelLog>> = throw NotImplementedError()
 
     companion object {
+        fun subscription(
+            id: String,
+            channel: YouTubeChannel,
+        ): YouTubeSubscription = object : YouTubeSubscription {
+            override val id: YouTubeSubscription.Id = YouTubeSubscription.Id(id)
+            override val channel: YouTubeChannel = channel
+            override val subscribeSince: Instant = Instant.EPOCH
+        }
+
         fun channelDetail(
             id: Int,
         ): YouTubeChannelDetail = object : YouTubeChannelDetail {
@@ -159,6 +170,9 @@ abstract class FakeYouTubeClient : YouTubeClient {
 
 fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
     CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
+
+fun <T> T.toUpdatableFromRemote(current: Instant): Updatable<T> =
+    toUpdatable(CacheControl.fromRemote(current))
 
 private data class YouTubePlaylistItemDetailEntity(
     override val id: YouTubePlaylistItem.Id,

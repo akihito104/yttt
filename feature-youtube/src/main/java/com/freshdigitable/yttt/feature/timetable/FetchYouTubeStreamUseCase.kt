@@ -4,6 +4,8 @@ import com.freshdigitable.yttt.AppPerformance.Companion.trace
 import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.YouTubeRepository
+import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.CacheControl.Companion.isFresh
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -37,6 +39,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
@@ -105,7 +108,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun fetchUploadedPlaylists(
         coroutineScope: CoroutineScope,
         videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>,
-    ): Result<Unit> = liveRepository.fetchAllSubscription()
+    ): Result<Unit> = liveRepository.fetchAllSubscription(dateTimeProvider.now())
         .fold(PlaylistUpdateTaskCache()) { acc, value ->
             val summary = value.onFailure { return@fold acc.apply { failureResults.add(it) } }
                 .getOrNull()?.item ?: throw AssertionError()
@@ -245,7 +248,22 @@ internal class YouTubeSubscriptionSummaryImpl(
     override val uploadedPlaylistId: YouTubePlaylist.Id?
 ) : YouTubeSubscriptionSummary by base
 
-internal fun YouTubeRepository.fetchAllSubscription(): Flow<Result<YouTubeSubscriptionSummaries>> =
+private val SUBSCRIPTION_FETCH_PERIOD = Duration.ofHours(2)
+internal val YouTubeRepository.subscriptionCacheControl: CacheControl
+    get() = CacheControl.create(subscriptionsFetchedAt, SUBSCRIPTION_FETCH_PERIOD)
+
+internal fun YouTubeRepository.fetchAllSubscription(
+    current: Instant,
+): Flow<Result<YouTubeSubscriptionSummaries>> = if (subscriptionCacheControl.isFresh(current)) {
+    flow {
+        var offset = 0
+        do {
+            val item = findSubscriptionSummariesByOffset(offset, MAX_BATCH_SIZE)
+            emit(Result.success(YouTubeSubscriptionSummaries(item = item)))
+            offset += MAX_BATCH_SIZE
+        } while (findSubscriptionQuery(offset) != null)
+    }
+} else {
     flow {
         var summary = YouTubeSubscriptionSummaries(query = findSubscriptionQuery(0))
         do {
@@ -280,6 +298,7 @@ internal fun YouTubeRepository.fetchAllSubscription(): Flow<Result<YouTubeSubscr
             subscriptionsFetchedAt = summary.fetchedAt
         }
     }
+}
 
 internal class YouTubeSubscriptionSummaries(
     val offset: Int = 0,

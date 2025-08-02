@@ -601,13 +601,6 @@ private fun playlistItem(
     videoId = videoId,
 )
 
-private fun subscription(id: String, channel: YouTubeChannel): YouTubeSubscription =
-    object : YouTubeSubscription {
-        override val id: YouTubeSubscription.Id = YouTubeSubscription.Id(id)
-        override val channel: YouTubeChannel = channel
-        override val subscribeSince: Instant = Instant.EPOCH
-    }
-
 private class FakeYouTubeClientImpl(
     var subscription: ((String?, String?) -> NetworkResponse<List<YouTubeSubscription>>)? = null,
     var channel: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
@@ -629,7 +622,6 @@ private class FakeYouTubeClientImpl(
                 .sortedBy { it.title.lowercase() }
             update(itemsPerPlaylist, current, videoFactory)
         }
-
 
         fun FakeYouTubeClientImpl.update(
             itemsPerPlaylist: Int,
