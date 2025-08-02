@@ -6,9 +6,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import androidx.paging.RemoteMediator
 import androidx.paging.testing.asSnapshot
-import com.freshdigitable.yttt.data.MediatorResultSubject.Companion.assertThat
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchCategory
@@ -36,13 +34,10 @@ import com.freshdigitable.yttt.data.source.remote.TwitchVideosResponse
 import com.freshdigitable.yttt.di.TwitchModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.MediatorResultSubject.Companion.assertThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.fromRemote
-import com.google.common.truth.FailureMetadata
-import com.google.common.truth.Subject
-import com.google.common.truth.ThrowableSubject
-import com.google.common.truth.Truth
 import com.google.common.truth.Truth.assertThat
 import dagger.Module
 import dagger.Provides
@@ -373,33 +368,3 @@ private class FakeCall<T>(private val response: Response<T>) : Call<T> {
 interface FakeDateTimeProviderModuleImpl : FakeDateTimeProviderModule
 interface TestCoroutineScopeModuleImpl : TestCoroutineScopeModule
 interface InMemoryDbModuleImpl : InMemoryDbModule
-
-@OptIn(ExperimentalPagingApi::class)
-class MediatorResultSubject(
-    metadata: FailureMetadata,
-    private val actual: RemoteMediator.MediatorResult?,
-) : Subject(metadata, actual) {
-    companion object {
-        private fun factory(): Factory<MediatorResultSubject, RemoteMediator.MediatorResult> =
-            Factory { metadata, actual -> MediatorResultSubject(metadata, actual) }
-
-        fun assertThat(actual: RemoteMediator.MediatorResult?): MediatorResultSubject =
-            Truth.assertAbout(factory()).that(actual)
-    }
-
-    fun isSuccess(endOfPaginationReached: Boolean) {
-        check("MediatorResult.Success").that(actual)
-            .isInstanceOf(RemoteMediator.MediatorResult.Success::class.java)
-        check("endOfPaginationReached").that((actual as RemoteMediator.MediatorResult.Success).endOfPaginationReached)
-            .isEqualTo(endOfPaginationReached)
-    }
-
-    fun isError(throwableMatcher: (ThrowableSubject) -> Unit) {
-        check("MediatorResult.Error").that(actual)
-            .isInstanceOf(RemoteMediator.MediatorResult.Error::class.java)
-        throwableMatcher(throwable())
-    }
-
-    private fun throwable(): ThrowableSubject =
-        check("throwable").that((actual as RemoteMediator.MediatorResult.Error).throwable)
-}
