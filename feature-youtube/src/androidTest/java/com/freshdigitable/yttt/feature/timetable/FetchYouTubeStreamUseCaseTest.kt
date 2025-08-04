@@ -628,7 +628,6 @@ private class FakeYouTubeClientImpl(
             current: Instant,
             videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo,
         ) {
-            logD { "update:$itemsPerPlaylist,$current,$videoFactory" }
             channel = { id ->
                 val c = channelDetail.associateBy { it.id }
                 id.mapNotNull { c[it] }.toUpdatable(CacheControl.fromRemote(current))
@@ -641,7 +640,7 @@ private class FakeYouTubeClientImpl(
                 val etag = md.run {
                     reset()
                     digest(sub.joinToString("") { it.id.value }.toByteArray()).toHexString()
-                }.also { logD { "setup: $tokenKey, $it" } }
+                }
                 tokenKey to NetworkResponse.create(
                     sub.toUpdatable(current),
                     nextToken,

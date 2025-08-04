@@ -6,8 +6,11 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.paging.testing.asSnapshot
+import com.freshdigitable.yttt.data.FakeYouTubeClientImpl.Companion.subscriptionsRelevanceOrderedIds
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.source.AccountRepository
@@ -21,7 +24,6 @@ import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.MediatorResultSubject.Companion.assertThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.freshdigitable.yttt.test.toUpdatableFromRemote
 import com.google.common.truth.Truth.assertThat
 import dagger.Binds
 import dagger.Module
@@ -36,9 +38,11 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import java.security.MessageDigest
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.ceil
 
 @OptIn(ExperimentalPagingApi::class)
 @HiltAndroidTest
@@ -62,6 +66,7 @@ class YouTubeRemoteMediatorTest {
     @Before
     fun setup() {
         FakeDateTimeProviderModule.instant = Instant.parse("2025-08-01T14:00:00Z")
+        FakeDateTimeProviderModule.onTimeAdvanced = { client.current = it }
         FakeYouTubeClientModule.client = client
         hiltRule.inject()
     }
@@ -121,12 +126,9 @@ class YouTubeRemoteMediatorTest {
     fun load_hasAccount_noItemsLoadedAndReturnsSuccess() = testScope.runTest {
         // setup
         FakeAccountRepositoryModule.account = "account"
+        client.channelDetails = emptyList()
         val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")
-        client.subscriptionRelevanceOrdered = {
-            NetworkResponse.create(
-                emptyList<YouTubeSubscriptionRelevanceOrdered>().toUpdatableFromRemote(fetchedAt)
-            )
-        }
+        FakeDateTimeProviderModule.instant = fetchedAt
         // exercise
         val actual = remoteMediator.load(
             LoadType.REFRESH,
@@ -141,19 +143,14 @@ class YouTubeRemoteMediatorTest {
     fun loadFromPager() = testScope.runTest {
         // setup
         FakeAccountRepositoryModule.account = "account"
-        val subs = (0..<20).map {
-            val channel = FakeYouTubeClient.channelDetail(it)
-            subscriptionRelevanceOrdered("s_${channel.id.value}", channel, it)
-        }
+        client.channelDetails = (0..<20).map { FakeYouTubeClient.channelDetail(it) }
         val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")
-        client.subscriptionRelevanceOrdered = {
-            NetworkResponse.create(subs.toUpdatableFromRemote(fetchedAt))
-        }
+        FakeDateTimeProviderModule.instant = fetchedAt
         // exercise
         val actual = pagerFactory.create(PagingConfig(20)).flow.asSnapshot()
         // verify
-        assertThat(actual).hasSize(20)
-        assertThat(actual.map { it.id.value }).containsExactlyElementsIn(subs.map { it.id.value })
+        assertThat(actual.map { it.id.value })
+            .containsExactlyElementsIn(client.subscriptionsRelevanceOrderedIds.map { it.value })
             .inOrder()
         assertThat(repository.subscriptionsOrderedFetchedAt).isEqualTo(fetchedAt)
     }
@@ -162,31 +159,19 @@ class YouTubeRemoteMediatorTest {
     fun loadFromPager_fetchAfterUpdatingTimelineTask_inRelevanceOrder() = testScope.runTest {
         // setup
         FakeAccountRepositoryModule.account = "account"
-        val channels = (0..<20).map { FakeYouTubeClient.channelDetail(it) }
-        val subs = channels.mapIndexed { i, c ->
-            subscriptionRelevanceOrdered("s_${c.id.value}", c, i)
-        }
-        client.subscription = {
-            NetworkResponse.create(
-                channels.sortedBy { it.title }
-                    .map { c -> FakeYouTubeClient.subscription("s_${c.id.value}", c) }
-                    .toUpdatableFromRemote(Instant.parse("2025-08-01T13:20:00Z")),
-                null, "eTag0",
-            )
-        }
-        val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")
-        client.subscriptionRelevanceOrdered = {
-            NetworkResponse.create(subs.toUpdatableFromRemote(fetchedAt))
-        }
+        client.channelDetails = (0..<20).map { FakeYouTubeClient.channelDetail(it) }
+        FakeDateTimeProviderModule.instant = Instant.parse("2025-08-01T13:20:00Z")
         // exercise
         repository.fetchPagedSubscription(50, null, null).onSuccess {
             repository.addSubscriptionEtag(0, it.nextPageToken, it.eTag!!)
             repository.subscriptionsFetchedAt = it.cacheControl.fetchedAt!!
         }
+        val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")
+        FakeDateTimeProviderModule.instant = fetchedAt
         val actual = pagerFactory.create(PagingConfig(20)).flow.asSnapshot()
         // verify
-        assertThat(actual).hasSize(20)
-        assertThat(actual.map { it.id.value }).containsExactlyElementsIn(subs.map { it.id.value })
+        assertThat(actual.map { it.id.value })
+            .containsExactlyElementsIn(client.subscriptionsRelevanceOrderedIds.map { it.value })
             .inOrder()
         assertThat(repository.subscriptionsOrderedFetchedAt).isEqualTo(fetchedAt)
     }
@@ -205,22 +190,62 @@ internal class FakeYouTubeClientImpl(
     var subscriptionRelevanceOrdered: (() -> NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>>)? = null,
     var subscription: (() -> NetworkResponse<List<YouTubeSubscription>>)? = null,
 ) : FakeYouTubeClient() {
+    var current: Instant = Instant.EPOCH
+    var channelDetails: List<YouTubeChannelDetail> = emptyList()
+        set(value) {
+            subscriptions = value.sortedBy { it.title }
+                .map { subscription("s_${it.id.value}", it) }
+                .toResponse(this)
+            subscriptionsInRelevanceOrder = value.mapIndexed { i, c ->
+                subscriptionRelevanceOrdered("s_${c.id.value}", c, i)
+            }.toResponse(this)
+            field = value
+        }
+    var subscriptions: Map<String?, () -> NetworkResponse<List<YouTubeSubscription>>> = emptyMap()
+        private set
+    var subscriptionsInRelevanceOrder: Map<String?, () -> NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>>> =
+        emptyMap()
+        private set
+
     override fun fetchSubscriptionRelevanceOrdered(
         pageSize: Int,
         offset: Int,
         token: String?,
     ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>> {
         logD { "fetchSubscriptionRelevanceOrdered: $pageSize,$offset,$token" }
-        return subscriptionRelevanceOrdered!!.invoke()
+        return if (subscriptionRelevanceOrdered != null) subscriptionRelevanceOrdered!!.invoke()
+        else subscriptionsInRelevanceOrder[token]!!.invoke()
     }
 
     override fun fetchSubscription(
         pageSize: Int,
         token: String?,
-        eTag: String?
+        eTag: String?,
     ): NetworkResponse<List<YouTubeSubscription>> {
         logD { "fetchSubscription: $pageSize,$token,$eTag" }
-        return subscription!!.invoke()
+        return if (subscription != null) subscription!!.invoke()
+        else subscriptions[token]!!.invoke()
+    }
+
+    companion object {
+        private val md = MessageDigest.getInstance("SHA-256")
+        private fun <T : YouTubeSubscription> Collection<T>.toResponse(
+            client: FakeYouTubeClientImpl,
+        ): Map<String?, () -> NetworkResponse<List<T>>> = chunked(50).mapIndexed { i, c ->
+            val key = if (i == 0) null else "token_$i"
+            val nextToken = if (i == ceil(size / 50.0).toInt() - 1) null else "token_${i + 1}"
+            val eTag = md.run {
+                reset()
+                digest(c.joinToString("") { it.id.value }.toByteArray()).toHexString()
+            }
+            val value = { NetworkResponse.create(c.toUpdatable(client.current), nextToken, eTag) }
+            key to value
+        }.toMap().ifEmpty {
+            mapOf(null to { NetworkResponse.create(emptyList<T>().toUpdatable(client.current)) })
+        }
+
+        val FakeYouTubeClientImpl.subscriptionsRelevanceOrderedIds: List<YouTubeSubscription.Id>
+            get() = subscriptionsInRelevanceOrder.values.map { it().item }.flatten().map { it.id }
     }
 }
 
