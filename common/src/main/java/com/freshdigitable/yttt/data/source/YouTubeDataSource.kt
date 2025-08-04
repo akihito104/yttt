@@ -13,7 +13,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import kotlinx.coroutines.flow.Flow
@@ -26,12 +25,7 @@ interface YouTubeDataSource {
         const val MAX_PAGE_SIZE = 50
     }
 
-    fun fetchSubscriptions(pageSize: Int = MAX_PAGE_SIZE): Flow<Result<YouTubeSubscriptions>>
-    suspend fun fetchPagedSubscription(
-        pageSize: Int = MAX_PAGE_SIZE,
-        nextPageToken: String?,
-        eTag: String?,
-    ): Result<NetworkResponse<List<YouTubeSubscription>>>
+    suspend fun fetchPagedSubscription(query: YouTubeSubscriptionQuery): Result<NetworkResponse<List<YouTubeSubscription>>>
 
     suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -57,11 +51,8 @@ interface YouTubeDataSource {
 
     interface Local : YouTubeDataSource, YouTubeLiveDataSource, ImageDataSource {
         suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id>
-        override suspend fun fetchPagedSubscription(
-            pageSize: Int,
-            nextPageToken: String?,
-            eTag: String?
-        ): Result<NetworkResponse<List<YouTubeSubscription>>> = throw NotImplementedError()
+        override suspend fun fetchPagedSubscription(query: YouTubeSubscriptionQuery): Result<NetworkResponse<List<YouTubeSubscription>>> =
+            throw NotImplementedError()
 
         suspend fun addPlaylist(playlist: Collection<Updatable<YouTubePlaylist>>)
 
@@ -71,7 +62,6 @@ interface YouTubeDataSource {
     }
 
     interface Remote : YouTubeDataSource {
-        override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions.Paged>>
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideo>>>
         override suspend fun fetchPlaylistWithItems(
             id: YouTubePlaylist.Id,
@@ -97,19 +87,14 @@ interface YouTubeLiveDataSource {
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
 
     var subscriptionsFetchedAt: Instant
-    var subscriptionsOrderedFetchedAt: Instant
+    var subscriptionsRelevanceOrderedFetchedAt: Instant
     suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
     suspend fun findSubscriptionSummariesByOffset(
         offset: Int,
         pageSize: Int,
     ): List<YouTubeSubscriptionSummary>
 
-    suspend fun addSubscribes(subscriptions: YouTubeSubscriptions)
-    suspend fun addPagedSubscription(
-        subscription: Collection<YouTubeSubscription>,
-        fetchedAt: Instant?,
-    )
-
+    suspend fun addPagedSubscription(subscription: Collection<YouTubeSubscription>)
     suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String)
     suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionQuery?
     suspend fun removeSubscribesByRemainingIds(subscriptions: Set<YouTubeSubscription.Id>)

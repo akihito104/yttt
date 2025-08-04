@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.NetworkResponse
@@ -79,7 +80,7 @@ class YouTubeRemoteMediatorTest {
     @Test
     fun initialize_needsRefreshWhenUpdatable() = testScope.runTest {
         // setup
-        repository.subscriptionsOrderedFetchedAt = Instant.parse("2025-08-01T12:00:00Z")
+        repository.subscriptionsRelevanceOrderedFetchedAt = Instant.parse("2025-08-01T12:00:00Z")
         // exercise
         val actual = remoteMediator.initialize()
         // verify
@@ -89,7 +90,7 @@ class YouTubeRemoteMediatorTest {
     @Test
     fun initialize_skipUntilMaxAge() = testScope.runTest {
         // setup
-        repository.subscriptionsOrderedFetchedAt = Instant.parse("2025-08-01T12:00:01Z")
+        repository.subscriptionsRelevanceOrderedFetchedAt = Instant.parse("2025-08-01T12:00:01Z")
         // exercise
         val actual = remoteMediator.initialize()
         // verify
@@ -136,7 +137,7 @@ class YouTubeRemoteMediatorTest {
         )
         // verify
         assertThat(actual).isSuccess(endOfPaginationReached = true)
-        assertThat(repository.subscriptionsOrderedFetchedAt).isEqualTo(fetchedAt)
+        assertThat(repository.subscriptionsRelevanceOrderedFetchedAt).isEqualTo(fetchedAt)
     }
 
     @Test
@@ -152,7 +153,7 @@ class YouTubeRemoteMediatorTest {
         assertThat(actual.map { it.id.value })
             .containsExactlyElementsIn(client.subscriptionsRelevanceOrderedIds.map { it.value })
             .inOrder()
-        assertThat(repository.subscriptionsOrderedFetchedAt).isEqualTo(fetchedAt)
+        assertThat(repository.subscriptionsRelevanceOrderedFetchedAt).isEqualTo(fetchedAt)
     }
 
     @Test
@@ -162,7 +163,14 @@ class YouTubeRemoteMediatorTest {
         client.channelDetails = (0..<20).map { FakeYouTubeClient.channelDetail(it) }
         FakeDateTimeProviderModule.instant = Instant.parse("2025-08-01T13:20:00Z")
         // exercise
-        repository.fetchPagedSubscription(50, null, null).onSuccess {
+        repository.fetchPagedSubscription(
+            object : YouTubeSubscriptionQuery {
+                override val offset: Int get() = 0
+                override val nextPageToken: String? get() = null
+                override val eTag: String? get() = null
+                override val order: YouTubeSubscriptionQuery.Order get() = YouTubeSubscriptionQuery.Order.ALPHABETICAL
+            }
+        ).onSuccess {
             repository.addSubscriptionEtag(0, it.nextPageToken, it.eTag!!)
             repository.subscriptionsFetchedAt = it.cacheControl.fetchedAt!!
         }
@@ -173,7 +181,7 @@ class YouTubeRemoteMediatorTest {
         assertThat(actual.map { it.id.value })
             .containsExactlyElementsIn(client.subscriptionsRelevanceOrderedIds.map { it.value })
             .inOrder()
-        assertThat(repository.subscriptionsOrderedFetchedAt).isEqualTo(fetchedAt)
+        assertThat(repository.subscriptionsRelevanceOrderedFetchedAt).isEqualTo(fetchedAt)
     }
 }
 
@@ -187,7 +195,6 @@ fun subscriptionRelevanceOrdered(
 }
 
 internal class FakeYouTubeClientImpl(
-    var subscriptionRelevanceOrdered: (() -> NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>>)? = null,
     var subscription: (() -> NetworkResponse<List<YouTubeSubscription>>)? = null,
 ) : FakeYouTubeClient() {
     var current: Instant = Instant.EPOCH
@@ -203,28 +210,19 @@ internal class FakeYouTubeClientImpl(
         }
     var subscriptions: Map<String?, () -> NetworkResponse<List<YouTubeSubscription>>> = emptyMap()
         private set
-    var subscriptionsInRelevanceOrder: Map<String?, () -> NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>>> =
+    var subscriptionsInRelevanceOrder: Map<String?, () -> NetworkResponse<List<YouTubeSubscription>>> =
         emptyMap()
         private set
 
-    override fun fetchSubscriptionRelevanceOrdered(
-        pageSize: Int,
-        offset: Int,
-        token: String?,
-    ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>> {
-        logD { "fetchSubscriptionRelevanceOrdered: $pageSize,$offset,$token" }
-        return if (subscriptionRelevanceOrdered != null) subscriptionRelevanceOrdered!!.invoke()
-        else subscriptionsInRelevanceOrder[token]!!.invoke()
-    }
-
-    override fun fetchSubscription(
-        pageSize: Int,
-        token: String?,
-        eTag: String?,
-    ): NetworkResponse<List<YouTubeSubscription>> {
-        logD { "fetchSubscription: $pageSize,$token,$eTag" }
+    override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> {
+        logD { "fetchSubscription: $query" }
         return if (subscription != null) subscription!!.invoke()
-        else subscriptions[token]!!.invoke()
+        else {
+            when (query.order) {
+                YouTubeSubscriptionQuery.Order.ALPHABETICAL -> subscriptions[query.nextPageToken]!!.invoke()
+                YouTubeSubscriptionQuery.Order.RELEVANCE -> subscriptionsInRelevanceOrder[query.nextPageToken]!!.invoke()
+            }
+        }
     }
 
     companion object {

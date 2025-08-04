@@ -60,7 +60,7 @@ internal class YouTubeSubscriptionTable(
 @Entity(
     tableName = "subscription_alphabetical_order_etag",
 )
-internal class YouTubeSubscriptionEtagTable(
+internal data class YouTubeSubscriptionEtagTable(
     @PrimaryKey
     @ColumnInfo(name = "offset") override val offset: Int,
     @ColumnInfo(name = "next_page_token") override val nextPageToken: String?,

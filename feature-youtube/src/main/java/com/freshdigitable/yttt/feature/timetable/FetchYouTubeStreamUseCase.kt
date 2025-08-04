@@ -240,12 +240,12 @@ private class PlaylistUpdateTaskCache {
 
 internal fun YouTubeSubscriptionSummary.Companion.create(
     base: YouTubeSubscriptionSummary,
-    uploadedPlaylistId: YouTubePlaylist.Id?
+    uploadedPlaylistId: YouTubePlaylist.Id?,
 ): YouTubeSubscriptionSummary = YouTubeSubscriptionSummaryImpl(base, uploadedPlaylistId)
 
 internal class YouTubeSubscriptionSummaryImpl(
     private val base: YouTubeSubscriptionSummary,
-    override val uploadedPlaylistId: YouTubePlaylist.Id?
+    override val uploadedPlaylistId: YouTubePlaylist.Id?,
 ) : YouTubeSubscriptionSummary by base
 
 private val SUBSCRIPTION_FETCH_PERIOD = Duration.ofHours(2)
@@ -267,33 +267,32 @@ internal fun YouTubeRepository.fetchAllSubscription(
     flow {
         var summary = YouTubeSubscriptionSummaries(query = findSubscriptionQuery(0))
         do {
-            val s = fetchPagedSubscription(MAX_BATCH_SIZE, summary.token, summary.eTag)
-                .onSuccess {
-                    addSubscriptionEtag(summary.offset, summary.token, checkNotNull(it.eTag))
-                }.map {
-                    val o = summary.offset + MAX_BATCH_SIZE
-                    YouTubeSubscriptionSummaries(
-                        item = findSubscriptionSummaries(it.item.map { i -> i.id }),
-                        offset = o,
-                        query = findSubscriptionQuery(o),
-                        _token = it.nextPageToken,
-                        fetchedAt = it.cacheControl.fetchedAt,
-                    )
-                }.recoverFromNotModified {
-                    val o = summary.offset + MAX_BATCH_SIZE
-                    YouTubeSubscriptionSummaries(
-                        item = findSubscriptionSummariesByOffset(summary.offset, MAX_BATCH_SIZE),
-                        offset = o,
-                        query = findSubscriptionQuery(o),
-                        fetchedAt = it.fetchedAt,
-                    )
-                }.onFailure {
-                    emit(Result.failure(it))
-                    return@flow
-                }
+            val s = fetchPagedSubscription(summary).onSuccess {
+                addSubscriptionEtag(summary.offset, summary.nextPageToken, checkNotNull(it.eTag))
+            }.map {
+                val o = summary.offset + MAX_BATCH_SIZE
+                YouTubeSubscriptionSummaries(
+                    item = findSubscriptionSummaries(it.item.map { i -> i.id }),
+                    offset = o,
+                    query = findSubscriptionQuery(o),
+                    _token = it.nextPageToken,
+                    fetchedAt = it.cacheControl.fetchedAt,
+                )
+            }.recoverFromNotModified {
+                val o = summary.offset + MAX_BATCH_SIZE
+                YouTubeSubscriptionSummaries(
+                    item = findSubscriptionSummariesByOffset(summary.offset, MAX_BATCH_SIZE),
+                    offset = o,
+                    query = findSubscriptionQuery(o),
+                    fetchedAt = it.fetchedAt,
+                )
+            }.onFailure {
+                emit(Result.failure(it))
+                return@flow
+            }
             emit(s)
             summary = s.getOrThrow()
-        } while (summary.token != null)
+        } while (summary.nextPageToken != null)
         if (summary.fetchedAt != null) {
             subscriptionsFetchedAt = summary.fetchedAt
         }
@@ -301,13 +300,13 @@ internal fun YouTubeRepository.fetchAllSubscription(
 }
 
 internal class YouTubeSubscriptionSummaries(
-    val offset: Int = 0,
+    override val offset: Int = 0,
     val item: List<YouTubeSubscriptionSummary> = emptyList(),
     private val query: YouTubeSubscriptionQuery? = null,
     private val _token: String? = null,
     val fetchedAt: Instant? = null,
-) {
-    val token: String? get() = _token ?: query?.nextPageToken
-    val eTag: String? get() = query?.eTag
-    val hasNextToken: Boolean get() = (token ?: query?.nextPageToken) != null
+) : YouTubeSubscriptionQuery {
+    override val nextPageToken: String? get() = _token ?: query?.nextPageToken
+    override val eTag: String? get() = query?.eTag
+    val hasNextToken: Boolean get() = (nextPageToken ?: query?.nextPageToken) != null
 }

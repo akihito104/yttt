@@ -9,14 +9,13 @@ import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.YouTube
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
-import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
-import kotlinx.coroutines.flow.last
 import java.time.Duration
 import javax.inject.Inject
 
@@ -29,7 +28,10 @@ internal class YouTubeRemoteMediator @Inject constructor(
     companion object {
         private val MAX_AGE_SUBSCRIPTION = Duration.ofHours(2)
         private val YouTubeLiveDataSource.subscriptionsOrderedCacheControl: CacheControl
-            get() = CacheControl.create(subscriptionsOrderedFetchedAt, MAX_AGE_SUBSCRIPTION)
+            get() = CacheControl.create(
+                subscriptionsRelevanceOrderedFetchedAt,
+                MAX_AGE_SUBSCRIPTION
+            )
     }
 
     override suspend fun initialize(): InitializeAction {
@@ -48,21 +50,25 @@ internal class YouTubeRemoteMediator @Inject constructor(
             return MediatorResult.Success(endOfPaginationReached = true)
         }
         when (loadType) {
-            LoadType.REFRESH -> {
-                repository.fetchSubscriptions(YouTubeDataSource.MAX_PAGE_SIZE).last()
-                    .onFailure { return MediatorResult.Error(it) }
-                    .onSuccess { s ->
-                        (s as? YouTubeSubscriptions.Updated)?.let {
-                            repository.addSubscribes(it)
-                            repository.subscriptionsOrderedFetchedAt = it.lastUpdatedAt
-                            repository.removeSubscribesByRemainingIds(it.ids)
-                        }
-                        return MediatorResult.Success(endOfPaginationReached = true)
-                    }
-            }
-
+            LoadType.REFRESH -> fetchPagedSubscriptions()
             LoadType.PREPEND, LoadType.APPEND -> Unit
         }
+        return MediatorResult.Success(true)
+    }
+
+    private suspend fun fetchPagedSubscriptions(): MediatorResult {
+        var token: String? = null
+        val items = mutableListOf<YouTubeSubscription>()
+        do {
+            val query = YouTubeSubscriptionQuery.forRelevance(items.size, token)
+            repository.fetchPagedSubscription(query).onFailure {
+                return MediatorResult.Error(it)
+            }.onSuccess { r ->
+                items.addAll(r.item)
+                token = r.nextPageToken
+            }
+        } while (token != null)
+        repository.removeSubscribesByRemainingIds(items.map { it.id }.toSet())
         return MediatorResult.Success(true)
     }
 }

@@ -11,6 +11,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.NetworkResponse
@@ -668,13 +669,9 @@ private class FakeYouTubeClientImpl(
         }
     }
 
-    override fun fetchSubscription(
-        pageSize: Int,
-        token: String?,
-        eTag: String?
-    ): NetworkResponse<List<YouTubeSubscription>> {
-        logD { "fetchSubscription: $token, $eTag" }
-        return subscription!!.invoke(token, eTag)
+    override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> {
+        logD { "fetchSubscription: $query" }
+        return subscription!!.invoke(query.nextPageToken, query.eTag)
     }
 
     override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {

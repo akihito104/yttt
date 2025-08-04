@@ -3,8 +3,6 @@ package com.freshdigitable.yttt.test
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.model.CacheControl
-import com.freshdigitable.yttt.data.model.Updatable
-import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -14,7 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
@@ -56,17 +54,8 @@ interface FakeYouTubeClientModule {
 }
 
 abstract class FakeYouTubeClient : YouTubeClient {
-    override fun fetchSubscription(
-        pageSize: Int,
-        token: String?,
-        eTag: String?,
-    ): NetworkResponse<List<YouTubeSubscription>> = throw NotImplementedError()
-
-    override fun fetchSubscriptionRelevanceOrdered(
-        pageSize: Int,
-        offset: Int,
-        token: String?,
-    ): NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>> = throw NotImplementedError()
+    override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> =
+        throw NotImplementedError()
 
     override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
         throw NotImplementedError()
@@ -95,7 +84,7 @@ abstract class FakeYouTubeClient : YouTubeClient {
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
         maxResult: Long?,
-        token: String?
+        token: String?,
     ): NetworkResponse<List<YouTubeChannelLog>> = throw NotImplementedError()
 
     companion object {
@@ -170,9 +159,6 @@ abstract class FakeYouTubeClient : YouTubeClient {
 
 fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
     CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
-
-fun <T> T.toUpdatableFromRemote(current: Instant): Updatable<T> =
-    toUpdatable(CacheControl.fromRemote(current))
 
 private data class YouTubePlaylistItemDetailEntity(
     override val id: YouTubePlaylistItem.Id,

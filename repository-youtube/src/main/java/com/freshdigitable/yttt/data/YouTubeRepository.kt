@@ -17,7 +17,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
@@ -25,8 +25,6 @@ import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotModified
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.time.Period
 import javax.inject.Inject
@@ -38,24 +36,19 @@ class YouTubeRepository @Inject constructor(
     private val localSource: YouTubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource, YouTubeLiveDataSource by localSource {
-    override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions>> =
-        remoteSource.fetchSubscriptions(pageSize).map { r ->
-            r.map {
-                if (it.hasNextPage) it
-                else YouTubeSubscriptions.Updated(it)
-            }
-        }
+    override suspend fun fetchPagedSubscription(query: YouTubeSubscriptionQuery): Result<NetworkResponse<List<YouTubeSubscription>>> =
+        remoteSource.fetchPagedSubscription(query).onSuccess {
+            localSource.addPagedSubscription(it.item)
+            if (it.nextPageToken == null) {
+                val fetchedAt = it.cacheControl.fetchedAt!!
+                when (query.order) {
+                    YouTubeSubscriptionQuery.Order.ALPHABETICAL ->
+                        subscriptionsFetchedAt = fetchedAt
 
-    override suspend fun fetchPagedSubscription(
-        pageSize: Int,
-        nextPageToken: String?,
-        eTag: String?,
-    ): Result<NetworkResponse<List<YouTubeSubscription>>> =
-        remoteSource.fetchPagedSubscription(pageSize, nextPageToken, eTag).onSuccess {
-            localSource.addPagedSubscription(
-                it.item,
-                if (it.nextPageToken == null) it.cacheControl.fetchedAt else null,
-            )
+                    YouTubeSubscriptionQuery.Order.RELEVANCE ->
+                        subscriptionsRelevanceOrderedFetchedAt = fetchedAt
+                }
+            }
         }
 
     override suspend fun fetchLiveChannelLogs(

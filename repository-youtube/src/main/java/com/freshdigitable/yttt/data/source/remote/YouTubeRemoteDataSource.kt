@@ -17,8 +17,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.upda
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.NetworkResponse
@@ -26,34 +25,14 @@ import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotFoundError
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 internal class YouTubeRemoteDataSource(
     private val youtube: YouTubeClient,
     private val ioScope: IoScope,
 ) : YouTubeDataSource.Remote {
-    override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions.Paged>> =
-        ioScope.asResultFlow {
-            var paged = PagedSubscription()
-            do {
-                val res = youtube.fetchSubscriptionRelevanceOrdered(
-                    pageSize,
-                    paged.itemSize,
-                    paged.nextPageToken,
-                )
-                paged = paged.update(res)
-                emit(Result.success(paged))
-            } while (paged.nextPageToken != null)
-        }
-
-    override suspend fun fetchPagedSubscription(
-        pageSize: Int,
-        nextPageToken: String?,
-        eTag: String?
-    ): Result<NetworkResponse<List<YouTubeSubscription>>> = ioScope.asResult {
-        youtube.fetchSubscription(pageSize, nextPageToken, eTag)
-    }
+    override suspend fun fetchPagedSubscription(query: YouTubeSubscriptionQuery): Result<NetworkResponse<List<YouTubeSubscription>>> =
+        ioScope.asResult { youtube.fetchSubscription(query) }
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -146,25 +125,6 @@ internal class YouTubeRemoteDataSource(
 
     private suspend inline fun <T> fetch(crossinline request: YouTubeClient.() -> Updatable<T>): Result<Updatable<T>> =
         ioScope.asResult { youtube.request() }
-}
-
-private data class PagedSubscription(
-    private val pages: List<List<YouTubeSubscription>> = emptyList(),
-    val nextPageToken: String? = null,
-    private val updatedAt: Instant? = null,
-) : YouTubeSubscriptions.Paged {
-    override val items: List<YouTubeSubscription> get() = pages.flatten()
-    override val lastUpdatedAt: Instant get() = updatedAt ?: Instant.EPOCH
-    override val lastPage: List<YouTubeSubscription> get() = pages.last()
-    override val hasNextPage: Boolean get() = nextPageToken != null
-    val itemSize: Int get() = pages.sumOf { it.size }
-    fun update(
-        res: NetworkResponse<List<YouTubeSubscriptionRelevanceOrdered>>,
-    ): PagedSubscription = copy(
-        pages = pages + listOf(res.item),
-        nextPageToken = res.nextPageToken,
-        updatedAt = res.cacheControl.fetchedAt,
-    )
 }
 
 private class YouTubePlaylistNotFound(

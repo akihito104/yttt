@@ -17,7 +17,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.ImageDataSource
@@ -55,21 +54,10 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }.getOrThrow()
 
     override var subscriptionsFetchedAt: Instant = Instant.EPOCH
-    override fun fetchSubscriptions(pageSize: Int): Flow<Result<YouTubeSubscriptions>> =
-        ioScope.asResultFlow {
-            val items = dao.findAllSubscriptions()
-            val subs = YouTubeSubscriptions.create(items, subscriptionsFetchedAt)
-            emit(Result.success(subs))
-        }
+    override var subscriptionsRelevanceOrderedFetchedAt: Instant = Instant.EPOCH
 
-    override suspend fun addPagedSubscription(
-        subscription: Collection<YouTubeSubscription>,
-        fetchedAt: Instant?,
-    ) {
+    override suspend fun addPagedSubscription(subscription: Collection<YouTubeSubscription>) {
         dao.addSubscriptions(subscription)
-        if (fetchedAt != null) {
-            subscriptionsFetchedAt = fetchedAt
-        }
     }
 
     override suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionQuery? =
@@ -77,11 +65,6 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id> =
         dao.fetchAllSubscriptionIds().toSet()
-
-    override var subscriptionsOrderedFetchedAt: Instant = Instant.EPOCH
-    override suspend fun addSubscribes(subscriptions: YouTubeSubscriptions) = ioScope.asResult {
-        dao.addSubscriptions(subscriptions.items)
-    }.getOrThrow()
 
     override suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String) {
         dao.addSubscriptionEtag(YouTubeSubscriptionEtagTable(offset, nextPageToken, eTag))
