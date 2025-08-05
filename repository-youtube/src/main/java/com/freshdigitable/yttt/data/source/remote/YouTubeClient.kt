@@ -13,7 +13,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
@@ -87,7 +86,7 @@ internal class YouTubeClientImpl(
     private val youtube: YouTube,
 ) : YouTubeClient {
     override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> =
-        youtube.fetch(YouTubeSubscriptionRemote.factory(query)) {
+        youtube.fetch(YouTubeSubscriptionRemote.factory) {
             subscriptions()
                 .list(listOf(PART_SNIPPET))
                 .setMine(true)
@@ -223,31 +222,17 @@ private class YouTubeSubscriptionRemote(
         )
 
     companion object {
-        fun factory(
-            query: YouTubeSubscriptionQuery,
-        ): ResponseFactory<SubscriptionListResponse, List<YouTubeSubscription>> = { res, cc ->
-            NetworkResponse.create(
-                item = when (query.order) {
-                    YouTubeSubscriptionQuery.Order.ALPHABETICAL ->
-                        res.items.map { YouTubeSubscriptionRemote(it) }
-
-                    YouTubeSubscriptionQuery.Order.RELEVANCE -> res.items.mapIndexed { i, s ->
-                        YouTubeSubscriptionRelevanceOrderedRemote(s, query.offset + i)
-                    }
-                },
-                cacheControl = cc,
-                nextPageToken = res.nextPageToken,
-                eTag = res.etag,
-            )
-        }
+        val factory: ResponseFactory<SubscriptionListResponse, List<YouTubeSubscription>> =
+            { res, cc ->
+                NetworkResponse.create(
+                    item = res.items.map { YouTubeSubscriptionRemote(it) },
+                    cacheControl = cc,
+                    nextPageToken = res.nextPageToken,
+                    eTag = res.etag,
+                )
+            }
     }
 }
-
-private class YouTubeSubscriptionRelevanceOrderedRemote(
-    subscription: Subscription,
-    override val order: Int,
-) : YouTubeSubscriptionRelevanceOrdered,
-    YouTubeSubscription by YouTubeSubscriptionRemote(subscription)
 
 private data class YouTubeChannelLogEntity(
     val activity: Activity,

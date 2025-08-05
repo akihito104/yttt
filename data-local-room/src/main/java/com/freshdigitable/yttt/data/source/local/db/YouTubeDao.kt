@@ -27,7 +27,7 @@ internal class YouTubeDao @Inject constructor(
 ) : YouTubeVideoDao by videoDao, YouTubePlaylistDao by playlistDao,
     YouTubeSubscriptionDao by subscriptionDao, YouTubeChannelDao by channelDao {
     suspend fun addSubscriptions(
-        subscriptions: Collection<YouTubeSubscription>
+        subscriptions: Collection<YouTubeSubscription>,
     ) = db.withTransaction {
         val channels = subscriptions.map { it.channel }.toSet()
             .map { it.toDbEntity() }

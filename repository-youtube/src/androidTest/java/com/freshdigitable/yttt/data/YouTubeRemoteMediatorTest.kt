@@ -9,11 +9,9 @@ import androidx.paging.testing.asSnapshot
 import com.freshdigitable.yttt.data.FakeYouTubeClientImpl.Companion.subscriptionsRelevanceOrderedIds
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTube
-import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
@@ -185,27 +183,16 @@ class YouTubeRemoteMediatorTest {
     }
 }
 
-fun subscriptionRelevanceOrdered(
-    id: String,
-    channel: YouTubeChannel,
-    order: Int,
-): YouTubeSubscriptionRelevanceOrdered = object : YouTubeSubscriptionRelevanceOrdered,
-    YouTubeSubscription by FakeYouTubeClient.subscription(id, channel) {
-    override val order: Int get() = order
-}
-
 internal class FakeYouTubeClientImpl(
     var subscription: (() -> NetworkResponse<List<YouTubeSubscription>>)? = null,
 ) : FakeYouTubeClient() {
     var current: Instant = Instant.EPOCH
     var channelDetails: List<YouTubeChannelDetail> = emptyList()
         set(value) {
-            subscriptions = value.sortedBy { it.title }
-                .map { subscription("s_${it.id.value}", it) }
+            subscriptions = value.sortedBy { it.title }.map { subscription("s_${it.id.value}", it) }
                 .toResponse(this)
-            subscriptionsInRelevanceOrder = value.mapIndexed { i, c ->
-                subscriptionRelevanceOrdered("s_${c.id.value}", c, i)
-            }.toResponse(this)
+            subscriptionsInRelevanceOrder = value.map { subscription("s_${it.id.value}", it) }
+                .toResponse(this)
             field = value
         }
     var subscriptions: Map<String?, () -> NetworkResponse<List<YouTubeSubscription>>> = emptyMap()
