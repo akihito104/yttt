@@ -142,26 +142,20 @@ internal data class YouTubeSubscriptionSummaryDb(
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT s.id AS subscription_id, s.channel_id, c.uploaded_playlist_id," +
-                " c.fetched_at AS fetched_at, c.max_age AS max_age FROM subscription AS s " +
-                "LEFT OUTER JOIN ( " +
-                " SELECT c.id, c.uploaded_playlist_id, p.max_age AS max_age, p.fetched_at AS fetched_at" +
-                " FROM channel_addition AS c " +
-                " INNER JOIN playlist_expire AS p ON c.uploaded_playlist_id = p.playlist_id " +
-                ") AS c ON s.channel_id = c.id " +
+            "SELECT s.id AS subscription_id, s.channel_id, ca.uploaded_playlist_id," +
+                " pe.fetched_at AS fetched_at, pe.max_age AS max_age FROM subscription AS s " +
+                "LEFT OUTER JOIN channel_addition AS ca ON s.channel_id = ca.id " +
+                "LEFT OUTER JOIN playlist_expire AS pe ON pe.playlist_id = ca.uploaded_playlist_id " +
                 "WHERE subscription_id IN (:ids)"
         )
         fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummaryDb>
 
         @Query(
-            "SELECT s.id AS subscription_id, s.channel_id, c.uploaded_playlist_id," +
-                " c.fetched_at AS fetched_at, c.max_age AS max_age FROM subscription AS s " +
-                "LEFT OUTER JOIN ( " +
-                " SELECT c.id, channel.title, c.uploaded_playlist_id, p.max_age AS max_age, p.fetched_at AS fetched_at" +
-                " FROM channel_addition AS c " +
-                " INNER JOIN channel ON channel.id = c.id " +
-                " INNER JOIN playlist_expire AS p ON c.uploaded_playlist_id = p.playlist_id " +
-                ") AS c ON s.channel_id = c.id " +
+            "SELECT s.id AS subscription_id, s.channel_id, ca.uploaded_playlist_id," +
+                " pe.fetched_at AS fetched_at, pe.max_age AS max_age FROM subscription AS s " +
+                "INNER JOIN channel AS c ON s.channel_id = c.id " +
+                "LEFT OUTER JOIN channel_addition AS ca ON s.channel_id = ca.id " +
+                "LEFT OUTER JOIN playlist_expire AS pe ON pe.playlist_id = ca.uploaded_playlist_id " +
                 "ORDER BY LOWER(c.title) ASC " +
                 "LIMIT :pageSize OFFSET :offset"
         )
