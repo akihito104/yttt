@@ -16,6 +16,9 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.PART_CONTENT_DETAILS
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.PART_LIVE_STREAMING_DETAILS
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.PART_SNIPPET
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.text
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpHeaders
@@ -73,7 +76,9 @@ interface YouTubeClient {
         fun create(youtube: YouTube): YouTubeClient = YouTubeClientImpl(youtube)
 
         val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(5)
-
+        const val PART_SNIPPET = "snippet"
+        const val PART_CONTENT_DETAILS = "contentDetails"
+        const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
         val YouTubeSubscriptionQuery.Order.text: String
             get() = when (this) {
                 YouTubeSubscriptionQuery.Order.ALPHABETICAL -> "alphabetical"
@@ -116,24 +121,30 @@ internal class YouTubeClientImpl(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetch(PlaylistItemRemote.factory(id)) {
-        playlistItems()
-            .list(listOf(PART_CONTENT_DETAILS))
-            .setPlaylistId(id.value)
-            .setMaxResults(maxResult)
-            .apply { eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
-    }
+    ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetchPlaylistItem(
+        id, maxResult, PlaylistItemRemote.factory(id), PlaylistItemRemote.part, eTag,
+    )
 
     override fun fetchPlaylistItemDetails(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItemDetail>> =
-        youtube.fetch(PlaylistItemDetailRemote.factory) {
-            playlistItems()
-                .list(listOf(PART_SNIPPET))
-                .setPlaylistId(id.value)
-                .setMaxResults(maxResult)
-        }
+    ): NetworkResponse<List<YouTubePlaylistItemDetail>> = youtube.fetchPlaylistItem(
+        id, maxResult, PlaylistItemDetailRemote.factory, PlaylistItemDetailRemote.part,
+    )
+
+    private fun <T : YouTubePlaylistItem> YouTube.fetchPlaylistItem(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        factory: ResponseFactory<PlaylistItemListResponse, List<T>>,
+        part: List<String>,
+        eTag: String? = null,
+    ): NetworkResponse<List<T>> = fetch(factory) {
+        playlistItems()
+            .list(part)
+            .setPlaylistId(id.value)
+            .setMaxResults(maxResult)
+            .apply { eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
+    }
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
         youtube.fetch(YouTubeVideoRemote.factory) {
@@ -173,9 +184,6 @@ internal class YouTubeClientImpl(
     }
 
     companion object {
-        private const val PART_SNIPPET = "snippet"
-        private const val PART_CONTENT_DETAILS = "contentDetails"
-        private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
         private fun <R, T> YouTube.fetch(
             factory: ResponseFactory<R, T>,
             request: YouTube.() -> AbstractGoogleClientRequest<R>,
@@ -473,6 +481,7 @@ private class PlaylistItemRemote(
                     )
                 }
             }
+        val part = listOf(PART_CONTENT_DETAILS)
     }
 }
 
@@ -504,6 +513,7 @@ private class PlaylistItemDetailRemote(
                     nextPageToken = res.nextPageToken,
                 )
             }
+        val part = listOf(PART_SNIPPET)
     }
 }
 
