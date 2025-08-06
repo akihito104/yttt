@@ -6,9 +6,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import androidx.paging.RemoteMediator
 import androidx.paging.testing.asSnapshot
-import com.freshdigitable.yttt.data.MediatorResultSubject.Companion.assertThat
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.TwitchCategory
@@ -36,13 +34,10 @@ import com.freshdigitable.yttt.data.source.remote.TwitchVideosResponse
 import com.freshdigitable.yttt.di.TwitchModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.MediatorResultSubject.Companion.assertThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.fromRemote
-import com.google.common.truth.FailureMetadata
-import com.google.common.truth.Subject
-import com.google.common.truth.ThrowableSubject
-import com.google.common.truth.Truth
 import com.google.common.truth.Truth.assertThat
 import dagger.Module
 import dagger.Provides
@@ -50,15 +45,12 @@ import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.coroutines.test.runTest
 import okhttp3.Headers
 import okhttp3.Request
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Timeout
 import org.junit.After
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import retrofit2.Call
@@ -73,9 +65,6 @@ class TwitchRemoteMediatorTest {
     @get:Rule(order = 0)
     var hiltRule = HiltAndroidRule(this)
 
-    @get:Rule(order = 1)
-    val testScope = TestCoroutineScopeRule()
-
     @Inject
     lateinit var localSource: TwitchDataSource.Local
 
@@ -89,36 +78,38 @@ class TwitchRemoteMediatorTest {
     private val followings =
         TwitchFollowings.create(authUser.id, broadcaster, CacheControl.create(fetchedAt, maxAge))
 
-    @Before
-    fun setup(): Unit = runBlocking {
-        hiltRule.inject()
-        localSource.deleteAllTables()
+    @get:Rule(order = 1)
+    val testScope = TestCoroutineScopeRule(
+        setup = {
+            hiltRule.inject()
+            localSource.deleteAllTables()
 
-        FakeDateTimeProviderModule.apply {
-            onTimeAdvanced = { current ->
-                FakeRemoteSourceModule.userDetails = {
-                    Response.success(
-                        TwitchUserResponse(broadcaster.map { it.toUserDetail() }),
-                        Headers.Builder().add("date", current).build(),
-                    )
+            FakeDateTimeProviderModule.apply {
+                onTimeAdvanced = { current ->
+                    FakeRemoteSourceModule.userDetails = {
+                        Response.success(
+                            TwitchUserResponse(broadcaster.map { it.toUserDetail() }),
+                            Headers.Builder().add("date", current).build(),
+                        )
+                    }
                 }
+                instant = Instant.ofEpochMilli(100)
             }
-            instant = Instant.ofEpochMilli(100)
-        }
-        localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
-        val stream = broadcaster.take(10).map { stream(it) }
-        val streams = object : TwitchStreams.Updated {
-            override val followerId: TwitchUser.Id get() = authUser.id
-            override val streams: List<TwitchStream> get() = stream
-            override val updatableThumbnails: Set<String> get() = emptySet()
-            override val deletedThumbnails: Set<String> get() = emptySet()
-        }
-        localSource.replaceFollowedStreams(streams.toUpdatable())
-        localSource.replaceAllFollowings(followings)
-    }
+            localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+            val stream = broadcaster.take(10).map { stream(it) }
+            val streams = object : TwitchStreams.Updated {
+                override val followerId: TwitchUser.Id get() = authUser.id
+                override val streams: List<TwitchStream> get() = stream
+                override val updatableThumbnails: Set<String> get() = emptySet()
+                override val deletedThumbnails: Set<String> get() = emptySet()
+            }
+            localSource.replaceFollowedStreams(streams.toUpdatable())
+            localSource.replaceAllFollowings(followings)
+        },
+    )
 
     @After
-    fun tearDown() = runTest {
+    fun tearDown() {
         FakeDateTimeProviderModule.clear()
         FakeRemoteSourceModule.clear()
     }
@@ -377,33 +368,3 @@ private class FakeCall<T>(private val response: Response<T>) : Call<T> {
 interface FakeDateTimeProviderModuleImpl : FakeDateTimeProviderModule
 interface TestCoroutineScopeModuleImpl : TestCoroutineScopeModule
 interface InMemoryDbModuleImpl : InMemoryDbModule
-
-@OptIn(ExperimentalPagingApi::class)
-class MediatorResultSubject(
-    metadata: FailureMetadata,
-    private val actual: RemoteMediator.MediatorResult?,
-) : Subject(metadata, actual) {
-    companion object {
-        private fun factory(): Factory<MediatorResultSubject, RemoteMediator.MediatorResult> =
-            Factory { metadata, actual -> MediatorResultSubject(metadata, actual) }
-
-        fun assertThat(actual: RemoteMediator.MediatorResult?): MediatorResultSubject =
-            Truth.assertAbout(factory()).that(actual)
-    }
-
-    fun isSuccess(endOfPaginationReached: Boolean) {
-        check("MediatorResult.Success").that(actual)
-            .isInstanceOf(RemoteMediator.MediatorResult.Success::class.java)
-        check("endOfPaginationReached").that((actual as RemoteMediator.MediatorResult.Success).endOfPaginationReached)
-            .isEqualTo(endOfPaginationReached)
-    }
-
-    fun isError(throwableMatcher: (ThrowableSubject) -> Unit) {
-        check("MediatorResult.Error").that(actual)
-            .isInstanceOf(RemoteMediator.MediatorResult.Error::class.java)
-        throwableMatcher(throwable())
-    }
-
-    private fun throwable(): ThrowableSubject =
-        check("throwable").that((actual as RemoteMediator.MediatorResult.Error).throwable)
-}

@@ -12,9 +12,11 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.text
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpHeaders
 import com.google.api.client.http.HttpResponseException
@@ -43,11 +45,7 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 
 interface YouTubeClient {
-    fun fetchSubscription(
-        pageSize: Long,
-        offset: Int,
-        token: String?,
-    ): NetworkResponse<List<YouTubeSubscription>>
+    fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>>
 
     fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>>
     fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>>
@@ -75,23 +73,27 @@ interface YouTubeClient {
         fun create(youtube: YouTube): YouTubeClient = YouTubeClientImpl(youtube)
 
         val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(5)
+
+        val YouTubeSubscriptionQuery.Order.text: String
+            get() = when (this) {
+                YouTubeSubscriptionQuery.Order.ALPHABETICAL -> "alphabetical"
+                YouTubeSubscriptionQuery.Order.RELEVANCE -> "relevance"
+            }
     }
 }
 
 internal class YouTubeClientImpl(
     private val youtube: YouTube,
 ) : YouTubeClient {
-    override fun fetchSubscription(
-        pageSize: Long,
-        offset: Int,
-        token: String?,
-    ): NetworkResponse<List<YouTubeSubscription>> =
-        youtube.fetch(YouTubeSubscriptionRemote.factory(offset)) {
+    override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> =
+        youtube.fetch(YouTubeSubscriptionRemote.factory) {
             subscriptions()
                 .list(listOf(PART_SNIPPET))
                 .setMine(true)
-                .setMaxResults(pageSize)
-                .setPageToken(token)
+                .setMaxResults(query.pageSize.toLong())
+                .setPageToken(query.nextPageToken)
+                .setOrder(query.order.text)
+                .apply { query.eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
         }
 
     override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
@@ -113,13 +115,13 @@ internal class YouTubeClientImpl(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        eTag: String?
+        eTag: String?,
     ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetch(PlaylistItemRemote.factory(id)) {
         playlistItems()
             .list(listOf(PART_CONTENT_DETAILS))
             .setPlaylistId(id.value)
             .setMaxResults(maxResult)
-            .apply { eTag?.let { requestHeaders = HttpHeaders().apply { setIfNoneMatch(it) } } }
+            .apply { eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
     }
 
     override fun fetchPlaylistItemDetails(
@@ -205,9 +207,8 @@ class YouTubeException(
 
 typealias ResponseFactory<R, T> = (R, CacheControl) -> NetworkResponse<T>
 
-private data class YouTubeSubscriptionRemote(
+private class YouTubeSubscriptionRemote(
     private val subscription: Subscription,
-    override val order: Int,
 ) : YouTubeSubscription {
     override val id: YouTubeSubscription.Id
         get() = YouTubeSubscription.Id(subscription.id)
@@ -221,14 +222,13 @@ private data class YouTubeSubscriptionRemote(
         )
 
     companion object {
-        fun factory(orderOffset: Int): ResponseFactory<SubscriptionListResponse, List<YouTubeSubscription>> =
-            { res, cacheControl ->
+        val factory: ResponseFactory<SubscriptionListResponse, List<YouTubeSubscription>> =
+            { res, cc ->
                 NetworkResponse.create(
-                    item = res.items.mapIndexed { i, s ->
-                        YouTubeSubscriptionRemote(s, orderOffset + i)
-                    },
-                    cacheControl = cacheControl,
+                    item = res.items.map { YouTubeSubscriptionRemote(it) },
+                    cacheControl = cc,
                     nextPageToken = res.nextPageToken,
+                    eTag = res.etag,
                 )
             }
     }
@@ -369,7 +369,7 @@ private data class YouTubeChannelImpl(
 }
 
 private data class YouTubeChannelSectionImpl(
-    private val channelSection: ChannelSection
+    private val channelSection: ChannelSection,
 ) : YouTubeChannelSection {
     override val id: YouTubeChannelSection.Id
         get() = YouTubeChannelSection.Id(channelSection.id)
@@ -419,7 +419,8 @@ private data class YouTubeChannelSectionImpl(
             val type = requireNotNull(snippet.parseType()) { "type is null: $snippet" }
             return when (type) {
                 YouTubeChannelSection.Type.SINGLE_PLAYLIST,
-                YouTubeChannelSection.Type.MULTIPLE_PLAYLIST -> YouTubeChannelSection.Content.Playlist(
+                YouTubeChannelSection.Type.MULTIPLE_PLAYLIST,
+                    -> YouTubeChannelSection.Content.Playlist(
                     contentDetails.playlists.map { YouTubePlaylist.Id(it) }
                 )
 

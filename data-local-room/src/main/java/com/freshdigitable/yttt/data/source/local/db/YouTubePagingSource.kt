@@ -47,9 +47,11 @@ data class YouTubeLiveSubscription(
     @androidx.room.Dao
     interface Dao {
         @Query(
-            "SELECT s.id AS id, s.subscription_since, s.subs_order AS `order`, " +
+            "SELECT s.id AS id, s.subscription_since, o.subs_order AS `order`, " +
                 "c.id AS channel_id, c.title AS channel_title, c.icon AS channel_icon FROM subscription AS s " +
-                "INNER JOIN channel AS c ON c.id = s.channel_id ORDER BY subs_order ASC"
+                "INNER JOIN channel AS c ON c.id = s.channel_id " +
+                "INNER JOIN subscription_relevance_order AS o ON s.id = o.subscription_id " +
+                "ORDER BY subs_order ASC"
         )
         fun getSubscriptionPagingSource(): PagingSource<Int, YouTubeLiveSubscription>
     }

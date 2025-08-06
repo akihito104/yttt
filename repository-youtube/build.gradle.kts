@@ -47,4 +47,5 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.hilt.android.testing)
+    androidTestImplementation(libs.androidx.paging.testing)
 }

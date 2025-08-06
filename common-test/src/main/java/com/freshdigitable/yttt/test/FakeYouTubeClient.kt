@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
@@ -53,11 +54,8 @@ interface FakeYouTubeClientModule {
 }
 
 abstract class FakeYouTubeClient : YouTubeClient {
-    override fun fetchSubscription(
-        pageSize: Long,
-        offset: Int,
-        token: String?
-    ): NetworkResponse<List<YouTubeSubscription>> = throw NotImplementedError()
+    override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> =
+        throw NotImplementedError()
 
     override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
         throw NotImplementedError()
@@ -86,10 +84,19 @@ abstract class FakeYouTubeClient : YouTubeClient {
         channelId: YouTubeChannel.Id,
         publishedAfter: Instant?,
         maxResult: Long?,
-        token: String?
+        token: String?,
     ): NetworkResponse<List<YouTubeChannelLog>> = throw NotImplementedError()
 
     companion object {
+        fun subscription(
+            id: String,
+            channel: YouTubeChannel,
+        ): YouTubeSubscription = object : YouTubeSubscription {
+            override val id: YouTubeSubscription.Id = YouTubeSubscription.Id(id)
+            override val channel: YouTubeChannel = channel
+            override val subscribeSince: Instant = Instant.EPOCH
+        }
+
         fun channelDetail(
             id: Int,
         ): YouTubeChannelDetail = object : YouTubeChannelDetail {

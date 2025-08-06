@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.feature.video
 
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
@@ -76,7 +75,7 @@ class YouTubeAnnotatableStringFactoryTest {
         }
 
         @Test
-        fun test(): Unit = runBlocking {
+        fun test() {
             // exercise
             val actual = sut.invoke(param.description)
             // verify

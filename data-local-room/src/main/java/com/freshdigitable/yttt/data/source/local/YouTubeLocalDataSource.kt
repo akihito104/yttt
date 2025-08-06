@@ -15,8 +15,8 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.ImageDataSource
@@ -24,6 +24,7 @@ import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistUpdatableDb
+import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionEtagTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -45,29 +46,32 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.findSubscriptionSummaries(ids)
     }.getOrThrow()
 
-    override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions>> =
-        ioScope.asResultFlow {
-            val items = dao.findAllSubscriptions()
-            val subs = YouTubeSubscriptions.create(items, _subscriptionsFetchedAt)
-            emit(Result.success(subs))
-        }
+    override suspend fun findSubscriptionSummariesByOffset(
+        offset: Int,
+        pageSize: Int,
+    ): List<YouTubeSubscriptionSummary> = ioScope.asResult {
+        dao.findSubscriptionSummariesByOffset(offset, pageSize)
+    }.getOrThrow()
+
+    override var subscriptionsFetchedAt: Instant = Instant.EPOCH
+    override var subscriptionsRelevanceOrderedFetchedAt: Instant = Instant.EPOCH
+
+    override suspend fun addPagedSubscription(subscription: Collection<YouTubeSubscription>) {
+        dao.addSubscriptions(subscription)
+    }
+
+    override suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionQuery? =
+        dao.findSubscriptionQuery(offset)
 
     override suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id> =
         dao.fetchAllSubscriptionIds().toSet()
 
-    private var _subscriptionsFetchedAt: Instant = Instant.EPOCH
-    override val subscriptionsFetchedAt: Instant get() = _subscriptionsFetchedAt
+    override suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String) {
+        dao.addSubscriptionEtag(YouTubeSubscriptionEtagTable(offset, nextPageToken, eTag))
+    }
 
-    override suspend fun addSubscribes(subscriptions: YouTubeSubscriptions) =
-        ioScope.asResult {
-            dao.addSubscriptions(subscriptions.items)
-            if (subscriptions is YouTubeSubscriptions.Updated) {
-                _subscriptionsFetchedAt = subscriptions.lastUpdatedAt
-            }
-        }.getOrThrow()
-
-    override suspend fun removeSubscribes(subscriptions: Set<YouTubeSubscription.Id>) {
-        dao.removeSubscriptions(subscriptions)
+    override suspend fun removeSubscribesByRemainingIds(subscriptions: Set<YouTubeSubscription.Id>) {
+        dao.removeSubscriptionsByRemainingIds(subscriptions)
     }
 
     override suspend fun fetchLiveChannelLogs(

@@ -16,16 +16,15 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail.Companion.is
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
+import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotModified
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import java.time.Duration
 import java.time.Instant
 import java.time.Period
 import javax.inject.Inject
@@ -37,17 +36,20 @@ class YouTubeRepository @Inject constructor(
     private val localSource: YouTubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource, YouTubeLiveDataSource by localSource {
-    override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions>> {
-        if (dateTimeProvider.now() < localSource.subscriptionsFetchedAt + SUBSCRIPTION_FETCH_PERIOD) {
-            return localSource.fetchSubscriptions(pageSize)
-        }
-        return remoteSource.fetchSubscriptions(pageSize).map { r ->
-            r.map {
-                if (it.hasNextPage) it
-                else YouTubeSubscriptions.Updated(localSource.fetchSubscriptionIds(), it)
+    override suspend fun fetchPagedSubscription(query: YouTubeSubscriptionQuery): Result<NetworkResponse<List<YouTubeSubscription>>> =
+        remoteSource.fetchPagedSubscription(query).onSuccess {
+            localSource.addPagedSubscription(it.item)
+            if (it.nextPageToken == null) {
+                val fetchedAt = it.cacheControl.fetchedAt!!
+                when (query.order) {
+                    YouTubeSubscriptionQuery.Order.ALPHABETICAL ->
+                        subscriptionsFetchedAt = fetchedAt
+
+                    YouTubeSubscriptionQuery.Order.RELEVANCE ->
+                        subscriptionsRelevanceOrderedFetchedAt = fetchedAt
+                }
             }
         }
-    }
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -166,7 +168,6 @@ class YouTubeRepository @Inject constructor(
 
     companion object {
         private val ACTIVITY_MAX_PERIOD = Period.ofDays(7)
-        private val SUBSCRIPTION_FETCH_PERIOD = Duration.ofHours(2)
     }
 
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>> {

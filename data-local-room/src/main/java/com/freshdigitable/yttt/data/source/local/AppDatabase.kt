@@ -48,7 +48,9 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemIdConvert
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistWithItemsEtag
+import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionEtagTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionIdConverter
+import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionRelevanceOrderTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoBroadcastType
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
@@ -63,6 +65,8 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         YouTubeChannelAdditionExpireTable::class,
         YouTubeChannelLogTable::class,
         YouTubeSubscriptionTable::class,
+        YouTubeSubscriptionRelevanceOrderTable::class,
+        YouTubeSubscriptionEtagTable::class,
         YouTubeVideoTable::class,
         YouTubeVideoIsArchivedTable::class,
         FreeChatTable::class,
@@ -88,7 +92,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     views = [
         TwitchUserDetailDbView::class,
     ],
-    version = 22,
+    version = 23,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -112,6 +116,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 19, to = 20),
         AutoMigration(from = 20, to = 21),
         AutoMigration(from = 21, to = 22, spec = AppDatabase.MigrateSeparatePlaylistItem::class),
+        AutoMigration(from = 22, to = 23, spec = AppDatabase.MigrateSubscriptionOrder::class),
     ]
 )
 @TypeConverters(
@@ -179,6 +184,11 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
         DeleteColumn(tableName = "playlist_item", columnName = "video_owner_channel_id"),
     )
     internal class MigrateSeparatePlaylistItem : AutoMigrationSpec
+
+    @DeleteColumn.Entries(
+        DeleteColumn(tableName = "subscription", columnName = "subs_order")
+    )
+    internal class MigrateSubscriptionOrder : AutoMigrationSpec
     companion object {
         private const val DATABASE_NAME = "ytttdb"
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =

@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.data.source.remote
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.flattenToList
-import com.freshdigitable.yttt.data.model.Updatable.Companion.map
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
@@ -17,30 +16,35 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.upda
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptions
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.NetworkResponse
+import com.freshdigitable.yttt.data.source.NetworkResponse.Companion.map
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotFoundError
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 internal class YouTubeRemoteDataSource(
     private val youtube: YouTubeClient,
     private val ioScope: IoScope,
 ) : YouTubeDataSource.Remote {
-    override fun fetchSubscriptions(pageSize: Long): Flow<Result<YouTubeSubscriptions.Paged>> =
-        ioScope.asResultFlow {
-            var paged = PagedSubscription()
-            do {
-                val res = youtube.fetchSubscription(pageSize, paged.itemSize, paged.nextPageToken)
-                paged = paged.update(res.item, res.nextPageToken, res.cacheControl.fetchedAt)
-                emit(Result.success(paged))
-            } while (paged.nextPageToken != null)
+    override suspend fun fetchPagedSubscription(
+        query: YouTubeSubscriptionQuery,
+    ): Result<NetworkResponse<List<YouTubeSubscription>>> = ioScope.asResult {
+        youtube.fetchSubscription(query).map { subs ->
+            if (query.order == YouTubeSubscriptionQuery.Order.RELEVANCE) {
+                subs.mapIndexed { i, s ->
+                    YouTubeSubscriptionRelevanceOrderedRemote(s, query.offset + i)
+                }
+            } else {
+                subs
+            }
         }
+    }
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -135,30 +139,14 @@ internal class YouTubeRemoteDataSource(
         ioScope.asResult { youtube.request() }
 }
 
-private data class PagedSubscription(
-    private val pages: List<List<YouTubeSubscription>> = emptyList(),
-    val nextPageToken: String? = null,
-    private val updatedAt: Instant? = null,
-) : YouTubeSubscriptions.Paged {
-    override val items: List<YouTubeSubscription> get() = pages.flatten()
-    override val lastUpdatedAt: Instant get() = updatedAt ?: Instant.EPOCH
-    override val lastPage: List<YouTubeSubscription> get() = pages.last()
-    override val hasNextPage: Boolean get() = nextPageToken != null
-    val itemSize: Int get() = pages.sumOf { it.size }
-    fun update(
-        items: List<YouTubeSubscription>,
-        nextPageToken: String?,
-        updatedAt: Instant? = null,
-    ): PagedSubscription = copy(
-        pages = pages + listOf(items),
-        nextPageToken = nextPageToken,
-        updatedAt = updatedAt,
-    )
-}
-
 private class YouTubePlaylistNotFound(
     override val id: YouTubePlaylist.Id,
 ) : YouTubePlaylist {
     override val title: String get() = ""
     override val thumbnailUrl: String get() = ""
 }
+
+private class YouTubeSubscriptionRelevanceOrderedRemote(
+    subscription: YouTubeSubscription,
+    override val order: Int,
+) : YouTubeSubscriptionRelevanceOrdered, YouTubeSubscription by subscription
