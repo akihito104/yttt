@@ -276,6 +276,110 @@ class AppDatabaseMigrationTest {
             }.isInstanceOf(SQLiteConstraintException::class.java)
         }
     }
+
+    @RunWith(AndroidJUnit4::class)
+    class From23To24 {
+        @get:Rule
+        val rule = AppMigrationTestRule(23, 24, MIGRATION_23_24)
+
+        @Before
+        fun setup(): Unit = rule.oldDb.use {
+            rule.insertForSetup("channel" to listOf(ContentValues().apply {
+                put("id", "channel_0")
+                put("title", "channel_title_0")
+                put("icon", "")
+            }))
+            rule.insertForSetup("playlist" to listOf(ContentValues().apply {
+                put("id", "channel_0-playlist_uploaded")
+                put("title", "uploaded")
+                put("thumbnail_url", "")
+            }))
+            rule.insertForSetup("channel_addition" to listOf(ContentValues().apply {
+                put("id", "channel_0")
+                put("banner_url", "")
+                put("subscriber_count", "10")
+                put("is_subscriber_hidden", "false")
+                put("video_count", "4")
+                put("view_count", "300")
+                put("published_at", "0")
+                put("custom_url", "@channel_0")
+                put("keywords", "")
+                put("description", "")
+                put("uploaded_playlist_id", "channel_0-playlist_uploaded")
+            }))
+        }
+
+        @Test
+        fun init(): Unit = rule.run {
+            newDb.query("SELECT * FROM yt_channel_related_playlist").use { c ->
+                c.moveToNext()
+                assertThat(c.getString(0)).isEqualTo("channel_0")
+                assertThat(c.getString(1)).isEqualTo("channel_0-playlist_uploaded")
+            }
+            newDb.query("SELECT * FROM channel_addition").use { c ->
+                c.moveToNext()
+                assertThatThrownBy { c.getColumnIndexOrThrow("uploaded_playlist_id") }
+                    .isInstanceOf(IllegalArgumentException::class.java)
+            }
+        }
+
+        @Test
+        fun insert(): Unit = rule.run {
+            newDb.insert("channel", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
+                put("id", "channel_99")
+                put("title", "channel_99_title")
+                put("icon", "")
+            })
+            newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
+                put("id", "channel_99-playlist_uploaded")
+                put("title", "uploaded")
+                put("thumbnail_url", "")
+            })
+            newDb.insert(
+                "yt_channel_related_playlist", SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("channel_id", "channel_99")
+                    put("uploaded_playlist_id", "channel_99-playlist_uploaded")
+                })
+            newDb.query("select * from yt_channel_related_playlist").use { c ->
+                assertThat(c.count).isEqualTo(2)
+            }
+        }
+
+        @Test
+        fun insert_throwsConstraintExceptionForChannel(): Unit = rule.run {
+            newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
+                put("id", "channel_99-playlist_uploaded")
+                put("title", "uploaded")
+                put("thumbnail_url", "")
+            })
+            assertThatThrownBy {
+                newDb.insert(
+                    "yt_channel_related_playlist", SQLiteDatabase.CONFLICT_ABORT,
+                    ContentValues().apply {
+                        put("channel_id", "channel_99")
+                        put("uploaded_playlist_id", "channel_99-playlist_uploaded")
+                    })
+            }.isInstanceOf(SQLiteConstraintException::class.java)
+        }
+
+        @Test
+        fun insert_throwsConstraintExceptionForPlaylist(): Unit = rule.run {
+            newDb.insert("channel", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
+                put("id", "channel_99")
+                put("title", "channel_99_title")
+                put("icon", "")
+            })
+            assertThatThrownBy {
+                newDb.insert(
+                    "yt_channel_related_playlist", SQLiteDatabase.CONFLICT_ABORT,
+                    ContentValues().apply {
+                        put("channel_id", "channel_99")
+                        put("uploaded_playlist_id", "channel_99-playlist_uploaded")
+                    })
+            }.isInstanceOf(SQLiteConstraintException::class.java)
+        }
+    }
 }
 
 fun twitchUser(id: Int): ContentValues = ContentValues().apply {

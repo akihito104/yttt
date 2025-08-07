@@ -5,6 +5,7 @@ import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
@@ -33,7 +34,9 @@ interface YouTubeDataSource {
         maxResult: Long? = null,
     ): Result<List<YouTubeChannelLog>>
 
-    suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>>
+    suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>>
+    suspend fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelRelatedPlaylist>>
+    suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>>
     suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>>
 
     suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>>
@@ -56,7 +59,9 @@ interface YouTubeDataSource {
 
         suspend fun addPlaylist(playlist: Collection<Updatable<YouTubePlaylist>>)
 
-        suspend fun addChannelList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>)
+        suspend fun addChannelList(channel: Collection<YouTubeChannel>)
+        suspend fun addChannelRelatedPlaylists(channel: List<YouTubeChannelRelatedPlaylist>)
+        suspend fun addChannelDetailList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>)
         suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>)
         suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>)
     }

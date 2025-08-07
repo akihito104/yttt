@@ -59,7 +59,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         override fun create(
             id: LiveChannel.Id,
             coroutineScope: CoroutineScope,
-            errorMessageChannel: SnackbarMessageBus.Sender
+            errorMessageChannel: SnackbarMessageBus.Sender,
         ): ChannelDetailDelegateForYouTube
     }
 
@@ -75,7 +75,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         if (BuildConfig.DEBUG) YouTubeChannelDetailTab.Debug else null
     )
     private val detail: Flow<YouTubeChannelDetail?> = flowOf(id).map { i ->
-        repository.fetchChannelList(setOf(i.mapTo())).map { it.firstOrNull() }
+        repository.fetchChannelDetailList(setOf(i.mapTo())).map { it.firstOrNull() }
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "detail:$i" } }
             .getOrNull()?.item

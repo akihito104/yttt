@@ -39,6 +39,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelAdditionTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelRelatedPlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistExpireTable
@@ -62,6 +63,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     entities = [
         YouTubeChannelTable::class,
         YouTubeChannelAdditionTable::class,
+        YouTubeChannelRelatedPlaylistTable::class,
         YouTubeChannelAdditionExpireTable::class,
         YouTubeChannelLogTable::class,
         YouTubeSubscriptionTable::class,
@@ -92,7 +94,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     views = [
         TwitchUserDetailDbView::class,
     ],
-    version = 23,
+    version = 24,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -193,7 +195,7 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
         private const val DATABASE_NAME = "ytttdb"
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name)
-                .addMigrations(MIGRATION_13_14, MIGRATION_15_16, MIGRATION_18_19)
+                .addMigrations(MIGRATION_13_14, MIGRATION_15_16, MIGRATION_18_19, MIGRATION_23_24)
                 .build()
     }
 }
@@ -290,6 +292,47 @@ internal val MIGRATION_18_19 = object : Migration(18, 19) {
         db.execSQL("ALTER TABLE __playlist RENAME TO playlist")
         db.execSQL("ALTER TABLE __playlist_expire RENAME TO playlist_expire")
         db.foreignKeyCheck("playlist_expire")
+    }
+}
+
+internal val MIGRATION_23_24 = object : Migration(23, 24) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP VIEW twitch_user_detail_view")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `yt_channel_related_playlist` (`channel_id` TEXT NOT NULL, " +
+                "`uploaded_playlist_id` TEXT, PRIMARY KEY(`channel_id`), " +
+                "FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, " +
+                "FOREIGN KEY(`uploaded_playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_yt_channel_related_playlist_uploaded_playlist_id`" +
+                " ON `yt_channel_related_playlist` (`uploaded_playlist_id`)"
+        )
+        db.execSQL(
+            "INSERT INTO `yt_channel_related_playlist` (`channel_id`, `uploaded_playlist_id`) " +
+                "SELECT `id` AS `channel_id`, `uploaded_playlist_id` FROM `channel_addition`"
+        )
+
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `_new_channel_addition` (`id` TEXT NOT NULL, `banner_url` TEXT, " +
+                "`subscriber_count` INTEGER NOT NULL, `is_subscriber_hidden` INTEGER NOT NULL, " +
+                "`video_count` INTEGER NOT NULL, `view_count` INTEGER NOT NULL, `published_at` INTEGER NOT NULL, " +
+                "`custom_url` TEXT NOT NULL, `keywords` TEXT NOT NULL, `description` TEXT, PRIMARY KEY(`id`), " +
+                "FOREIGN KEY(`id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+        )
+        db.execSQL(
+            "INSERT INTO `_new_channel_addition` (`id`,`banner_url`,`subscriber_count`,`is_subscriber_hidden`," +
+                "`video_count`,`view_count`,`published_at`,`custom_url`,`keywords`,`description`) " +
+                "SELECT `id`,`banner_url`,`subscriber_count`,`is_subscriber_hidden`,`video_count`,`view_count`," +
+                "`published_at`,`custom_url`,`keywords`,`description` FROM `channel_addition`"
+        )
+        db.execSQL("DROP TABLE `channel_addition`")
+        db.execSQL("ALTER TABLE `_new_channel_addition` RENAME TO `channel_addition`")
+        db.foreignKeyCheck("channel_addition")
+        db.execSQL(
+            "CREATE VIEW `twitch_user_detail_view` AS SELECT u.login_name, u.display_name, d.* " +
+                "FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
+        )
     }
 }
 

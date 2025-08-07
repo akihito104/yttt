@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
@@ -83,16 +84,24 @@ internal class YouTubeDao @Inject constructor(
     ) = db.withTransaction {
         val channels = channelDetail.map { it.item.toDbEntity() }
         val additions = channelDetail.map { it.item.toAddition() }
-        val playlists = additions.mapNotNull { it.uploadedPlayList }
-            .distinct()
-            .map { YouTubePlaylistTable(it) }
         val expired = channelDetail
             .map { YouTubeChannelAdditionExpireTable(it.item.id, it.cacheControl.toDb()) }
         addChannels(channels)
-        addPlaylists(playlists)
+        addChannelRelatedPlaylistList(channelDetail.map { it.item })
         addChannelAddition(additions)
         addChannelAdditionExpire(expired)
     }
+
+    suspend fun addChannelRelatedPlaylistList(entities: Collection<YouTubeChannelRelatedPlaylist>) =
+        db.withTransaction {
+            val playlists = entities.mapNotNull { it.uploadedPlayList }
+                .distinct()
+                .map { YouTubePlaylistTable(it) }
+            addPlaylists(playlists)
+            addChannelRelatedPlaylists(entities.mapNotNull { c ->
+                c.uploadedPlayList?.let { YouTubeChannelRelatedPlaylistTable(c.id, it) }
+            })
+        }
 
     suspend fun addFreeChatItems(
         ids: Collection<YouTubeVideo.Id>,
@@ -172,7 +181,6 @@ private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
     YouTubeChannelAdditionTable(
         id = id,
         bannerUrl = bannerUrl,
-        uploadedPlayList = uploadedPlayList,
         description = description,
         customUrl = customUrl,
         isSubscriberHidden = isSubscriberHidden,
