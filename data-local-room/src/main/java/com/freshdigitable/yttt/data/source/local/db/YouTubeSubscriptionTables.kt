@@ -43,9 +43,6 @@ internal class YouTubeSubscriptionTable(
         @Upsert
         suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscriptionTable>)
 
-        @Query("DELETE FROM subscription WHERE id IN (:removed)")
-        suspend fun removeSubscriptions(removed: Collection<YouTubeSubscription.Id>)
-
         @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
         suspend fun removeSubscriptionsByRemainingIds(id: Collection<YouTubeSubscription.Id>)
 
@@ -100,6 +97,9 @@ internal class YouTubeSubscriptionRelevanceOrderTable(
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addSubscriptionRelevanceOrders(order: Collection<YouTubeSubscriptionRelevanceOrderTable>)
+
+        @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
+        suspend fun removeSubscriptionsRelevanceOrderedByRemainingIds(id: Collection<YouTubeSubscription.Id>)
 
         @Query("DELETE FROM subscription_relevance_order")
         override suspend fun deleteTable()

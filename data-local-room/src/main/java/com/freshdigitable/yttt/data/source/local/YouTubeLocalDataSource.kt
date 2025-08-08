@@ -72,9 +72,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.addSubscriptionEtag(YouTubeSubscriptionEtagTable(offset, nextPageToken, eTag))
     }
 
-    override suspend fun removeSubscribesByRemainingIds(subscriptions: Set<YouTubeSubscription.Id>) {
-        dao.removeSubscriptionsByRemainingIds(subscriptions)
-    }
+    override suspend fun removeSubscribesByRemainingIds(subscriptions: Set<YouTubeSubscription.Id>) =
+        database.withTransaction {
+            dao.removeSubscriptionsRelevanceOrderedByRemainingIds(subscriptions)
+            dao.removeSubscriptionsByRemainingIds(subscriptions)
+        }
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
