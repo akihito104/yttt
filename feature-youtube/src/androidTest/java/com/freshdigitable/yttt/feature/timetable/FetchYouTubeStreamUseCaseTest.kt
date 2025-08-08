@@ -8,6 +8,7 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -604,7 +605,7 @@ private fun playlistItem(
 
 private class FakeYouTubeClientImpl(
     var subscription: ((String?, String?) -> NetworkResponse<List<YouTubeSubscription>>)? = null,
-    var channel: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
+    var channel: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelRelatedPlaylist>>)? = null,
     var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItem>>)? = null,
     var video: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
 ) : FakeYouTubeClient() {
@@ -674,9 +675,8 @@ private class FakeYouTubeClientImpl(
         return subscription!!.invoke(query.nextPageToken, query.eTag)
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
-        logD { "fetchChannelList: $ids" }
-        check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
+    override fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> {
+        logD { "fetchChannelRelatedPlaylistList: $ids" }
         return NetworkResponse.create(channel!!.invoke(ids))
     }
 

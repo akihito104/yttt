@@ -62,7 +62,7 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
             return emptyFlow()
         }
         return flowOf(item).map { c ->
-            repository.fetchChannelList(c).map { res -> res.map { it.item }.associateBy { it.id } }
+            repository.fetchChannelList(c).map { res -> res.associateBy { it.id } }
         }
     }
 

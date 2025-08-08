@@ -3,9 +3,11 @@ package com.freshdigitable.yttt.data.source.remote
 import androidx.annotation.VisibleForTesting
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelBase
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
@@ -16,6 +18,9 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.PART_CONTENT_DETAILS
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.PART_LIVE_STREAMING_DETAILS
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.PART_SNIPPET
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.text
 import com.google.api.client.googleapis.services.AbstractGoogleClientRequest
 import com.google.api.client.http.HttpHeaders
@@ -47,7 +52,10 @@ import java.time.format.DateTimeFormatter
 interface YouTubeClient {
     fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>>
 
-    fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>>
+    fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>>
+    fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>>
+    fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelRelatedPlaylist>>
+
     fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>>
     fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
@@ -73,7 +81,9 @@ interface YouTubeClient {
         fun create(youtube: YouTube): YouTubeClient = YouTubeClientImpl(youtube)
 
         val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(5)
-
+        const val PART_SNIPPET = "snippet"
+        const val PART_CONTENT_DETAILS = "contentDetails"
+        const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
         val YouTubeSubscriptionQuery.Order.text: String
             get() = when (this) {
                 YouTubeSubscriptionQuery.Order.ALPHABETICAL -> "alphabetical"
@@ -96,13 +106,33 @@ internal class YouTubeClientImpl(
                 .apply { query.eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
         }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
-        youtube.fetch(YouTubeChannelImpl.factory) {
-            channels()
-                .list(listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics"))
-                .setId(ids.map { it.value })
-                .setMaxResults(ids.size.toLong())
-        }
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>> =
+        youtube.fetchChannelList(ids, YouTubeChannelRemote.factory, YouTubeChannelRemote.part)
+
+    override fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
+        youtube.fetchChannelList(
+            ids,
+            YouTubeChannelDetailImpl.factory,
+            YouTubeChannelDetailImpl.part,
+        )
+
+    override fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> {
+        return youtube.fetchChannelList(
+            ids, YouTubeChannelRelatedPlaylistRemote.factory,
+            YouTubeChannelRelatedPlaylistRemote.part
+        )
+    }
+
+    private fun <T : YouTubeChannelBase> YouTube.fetchChannelList(
+        ids: Set<YouTubeChannel.Id>,
+        factory: ResponseFactory<ChannelListResponse, List<T>>,
+        part: List<String>,
+    ): NetworkResponse<List<T>> = fetch(factory) {
+        channels()
+            .list(part)
+            .setId(ids.map { it.value })
+            .setMaxResults(ids.size.toLong())
+    }
 
     override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
         youtube.fetch(YouTubePlaylistRemote.factory) {
@@ -116,24 +146,30 @@ internal class YouTubeClientImpl(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetch(PlaylistItemRemote.factory(id)) {
-        playlistItems()
-            .list(listOf(PART_CONTENT_DETAILS))
-            .setPlaylistId(id.value)
-            .setMaxResults(maxResult)
-            .apply { eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
-    }
+    ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetchPlaylistItem(
+        id, maxResult, PlaylistItemRemote.factory(id), PlaylistItemRemote.part, eTag,
+    )
 
     override fun fetchPlaylistItemDetails(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItemDetail>> =
-        youtube.fetch(PlaylistItemDetailRemote.factory) {
-            playlistItems()
-                .list(listOf(PART_SNIPPET))
-                .setPlaylistId(id.value)
-                .setMaxResults(maxResult)
-        }
+    ): NetworkResponse<List<YouTubePlaylistItemDetail>> = youtube.fetchPlaylistItem(
+        id, maxResult, PlaylistItemDetailRemote.factory, PlaylistItemDetailRemote.part,
+    )
+
+    private fun <T : YouTubePlaylistItem> YouTube.fetchPlaylistItem(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        factory: ResponseFactory<PlaylistItemListResponse, List<T>>,
+        part: List<String>,
+        eTag: String? = null,
+    ): NetworkResponse<List<T>> = fetch(factory) {
+        playlistItems()
+            .list(part)
+            .setPlaylistId(id.value)
+            .setMaxResults(maxResult)
+            .apply { eTag?.let { requestHeaders = HttpHeaders().setIfNoneMatch(it) } }
+    }
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
         youtube.fetch(YouTubeVideoRemote.factory) {
@@ -173,9 +209,6 @@ internal class YouTubeClientImpl(
     }
 
     companion object {
-        private const val PART_SNIPPET = "snippet"
-        private const val PART_CONTENT_DETAILS = "contentDetails"
-        private const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
         private fun <R, T> YouTube.fetch(
             factory: ResponseFactory<R, T>,
             request: YouTube.() -> AbstractGoogleClientRequest<R>,
@@ -325,46 +358,74 @@ private val ThumbnailDetails.url: String
 private val ThumbnailDetails.iconUrl: String
     get() = (medium ?: high ?: default)?.url ?: ""
 
-private data class YouTubeChannelImpl(
+private class YouTubeChannelRemote(
     private val channel: Channel,
-) : YouTubeChannelDetail {
-    override val id: YouTubeChannel.Id
-        get() = YouTubeChannel.Id(channel.id)
-    override val title: String
-        get() = channel.snippet.title
-    override val iconUrl: String
-        get() = channel.snippet.thumbnails.iconUrl
-    override val bannerUrl: String?
-        get() = channel.brandingSettings?.image?.bannerExternalUrl
-    override val subscriberCount: BigInteger
-        get() = channel.statistics.subscriberCount
-    override val isSubscriberHidden: Boolean
-        get() = channel.statistics.hiddenSubscriberCount
-    override val videoCount: BigInteger
-        get() = channel.statistics.videoCount
-    override val viewsCount: BigInteger
-        get() = channel.statistics.viewCount ?: BigInteger.ZERO
-    override val customUrl: String
-        get() = channel.snippet.customUrl ?: ""
-    override val keywords: Collection<String>
-        get() = channel.brandingSettings?.channel?.keywords?.split(",", " ") ?: emptyList()
-    override val publishedAt: Instant
-        get() = channel.snippet.publishedAt.toInstant()
-    override val description: String?
-        get() = channel.brandingSettings?.channel?.description
+) : YouTubeChannel {
+    override val id: YouTubeChannel.Id get() = YouTubeChannel.Id(channel.id)
+    override val title: String get() = channel.snippet.title
+    override val iconUrl: String get() = channel.snippet.thumbnails.iconUrl
+
+    companion object {
+        val factory: ResponseFactory<ChannelListResponse, List<YouTubeChannel>> = { res, cc ->
+            NetworkResponse.create(
+                item = res.items.map { YouTubeChannelRemote(it) },
+                cacheControl = cc,
+                nextPageToken = res.nextPageToken,
+            )
+        }
+        val part = listOf(PART_SNIPPET)
+    }
+}
+
+private class YouTubeChannelRelatedPlaylistRemote(
+    private val channel: Channel,
+) : YouTubeChannelRelatedPlaylist {
+    override val id: YouTubeChannel.Id get() = YouTubeChannel.Id(channel.id)
     override val uploadedPlayList: YouTubePlaylist.Id?
         get() = channel.contentDetails?.relatedPlaylists?.uploads?.let { YouTubePlaylist.Id(it) }
+
+    companion object {
+        val factory: ResponseFactory<ChannelListResponse, List<YouTubeChannelRelatedPlaylist>> =
+            { res, cc ->
+                NetworkResponse.create(
+                    item = res.items.map { YouTubeChannelRelatedPlaylistRemote(it) },
+                    cacheControl = cc,
+                    nextPageToken = res.nextPageToken,
+                )
+            }
+        val part = listOf(PART_CONTENT_DETAILS)
+    }
+}
+
+private data class YouTubeChannelDetailImpl(
+    private val channel: Channel,
+) : YouTubeChannelDetail, YouTubeChannel by YouTubeChannelRemote(channel),
+    YouTubeChannelRelatedPlaylist by YouTubeChannelRelatedPlaylistRemote(channel) {
+    override val id: YouTubeChannel.Id get() = YouTubeChannel.Id(channel.id)
+    override val customUrl: String get() = channel.snippet.customUrl ?: ""
+    override val publishedAt: Instant get() = channel.snippet.publishedAt.toInstant()
+
+    override val bannerUrl: String? get() = channel.brandingSettings?.image?.bannerExternalUrl
+    override val keywords: Collection<String>
+        get() = channel.brandingSettings?.channel?.keywords?.split(",", " ") ?: emptyList()
+    override val description: String? get() = channel.brandingSettings?.channel?.description
+
+    override val subscriberCount: BigInteger get() = channel.statistics.subscriberCount
+    override val isSubscriberHidden: Boolean get() = channel.statistics.hiddenSubscriberCount
+    override val videoCount: BigInteger get() = channel.statistics.videoCount
+    override val viewsCount: BigInteger get() = channel.statistics.viewCount ?: BigInteger.ZERO
 
     override fun toString(): String = channel.toPrettyString()
 
     companion object {
         val factory: ResponseFactory<ChannelListResponse, List<YouTubeChannelDetail>> = { res, cc ->
             NetworkResponse.create(
-                item = res.items.map { YouTubeChannelImpl(it) },
+                item = res.items.map { YouTubeChannelDetailImpl(it) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,
             )
         }
+        val part = listOf(PART_SNIPPET, PART_CONTENT_DETAILS, "brandingSettings", "statistics")
     }
 }
 
@@ -473,6 +534,7 @@ private class PlaylistItemRemote(
                     )
                 }
             }
+        val part = listOf(PART_CONTENT_DETAILS)
     }
 }
 
@@ -504,6 +566,7 @@ private class PlaylistItemDetailRemote(
                     nextPageToken = res.nextPageToken,
                 )
             }
+        val part = listOf(PART_SNIPPET)
     }
 }
 

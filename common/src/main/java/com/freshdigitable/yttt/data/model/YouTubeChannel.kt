@@ -4,8 +4,11 @@ import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 
-interface YouTubeChannelTitle {
+interface YouTubeChannelBase {
     val id: YouTubeChannel.Id
+}
+
+interface YouTubeChannelTitle : YouTubeChannelBase {
     val title: String
 }
 
@@ -21,22 +24,26 @@ data class YouTubeChannelEntity(
     override val iconUrl: String,
 ) : YouTubeChannel
 
+interface YouTubeChannelRelatedPlaylist : YouTubeChannelBase {
+    val uploadedPlayList: YouTubePlaylist.Id?
+}
+
 interface YouTubeChannelAddition {
+    val publishedAt: Instant
+    val customUrl: String
+
     val bannerUrl: String?
+    val keywords: Collection<String>
+    val description: String?
+
     val subscriberCount: BigInteger
     val isSubscriberHidden: Boolean
     val videoCount: BigInteger
     val viewsCount: BigInteger
-    val publishedAt: Instant
-    val customUrl: String
-    val keywords: Collection<String>
-    val description: String?
-    val uploadedPlayList: YouTubePlaylist.Id?
 }
 
-interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition {
-    override val iconUrl: String
-
+interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition,
+    YouTubeChannelRelatedPlaylist {
     companion object {
         val MAX_AGE: Duration = Duration.ofDays(1)
     }

@@ -43,9 +43,6 @@ internal class YouTubeSubscriptionTable(
         @Upsert
         suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscriptionTable>)
 
-        @Query("DELETE FROM subscription WHERE id IN (:removed)")
-        suspend fun removeSubscriptions(removed: Collection<YouTubeSubscription.Id>)
-
         @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
         suspend fun removeSubscriptionsByRemainingIds(id: Collection<YouTubeSubscription.Id>)
 
@@ -101,6 +98,9 @@ internal class YouTubeSubscriptionRelevanceOrderTable(
         @Upsert
         suspend fun addSubscriptionRelevanceOrders(order: Collection<YouTubeSubscriptionRelevanceOrderTable>)
 
+        @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
+        suspend fun removeSubscriptionsRelevanceOrderedByRemainingIds(id: Collection<YouTubeSubscription.Id>)
+
         @Query("DELETE FROM subscription_relevance_order")
         override suspend fun deleteTable()
     }
@@ -144,7 +144,7 @@ internal data class YouTubeSubscriptionSummaryDb(
         @Query(
             "SELECT s.id AS subscription_id, s.channel_id, ca.uploaded_playlist_id," +
                 " pe.fetched_at AS fetched_at, pe.max_age AS max_age FROM subscription AS s " +
-                "LEFT OUTER JOIN channel_addition AS ca ON s.channel_id = ca.id " +
+                "LEFT OUTER JOIN yt_channel_related_playlist AS ca ON s.channel_id = ca.channel_id " +
                 "LEFT OUTER JOIN playlist_expire AS pe ON pe.playlist_id = ca.uploaded_playlist_id " +
                 "WHERE subscription_id IN (:ids)"
         )
@@ -154,7 +154,7 @@ internal data class YouTubeSubscriptionSummaryDb(
             "SELECT s.id AS subscription_id, s.channel_id, ca.uploaded_playlist_id," +
                 " pe.fetched_at AS fetched_at, pe.max_age AS max_age FROM subscription AS s " +
                 "INNER JOIN channel AS c ON s.channel_id = c.id " +
-                "LEFT OUTER JOIN channel_addition AS ca ON s.channel_id = ca.id " +
+                "LEFT OUTER JOIN yt_channel_related_playlist AS ca ON s.channel_id = ca.channel_id " +
                 "LEFT OUTER JOIN playlist_expire AS pe ON pe.playlist_id = ca.uploaded_playlist_id " +
                 "ORDER BY LOWER(c.title) ASC " +
                 "LIMIT :pageSize OFFSET :offset"

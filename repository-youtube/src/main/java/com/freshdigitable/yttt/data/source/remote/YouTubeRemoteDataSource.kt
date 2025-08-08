@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -57,8 +58,14 @@ internal class YouTubeRemoteDataSource(
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideo>>> =
         fetchList(ids) { fetchVideoList(it) }
 
-    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> =
-        fetchList(ids) { fetchChannelList(it) }
+    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> =
+        fetchList(ids) { fetchChannelList(it) }.map { r -> r.map { it.item } }
+
+    override suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> =
+        fetchList(ids) { fetchChannelDetailList(it) }
+
+    override suspend fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelRelatedPlaylist>> =
+        fetchList(ids) { fetchChannelRelatedPlaylistList(it) }.map { r -> r.map { it.item } }
 
     override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> =
         fetch { fetchChannelSection(id) }.map { it.item }

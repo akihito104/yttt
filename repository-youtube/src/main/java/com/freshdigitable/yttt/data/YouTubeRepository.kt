@@ -10,6 +10,7 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail.Companion.isFromAnotherChannel
@@ -130,11 +131,39 @@ class YouTubeRepository @Inject constructor(
             .map { it }
     }
 
-    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> {
+    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> {
+        val cache = localSource.fetchChannelList(ids)
+        if (cache.isFailure) {
+            return cache
+        }
+        val needed = ids - cache.getOrThrow().map { it.id }
+        if (needed.isEmpty()) {
+            return cache
+        }
+        return remoteSource.fetchChannelList(needed)
+            .onSuccess { localSource.addChannelList(it) }
+            .map { cache.getOrThrow() + it }
+    }
+
+    override suspend fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelRelatedPlaylist>> {
+        val cache = localSource.fetchChannelRelatedPlaylistList(ids)
+        if (cache.isFailure) {
+            return cache
+        }
+        val needed = ids - cache.getOrThrow().map { it.id }
+        if (needed.isEmpty()) {
+            return cache
+        }
+        return remoteSource.fetchChannelRelatedPlaylistList(needed)
+            .onSuccess { localSource.addChannelRelatedPlaylists(it) }
+            .map { cache.getOrThrow() + it }
+    }
+
+    override suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> {
         if (ids.isEmpty()) {
             return Result.success(emptyList())
         }
-        val cacheRes = localSource.fetchChannelList(ids).map { res ->
+        val cacheRes = localSource.fetchChannelDetailList(ids).map { res ->
             val current = dateTimeProvider.now()
             res.filter { it.isFresh(current) }
         }
@@ -146,9 +175,9 @@ class YouTubeRepository @Inject constructor(
         if (needed.isEmpty()) {
             return cacheRes
         }
-        return remoteSource.fetchChannelList(needed)
+        return remoteSource.fetchChannelDetailList(needed)
             .map { c -> c.map { it.overrideMaxAge(YouTubeChannelDetail.MAX_AGE) } }
-            .onSuccess { localSource.addChannelList(it) }
+            .onSuccess { localSource.addChannelDetailList(it) }
             .map { it + cache }
     }
 
@@ -192,9 +221,9 @@ class YouTubeRepository @Inject constructor(
                 v
             } else {
                 fetchChannelList(needsChannel.map { it.item.channel.id }.toSet()).map { c ->
-                    val channels = c.associateBy { it.item.id }
+                    val channels = c.associateBy { it.id }
                     needsChannel.map { n ->
-                        val channel = channels.getValue(n.item.channel.id).item
+                        val channel = channels.getValue(n.item.channel.id)
                         n.map {
                             object : YouTubeVideo by it {
                                 override val channel: YouTubeChannel get() = channel

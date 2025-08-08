@@ -60,10 +60,10 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             fetchAsync(
                 updateCurrentVideoItemsTask = this@FetchYouTubeStreamUseCase::updateCurrentVideos,
                 updateFromPlaylistTask = this@FetchYouTubeStreamUseCase::fetchUploadedPlaylists,
-            ) { videoUpdateTaskChannel ->
+            ) { coroutineScope, videoUpdateTaskChannel ->
                 val task = videoUpdateTaskChannel.consumeAsFlow()
                     .flatMapConcat { it.asFlow() }
-                    .chunked(MAX_BATCH_SIZE).map { ids ->
+                    .chunked(MAX_BATCH_SIZE).mapAsync(coroutineScope) { ids ->
                         liveRepository.fetchVideoList(ids.toSet())
                             .onFailure { logE(throwable = it) { "ids: $ids" } }
                             .onSuccess { video ->
@@ -85,7 +85,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                                 liveRepository.addVideo(video.filter { !it.item.isArchived })
                                 incrementMetric("new_stream", ids.size.toLong())
                             }
-                    }.toList()
+                    }.toList().awaitAll()
                 if (task.any { it.isFailure }) {
                     task.first { it.isFailure }.map { }
                 } else {
@@ -154,10 +154,10 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         summary: Collection<YouTubeSubscriptionSummary>,
     ): Result<List<YouTubeSubscriptionSummary>> {
         val s = summary.associateBy { it.channelId }
-        return liveRepository.fetchChannelList(s.keys)
+        return liveRepository.fetchChannelRelatedPlaylistList(s.keys)
             .onFailure { logE(throwable = it) { "updateSummary: " } }
             .map { c ->
-                c.map { it.item }.filter { it.uploadedPlayList != null }
+                c.filter { it.uploadedPlayList != null }
                     .map {
                         val base = checkNotNull(s[it.id])
                         YouTubeSubscriptionSummary.create(base, it.uploadedPlayList)
@@ -180,10 +180,10 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend inline fun fetchAsync(
         crossinline updateCurrentVideoItemsTask: suspend (SendChannel<List<YouTubeVideo.Id>>) -> Unit,
         crossinline updateFromPlaylistTask: suspend (CoroutineScope, SendChannel<List<YouTubeVideo.Id>>) -> Result<Unit>,
-        crossinline fetchVideoItemsTask: suspend (ReceiveChannel<List<YouTubeVideo.Id>>) -> Result<Unit>,
+        crossinline fetchVideoItemsTask: suspend (CoroutineScope, ReceiveChannel<List<YouTubeVideo.Id>>) -> Result<Unit>,
     ): Result<Unit> = coroutineScope {
         val videoUpdateTaskChannel = Channel<List<YouTubeVideo.Id>>(Channel.BUFFERED)
-        val t = async { fetchVideoItemsTask(videoUpdateTaskChannel) }
+        val t = async { fetchVideoItemsTask(this, videoUpdateTaskChannel) }
         val tasks = listOf(
             async { Result.success(updateCurrentVideoItemsTask(videoUpdateTaskChannel)) },
             async { updateFromPlaylistTask(this, videoUpdateTaskChannel) },
@@ -237,6 +237,11 @@ private class PlaylistUpdateTaskCache {
         }
     }
 }
+
+private inline fun <T, R> Flow<T>.mapAsync(
+    coroutineScope: CoroutineScope,
+    crossinline body: suspend (T) -> R,
+): Flow<Deferred<R>> = map { coroutineScope.async { body(it) } }
 
 internal fun YouTubeSubscriptionSummary.Companion.create(
     base: YouTubeSubscriptionSummary,

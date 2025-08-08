@@ -14,6 +14,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelAddition
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
+import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -41,6 +42,9 @@ internal data class YouTubeChannelTable(
         @Query("SELECT * FROM channel WHERE id = :id")
         suspend fun findChannel(id: YouTubeChannel.Id): YouTubeChannelTable?
 
+        @Query("SELECT * FROM channel WHERE id IN (:id)")
+        suspend fun findChannels(id: Set<YouTubeChannel.Id>): List<YouTubeChannelTable>
+
         @Query("DELETE FROM channel")
         override suspend fun deleteTable()
     }
@@ -60,11 +64,6 @@ internal class YouTubeChannelTitleDb(
             entity = YouTubeChannelTable::class,
             parentColumns = ["id"],
             childColumns = ["id"],
-        ),
-        ForeignKey(
-            entity = YouTubePlaylistTable::class,
-            parentColumns = ["id"],
-            childColumns = ["uploaded_playlist_id"],
         ),
     ],
 )
@@ -90,8 +89,6 @@ internal data class YouTubeChannelAdditionTable(
     val keywordsRaw: String,
     @ColumnInfo(name = "description")
     override val description: String?,
-    @ColumnInfo(name = "uploaded_playlist_id", index = true)
-    override val uploadedPlayList: YouTubePlaylist.Id?,
 ) : YouTubeChannelAddition {
     override val keywords: Collection<String>
         get() = keywordsRaw.split(",", " ")
@@ -102,6 +99,44 @@ internal data class YouTubeChannelAdditionTable(
         suspend fun addChannelAddition(addition: Collection<YouTubeChannelAdditionTable>)
 
         @Query("DELETE FROM channel_addition")
+        override suspend fun deleteTable()
+    }
+}
+
+@Entity(
+    tableName = "yt_channel_related_playlist",
+    foreignKeys = [
+        ForeignKey(
+            entity = YouTubeChannelTable::class,
+            parentColumns = ["id"],
+            childColumns = ["channel_id"],
+        ),
+        ForeignKey(
+            entity = YouTubePlaylistTable::class,
+            parentColumns = ["id"],
+            childColumns = ["uploaded_playlist_id"],
+        ),
+    ],
+)
+internal class YouTubeChannelRelatedPlaylistTable(
+    @PrimaryKey
+    @ColumnInfo(name = "channel_id")
+    override val id: YouTubeChannel.Id,
+    @ColumnInfo(
+        name = "uploaded_playlist_id",
+        index = true,
+    )
+    override val uploadedPlayList: YouTubePlaylist.Id?,
+) : YouTubeChannelRelatedPlaylist {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addChannelRelatedPlaylists(entities: Collection<YouTubeChannelRelatedPlaylistTable>)
+
+        @Query("SELECT * FROM yt_channel_related_playlist WHERE channel_id IN (:ids)")
+        suspend fun findChannelRelatedPlaylists(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelRelatedPlaylistTable>
+
+        @Query("DELETE FROM yt_channel_related_playlist")
         override suspend fun deleteTable()
     }
 }
@@ -141,16 +176,20 @@ internal data class YouTubeChannelDetailDb(
     override val iconUrl: String,
     @Embedded
     val addition: YouTubeChannelAdditionTable,
-) : YouTubeChannelDetail, YouTubeChannel, YouTubeChannelAddition by addition {
+    @ColumnInfo(name = "uploaded_playlist_id")
+    override val uploadedPlayList: YouTubePlaylist.Id?,
+) : YouTubeChannelDetail, YouTubeChannelAddition by addition {
     @get:Ignore
     override val id: YouTubeChannel.Id get() = addition.id
 
     @androidx.room.Dao
     internal interface Dao {
         @Query(
-            "SELECT c.icon AS icon, c.title AS title, a.*, e.fetched_at AS fetched_at, e.max_age AS max_age FROM channel AS c " +
+            "SELECT c.icon AS icon, c.title AS title, a.*, e.fetched_at AS fetched_at, e.max_age AS max_age, " +
+                " p.uploaded_playlist_id AS uploaded_playlist_id FROM channel AS c " +
                 "INNER JOIN channel_addition AS a ON c.id = a.id " +
                 "INNER JOIN channel_addition_expire AS e ON c.id = e.channel_id " +
+                "LEFT OUTER JOIN yt_channel_related_playlist AS p ON c.id = p.channel_id " +
                 "WHERE c.id IN (:id)"
         )
         suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<UpdatableYouTubeChannelDetailDb>
@@ -219,7 +258,7 @@ internal data class YouTubeChannelLogTable(
         )
         suspend fun findChannelLogs(
             channelId: YouTubeChannel.Id,
-            maxResult: Long? = Long.MAX_VALUE
+            maxResult: Long? = Long.MAX_VALUE,
         ): List<YouTubeChannelLogTable>
 
         @Query("DELETE FROM channel_log")
@@ -231,12 +270,14 @@ internal interface YouTubeChannelDaoProviders {
     val youTubeChannelDao: YouTubeChannelTable.Dao
     val youTubeChannelAdditionDao: YouTubeChannelAdditionTable.Dao
     val youTubeChannelDetailDbDao: YouTubeChannelDetailDb.Dao
+    val youTubeChannelRelatedPlaylistDbDao: YouTubeChannelRelatedPlaylistTable.Dao
     val youTubeChannelLogDao: YouTubeChannelLogTable.Dao
     val youTubeChannelAdditionExpireDao: YouTubeChannelAdditionExpireTable.Dao
 }
 
 internal interface YouTubeChannelDao : YouTubeChannelTable.Dao, YouTubeChannelAdditionTable.Dao,
-    YouTubeChannelLogTable.Dao, YouTubeChannelDetailDb.Dao, YouTubeChannelAdditionExpireTable.Dao
+    YouTubeChannelLogTable.Dao, YouTubeChannelDetailDb.Dao, YouTubeChannelRelatedPlaylistTable.Dao,
+    YouTubeChannelAdditionExpireTable.Dao
 
 internal class YouTubeChannelDaoImpl @Inject constructor(
     private val db: YouTubeChannelDaoProviders,
@@ -244,12 +285,14 @@ internal class YouTubeChannelDaoImpl @Inject constructor(
     YouTubeChannelAdditionTable.Dao by db.youTubeChannelAdditionDao,
     YouTubeChannelLogTable.Dao by db.youTubeChannelLogDao,
     YouTubeChannelDetailDb.Dao by db.youTubeChannelDetailDbDao,
+    YouTubeChannelRelatedPlaylistTable.Dao by db.youTubeChannelRelatedPlaylistDbDao,
     YouTubeChannelAdditionExpireTable.Dao by db.youTubeChannelAdditionExpireDao {
     override suspend fun deleteTable() {
         listOf(
             db.youTubeChannelDao,
             db.youTubeChannelAdditionDao,
             db.youTubeChannelLogDao,
+            db.youTubeChannelRelatedPlaylistDbDao,
             db.youTubeChannelAdditionExpireDao,
         ).forEach { it.deleteTable() }
     }

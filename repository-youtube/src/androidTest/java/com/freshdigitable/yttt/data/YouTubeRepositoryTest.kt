@@ -4,7 +4,6 @@ import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
@@ -97,7 +96,9 @@ class YouTubeRepositoryTest {
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         val video = video(1, channelDetail)
         hiltRule.inject()
-        localSource.addChannelList(listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))))
+        localSource.addChannelDetailList(
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+        )
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
@@ -124,7 +125,9 @@ class YouTubeRepositoryTest {
             },
         )
         hiltRule.inject()
-        localSource.addChannelList(listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))))
+        localSource.addChannelDetailList(
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+        )
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
@@ -151,7 +154,6 @@ class YouTubeRepositoryTest {
             },
         )
         hiltRule.inject()
-        localSource.addChannelList(listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))))
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1) + Duration.ofDays(1)
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
@@ -173,7 +175,9 @@ class YouTubeRepositoryTest {
             },
         )
         hiltRule.inject()
-        localSource.addChannelList(listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))))
+        localSource.addChannelDetailList(
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+        )
         sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
             override val channel: YouTubeChannel get() = channelDetail
             override val isFreeChat: Boolean get() = false
@@ -251,7 +255,7 @@ class YouTubeRepositoryTest {
         hiltRule.inject()
         val playlistId = YouTubePlaylist.Id("0")
         val channel = FakeYouTubeClient.channelDetail(1)
-        localSource.addChannelList(listOf(channel.toUpdatable()))
+        localSource.addChannelDetailList(listOf(channel.toUpdatable()))
         val item = FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), playlistId)
         localSource.updatePlaylistWithItems(
             object : YouTubePlaylistWithItems {
@@ -298,7 +302,7 @@ private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = YouTubeVideo
 
 private class FakeRemoteSource(
     val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
-    val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelDetail>>)? = null,
+    val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannel>>)? = null,
     val playlist: ((Set<YouTubePlaylist.Id>) -> Updatable<List<YouTubePlaylist>>)? = null,
     val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItem>>)? = null,
 ) : FakeYouTubeClient() {
@@ -307,7 +311,7 @@ private class FakeRemoteSource(
         return NetworkResponse.create(videoList!!.invoke(ids))
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> {
+    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>> {
         logD { "fetchChannelList: $ids" }
         return NetworkResponse.create(channelList!!.invoke(ids))
     }
@@ -320,7 +324,7 @@ private class FakeRemoteSource(
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
-        eTag: String?
+        eTag: String?,
     ): NetworkResponse<List<YouTubePlaylistItem>> {
         logD { "fetchPlaylistItems: $id" }
         return NetworkResponse.create(playlistItems!!.invoke(id)(eTag))
