@@ -179,12 +179,14 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+        val thumbs = dao.findThumbnailUrlByIds(ids)
         fetchByIds(ids) { i ->
             val items = i.map { YouTubeVideoIsArchivedTable(it, true) }
-            addVideoIsArchivedEntities(items)
+            database.withTransaction {
+                addVideoIsArchivedEntities(items)
+                removeVideos(i)
+            }
         }
-        val thumbs = dao.findThumbnailUrlByIds(ids)
-        fetchByIds(ids) { removeVideos(it) }
         removeImageByUrl(thumbs)
     }.getOrThrow()
 
