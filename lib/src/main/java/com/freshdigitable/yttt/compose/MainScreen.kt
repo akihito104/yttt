@@ -250,10 +250,10 @@ class MainViewModel @AssistedInject constructor(
         messageBus.messageFlow.map { SnackbarAction.NopAction(it) },
         accountRepositories.map { r ->
             r.value.isTokenInvalid.map { if (it == true) r.key else null }
-        }.merge().filterNotNull().map {
+        }.merge().filterNotNull().map { p ->
             SnackbarAction.NavigationAction(
                 SnackbarMessage(
-                    message = "Your ${it.name} login credential has expired.",
+                    message = "Your ${p.name} login credential has expired.",
                     actionLabel = "account setting",
                     withDismissAction = false,
                     duration = SnackbarDuration.Long,
