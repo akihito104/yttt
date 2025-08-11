@@ -95,8 +95,8 @@ private fun SubscriptionListContent(
             items(
                 count = item.itemCount,
                 key = item.itemKey { i -> "${i.id.value}_${i.channel.id.value}" },
-            ) {
-                val channel = remember { item[it]?.channel }
+            ) { i ->
+                val channel = remember { item[i]?.channel }
                 LiveChannelListItemView(
                     modifier = channel?.let { Modifier.clickable { onListItemClicked(it.id) } }
                         ?: Modifier,
@@ -150,5 +150,5 @@ private data class LiveSubscriptionEntity(
     override val id: LiveSubscription.Id,
     override val subscribeSince: Instant,
     override val channel: LiveChannel,
-    override val order: Int
+    override val order: Int,
 ) : LiveSubscription

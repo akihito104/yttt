@@ -4,8 +4,10 @@ import android.app.Application
 import coil3.EventListener
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
+import coil3.memoryCacheMaxSizePercentWhileInBackground
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
@@ -14,7 +16,6 @@ import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.compose.ImageLoaderViewSetup
 import com.freshdigitable.yttt.compose.image.coil.ImageLoadableCoilView
 import com.freshdigitable.yttt.data.source.ImageDataSource
-import com.freshdigitable.yttt.logD
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -43,6 +44,7 @@ internal interface ImageLoadableCoilViewProvider {
             .maxSizePercent(context, 0.25)
             .build()
 
+        @OptIn(ExperimentalCoilApi::class)
         @Provides
         @Singleton
         fun provideSetup(
@@ -53,6 +55,7 @@ internal interface ImageLoadableCoilViewProvider {
         ): ImageLoaderViewSetup = {
             SingletonImageLoader.setSafe { context ->
                 ImageLoader.Builder(context)
+                    .memoryCacheMaxSizePercentWhileInBackground(0.5)
                     .memoryCache { memoryCache }
                     .diskCache { diskCache }
                     .eventListener(object : EventListener() {
