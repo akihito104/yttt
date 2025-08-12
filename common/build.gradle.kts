@@ -22,7 +22,11 @@ android {
         }
     }
 }
-
+android.testOptions {
+    unitTests.all {
+        it.useJUnitPlatform()
+    }
+}
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
@@ -37,8 +41,12 @@ dependencies {
 
     testImplementation(project(":common-test"))
     testImplementation(libs.junit)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.mockk)
     testImplementation(libs.assertj.core)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
