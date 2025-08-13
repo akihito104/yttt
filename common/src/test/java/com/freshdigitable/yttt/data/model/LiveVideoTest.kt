@@ -1,13 +1,12 @@
 package com.freshdigitable.yttt.data.model
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactly
 import java.math.BigInteger
 import java.time.Instant
 
-class LiveVideoTest {
-    @Test
-    fun comparator_onAir() {
+class LiveVideoTest : ShouldSpec({
+    should("comparator_onAir sorts LiveVideoOnAirEntity correctly") {
         val id1 = LiveVideo.Id("video1", YouTubeVideo.Id::class)
         val id2 = LiveVideo.Id("video2", YouTubeVideo.Id::class)
         val id3 = LiveVideo.Id("video3", TwitchVideo.Id::class)
@@ -35,11 +34,10 @@ class LiveVideoTest {
             ),
         )
         val actual = target.sortedWith(compareBy { it })
-        assertThat(actual.map { it.id }).containsExactly(id4, id2, id3, id1)
+        actual.map { it.id }.shouldContainExactly(id4, id2, id3, id1)
     }
 
-    @Test
-    fun comparator_upcoming() {
+    should("comparator_upcoming sorts LiveVideoUpcomingEntity correctly") {
         val id1 = LiveVideo.Id("video1", YouTubeVideo.Id::class)
         val id2 = LiveVideo.Id("video2", YouTubeVideo.Id::class)
         val id3 = LiveVideo.Id("video3", TwitchVideo.Id::class)
@@ -67,11 +65,10 @@ class LiveVideoTest {
             ),
         )
         val actual = target.sortedWith(compareBy { it })
-        assertThat(actual.map { it.id }).containsExactly(id1, id4, id2, id3)
+        actual.map { it.id }.shouldContainExactly(id1, id4, id2, id3)
     }
 
-    @Test
-    fun comparator_freeChat() {
+    should("comparator_freeChat sorts LiveVideoFreeChatEntity correctly") {
         val id1 = LiveVideo.Id("video1", YouTubeVideo.Id::class)
         val id2 = LiveVideo.Id("video2", YouTubeVideo.Id::class)
         val id3 = LiveVideo.Id("video3", YouTubeVideo.Id::class)
@@ -110,9 +107,9 @@ class LiveVideoTest {
             ),
         )
         val actual = target.sortedWith(compareBy { it })
-        assertThat(actual.map { it.id }).containsExactly(id1, id5, id4, id2, id3)
+        actual.map { it.id }.shouldContainExactly(id1, id5, id4, id2, id3)
     }
-}
+})
 
 internal data class LiveVideoOnAirEntity(
     override val id: LiveVideo.Id,
