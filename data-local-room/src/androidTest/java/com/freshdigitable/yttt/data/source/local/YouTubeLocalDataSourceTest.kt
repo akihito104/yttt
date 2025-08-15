@@ -20,7 +20,9 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import com.freshdigitable.yttt.data.source.local.db.toDbEntity
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
-import org.assertj.core.api.Assertions.assertThat
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.shouldBe
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -39,15 +41,14 @@ class YouTubeLocalDataSourceTest {
         @Test
         fun videoFlowIsEmpty() = rule.runWithLocalSource {
             dataSource.videos.test {
-                assertThat(awaitItem()).isEmpty()
+                awaitItem().shouldBeEmpty()
             }
         }
 
         @Test
         fun videoIsEmpty() = rule.runWithLocalSource {
-            assertThat(dataSource.fetchVideoList(emptySet()).getOrNull()).isEmpty()
-            assertThat(dataSource.fetchVideoList(setOf(YouTubeVideo.Id("test"))).getOrNull())
-                .isEmpty()
+            dataSource.fetchVideoList(emptySet()).getOrNull().shouldBeEmpty()
+            dataSource.fetchVideoList(setOf(YouTubeVideo.Id("test"))).getOrNull().shouldBeEmpty()
         }
 
         @Test
@@ -73,8 +74,8 @@ class YouTubeLocalDataSourceTest {
             dao.watchAllUnfinishedVideos().test {
                 awaitItem().containsVideoIdInAnyOrder(*unfinished.map { it.item }.toTypedArray())
             }
-            assertThat(dao.findAllArchivedVideos()).containsExactlyInAnyOrderElementsOf(inactive.map { it.item.id })
-            assertThat(dao.findUnusedVideoIds()).containsExactlyInAnyOrderElementsOf(inactive.map { it.item.id })
+            dao.findAllArchivedVideos().shouldContainExactlyInAnyOrder(inactive.map { it.item.id })
+            dao.findUnusedVideoIds().shouldContainExactlyInAnyOrder(inactive.map { it.item.id })
         }
 
         @Test
@@ -89,8 +90,8 @@ class YouTubeLocalDataSourceTest {
             // exercise
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // verify
-            assertThat(dao.findPlaylistItemByPlaylistId(id)).isEmpty()
-            assertThat(dao.findPlaylistById(id)?.id).isEqualTo(id)
+            dao.findPlaylistItemByPlaylistId(id).shouldBeEmpty()
+            dao.findPlaylistById(id)?.id shouldBe id
         }
 
         @Test
@@ -115,8 +116,8 @@ class YouTubeLocalDataSourceTest {
             // exercise
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // verify
-            assertThat(dao.findPlaylistItemByPlaylistId(playlistId)).hasSize(1)
-            assertThat(dao.findPlaylistById(playlistId)?.id).isEqualTo(playlistId)
+            dao.findPlaylistItemByPlaylistId(playlistId).size shouldBe 1
+            dao.findPlaylistById(playlistId)?.id shouldBe playlistId
         }
 
         @Test
@@ -152,8 +153,8 @@ class YouTubeLocalDataSourceTest {
             )
             dataSource.updatePlaylistWithItems(u.item, u.cacheControl)
             // verify
-            assertThat(dao.findPlaylistItemByPlaylistId(playlistId)).hasSize(1)
-            assertThat(dao.findPlaylistById(playlistId)?.id).isEqualTo(playlistId)
+            dao.findPlaylistItemByPlaylistId(playlistId).size shouldBe 1
+            dao.findPlaylistById(playlistId)?.id shouldBe playlistId
         }
     }
 
@@ -198,7 +199,7 @@ class YouTubeLocalDataSourceTest {
             val actual =
                 dataSource.fetchVideoList(setOf(YouTubeVideo.Id("unknown_entity"))).getOrNull()
             // verify
-            assertThat(actual).isEmpty()
+            actual.shouldBeEmpty()
         }
 
         @Test
@@ -207,8 +208,8 @@ class YouTubeLocalDataSourceTest {
             val actual = dataSource.fetchVideoList(setOf(freeChat.item.id)).getOrNull()
                 ?: throw AssertionError()
             // verify
-            assertThat(actual).hasSize(1)
-            assertThat(actual.first().item.isFreeChat).isTrue()
+            actual.size shouldBe 1
+            actual.first().item.isFreeChat shouldBe true
         }
     }
 
@@ -224,8 +225,8 @@ class YouTubeLocalDataSourceTest {
         }
 
         private fun List<YouTubeVideoExtended>.containsVideoIdInAnyOrder(vararg expected: YouTubeVideoExtended) {
-            assertThat(this).hasSize(expected.size)
-            assertThat(this.map { it.id }).containsExactlyInAnyOrderElementsOf(expected.map { it.id })
+            this.size shouldBe expected.size
+            this.map { it.id }.shouldContainExactlyInAnyOrder(expected.map { it.id })
         }
     }
 
@@ -262,7 +263,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             val actual = dataSource.fetchPlaylistWithItems(simple, 10).getOrNull()
             // verify
-            assertThat(actual?.item?.items).hasSize(1)
+            actual?.item?.items?.size shouldBe 1
         }
 
         @Test
@@ -275,7 +276,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             val actual = dataSource.fetchPlaylistWithItems(simple, 10).getOrNull()
             // verify
-            assertThat(actual?.item?.items).hasSize(1)
+            actual?.item?.items?.size shouldBe 1
         }
 
         @Test
@@ -296,7 +297,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             val actual = dataSource.fetchPlaylistWithItems(simple, 10).getOrNull()
             // verify
-            assertThat(actual?.item?.items).hasSize(2)
+            actual?.item?.items?.size shouldBe 2
         }
 
         @Test
@@ -304,7 +305,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             val actual = dataSource.fetchPlaylistWithItems(privatePlaylist, 10).getOrNull()
             // verify
-            assertThat(actual?.item?.items).isEmpty()
+            actual?.item?.items.shouldBeEmpty()
         }
 
         @Test
@@ -312,7 +313,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             val actual = dataSource.fetchPlaylistWithItems(empty, 10).getOrNull()
             // verify
-            assertThat(actual?.item?.items).isEmpty()
+            actual?.item?.items.shouldBeEmpty()
         }
     }
 
@@ -355,12 +356,12 @@ class YouTubeLocalDataSourceTest {
             // exercise
             dataSource.cleanUp()
             // verify
-            assertThat(dao.findAllArchivedVideos()).isEmpty()
-            assertThat(dao.findUnusedVideoIds()).isEmpty()
+            dao.findAllArchivedVideos().shouldBeEmpty()
+            dao.findUnusedVideoIds().shouldBeEmpty()
             val actual = dao.findVideosById(videos.map { it.item.id })
             actual.containsVideoIdInAnyOrder(upcoming, live, freeChat, endlessLive)
-            assertThat(rule.queryVideoIsArchived().map { it.videoId })
-                .containsExactlyInAnyOrder(archivedInPlaylist.item.id)
+            rule.queryVideoIsArchived().map { it.videoId }
+                .shouldContainExactlyInAnyOrder(archivedInPlaylist.item.id)
         }
 
         @Test
@@ -373,12 +374,12 @@ class YouTubeLocalDataSourceTest {
             // exercise
             dataSource.cleanUp()
             // verify
-            assertThat(dao.findAllArchivedVideos()).isEmpty()
-            assertThat(dao.findUnusedVideoIds()).isEmpty()
+            dao.findAllArchivedVideos().shouldBeEmpty()
+            dao.findUnusedVideoIds().shouldBeEmpty()
             val actual = dao.findVideosById(videos.map { it.item.id })
             actual.containsVideoIdInAnyOrder(upcoming, freeChat, endlessLive)
-            assertThat(rule.queryVideoIsArchived().map { it.videoId })
-                .containsExactlyInAnyOrder(live.item.id, archivedInPlaylist.item.id)
+            rule.queryVideoIsArchived().map { it.videoId }
+                .shouldContainExactlyInAnyOrder(live.item.id, archivedInPlaylist.item.id)
         }
 
         private fun YouTubeDatabaseTestRule.queryVideoIsArchived(): List<YouTubeVideoIsArchivedTable> {

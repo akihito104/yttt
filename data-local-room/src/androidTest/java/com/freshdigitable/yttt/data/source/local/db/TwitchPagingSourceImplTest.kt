@@ -6,7 +6,7 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.local.TwitchDataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.userDetail
 import com.freshdigitable.yttt.test.zero
-import org.assertj.core.api.Assertions.assertThat
+import io.kotest.matchers.shouldBe
 import org.junit.Rule
 import org.junit.Test
 import java.time.Duration
@@ -33,7 +33,7 @@ class TwitchPagingSourceImplTest {
         // exercise
         val actual = sut.isUpdatable((fetchedAt + maxAge).minusMillis(1))
         // verify
-        assertThat(actual).isFalse()
+        actual shouldBe false
     }
 
     @Test
@@ -45,6 +45,6 @@ class TwitchPagingSourceImplTest {
         // exercise
         val actual = sut.isUpdatable(fetchedAt + maxAge)
         // verify
-        assertThat(actual).isTrue()
+        actual shouldBe true
     }
 }

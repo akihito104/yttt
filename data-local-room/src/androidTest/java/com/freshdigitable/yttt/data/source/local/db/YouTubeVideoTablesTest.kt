@@ -4,7 +4,10 @@ import app.cash.turbine.test
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import org.assertj.core.api.Assertions.assertThat
+import io.kotest.inspectors.forAll
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.shouldBe
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -21,10 +24,10 @@ class YouTubeVideoTablesTest {
 
         @Test
         fun findApis_returnEmpty() = dbRule.runWithDao { dao ->
-            assertThat(dao.findAllArchivedVideos()).isEmpty()
-            assertThat(dao.findUnusedVideoIds()).isEmpty()
-            assertThat(dao.findVideosById(listOf(YouTubeVideo.Id("test")))).isEmpty()
-            assertThat(dao.findFreeChatItems(listOf(YouTubeVideo.Id("test")))).isEmpty()
+            dao.findAllArchivedVideos().shouldBeEmpty()
+            dao.findUnusedVideoIds().shouldBeEmpty()
+            dao.findVideosById(listOf(YouTubeVideo.Id("test"))).shouldBeEmpty()
+            dao.findFreeChatItems(listOf(YouTubeVideo.Id("test"))).shouldBeEmpty()
         }
 
         @Test
@@ -33,7 +36,7 @@ class YouTubeVideoTablesTest {
             val actual = dao.watchAllUnfinishedVideos()
             // verify
             actual.test {
-                assertThat(awaitItem()).isEmpty()
+                awaitItem().shouldBeEmpty()
             }
         }
     }
@@ -71,8 +74,8 @@ class YouTubeVideoTablesTest {
             val actual = dao.findVideosById(listOf(target))
                 .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
-            assertThat(actual).hasSize(1)
-            assertThat(actual.first().item.id).isEqualTo(target)
+            actual.size shouldBe 1
+            actual.first().item.id shouldBe target
         }
 
         @Test
@@ -83,7 +86,7 @@ class YouTubeVideoTablesTest {
             val actual = dao.findVideosById(listOf(target))
                 .filter { it.isFresh(Instant.ofEpochMilli(100)) }
             // verify
-            assertThat(actual).hasSize(0)
+            actual.size shouldBe 0
         }
 
         @Test
@@ -94,9 +97,9 @@ class YouTubeVideoTablesTest {
             val actual = dao.findVideosById(listOf(target))
                 .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
-            assertThat(actual).hasSize(1)
-            assertThat(actual.first().item.id).isEqualTo(target)
-            assertThat(actual.first().item.isFreeChat).isTrue()
+            actual.size shouldBe 1
+            actual.first().item.id shouldBe target
+            actual.first().item.isFreeChat shouldBe true
         }
 
         @Test
@@ -107,7 +110,7 @@ class YouTubeVideoTablesTest {
             val actual = dao.findVideosById(listOf(target))
                 .filter { it.isFresh(Instant.ofEpochMilli(100)) }
             // verify
-            assertThat(actual).isEmpty()
+            actual.shouldBeEmpty()
         }
 
         @Test
@@ -118,7 +121,7 @@ class YouTubeVideoTablesTest {
             val actual = dao.findVideosById(target)
                 .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
-            assertThat(actual.map { it.item.id }).containsExactlyInAnyOrder(simple)
+            actual.map { it.item.id }.shouldContainExactlyInAnyOrder(simple)
         }
 
         @Test
@@ -163,9 +166,9 @@ class YouTubeVideoTablesTest {
             // verify
             actual.test {
                 val item = awaitItem()
-                assertThat(item).hasSize(5)
-                    .allMatch { it.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
-                assertThat(item.map { it.id }).containsExactlyInAnyOrder(
+                item.size shouldBe 5
+                item.forAll { it.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
+                item.map { it.id }.shouldContainExactlyInAnyOrder(
                     simple, freechat, hasNoExpire, live, upcoming,
                 )
             }

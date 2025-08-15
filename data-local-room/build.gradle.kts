@@ -70,7 +70,6 @@ dependencies {
     androidTestImplementation("de.mannodermaus.junit5:android-test-core:1.8.0")
     androidTestRuntimeOnly("de.mannodermaus.junit5:android-test-runner:1.8.0")
     androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.assertj.core)
     androidTestImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -18,9 +18,11 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDaoImpl
 import com.freshdigitable.yttt.test.zero
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -48,7 +50,7 @@ class TwitchLiveLocalDataSourceTest {
             dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
-            assertThat(entity?.id).isEqualTo(streamSchedule.id)
+            entity?.id shouldBe streamSchedule.id
         }
 
         @Test
@@ -58,9 +60,9 @@ class TwitchLiveLocalDataSourceTest {
                 dataSource.cleanUpByUserId(listOf(broadcaster.id))
                 // verify
                 val entity = dao.findStreamScheduleEntity(streamSchedule.id)
-                assertThat(entity).isNotNull()
+                entity.shouldNotBeNull()
                 val user = dao.findUser(broadcaster.id)
-                assertThat(user).isNotNull()
+                user.shouldNotBeNull()
             }
 
         @Test
@@ -72,9 +74,9 @@ class TwitchLiveLocalDataSourceTest {
                 dataSource.cleanUpByUserId(listOf(broadcaster.id))
                 // verify
                 val entity = dao.findStreamScheduleEntity(streamSchedule.id)
-                assertThat(entity).isNull()
+                entity.shouldBeNull()
                 val user = dao.findUser(broadcaster.id)
-                assertThat(user).isNull()
+                user.shouldBeNull()
             }
     }
 
@@ -100,7 +102,7 @@ class TwitchLiveLocalDataSourceTest {
             dao.replaceChannelSchedules(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
-            assertThat(entity?.id).isEqualTo(streamSchedule.id)
+            entity?.id shouldBe streamSchedule.id
         }
 
         @Test
@@ -110,9 +112,9 @@ class TwitchLiveLocalDataSourceTest {
                 dataSource.cleanUpByUserId(listOf(broadcaster.id))
                 // verify
                 val entity = dao.findStreamScheduleEntity(streamSchedule.id)
-                assertThat(entity).isNotNull()
+                entity.shouldNotBeNull()
                 val user = dao.findUser(broadcaster.id)
-                assertThat(user).isNotNull()
+                user.shouldNotBeNull()
             }
 
         @Test
@@ -124,9 +126,9 @@ class TwitchLiveLocalDataSourceTest {
                 dataSource.cleanUpByUserId(listOf(broadcaster.id))
                 // verify
                 val entity = dao.findStreamScheduleEntity(streamSchedule.id)
-                assertThat(entity).isNotNull()
+                entity.shouldNotBeNull()
                 val user = dao.findUser(broadcaster.id)
-                assertThat(user).isNotNull()
+                user.shouldNotBeNull()
             }
 
         @Test
@@ -139,11 +141,11 @@ class TwitchLiveLocalDataSourceTest {
             dataSource.cleanUpByUserId(listOf(broadcaster.id, me2.id))
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
-            assertThat(entity).isNull()
+            entity.shouldBeNull()
             val user = dao.findUser(broadcaster.id)
-            assertThat(user).isNull()
+            user.shouldBeNull()
             val userMe2 = dao.findUser(me2.id)
-            assertThat(userMe2).isNotNull()
+            userMe2.shouldNotBeNull()
         }
     }
 }
