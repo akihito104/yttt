@@ -8,3 +8,8 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.hilt.android) apply false
 }
+buildscript {
+    dependencies {
+        classpath("de.mannodermaus.gradle.plugins:android-junit5:1.13.1.0")
+    }
+}

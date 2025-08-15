@@ -6,7 +6,10 @@ import androidx.room.migration.Migration
 import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.platform.app.InstrumentationRegistry
-import org.assertj.core.api.Assertions
+import io.kotest.inspectors.shouldForAll
+import org.junit.jupiter.api.extension.AfterEachCallback
+import org.junit.jupiter.api.extension.BeforeEachCallback
+import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.runner.Description
 
 class AppMigrationTestRule(
@@ -16,7 +19,7 @@ class AppMigrationTestRule(
 ) : MigrationTestHelper(
     InstrumentationRegistry.getInstrumentation(),
     AppDatabase::class.java,
-) {
+), BeforeEachCallback, AfterEachCallback {
     init {
         check(versionFrom < versionTo)
         check(versionFrom <= migration.startVersion && migration.endVersion <= versionTo)
@@ -36,7 +39,7 @@ class AppMigrationTestRule(
             val res = values.map {
                 oldDb.insert(table, SQLiteDatabase.CONFLICT_ABORT, it)
             }
-            Assertions.assertThat(res).allMatch { it > -1 }
+            res.shouldForAll { it > -1 }
         }
         oldDb.query("pragma defer_foreign_keys = false")
     }
@@ -51,5 +54,13 @@ class AppMigrationTestRule(
     override fun finished(description: Description?) {
         super.finished(description)
         if (newDb.isOpen) newDb.close()
+    }
+
+    override fun beforeEach(context: ExtensionContext?) {
+        starting(null)
+    }
+
+    override fun afterEach(context: ExtensionContext?) {
+        finished(null)
     }
 }
