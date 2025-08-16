@@ -27,6 +27,7 @@ class AppDatabaseMigrationTest {
             twitchChannelStreamSchedule13(3, "cid1", "3")
         )
 
+        @JvmField
         @RegisterExtension
         val rule = AppMigrationTestRule(13, 14, MIGRATION_13_14)
 
@@ -100,6 +101,7 @@ class AppDatabaseMigrationTest {
             twitchStream15(3, user[3].getAsString("id"), "2"),
         )
 
+        @JvmField
         @RegisterExtension
         val rule = AppMigrationTestRule(15, 16, MIGRATION_15_16)
 
@@ -162,6 +164,7 @@ class AppDatabaseMigrationTest {
 
     @Nested
     inner class From18To19 {
+        @JvmField
         @RegisterExtension
         val rule = AppMigrationTestRule(18, 19, MIGRATION_18_19)
         private val playlist = (0..2).map { youtubePlaylist18(it) }
@@ -271,6 +274,7 @@ class AppDatabaseMigrationTest {
 
     @Nested
     inner class From23To24 {
+        @JvmField
         @RegisterExtension
         val rule = AppMigrationTestRule(23, 24, MIGRATION_23_24)
 
