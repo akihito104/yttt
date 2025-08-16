@@ -11,7 +11,6 @@ import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
-import com.freshdigitable.yttt.data.source.local.db.DateTimeProviderFake
 import com.freshdigitable.yttt.data.source.local.db.NopImageDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoImpl
@@ -150,9 +149,7 @@ class TwitchLiveLocalDataSourceTest {
     }
 }
 
-internal class TwitchDataSourceTestRule(
-    baseTime: Instant = Instant.EPOCH,
-) : DataSourceTestRule<TwitchDao, TwitchLocalDataSource>(baseTime) {
+internal class TwitchDataSourceTestRule() : DataSourceTestRule<TwitchDao, TwitchLocalDataSource>() {
     override fun createDao(database: AppDatabase): TwitchDao = TwitchDao(
         database,
         TwitchUserDaoImpl(database),
@@ -166,7 +163,6 @@ internal class TwitchDataSourceTestRule(
         )
         return object : DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
             override val testScope: TestScope get() = testScope
-            override val dateTimeProvider: DateTimeProviderFake get() = this@TwitchDataSourceTestRule.dateTimeProvider
             override val dao: TwitchDao get() = this@TwitchDataSourceTestRule.dao
             override val dataSource: TwitchLocalDataSource get() = dataSource
         }

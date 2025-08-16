@@ -83,9 +83,9 @@ class YouTubeLocalDataSourceTest {
             // setup
             val id = YouTubePlaylist.Id("test")
             val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(id, dateTimeProvider.now()),
+                playlist = playlist(id),
                 items = emptyList<YouTubePlaylistItemDetail>()
-                    .toUpdatable(CacheControl.fromRemote(dateTimeProvider.now())),
+                    .toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
             )
             // exercise
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
@@ -110,8 +110,8 @@ class YouTubeLocalDataSourceTest {
                 .distinctBy { it.id }
             dao.addChannels(channel)
             val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId, dateTimeProvider.now()),
-                items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now()))
+                playlist = playlist(playlistId),
+                items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             )
             // exercise
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
@@ -136,20 +136,20 @@ class YouTubeLocalDataSourceTest {
                 .distinctBy { it.id }
             dao.addChannels(channel)
             val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId, dateTimeProvider.now()),
-                items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now()))
+                playlist = playlist(playlistId),
+                items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             )
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // exercise
             val u = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId, dateTimeProvider.now()),
+                playlist = playlist(playlistId),
                 items = listOf(
                     FakeYouTubeClient.playlistItemDetail(
                         id = YouTubePlaylistItem.Id("playlist_1"),
                         playlistId = playlistId,
                         channel = channelTable(),
                     )
-                ).toUpdatable(dateTimeProvider.now())
+                ).toUpdatable(Instant.EPOCH)
             )
             dataSource.updatePlaylistWithItems(u.item, u.cacheControl)
             // verify
@@ -162,7 +162,7 @@ class YouTubeLocalDataSourceTest {
         private val base = Instant.ofEpochSecond(1000)
 
         @get:Rule
-        internal val rule = YouTubeDatabaseTestRule(base)
+        internal val rule = YouTubeDatabaseTestRule()
         private val live = YouTubeVideoEntity.liveStreaming(fetchedAt = base)
         private val unscheduled = YouTubeVideoEntity.unscheduledUpcoming(fetchedAt = base)
         private val upcoming = YouTubeVideoEntity.upcomingStream(fetchedAt = base)
@@ -248,8 +248,8 @@ class YouTubeLocalDataSourceTest {
             empty to emptyList()
         ).map { (playlistId, items) ->
             playlistId to YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId, rule.dateTimeProvider.now()),
-                items = items.toUpdatable(CacheControl.fromRemote(rule.dateTimeProvider.now()))
+                playlist = playlist(playlistId),
+                items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
             )
         }.toMap()
 
@@ -270,7 +270,7 @@ class YouTubeLocalDataSourceTest {
         fun fetchPlaylistWithItems_simple_addSameItem_returns1Item() = rule.runWithLocalSource {
             // setup
             val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
-                it?.item?.update(items[simple]!!.item.items.toUpdatable(fetchedAt = dateTimeProvider.now()))
+                it?.item?.update(items[simple]!!.item.items.toUpdatable(fetchedAt = Instant.EPOCH))
             }.getOrNull()
             dataSource.updatePlaylistWithItems(updatable!!.item, updatable.cacheControl)
             // exercise
@@ -291,7 +291,7 @@ class YouTubeLocalDataSourceTest {
                 )
             ) + checkNotNull(items[simple]!!.item.items)
             val updatable = dataSource.fetchPlaylistWithItems(simple, 10).map {
-                it?.item?.update(newItems.toUpdatable(fetchedAt = dateTimeProvider.now()))
+                it?.item?.update(newItems.toUpdatable(fetchedAt = Instant.EPOCH))
             }.getOrNull()
             dataSource.updatePlaylistWithItems(updatable!!.item, updatable.cacheControl)
             // exercise
@@ -341,8 +341,8 @@ class YouTubeLocalDataSourceTest {
                 )
             }
             val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId, dateTimeProvider.now()),
-                items = items.toUpdatable(CacheControl.fromRemote(dateTimeProvider.now())),
+                playlist = playlist(playlistId),
+                items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
             )
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             val channels = videos.map { it.item.channel.toDbEntity() }
@@ -368,7 +368,6 @@ class YouTubeLocalDataSourceTest {
         fun cleanUp_liveIsUpdatedAsArchived_remainsUpcomingAndFreeChat() = rule.runWithLocalSource {
             // setup
             val duration = Duration.ofHours(1)
-            dateTimeProvider.advance(duration)
             val finishedLive = live.item.liveFinished(duration)
             dataSource.addVideo(listOf(finishedLive))
             // exercise
