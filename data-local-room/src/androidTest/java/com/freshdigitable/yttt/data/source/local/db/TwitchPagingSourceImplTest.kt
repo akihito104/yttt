@@ -3,19 +3,21 @@ package com.freshdigitable.yttt.data.source.local.db
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import com.freshdigitable.yttt.data.source.local.TwitchDataSourceTestRule
+import com.freshdigitable.yttt.data.source.local.fixture.DatabaseExtension
+import com.freshdigitable.yttt.data.source.local.fixture.TwitchDataSourceExtension
+import com.freshdigitable.yttt.data.source.local.fixture.TwitchDataSourceTestScope
 import com.freshdigitable.yttt.data.source.local.userDetail
 import com.freshdigitable.yttt.test.zero
 import io.kotest.matchers.shouldBe
-import org.junit.Rule
-import org.junit.Test
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.ExtendWith
 import java.time.Duration
 import java.time.Instant
 
+@ExtendWith(DatabaseExtension::class, TwitchDataSourceExtension::class)
 class TwitchPagingSourceImplTest {
-    @get:Rule
-    internal val rule = TwitchDataSourceTestRule()
-
     private companion object {
         private val me = userDetail(id = "user_me")
         private val fetchedAt = Instant.EPOCH
@@ -24,26 +26,31 @@ class TwitchPagingSourceImplTest {
             TwitchFollowings.create(me.id, emptyList(), CacheControl.create(fetchedAt, maxAge))
     }
 
-    @Test
-    fun isUpdatable_returnsFalse() = rule.runWithLocalSource {
-        // setup
+    internal lateinit var sut: TwitchPagingSourceImpl
+
+    @BeforeEach
+    internal fun TwitchDataSourceTestScope.setup() = scopedTest {
         dataSource.setMe(me.toUpdatable(CacheControl.zero()))
         dataSource.replaceAllFollowings(followings)
-        val sut = TwitchPagingSourceImpl(rule.database)
+        sut = TwitchPagingSourceImpl(database)
+    }
+
+    @Test
+    internal fun isUpdatable_returnsFalse() = runTest {
+        // setup
+        val current = (fetchedAt + maxAge).minusMillis(1)
         // exercise
-        val actual = sut.isUpdatable((fetchedAt + maxAge).minusMillis(1))
+        val actual = sut.isUpdatable(current)
         // verify
         actual shouldBe false
     }
 
     @Test
-    fun isUpdatable_returnsTrue() = rule.runWithLocalSource {
+    internal fun isUpdatable_returnsTrue() = runTest {
         // setup
-        dataSource.setMe(me.toUpdatable(CacheControl.zero()))
-        dataSource.replaceAllFollowings(followings)
-        val sut = TwitchPagingSourceImpl(rule.database)
+        val current = fetchedAt + maxAge
         // exercise
-        val actual = sut.isUpdatable(fetchedAt + maxAge)
+        val actual = sut.isUpdatable(current)
         // verify
         actual shouldBe true
     }

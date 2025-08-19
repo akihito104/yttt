@@ -46,6 +46,9 @@ leakcanaryAndroid = "2.14"
 
 junit = "4.13.2"
 junitVintageEngine = "5.13.4"
+androidJunit5Version = "1.13.1.0"
+androidJunit5 = "1.8.0"
+junitJupiterApi = "5.13.1" # android-junit5 uses this version
 kotest = "5.9.1"
 test-runner = "1.7.0"
 mockk = "1.14.5"
@@ -99,7 +102,11 @@ hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hilt"
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hilt" }
 hilt-android-testing = { module = "com.google.dagger:hilt-android-testing", version.ref = "hilt" }
 junit = { module = "junit:junit", version.ref = "junit" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junitJupiterApi" }
 junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junitVintageEngine" }
+android-junit5 = { module = "de.mannodermaus.gradle.plugins:android-junit5", version.ref = "androidJunit5Version" }
+android-junit5-core = { module = "de.mannodermaus.junit5:android-test-core", version.ref = "androidJunit5" }
+android-junit5-runner = { module = "de.mannodermaus.junit5:android-test-runner", version.ref = "androidJunit5" }
 kermit = { module = "co.touchlab:kermit", version.ref = "kermit" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotest-framework-datatest = { module = "io.kotest:kotest-framework-datatest", version.ref = "kotest" }

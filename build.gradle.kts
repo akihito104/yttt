@@ -10,6 +10,6 @@ plugins {
 }
 buildscript {
     dependencies {
-        classpath("de.mannodermaus.gradle.plugins:android-junit5:1.13.1.0")
+        classpath(libs.android.junit5)
     }
 }
