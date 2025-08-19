@@ -25,7 +25,11 @@ android {
         }
     }
 }
-
+android.testOptions {
+    unitTests.all {
+        it.useJUnitPlatform()
+    }
+}
 dependencies {
     api(project(":common"))
     api(project(":common-ui"))
@@ -48,8 +52,9 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.assertj.core)
+    testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotest.framework.datatest)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
