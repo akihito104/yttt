@@ -11,7 +11,7 @@ import java.time.Instant
 import java.time.ZoneId
 
 class LiveChannelDetailYouTubeTest : ShouldSpec({
-    should("SubscriberCountIsNotHidden") {
+    context("SubscriberCountIsNotHidden") {
         val detailMock: YouTubeChannelDetail = mockk {
             every { customUrl } returns "@channel"
             every { isSubscriberHidden } returns false
@@ -37,7 +37,7 @@ class LiveChannelDetailYouTubeTest : ShouldSpec({
         }
     }
 
-    should("SubscriberCountIsHidden") {
+    context("SubscriberCountIsHidden") {
         val detailMock: YouTubeChannelDetail = mockk {
             every { customUrl } returns "@channel"
             every { isSubscriberHidden } returns true
