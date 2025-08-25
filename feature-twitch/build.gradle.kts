@@ -67,5 +67,5 @@ dependencies {
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(libs.turbine)
-    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.kotest.assertions.core)
 }

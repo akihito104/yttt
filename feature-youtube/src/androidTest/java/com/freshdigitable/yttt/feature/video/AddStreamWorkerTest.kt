@@ -25,9 +25,12 @@ import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.fromRemote
-import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import io.kotest.matchers.booleans.shouldBeFalse
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.firstOrNull
@@ -72,7 +75,7 @@ class AddStreamWorkerTest {
         // exercise
         val data = AddStreamUseCase.Input.create("https://example.com/".toUri())
         // verify
-        assertThat(data).isNull()
+        data.shouldBeNull()
     }
 
     @Test
@@ -97,9 +100,9 @@ class AddStreamWorkerTest {
         val actual = AddStreamWorker.enqueue(context, data)
             .firstOrNull { it?.state?.isFinished == true }
         // verify
-        assertThat(actual?.state).isEqualTo(WorkInfo.State.SUCCEEDED)
+        actual?.state shouldBe WorkInfo.State.SUCCEEDED
         val actualVideo = localSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
-        assertThat(actualVideo.item.isFreeChat).isFalse()
+        actualVideo.item.isFreeChat!!.shouldBeFalse()
     }
 
     @Inject
@@ -127,9 +130,9 @@ class AddStreamWorkerTest {
         val actual = AddStreamWorker.enqueue(context, data)
             .firstOrNull { it?.state?.isFinished == true }
         // verify
-        assertThat(actual?.state).isEqualTo(WorkInfo.State.SUCCEEDED)
+        actual?.state shouldBe WorkInfo.State.SUCCEEDED
         val actualVideo = localSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
-        assertThat(actualVideo.item.isFreeChat).isTrue()
+        actualVideo.item.isFreeChat!!.shouldBeTrue()
     }
 
     private fun initTestWorkManager() {

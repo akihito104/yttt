@@ -19,7 +19,6 @@ import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
-import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.fromRemote
@@ -32,9 +31,16 @@ import com.google.api.services.youtube.model.ThumbnailDetails
 import com.google.api.services.youtube.model.Video
 import com.google.api.services.youtube.model.VideoLiveStreamingDetails
 import com.google.api.services.youtube.model.VideoSnippet
-import com.google.common.truth.Truth.assertThat
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.result.shouldBeFailure
+import io.kotest.matchers.result.shouldBeSuccess
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldNotBeEmpty
+import io.kotest.matchers.types.shouldBeInstanceOf
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -78,10 +84,10 @@ class YouTubeRepositoryTest {
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
-        assertResultThat(actual).isSuccess { value ->
-            assertThat(value.first().item.channel.iconUrl).apply {
-                isNotNull()
-                isNotEmpty()
+        actual.shouldBeSuccess {
+            it.first().item.channel.iconUrl.apply {
+                shouldNotBeNull()
+                shouldNotBeEmpty()
             }
         }
     }
@@ -106,10 +112,10 @@ class YouTubeRepositoryTest {
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
-        assertResultThat(actual).isSuccess { value ->
-            assertThat(value.first().item.channel.iconUrl).apply {
-                isNotNull()
-                isNotEmpty()
+        actual.shouldBeSuccess { value ->
+            value.first().item.channel.iconUrl.apply {
+                shouldNotBeNull()
+                shouldNotBeEmpty()
             }
         }
     }
@@ -132,10 +138,10 @@ class YouTubeRepositoryTest {
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
-        assertResultThat(actual).isSuccess { value ->
-            assertThat(value.first().item.channel.iconUrl).apply {
-                isNotNull()
-                isNotEmpty()
+        actual.shouldBeSuccess { value ->
+            value.first().item.channel.iconUrl.apply {
+                shouldNotBeNull()
+                shouldNotBeEmpty()
             }
         }
     }
@@ -158,8 +164,8 @@ class YouTubeRepositoryTest {
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
-        assertResultThat(actual).isFailure {
-            it.isInstanceOf(YouTubeException::class.java)
+        actual shouldBeFailure {
+            it.shouldBeInstanceOf<YouTubeException>()
         }
     }
 
@@ -185,10 +191,10 @@ class YouTubeRepositoryTest {
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
-        assertResultThat(actual).isSuccess { value ->
-            assertThat(value.first().item.channel.iconUrl).apply {
-                isNotNull()
-                isNotEmpty()
+        actual.shouldBeSuccess { value ->
+            value.first().item.channel.iconUrl.apply {
+                shouldNotBeNull()
+                shouldNotBeEmpty()
             }
         }
     }
@@ -213,8 +219,8 @@ class YouTubeRepositoryTest {
         // exercise
         val actual = sut.fetchPlaylistWithItems(YouTubePlaylist.Id("0"), 10)
         // verify
-        assertResultThat(actual).isSuccess {
-            assertThat(it!!.item.items).hasSize(1)
+        actual shouldBeSuccess {
+            it!!.item.items shouldHaveSize 1
         }
     }
 
@@ -233,9 +239,9 @@ class YouTubeRepositoryTest {
         // exercise
         val actual = sut.fetchPlaylistWithItems(YouTubePlaylist.Id("0"), 10)
         // verify
-        assertResultThat(actual).isSuccess {
-            assertThat(it!!.item.playlist.id).isEqualTo(YouTubePlaylist.Id("0"))
-            assertThat(it.cacheControl.fetchedAt).isEqualTo(current)
+        actual shouldBeSuccess {
+            it!!.item.playlist.id shouldBe YouTubePlaylist.Id("0")
+            it.cacheControl.fetchedAt shouldBe current
         }
     }
 
@@ -266,15 +272,15 @@ class YouTubeRepositoryTest {
             CacheControl.fromRemote(Instant.EPOCH),
         )
         val cache = checkNotNull(localSource.fetchPlaylistWithItems(playlistId, 10).getOrNull())
-        assertThat(cache.item.eTag).isEqualTo("valid_eTag")
+        cache.item.eTag shouldBe "valid_eTag"
         // exercise
         val actual = sut.fetchPlaylistWithItems(playlistId, 10)
         // verify
-        assertResultThat(actual).isSuccess {
-            assertThat(it!!.item.playlist.id).isEqualTo(cache.item.playlist.id)
-            assertThat(it.item.items).hasSize(1)
-            assertThat(it.item.addedItems).isEmpty()
-            assertThat(it.item.eTag).isEqualTo("valid_eTag")
+        actual shouldBeSuccess {
+            it!!.item.playlist.id shouldBe cache.item.playlist.id
+            it.item.items shouldHaveSize 1
+            it.item.addedItems.shouldBeEmpty()
+            it.item.eTag shouldBe "valid_eTag"
         }
     }
 }

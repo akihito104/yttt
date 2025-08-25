@@ -43,7 +43,7 @@ dependencies {
     androidTestImplementation(project(":image-loadable-coil"))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.kotest.assertions.core)
     androidTestImplementation(libs.androidx.espresso.core)
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.hilt.android.testing)

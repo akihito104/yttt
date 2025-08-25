@@ -31,6 +31,6 @@ dependencies {
     implementation(libs.androidx.test.runner)
     implementation(libs.kotlinx.coroutines.test)
     implementation(libs.hilt.android.testing)
-    implementation(libs.truth)
+    implementation(libs.kotest.assertions.core)
     implementation(libs.androidx.paging.runtime)
 }

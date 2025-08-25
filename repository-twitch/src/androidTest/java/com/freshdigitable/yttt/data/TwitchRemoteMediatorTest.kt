@@ -34,17 +34,20 @@ import com.freshdigitable.yttt.data.source.remote.TwitchVideosResponse
 import com.freshdigitable.yttt.di.TwitchModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
-import com.freshdigitable.yttt.test.MediatorResultSubject.Companion.assertThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.fromRemote
-import com.google.common.truth.Truth.assertThat
+import com.freshdigitable.yttt.test.shouldBeError
+import com.freshdigitable.yttt.test.shouldBeSuccess
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.shouldNotBeEmpty
+import io.kotest.matchers.collections.shouldNotContain
 import kotlinx.coroutines.test.advanceUntilIdle
 import okhttp3.Headers
 import okhttp3.Request
@@ -126,8 +129,8 @@ class TwitchRemoteMediatorTest {
         val actual = sut.flow.asSnapshot()
         advanceUntilIdle()
         // verify
-        assertThat(actual).hasSize(60) // PagingConfig.pageSize = 20, default initialLoadSize is 60 = (20 * 3)
-        assertThat(actual.map { it.channel.iconUrl }).doesNotContain("")
+        actual shouldHaveSize 60 // PagingConfig.pageSize = 20, default initialLoadSize is 60 = (20 * 3)
+        actual.map { it.channel.iconUrl } shouldNotContain ""
     }
 
     @Test
@@ -138,8 +141,8 @@ class TwitchRemoteMediatorTest {
         // exercise
         val actual = sut.flow.asSnapshot()
         // verify
-        assertThat(actual).hasSize(60) // PagingConfig.pageSize = 20, default initialLoadSize is 60 = (20 * 3)
-        assertThat(actual.map { it.channel.iconUrl }).doesNotContain("")
+        actual shouldHaveSize 60 // PagingConfig.pageSize = 20, default initialLoadSize is 60 = (20 * 3)
+        actual.map { it.channel.iconUrl } shouldNotContain ""
     }
 
     @Test
@@ -151,8 +154,8 @@ class TwitchRemoteMediatorTest {
             appendScrollWhile { it.channel.id.value != "user99" } // footer
         }
         // verify
-        assertThat(actual).isNotEmpty()
-        assertThat(actual.map { it.channel.iconUrl }).doesNotContain("")
+        actual.shouldNotBeEmpty()
+        actual.map { it.channel.iconUrl } shouldNotContain ""
     }
 
     @Inject
@@ -171,9 +174,7 @@ class TwitchRemoteMediatorTest {
             PagingState(emptyList(), null, PagingConfig(20), 0),
         )
         // verify
-        assertThat(actual).isError { throwable ->
-            throwable.isInstanceOf(TwitchException::class.java)
-        }
+        actual.shouldBeError<TwitchException>()
     }
 
     @OptIn(ExperimentalPagingApi::class)
@@ -190,7 +191,7 @@ class TwitchRemoteMediatorTest {
             PagingState(emptyList(), null, PagingConfig(20), 0),
         )
         // verify
-        assertThat(actual).isSuccess(endOfPaginationReached = true)
+        actual.shouldBeSuccess(endOfPaginationReached = true)
     }
 
     @OptIn(ExperimentalPagingApi::class)
@@ -211,7 +212,7 @@ class TwitchRemoteMediatorTest {
             ),
         )
         // verify
-        assertThat(actual).isSuccess(endOfPaginationReached = true)
+        actual.shouldBeSuccess(endOfPaginationReached = true)
     }
 
     private companion object {
@@ -311,20 +312,20 @@ interface FakeRemoteSourceModule {
             return object : TwitchHelixService {
                 override fun getUser(
                     id: Collection<TwitchUser.Id>?,
-                    loginName: Collection<String>?
+                    loginName: Collection<String>?,
                 ): Call<TwitchUserResponse> = FakeCall(userDetails!!.invoke())
 
                 override fun getFollowing(
                     userId: TwitchUser.Id,
                     broadcasterId: TwitchUser.Id?,
                     itemsPerPage: Int?,
-                    cursor: String?
+                    cursor: String?,
                 ): Call<FollowedChannelsResponse> = FakeCall(following!!.invoke())
 
                 override fun getFollowedStreams(
                     userId: TwitchUser.Id,
                     itemsPerPage: Int?,
-                    cursor: String?
+                    cursor: String?,
                 ): Call<FollowingStreamsResponse> = throw NotImplementedError()
 
                 override fun getChannelStreamSchedule(
@@ -332,7 +333,7 @@ interface FakeRemoteSourceModule {
                     segmentId: TwitchChannelSchedule.Stream.Id?,
                     startTime: Instant?,
                     itemsPerPage: Int?,
-                    cursor: String?
+                    cursor: String?,
                 ): Call<ChannelStreamScheduleResponse> = throw NotImplementedError()
 
                 override fun getVideoByUserId(
@@ -343,7 +344,7 @@ interface FakeRemoteSourceModule {
                     type: String?,
                     itemsPerPage: Int?,
                     nextCursor: String?,
-                    prevCursor: String?
+                    prevCursor: String?,
                 ): Call<TwitchVideosResponse> = throw NotImplementedError()
 
                 override fun getGame(id: Set<TwitchCategory.Id>): Call<TwitchGameResponse> =
