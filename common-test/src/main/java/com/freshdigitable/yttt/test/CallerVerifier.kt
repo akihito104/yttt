@@ -1,6 +1,9 @@
 package com.freshdigitable.yttt.test
 
-import com.google.common.truth.Truth.assertWithMessage
+import io.kotest.inspectors.forAll
+import io.kotest.matchers.Matcher
+import io.kotest.matchers.MatcherResult
+import io.kotest.matchers.should
 import org.junit.rules.Verifier
 
 class CallerVerifier : Verifier() {
@@ -12,10 +15,15 @@ class CallerVerifier : Verifier() {
     }
 
     override fun verify() {
-        recorder.run {
-            forEach { assertWithMessage(it.toString()).that(it.actual).isEqualTo(it.expected) }
-            clear()
-        }
+        recorder.forAll {
+            it.actual should Matcher { value ->
+                MatcherResult(
+                    it.actual == it.expected,
+                    { "expected($it) calls ${it.expected} but was ${it.actual}" },
+                    { throw NotImplementedError() },
+                )
+            }
+        }.clear()
     }
 }
 

@@ -22,17 +22,21 @@ import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.AppTraceVerifier
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
-import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.zero
-import com.google.common.truth.Truth.assertThat
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.result.shouldBeFailure
+import io.kotest.matchers.result.shouldBeSuccess
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -86,9 +90,9 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            localSource.onAir.test { assertThat(awaitItem()).isEmpty() }
-            localSource.upcoming.test { assertThat(awaitItem()).isEmpty() }
+            actual.shouldBeSuccess()
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -103,12 +107,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailure {
-                it.isInstanceOf(TwitchException::class.java)
-            }
-            assertResultThat(localSource.fetchMe()).value().isNull()
-            localSource.onAir.test { assertThat(awaitItem()).isEmpty() }
-            localSource.upcoming.test { assertThat(awaitItem()).isEmpty() }
+            actual.shouldBeFailure<TwitchException>()
+            localSource.fetchMe().shouldBeSuccess { it shouldBe null }
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -127,17 +129,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
-            localSource.onAir.test {
-                assertThat(awaitItem()).isEmpty()
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).isEmpty()
-            }
+            actual.shouldBeSuccess()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -155,15 +150,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailure {
-                it.isInstanceOf(TwitchException::class.java)
-            }
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
-            localSource.onAir.test { assertThat(awaitItem()).isEmpty() }
-            localSource.upcoming.test { assertThat(awaitItem()).isEmpty() }
+            actual.shouldBeFailure<TwitchException>()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -189,17 +179,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
-            localSource.onAir.test {
-                assertThat(awaitItem()).hasSize(1)
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).isEmpty()
-            }
+            actual.shouldBeSuccess()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
+            localSource.onAir.test { awaitItem() shouldHaveSize 1 }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -230,17 +213,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
-            localSource.onAir.test {
-                assertThat(awaitItem()).isEmpty()
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).hasSize(1)
-            }
+            actual.shouldBeSuccess()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem() shouldHaveSize 1 }
         }
 
         @Test
@@ -272,17 +248,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
-            localSource.onAir.test {
-                assertThat(awaitItem()).isEmpty()
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).hasSize(1)
-            }
+            actual.shouldBeSuccess()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem() shouldHaveSize 1 }
         }
 
         @Test
@@ -305,17 +274,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailure()
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
-            localSource.onAir.test {
-                assertThat(awaitItem()).isEmpty()
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).isEmpty()
-            }
+            actual.shouldBeFailure()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -341,19 +303,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailure {
-                it.isInstanceOf(TwitchException::class.java)
-            }
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
-            localSource.onAir.test {
-                assertThat(awaitItem()).isEmpty()
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).isEmpty()
-            }
+            actual.shouldBeFailure<TwitchException>()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -376,13 +329,10 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailure()
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
-            localSource.onAir.test { assertThat(awaitItem()).isEmpty() }
-            localSource.upcoming.test { assertThat(awaitItem()).isEmpty() }
+            actual.shouldBeFailure()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
     }
 
@@ -459,11 +409,8 @@ class FetchTwitchStreamUseCaseTest {
         private suspend fun TestScope.initialLoad() {
             val actual = sut.invoke()
             advanceUntilIdle()
-            assertResultThat(actual).isSuccess()
-            assertResultThat(localSource.fetchMe()).apply {
-                isSuccess()
-                value().isNotNull()
-            }
+            actual.shouldBeSuccess()
+            localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
         }
 
         @Test
@@ -475,14 +422,12 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            localSource.onAir.test {
-                assertThat(awaitItem()).hasSize(1)
-            }
+            actual.shouldBeSuccess()
+            localSource.onAir.test { awaitItem() shouldHaveSize 1 }
             localSource.upcoming.test {
                 val item = awaitItem()
-                assertThat(item).hasSize(1)
-                assertThat(item.first().schedule.category?.id).isEqualTo(category.id)
+                item shouldHaveSize 1
+                item.first().schedule.category?.id shouldBe category.id
             }
         }
 
@@ -506,13 +451,9 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            localSource.onAir.test {
-                assertThat(awaitItem()).isEmpty()
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).hasSize(1)
-            }
+            actual.shouldBeSuccess()
+            localSource.onAir.test { awaitItem().shouldBeEmpty() }
+            localSource.upcoming.test { awaitItem() shouldHaveSize 1 }
         }
 
         @Test
@@ -529,13 +470,9 @@ class FetchTwitchStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            localSource.onAir.test {
-                assertThat(awaitItem()).hasSize(1)
-            }
-            localSource.upcoming.test {
-                assertThat(awaitItem()).isEmpty()
-            }
+            actual.shouldBeSuccess()
+            localSource.onAir.test { awaitItem() shouldHaveSize 1 }
+            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
     }
 }
@@ -671,7 +608,7 @@ interface FakeTwitchHelixClient {
 
             override suspend fun getVideoByUserId(
                 id: TwitchUser.Id,
-                itemCount: Int
+                itemCount: Int,
             ): NetworkResponse<List<TwitchVideoDetail>> = throw NotImplementedError()
         }
 

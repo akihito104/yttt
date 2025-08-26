@@ -29,15 +29,12 @@ import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
-import com.freshdigitable.yttt.test.ResultSubject
-import com.freshdigitable.yttt.test.ResultSubject.Companion.assertResultThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.fromRemote
 import com.freshdigitable.yttt.test.internalServerError
 import com.freshdigitable.yttt.test.notFound
 import com.freshdigitable.yttt.test.notModified
-import com.google.common.truth.Truth.assertThat
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -46,6 +43,14 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import dagger.multibindings.IntoMap
+import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.result.shouldBeFailure
+import io.kotest.matchers.result.shouldBeSuccess
+import io.kotest.matchers.should
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.After
@@ -102,9 +107,9 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
             localSource.videos.test {
-                assertThat(awaitItem()).isEmpty()
+                awaitItem().shouldBeEmpty()
             }
         }
 
@@ -129,9 +134,9 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
             localSource.videos.test {
-                assertThat(awaitItem()).isEmpty()
+                awaitItem().shouldBeEmpty()
             }
         }
 
@@ -147,11 +152,11 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailureOfYouTubeException(statusCode = 500)
+            actual.shouldBeFailureOfYouTubeException(statusCode = 500)
             localSource.videos.test {
-                assertThat(awaitItem()).isEmpty()
+                awaitItem().shouldBeEmpty()
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.EPOCH)
+            localSource.subscriptionsFetchedAt shouldBe Instant.EPOCH
         }
 
         @Test
@@ -164,9 +169,9 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
             localSource.videos.test {
-                assertThat(awaitItem()).hasSize(20)
+                awaitItem() shouldHaveSize 20
             }
         }
 
@@ -182,11 +187,11 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailureOfYouTubeException(statusCode = 500)
+            actual.shouldBeFailureOfYouTubeException(statusCode = 500)
             localSource.videos.test {
-                assertThat(awaitItem()).isEmpty()
+                awaitItem().shouldBeEmpty()
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(current)
+            localSource.subscriptionsFetchedAt shouldBe current
         }
 
         @Test
@@ -207,7 +212,7 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailureOfYouTubeException(statusCode = 500)
+            actual.shouldBeFailureOfYouTubeException(statusCode = 500)
         }
 
         @Test
@@ -228,7 +233,7 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
         }
 
         @Test
@@ -247,7 +252,7 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailureOfYouTubeException(statusCode = 500)
+            actual.shouldBeFailureOfYouTubeException(statusCode = 500)
         }
 
         @Test
@@ -261,11 +266,11 @@ class FetchYouTubeStreamUseCaseTest {
                 val actual = sut.invoke()
                 advanceUntilIdle()
                 // verify
-                assertResultThat(actual).isSuccess()
+                actual.shouldBeSuccess()
                 localSource.videos.test {
-                    assertThat(awaitItem()).hasSize(200)
+                    awaitItem() shouldHaveSize 200
                 }
-                assertThat(localSource.subscriptionsFetchedAt).isEqualTo(current)
+                localSource.subscriptionsFetchedAt shouldBe current
             }
 
         @Test
@@ -287,7 +292,7 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailureOfYouTubeException(statusCode = 500)
+            actual.shouldBeFailureOfYouTubeException(statusCode = 500)
         }
     }
 
@@ -335,11 +340,11 @@ class FetchYouTubeStreamUseCaseTest {
                 val actual = sut.invoke()
                 advanceUntilIdle()
                 // verify
-                assertResultThat(actual).isSuccess()
+                actual.shouldBeSuccess()
                 localSource.videos.test {
-                    assertThat(awaitItem()).hasSize(200)
+                    awaitItem() shouldHaveSize 200
                 }
-                assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
+                localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             }
 
         @Test
@@ -353,12 +358,12 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
-            assertThat(localSource.fetchSubscriptionIds().size).isEqualTo(9)
+            actual.shouldBeSuccess()
+            localSource.fetchSubscriptionIds() shouldHaveSize 9
             localSource.videos.test {
-                assertThat(awaitItem()).hasSize(18)
+                awaitItem() shouldHaveSize 18
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
+            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
 
         @Test
@@ -376,13 +381,13 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
             localSource.videos.test {
                 val a = awaitItem()
-                assertThat(a).hasSize(30)
-                assertThat(a.map { it.isNowOnAir() }.all { it }).isTrue()
+                a shouldHaveSize 30
+                a.map { it.isNowOnAir() }.all { it }.shouldBeTrue()
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
+            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
 
         @Test
@@ -405,12 +410,11 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
             localSource.videos.test {
-                val a = awaitItem()
-                assertThat(a).hasSize(28)
+                awaitItem() shouldHaveSize 28
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
+            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
     }
 
@@ -458,15 +462,15 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
             localSource.videos.test {
-                assertThat(awaitItem()).hasSize(150 * 3)
+                awaitItem() shouldHaveSize (150 * 3)
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
-            assertThat(networkRes).hasSize(3)
-            assertResultThat(networkRes[0]).isFailureOfYouTubeException(statusCode = 304)
-            assertResultThat(networkRes[1]).isFailureOfYouTubeException(statusCode = 304)
-            assertResultThat(networkRes[2]).isFailureOfYouTubeException(statusCode = 304)
+            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            networkRes shouldHaveSize 3
+            networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
+            networkRes[1].shouldBeFailureOfYouTubeException(statusCode = 304)
+            networkRes[2].shouldBeFailureOfYouTubeException(statusCode = 304)
         }
 
         @Test
@@ -482,15 +486,15 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
             localSource.videos.test {
-                assertThat(awaitItem()).hasSize(149 * 3)
+                awaitItem() shouldHaveSize (149 * 3)
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
-            assertThat(networkRes).hasSize(3)
-            assertResultThat(networkRes[0]).isFailureOfYouTubeException(statusCode = 304)
-            assertResultThat(networkRes[1]).isSuccess()
-            assertResultThat(networkRes[2]).isSuccess()
+            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            networkRes shouldHaveSize 3
+            networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
+            networkRes[1].shouldBeSuccess()
+            networkRes[2].shouldBeSuccess()
         }
 
         @Test
@@ -506,15 +510,15 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isSuccess()
+            actual.shouldBeSuccess()
             localSource.videos.test {
-                assertThat(awaitItem()).hasSize(149 * 3)
+                awaitItem() shouldHaveSize (149 * 3)
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(Instant.parse("2025-04-20T03:00:00Z"))
-            assertThat(networkRes).hasSize(3)
-            assertResultThat(networkRes[0]).isFailureOfYouTubeException(statusCode = 304)
-            assertResultThat(networkRes[1]).isFailureOfYouTubeException(statusCode = 304)
-            assertResultThat(networkRes[2]).isSuccess()
+            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            networkRes shouldHaveSize 3
+            networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
+            networkRes[1].shouldBeFailureOfYouTubeException(statusCode = 304)
+            networkRes[2].shouldBeSuccess()
         }
 
         @Test
@@ -538,15 +542,15 @@ class FetchYouTubeStreamUseCaseTest {
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
-            assertResultThat(actual).isFailureOfYouTubeException(statusCode = 500)
+            actual.shouldBeFailureOfYouTubeException(statusCode = 500)
             localSource.videos.test {
-                assertThat(awaitItem().size).isGreaterThan(300)
+                awaitItem().size.shouldBeGreaterThan(300)
             }
-            assertThat(localSource.subscriptionsFetchedAt).isEqualTo(current)
-            assertThat(networkRes).hasSize(3)
-            assertResultThat(networkRes[0]).isFailureOfYouTubeException(statusCode = 304)
-            assertResultThat(networkRes[1]).isFailureOfYouTubeException(statusCode = 304)
-            assertResultThat(networkRes[2]).isFailureOfYouTubeException(statusCode = 500)
+            localSource.subscriptionsFetchedAt shouldBe current
+            networkRes shouldHaveSize 3
+            networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
+            networkRes[1].shouldBeFailureOfYouTubeException(statusCode = 304)
+            networkRes[2].shouldBeFailureOfYouTubeException(statusCode = 500)
         }
     }
 }
@@ -562,8 +566,8 @@ private fun FakeYouTubeClientImpl.wrapSubscriptionAsResult(): List<Result<*>> {
     return networkRes
 }
 
-fun <T> ResultSubject<T>.isFailureOfYouTubeException(statusCode: Int) {
-    isFailureOf(YouTubeException::class) { assertThat(it.statusCode).isEqualTo(statusCode) }
+internal inline fun <reified T> Result<T>.shouldBeFailureOfYouTubeException(statusCode: Int) {
+    shouldBeFailure<YouTubeException>().should { it.statusCode shouldBe statusCode }
 }
 
 private fun FakeYouTubeClientModule.Companion.setup(

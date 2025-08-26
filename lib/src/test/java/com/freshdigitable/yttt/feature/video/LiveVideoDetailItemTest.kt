@@ -2,42 +2,53 @@ package com.freshdigitable.yttt.feature.video
 
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.datatest.withData
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.Test
-import org.junit.experimental.runners.Enclosed
-import org.junit.runner.RunWith
-import org.junit.runners.Parameterized
-import org.junit.runners.Parameterized.Parameters
 import java.math.BigInteger
 import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 
-@RunWith(Enclosed::class)
-class LiveVideoDetailItemTest {
-    @RunWith(Parameterized::class)
-    internal class StatusTextForOnAir(private val param: TestParam) {
-        internal companion object {
-            @Parameters
-            @JvmStatic
-            fun params(): List<TestParam> = listOf(
-                TestParam(
-                    actualStartDateTime = Instant.parse("2025-01-12T19:00:00.000+09:00"),
-                    viewerCount = BigInteger.ZERO,
-                    actual = "2025/01/12(日) 19:00:00・Viewers:0",
-                ),
-                TestParam(
-                    actualStartDateTime = Instant.parse("2025-01-12T19:00:00.000+09:00"),
-                    viewerCount = null,
-                    actual = "2025/01/12(日) 19:00:00",
-                ),
-            )
-        }
+internal data class StatusTextForOnAirParam(
+    val actualStartDateTime: Instant,
+    val viewerCount: BigInteger?,
+    val expected: String,
+    val name: String,
+)
 
-        @Test
-        fun test() {
+internal data class StatusTextForUpcomingParam(
+    val scheduledStartDateTime: Instant,
+    val viewerCount: BigInteger?,
+    val expected: String,
+    val name: String,
+)
+
+class LiveVideoDetailItemTest : ShouldSpec({
+    val commonZoneId = ZoneId.of("Asia/Tokyo")
+    val commonLocale = Locale.JAPAN
+
+    context("statsText for OnAir video") {
+        val params = listOf(
+            StatusTextForOnAirParam(
+                actualStartDateTime = Instant.parse("2025-01-12T19:00:00.000+09:00"),
+                viewerCount = BigInteger.ZERO,
+                expected = "2025/01/12(日) 19:00:00・Viewers:0",
+                name = "with viewers"
+            ),
+            StatusTextForOnAirParam(
+                actualStartDateTime = Instant.parse("2025-01-12T19:00:00.000+09:00"),
+                viewerCount = null,
+                expected = "2025/01/12(日) 19:00:00",
+                name = "without viewers"
+            ),
+        )
+        withData(
+            nameFn = { param -> "given ${param.name}, then actual string is '''Started:${param.expected}'''" },
+            params
+        ) { param ->
             // setup
             val sut = LiveVideoDetailItem(
                 video = mockk<LiveVideo.OnAir>().apply {
@@ -46,43 +57,35 @@ class LiveVideoDetailItemTest {
                 },
                 annotatableTitle = AnnotatableString.empty(),
                 annotatableDescription = AnnotatableString.empty(),
-                zoneId = ZoneId.of("Asia/Tokyo"),
-                locale = Locale.JAPAN,
+                zoneId = commonZoneId,
+                locale = commonLocale,
             )
             // exercise
             val actual = sut.statsText
             // verify
-            assertThat(actual).isEqualTo("Started:${param.actual}")
+            actual shouldBe "Started:${param.expected}"
         }
-
-        internal data class TestParam(
-            val actualStartDateTime: Instant,
-            val viewerCount: BigInteger?,
-            val actual: String,
-        )
     }
 
-    @RunWith(Parameterized::class)
-    internal class StatusTextForUpcoming(private val param: TestParam) {
-        internal companion object {
-            @Parameters
-            @JvmStatic
-            fun params(): List<TestParam> = listOf(
-                TestParam(
-                    scheduledStartDateTime = Instant.parse("2025-01-12T19:00:00.000+09:00"),
-                    viewerCount = BigInteger.ZERO,
-                    actual = "2025/01/12(日) 19:00・Viewers:0",
-                ),
-                TestParam(
-                    scheduledStartDateTime = Instant.parse("2025-01-12T19:00:00.000+09:00"),
-                    viewerCount = null,
-                    actual = "2025/01/12(日) 19:00",
-                ),
-            )
-        }
-
-        @Test
-        fun test() {
+    context("statsText for Upcoming video") {
+        val params = listOf(
+            StatusTextForUpcomingParam(
+                scheduledStartDateTime = Instant.parse("2025-01-12T19:00:00.000+09:00"),
+                viewerCount = BigInteger.ZERO,
+                expected = "2025/01/12(日) 19:00・Viewers:0",
+                name = "with viewers"
+            ),
+            StatusTextForUpcomingParam(
+                scheduledStartDateTime = Instant.parse("2025-01-12T19:00:00.000+09:00"),
+                viewerCount = null,
+                expected = "2025/01/12(日) 19:00",
+                name = "without viewers"
+            ),
+        )
+        withData(
+            nameFn = { param -> "given ${param.name}, then actual string is '''Starting:${param.expected}'''" },
+            params
+        ) { param ->
             // setup
             val sut = LiveVideoDetailItem(
                 video = mockk<LiveVideo.Upcoming>().apply {
@@ -91,19 +94,13 @@ class LiveVideoDetailItemTest {
                 },
                 annotatableTitle = AnnotatableString.empty(),
                 annotatableDescription = AnnotatableString.empty(),
-                zoneId = ZoneId.of("Asia/Tokyo"),
-                locale = Locale.JAPAN,
+                zoneId = commonZoneId,
+                locale = commonLocale,
             )
             // exercise
             val actual = sut.statsText
             // verify
-            assertThat(actual).isEqualTo("Starting:${param.actual}")
+            actual shouldBe "Starting:${param.expected}"
         }
-
-        internal data class TestParam(
-            val scheduledStartDateTime: Instant,
-            val viewerCount: BigInteger?,
-            val actual: String,
-        )
     }
-}
+})

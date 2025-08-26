@@ -1,16 +1,15 @@
 package com.freshdigitable.yttt.feature.channel
 
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
-import com.google.common.truth.Truth.assertThat
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.Test
 import java.time.Instant
 import java.time.ZoneId
 
-class LiveChannelDetailTwitchTest {
-    @Test
-    fun test() {
+class LiveChannelDetailTwitchTest : ShouldSpec({
+    should("statsText returns formatted string with loginName and publishedAt") {
         // setup
         val sut = LiveChannelDetailTwitch(
             detail = mockk<TwitchUserDetail>().apply {
@@ -22,6 +21,6 @@ class LiveChannelDetailTwitchTest {
         // exercise
         val actual = sut.statsText
         // verify
-        assertThat(actual).isEqualTo("channel・Published:2022/11/04")
+        actual shouldBe "channel・Published:2022/11/04"
     }
-}
+})

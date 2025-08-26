@@ -38,3 +38,15 @@ fun Project.configureDesugaring(commonExtension: CommonExtension<*, *, *, *, *, 
             add("coreLibraryDesugaring", libs.findLibrary("desugarJdkLibs").get())
         }
     }
+
+fun Project.configureKotest(commonExtension: CommonExtension<*, *, *, *, *, *>) =
+    commonExtension.apply {
+        testOptions.unitTests.all {
+            it.useJUnitPlatform()
+        }
+        dependencies {
+            testImplementation(libs.findLibrary("kotest-runner-junit5"))
+            testImplementation(libs.findLibrary("kotest-assertions-core"))
+            testImplementation(libs.findLibrary("kotest-framework-datatest"))
+        }
+    }

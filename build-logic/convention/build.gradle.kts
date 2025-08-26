@@ -47,5 +47,9 @@ gradlePlugin {
             id = "yttt.hilt"
             implementationClass = "HiltConventionPlugin"
         }
+        register("kotest") {
+            id = "yttt.kotest"
+            implementationClass = "KotestConventionPlugin"
+        }
     }
 }

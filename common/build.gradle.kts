@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
+    alias(libs.plugins.yttt.kotest)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -36,9 +37,7 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
 
     testImplementation(project(":common-test"))
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.assertj.core)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

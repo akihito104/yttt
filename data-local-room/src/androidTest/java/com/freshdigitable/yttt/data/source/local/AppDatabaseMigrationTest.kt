@@ -3,37 +3,35 @@ package com.freshdigitable.yttt.data.source.local
 import android.content.ContentValues
 import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
-import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.Before
-import org.junit.Rule
-import org.junit.Test
-import org.junit.experimental.runners.Enclosed
-import org.junit.runner.RunWith
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.longs.shouldBeGreaterThan
+import io.kotest.matchers.shouldBe
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.extension.RegisterExtension
+import io.kotest.matchers.string.shouldBeEmpty as shouldBeEmptyString
 
-@RunWith(Enclosed::class)
 class AppDatabaseMigrationTest {
     private companion object {
         private const val TABLE_STREAM_SCHEDULE = "twitch_channel_schedule_stream"
         private const val TABLE_CATEGORY = "twitch_category"
     }
 
-    @RunWith(AndroidJUnit4::class)
-    class From13To14 {
-        private companion object {
-            private val schedule = listOf(
-                twitchChannelStreamSchedule13(0, "cid0", "0"),
-                twitchChannelStreamSchedule13(1, null, "1"),
-                twitchChannelStreamSchedule13(2, "cid0", "2"),
-                twitchChannelStreamSchedule13(3, "cid1", "3")
-            )
-        }
+    @Nested
+    inner class From13To14 {
+        private val schedule = listOf(
+            twitchChannelStreamSchedule13(0, "cid0", "0"),
+            twitchChannelStreamSchedule13(1, null, "1"),
+            twitchChannelStreamSchedule13(2, "cid0", "2"),
+            twitchChannelStreamSchedule13(3, "cid1", "3")
+        )
 
-        @get:Rule
+        @JvmField
+        @RegisterExtension
         val rule = AppMigrationTestRule(13, 14, MIGRATION_13_14)
 
-        @Before
+        @BeforeEach
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup(
                 "twitch_user" to (0..3).map { twitchUser(it) },
@@ -45,14 +43,14 @@ class AppDatabaseMigrationTest {
         fun init(): Unit = rule.run {
             // verify
             newDb.query("SELECT * FROM $TABLE_STREAM_SCHEDULE").use {
-                assertThat(it.count).isEqualTo(schedule.size)
+                it.count shouldBe schedule.size
             }
             newDb.query("SELECT * FROM $TABLE_CATEGORY").use { c ->
-                assertThat(c.count).isEqualTo(2)
+                c.count shouldBe 2
                 listOf(schedule[0], schedule[3]).forEach {
                     c.moveToNext()
-                    assertThat(c.getString(0)).isEqualTo(it.getAsString("category_id"))
-                    assertThat(c.getString(1)).isEqualTo(it.getAsString("category_name"))
+                    c.getString(0) shouldBe it.getAsString("category_id")
+                    c.getString(1) shouldBe it.getAsString("category_name")
                 }
             }
         }
@@ -65,7 +63,7 @@ class AppDatabaseMigrationTest {
             val actual =
                 newDb.insert(TABLE_STREAM_SCHEDULE, SQLiteDatabase.CONFLICT_ABORT, values)
             // verify
-            assertThat(actual).isGreaterThan(-1)
+            actual shouldBeGreaterThan -1L
         }
 
         @Test
@@ -73,10 +71,9 @@ class AppDatabaseMigrationTest {
             // setup
             val values = twitchChannelStreamSchedule14(99, "cid99", "3")
             // exercise
-            assertThatThrownBy {
+            shouldThrow<SQLiteConstraintException> {
                 newDb.insert(TABLE_STREAM_SCHEDULE, SQLiteDatabase.CONFLICT_ABORT, values)
-                // verify
-            }.isInstanceOf(SQLiteConstraintException::class.java)
+            }
         }
 
         @Test
@@ -84,33 +81,31 @@ class AppDatabaseMigrationTest {
             // setup
             val values = twitchChannelStreamSchedule14(99, "cid1", "99")
             // exercise
-            assertThatThrownBy {
+            shouldThrow<SQLiteConstraintException> {
                 newDb.insert(TABLE_STREAM_SCHEDULE, SQLiteDatabase.CONFLICT_ABORT, values)
-                // verify
-            }.isInstanceOf(SQLiteConstraintException::class.java)
+            }
         }
     }
 
-    @RunWith(AndroidJUnit4::class)
-    class From15To16 {
-        companion object {
-            private val user = (0..3).map { twitchUser(it) }
-            private val category = listOf(
-                twitchCategory(0),
-                twitchCategory(5),
-            )
-            private val stream = listOf(
-                twitchStream15(0, user[0].getAsString("id"), category[0].getAsString("id")),
-                twitchStream15(1, user[1].getAsString("id"), "1"),
-                twitchStream15(2, user[2].getAsString("id"), "1"),
-                twitchStream15(3, user[3].getAsString("id"), "2"),
-            )
-        }
+    @Nested
+    inner class From15To16 {
+        private val user = (0..3).map { twitchUser(it) }
+        private val category = listOf(
+            twitchCategory(0),
+            twitchCategory(5),
+        )
+        private val stream = listOf(
+            twitchStream15(0, user[0].getAsString("id"), category[0].getAsString("id")),
+            twitchStream15(1, user[1].getAsString("id"), "1"),
+            twitchStream15(2, user[2].getAsString("id"), "1"),
+            twitchStream15(3, user[3].getAsString("id"), "2"),
+        )
 
-        @get:Rule
+        @JvmField
+        @RegisterExtension
         val rule = AppMigrationTestRule(15, 16, MIGRATION_15_16)
 
-        @Before
+        @BeforeEach
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup(
                 "twitch_user" to user,
@@ -123,15 +118,15 @@ class AppDatabaseMigrationTest {
         fun init(): Unit = rule.run {
             // verify
             newDb.query("SELECT * FROM twitch_stream").use {
-                assertThat(it.count).isEqualTo(stream.size)
+                it.count shouldBe stream.size
             }
             newDb.query("SELECT * FROM $TABLE_CATEGORY").use {
-                assertThat(it.count).isEqualTo(category.size + 2)
+                it.count shouldBe (category.size + 2)
             }
             newDb.query("SELECT * FROM $TABLE_CATEGORY WHERE id = '0'").use {
                 it.moveToNext()
                 listOf("id", "name", "art_url_base", "igdb_id").forEachIndexed { i, key ->
-                    assertThat(it.getString(i)).isEqualTo(category[0].getAsString(key))
+                    it.getString(i) shouldBe category[0].getAsString(key)
                 }
             }
         }
@@ -143,7 +138,7 @@ class AppDatabaseMigrationTest {
             // exercise
             val actual = newDb.insert("twitch_stream", SQLiteDatabase.CONFLICT_ABORT, values)
             // verify
-            assertThat(actual).isGreaterThan(-1)
+            actual shouldBeGreaterThan -1L
         }
 
         @Test
@@ -151,10 +146,9 @@ class AppDatabaseMigrationTest {
             // setup
             val values = twitchStream16(99, "99", "0")
             // exercise
-            assertThatThrownBy {
+            shouldThrow<SQLiteConstraintException> {
                 newDb.insert("twitch_stream", SQLiteDatabase.CONFLICT_ABORT, values)
-                // verify
-            }.isInstanceOf(SQLiteConstraintException::class.java)
+            }
         }
 
         @Test
@@ -162,20 +156,20 @@ class AppDatabaseMigrationTest {
             // setup
             val values = twitchStream16(99, user[0].getAsString("id"), "99")
             // exercise
-            assertThatThrownBy {
+            shouldThrow<SQLiteConstraintException> {
                 newDb.insert("twitch_stream", SQLiteDatabase.CONFLICT_ABORT, values)
-                // verify
-            }.isInstanceOf(SQLiteConstraintException::class.java)
+            }
         }
     }
 
-    @RunWith(AndroidJUnit4::class)
-    class From18To19 {
-        @get:Rule
+    @Nested
+    inner class From18To19 {
+        @JvmField
+        @RegisterExtension
         val rule = AppMigrationTestRule(18, 19, MIGRATION_18_19)
         private val playlist = (0..2).map { youtubePlaylist18(it) }
 
-        @Before
+        @BeforeEach
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup("playlist" to playlist)
         }
@@ -183,21 +177,21 @@ class AppDatabaseMigrationTest {
         @Test
         fun init(): Unit = rule.run {
             newDb.query("SELECT * FROM playlist").use { c ->
-                assertThat(c.count).isEqualTo(3)
+                c.count shouldBe 3
                 playlist.forEachIndexed { i, value ->
                     c.moveToNext()
-                    assertThat(c.getString(0)).isEqualTo(value.getAsString("id"))
-                    assertThat(c.getString(1)).isEmpty()
-                    assertThat(c.getString(2)).isEmpty()
+                    c.getString(0) shouldBe value.getAsString("id")
+                    c.getString(1).shouldBeEmptyString()
+                    c.getString(2).shouldBeEmptyString()
                 }
             }
             newDb.query("SELECT * FROM playlist_expire").use { c ->
-                assertThat(c.count).isEqualTo(3)
+                c.count shouldBe 3
                 playlist.forEachIndexed { i, value ->
                     c.moveToNext()
-                    assertThat(c.getString(0)).isEqualTo(value.getAsString("id"))
-                    assertThat(c.getLong(1)).isEqualTo(value.getAsLong("last_modified"))
-                    assertThat(c.getLong(2)).isEqualTo(value.getAsLong("max_age"))
+                    c.getString(0) shouldBe value.getAsString("id")
+                    c.getLong(1) shouldBe value.getAsLong("last_modified")
+                    c.getLong(2) shouldBe value.getAsLong("max_age")
                 }
             }
         }
@@ -219,18 +213,19 @@ class AppDatabaseMigrationTest {
                 arrayOf(playlistId0),
             )
             // verify
-            assertThat(actual).isEqualTo(1)
-            newDb.query("SELECT * FROM playlist_expire WHERE playlist_id = $playlistId0").use { c ->
-                c.moveToNext()
-                assertThat(c.getLong(1)).isEqualTo(values.getAsLong("fetched_at"))
-                assertThat(c.getLong(2)).isEqualTo(values.getAsLong("max_age"))
-            }
+            actual shouldBe 1
+            newDb.query("SELECT * FROM playlist_expire WHERE playlist_id = '$playlistId0'")
+                .use { c ->
+                    c.moveToNext()
+                    c.getLong(1) shouldBe values.getAsLong("fetched_at")
+                    c.getLong(2) shouldBe values.getAsLong("max_age")
+                }
         }
 
         @Test
         fun insert(): Unit = rule.run {
             // setup
-            val playlist = ContentValues().apply {
+            val playlistData = ContentValues().apply {
                 put("id", "10")
                 put("title", "")
                 put("thumbnail_url", "")
@@ -241,23 +236,24 @@ class AppDatabaseMigrationTest {
                 put("max_age", 1000)
             }
             // exercise
-            val playlistActual = newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, playlist)
+            val playlistActual =
+                newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, playlistData)
             val playlistExpireActual =
                 newDb.insert("playlist_expire", SQLiteDatabase.CONFLICT_ABORT, playlistExpire)
             // verify
-            assertThat(playlistActual).isGreaterThan(-1)
-            assertThat(playlistExpireActual).isGreaterThan(-1)
+            playlistActual shouldBeGreaterThan -1L
+            playlistExpireActual shouldBeGreaterThan -1L
             newDb.query("SELECT * FROM playlist WHERE id = '10'").use { c ->
                 c.moveToNext()
-                assertThat(c.getString(0)).isEqualTo(playlist.getAsString("id"))
-                assertThat(c.getString(1)).isEqualTo(playlist.getAsString("title"))
-                assertThat(c.getString(2)).isEqualTo(playlist.getAsString("thumbnail_url"))
+                c.getString(0) shouldBe playlistData.getAsString("id")
+                c.getString(1) shouldBe playlistData.getAsString("title")
+                c.getString(2) shouldBe playlistData.getAsString("thumbnail_url")
             }
             newDb.query("SELECT * FROM playlist_expire WHERE playlist_id = '10'").use { c ->
                 c.moveToNext()
-                assertThat(c.getString(0)).isEqualTo(playlistExpire.getAsString("playlist_id"))
-                assertThat(c.getLong(1)).isEqualTo(playlistExpire.getAsLong("fetched_at"))
-                assertThat(c.getLong(2)).isEqualTo(playlistExpire.getAsLong("max_age"))
+                c.getString(0) shouldBe playlistExpire.getAsString("playlist_id")
+                c.getLong(1) shouldBe playlistExpire.getAsLong("fetched_at")
+                c.getLong(2) shouldBe playlistExpire.getAsLong("max_age")
             }
         }
 
@@ -270,19 +266,19 @@ class AppDatabaseMigrationTest {
                 put("max_age", 1000)
             }
             // exercise
-            assertThatThrownBy {
+            shouldThrow<SQLiteConstraintException> {
                 newDb.insert("playlist_expire", SQLiteDatabase.CONFLICT_ABORT, values)
-                // verify
-            }.isInstanceOf(SQLiteConstraintException::class.java)
+            }
         }
     }
 
-    @RunWith(AndroidJUnit4::class)
-    class From23To24 {
-        @get:Rule
+    @Nested
+    inner class From23To24 {
+        @JvmField
+        @RegisterExtension
         val rule = AppMigrationTestRule(23, 24, MIGRATION_23_24)
 
-        @Before
+        @BeforeEach
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup("channel" to listOf(ContentValues().apply {
                 put("id", "channel_0")
@@ -313,13 +309,14 @@ class AppDatabaseMigrationTest {
         fun init(): Unit = rule.run {
             newDb.query("SELECT * FROM yt_channel_related_playlist").use { c ->
                 c.moveToNext()
-                assertThat(c.getString(0)).isEqualTo("channel_0")
-                assertThat(c.getString(1)).isEqualTo("channel_0-playlist_uploaded")
+                c.getString(0) shouldBe "channel_0"
+                c.getString(1) shouldBe "channel_0-playlist_uploaded"
             }
             newDb.query("SELECT * FROM channel_addition").use { c ->
                 c.moveToNext()
-                assertThatThrownBy { c.getColumnIndexOrThrow("uploaded_playlist_id") }
-                    .isInstanceOf(IllegalArgumentException::class.java)
+                shouldThrow<IllegalArgumentException> {
+                    c.getColumnIndexOrThrow("uploaded_playlist_id")
+                }
             }
         }
 
@@ -342,7 +339,7 @@ class AppDatabaseMigrationTest {
                     put("uploaded_playlist_id", "channel_99-playlist_uploaded")
                 })
             newDb.query("select * from yt_channel_related_playlist").use { c ->
-                assertThat(c.count).isEqualTo(2)
+                c.count shouldBe 2
             }
         }
 
@@ -353,14 +350,14 @@ class AppDatabaseMigrationTest {
                 put("title", "uploaded")
                 put("thumbnail_url", "")
             })
-            assertThatThrownBy {
+            shouldThrow<SQLiteConstraintException> {
                 newDb.insert(
                     "yt_channel_related_playlist", SQLiteDatabase.CONFLICT_ABORT,
                     ContentValues().apply {
                         put("channel_id", "channel_99")
                         put("uploaded_playlist_id", "channel_99-playlist_uploaded")
                     })
-            }.isInstanceOf(SQLiteConstraintException::class.java)
+            }
         }
 
         @Test
@@ -370,14 +367,14 @@ class AppDatabaseMigrationTest {
                 put("title", "channel_99_title")
                 put("icon", "")
             })
-            assertThatThrownBy {
+            shouldThrow<SQLiteConstraintException> {
                 newDb.insert(
                     "yt_channel_related_playlist", SQLiteDatabase.CONFLICT_ABORT,
                     ContentValues().apply {
                         put("channel_id", "channel_99")
                         put("uploaded_playlist_id", "channel_99-playlist_uploaded")
                     })
-            }.isInstanceOf(SQLiteConstraintException::class.java)
+            }
         }
     }
 }
@@ -434,9 +431,9 @@ fun twitchStream16(id: Int, userId: String, categoryId: String): ContentValues =
 
 fun twitchCategory(id: Int): ContentValues = ContentValues().apply {
     put("id", "$id")
-    put("name", "cname_0")
+    put("name", "cname_$id")
     put("art_url_base", "<url is here>")
-    put("igdb_id", "0")
+    put("igdb_id", "$id")
 }
 
 fun youtubePlaylist18(id: Int): ContentValues = ContentValues().apply {

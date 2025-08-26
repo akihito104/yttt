@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
+    alias(libs.plugins.yttt.kotest)
 }
 
 android {
@@ -49,9 +50,8 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.compose)
 
-    testImplementation(libs.junit)
-    testImplementation(libs.assertj.core)
     testImplementation(libs.mockk)
+
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

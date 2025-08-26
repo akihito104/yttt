@@ -4,60 +4,54 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isUpcomingWithinPublicationDeadline
 import com.freshdigitable.yttt.test.fromRemote
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.catchThrowable
-import org.junit.Test
-import org.junit.experimental.runners.Enclosed
-import org.junit.runner.RunWith
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeSameInstanceAs
 import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 
-@RunWith(Enclosed::class)
-class YouTubeVideoExtendedTest {
-    class ChangeFromUpcomingForIsFreeChat {
-        private val old = YouTubeVideoImpl(
+class YouTubeVideoExtendedTest : ShouldSpec({
+    context("ChangeFromUpcomingForIsFreeChat") {
+        val old = YouTubeVideoImpl(
             id = YouTubeVideo.Id("video"),
             title = "video",
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = old.extended(false).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+        val oldEx = old.extended(false).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
 
-        @Test
-        fun init_freeChatIsFalse() {
+        should("init_freeChatIsFalse") {
             // setup
             val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(null)
             // verify
-            assertThat(actual.item.isFreeChat).isFalse()
+            actual.item.isFreeChat shouldBe false
         }
 
-        @Test
-        fun notUpdated_returnsFalse() {
+        should("notUpdated_returnsFalse") {
             // setup
             val current = old.copy()
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isFalse()
+            actual.item.isFreeChat shouldBe false
         }
 
-        @Test
-        fun changedTitleToFreeChat_returnsTrue() {
+        should("changedTitleToFreeChat_returnsTrue") {
             // setup
             val current = old.copy(title = "free chat")
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isTrue()
+            actual.item.isFreeChat shouldBe true
         }
 
-        @Test
-        fun changedTitleToFreeChatAndArchived_returnsFalse() {
+        should("changedTitleToFreeChatAndArchived_returnsFalse") {
             // setup
             val current = old.copy(
                 title = "free chat",
@@ -66,22 +60,20 @@ class YouTubeVideoExtendedTest {
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isFalse()
+            actual.item.isFreeChat shouldBe false
         }
 
-        @Test
-        fun changedTitle_freeChatIsFalse() {
+        should("changedTitle_freeChatIsFalse") {
             // setup
             val current = old.copy(title = "changed title")
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isFalse()
+            actual.item.isFreeChat shouldBe false
         }
 
-        @Test
-        fun extendedObjectIsNotExtendedAnyMore() {
+        should("extendedObjectIsNotExtendedAnyMore") {
             // setup
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(title = "changed title") {
@@ -91,43 +83,40 @@ class YouTubeVideoExtendedTest {
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual).isSameAs(actual)
-            assertThat(actual.item.isFreeChat).isTrue()
+            actual shouldBeSameInstanceAs current // isSameAs -> shouldBeSameInstanceAs
+            actual.item.isFreeChat shouldBe true
         }
     }
 
-    class ChangeFromUpcomingForIsThumbnailUpdatable {
-        private val old = YouTubeVideoImpl(
+    context("ChangeFromUpcomingForIsThumbnailUpdatable") {
+        val old = YouTubeVideoImpl(
             id = YouTubeVideo.Id("video"),
             title = "video",
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = old.extended(false).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+        val oldEx = old.extended(false).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
 
-        @Test
-        fun init_thumbnailIsNotUpdatable() {
+        should("init_thumbnailIsNotUpdatable") {
             // setup
             val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(null)
             // verify
-            assertThat(actual.item.isThumbnailUpdatable).isFalse()
+            actual.item.isThumbnailUpdatable shouldBe false
         }
 
-        @Test
-        fun notUpdated_returnsFalse() {
+        should("notUpdated_returnsFalse") {
             // setup
             val current = old.copy()
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isThumbnailUpdatable).isFalse()
+            actual.item.isThumbnailUpdatable shouldBe false
         }
 
-        @Test
-        fun notUpdatedButFreeChat_returnsTrue() {
+        should("notUpdatedButFreeChat_returnsTrue") {
             // setup
             val current = old.copy().toUpdatable<YouTubeVideo>(
                 fetchedAt = Instant.EPOCH + YouTubeVideo.MAX_AGE_FREE_CHAT,
@@ -139,22 +128,20 @@ class YouTubeVideoExtendedTest {
             // exercise
             val actual = current.extend(oldAsFreeChat, isFreeChat = true)
             // verify
-            assertThat(actual.item.isThumbnailUpdatable).isTrue()
+            actual.item.isThumbnailUpdatable shouldBe true
         }
 
-        @Test
-        fun liveIsArchived_returnsFalse() {
+        should("liveIsArchived_returnsFalse") {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isThumbnailUpdatable).isFalse()
+            actual.item.isThumbnailUpdatable shouldBe false
         }
 
-        @Test
-        fun titleIsChangedAndArchived_returnsFalse() {
+        should("titleIsChangedAndArchived_returnsFalse") {
             // setup
             val current = old.copy(
                 liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
@@ -163,33 +150,30 @@ class YouTubeVideoExtendedTest {
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isThumbnailUpdatable).isFalse()
+            actual.item.isThumbnailUpdatable shouldBe false
         }
 
-        @Test
-        fun liveIsStarted_returnsTrue() {
+        should("liveIsStarted_returnsTrue") {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE)
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isThumbnailUpdatable).isTrue()
+            actual.item.isThumbnailUpdatable shouldBe true
         }
 
-        @Test
-        fun titleIsChanged_returnsTrue() {
+        should("titleIsChanged_returnsTrue") {
             // setup
             val current = old.copy(title = "changed title")
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isThumbnailUpdatable).isTrue()
+            actual.item.isThumbnailUpdatable shouldBe true
         }
 
-        @Test
-        fun objectIsNotCreatedByExtendCreator_returnsFalse() {
+        should("objectIsNotCreatedByExtendCreator_returnsFalse") {
             // setup
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(title = "changed title") {
@@ -199,54 +183,50 @@ class YouTubeVideoExtendedTest {
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual).isSameAs(actual)
-            assertThat(actual.item.isThumbnailUpdatable).isFalse()
+            actual shouldBeSameInstanceAs current // isSameAs -> shouldBeSameInstanceAs
+            actual.item.isThumbnailUpdatable shouldBe false
         }
     }
 
-    class ChangeFromFreeChat {
-        private val old = YouTubeVideoImpl(
+    context("ChangeFromFreeChat") {
+        val old = YouTubeVideoImpl(
             id = YouTubeVideo.Id("video"),
             title = "free chat",
             scheduledStartDateTime = Instant.ofEpochSecond(1000),
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         )
-        private val oldEx = old.extended(true).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+        val oldEx = old.extended(true).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
 
-        @Test
-        fun init_returnsTrue() {
+        should("init_returnsTrue") {
             // setup
             val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(null)
             // verify
-            assertThat(actual.item.isFreeChat).isTrue()
+            actual.item.isFreeChat shouldBe true
         }
 
-        @Test
-        fun notUpdated_returnsTrue() {
+        should("notUpdated_returnsTrue") {
             // setup
             val current = old.copy()
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isTrue()
+            actual.item.isFreeChat shouldBe true
         }
 
-        @Test
-        fun changeTitle_returnsFalse() {
+        should("changeTitle_returnsFalse") {
             // setup
             val current = old.copy(title = "changed title")
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isFalse()
+            actual.item.isFreeChat shouldBe false
         }
 
-        @Test
-        fun changeTitleToLiveStream_returnsFalse() {
+        should("changeTitleToLiveStream_returnsFalse") {
             // setup
             val current = old.copy(
                 title = "recycle free chat",
@@ -255,33 +235,30 @@ class YouTubeVideoExtendedTest {
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isFalse()
+            actual.item.isFreeChat shouldBe false
         }
 
-        @Test
-        fun changeToLiveStream_returnsFalse() {
+        should("changeToLiveStream_returnsFalse") {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE)
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isFalse()
+            actual.item.isFreeChat shouldBe false
         }
 
-        @Test
-        fun changeToArchived_returnsFalse() {
+        should("changeToArchived_returnsFalse") {
             // setup
             val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
                 .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual.item.isFreeChat).isFalse()
+            actual.item.isFreeChat shouldBe false
         }
 
-        @Test
-        fun changeToExtended_returnsSameObject() {
+        should("changeToExtended_returnsSameObject") {
             // setup
             val current = object : YouTubeVideoExtended,
                 YouTubeVideo by old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE) {
@@ -291,60 +268,54 @@ class YouTubeVideoExtendedTest {
             // exercise
             val actual = current.extend(oldEx)
             // verify
-            assertThat(actual).isSameAs(current)
+            actual shouldBeSameInstanceAs current
         }
     }
 
-    class IsUpcomingWithinPublicationDeadline {
-        private val scheduledStartDateTime = Instant.parse("2025-01-23T02:00:00.000+09:00")
-        private val video = YouTubeVideoImpl(
+    context("IsUpcomingWithinPublicationDeadline") {
+        val scheduledStartDateTime = Instant.parse("2025-01-23T02:00:00.000+09:00")
+        val video = YouTubeVideoImpl(
             id = YouTubeVideo.Id("video"),
             title = "title",
             scheduledStartDateTime = scheduledStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         ).extended(false)
 
-        @Test
-        fun returnsTrue() {
+        should("returnsTrue") {
             // setup
             val current = scheduledStartDateTime + YouTubeVideo.UPCOMING_DEADLINE
             // exercise
             val actual = video.isUpcomingWithinPublicationDeadline(current)
             // verify
-            assertThat(actual).isTrue()
+            actual shouldBe true
         }
 
-        @Test
-        fun returnsFalse() {
+        should("returnsFalse") {
             // setup
             val current = scheduledStartDateTime + YouTubeVideo.UPCOMING_DEADLINE.plusMillis(1)
             // exercise
             val actual = video.isUpcomingWithinPublicationDeadline(current)
             // verify
-            assertThat(actual).isFalse()
+            actual shouldBe false
         }
 
-        @Test
-        fun scheduledStartDateTimeIsNull_throwsIllegalStateException() {
+        should("scheduledStartDateTimeIsNull_throwsIllegalStateException") {
             // setup
-            val video = YouTubeVideoImpl(
+            val videoNoSchedule = YouTubeVideoImpl(
                 id = YouTubeVideo.Id("video"),
                 title = "title",
                 liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
             ).extended(false)
             val current = scheduledStartDateTime + YouTubeVideo.UPCOMING_DEADLINE
             // exercise
-            val actual = catchThrowable {
-                video.isUpcomingWithinPublicationDeadline(current)
+            shouldThrow<IllegalStateException> {
+                videoNoSchedule.isUpcomingWithinPublicationDeadline(current)
             }
-            // verify
-            assertThat(actual).isInstanceOf(IllegalStateException::class.java)
         }
 
-        @Test
-        fun live_throwsIllegalStateException() {
+        should("live_throwsIllegalStateException") {
             // setup
-            val video = YouTubeVideoImpl(
+            val liveVideo = YouTubeVideoImpl(
                 id = YouTubeVideo.Id("video"),
                 title = "title",
                 scheduledStartDateTime = scheduledStartDateTime,
@@ -352,17 +323,14 @@ class YouTubeVideoExtendedTest {
             ).extended(false)
             val current = scheduledStartDateTime + YouTubeVideo.UPCOMING_DEADLINE
             // exercise
-            val actual = catchThrowable {
-                video.isUpcomingWithinPublicationDeadline(current)
+            shouldThrow<IllegalStateException> {
+                liveVideo.isUpcomingWithinPublicationDeadline(current)
             }
-            // verify
-            assertThat(actual).isInstanceOf(IllegalStateException::class.java)
         }
 
-        @Test
-        fun freeChat_throwsIllegalStateException() {
+        should("freeChat_throwsIllegalStateException") {
             // setup
-            val video = YouTubeVideoImpl(
+            val freeChatVideo = YouTubeVideoImpl(
                 id = YouTubeVideo.Id("video"),
                 title = "title",
                 scheduledStartDateTime = scheduledStartDateTime,
@@ -370,14 +338,12 @@ class YouTubeVideoExtendedTest {
             ).extended(true)
             val current = scheduledStartDateTime + YouTubeVideo.UPCOMING_DEADLINE
             // exercise
-            val actual = catchThrowable {
-                video.isUpcomingWithinPublicationDeadline(current)
+            shouldThrow<IllegalStateException> {
+                freeChatVideo.isUpcomingWithinPublicationDeadline(current)
             }
-            // verify
-            assertThat(actual).isInstanceOf(IllegalStateException::class.java)
         }
     }
-}
+})
 
 internal data class YouTubeVideoImpl(
     override val id: YouTubeVideo.Id,

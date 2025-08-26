@@ -21,9 +21,8 @@ import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
-import com.freshdigitable.yttt.test.MediatorResultSubject.Companion.assertThat
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.google.common.truth.Truth.assertThat
+import com.freshdigitable.yttt.test.shouldBeSuccess
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -32,6 +31,8 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import dagger.multibindings.IntoMap
+import io.kotest.matchers.collections.shouldContainInOrder
+import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.Flow
 import org.junit.After
 import org.junit.Before
@@ -82,7 +83,7 @@ class YouTubeRemoteMediatorTest {
         // exercise
         val actual = remoteMediator.initialize()
         // verify
-        assertThat(actual).isEqualTo(RemoteMediator.InitializeAction.LAUNCH_INITIAL_REFRESH)
+        actual shouldBe RemoteMediator.InitializeAction.LAUNCH_INITIAL_REFRESH
     }
 
     @Test
@@ -92,7 +93,7 @@ class YouTubeRemoteMediatorTest {
         // exercise
         val actual = remoteMediator.initialize()
         // verify
-        assertThat(actual).isEqualTo(RemoteMediator.InitializeAction.SKIP_INITIAL_REFRESH)
+        actual shouldBe RemoteMediator.InitializeAction.SKIP_INITIAL_REFRESH
     }
 
     @Test
@@ -105,7 +106,7 @@ class YouTubeRemoteMediatorTest {
             PagingState(emptyList(), 0, PagingConfig(20), 0),
         )
         // verify
-        assertThat(actual).isSuccess(endOfPaginationReached = true)
+        actual.shouldBeSuccess(endOfPaginationReached = true)
     }
 
     @Test
@@ -118,7 +119,7 @@ class YouTubeRemoteMediatorTest {
             PagingState(emptyList(), 0, PagingConfig(20), 0),
         )
         // verify
-        assertThat(actual).isSuccess(endOfPaginationReached = true)
+        actual.shouldBeSuccess(endOfPaginationReached = true)
     }
 
     @Test
@@ -134,8 +135,8 @@ class YouTubeRemoteMediatorTest {
             PagingState(emptyList(), 0, PagingConfig(20), 0),
         )
         // verify
-        assertThat(actual).isSuccess(endOfPaginationReached = true)
-        assertThat(repository.subscriptionsRelevanceOrderedFetchedAt).isEqualTo(fetchedAt)
+        actual.shouldBeSuccess(endOfPaginationReached = true)
+        repository.subscriptionsRelevanceOrderedFetchedAt shouldBe fetchedAt
     }
 
     @Test
@@ -148,10 +149,9 @@ class YouTubeRemoteMediatorTest {
         // exercise
         val actual = pagerFactory.create(PagingConfig(20)).flow.asSnapshot()
         // verify
-        assertThat(actual.map { it.id.value })
-            .containsExactlyElementsIn(client.subscriptionsRelevanceOrderedIds.map { it.value })
-            .inOrder()
-        assertThat(repository.subscriptionsRelevanceOrderedFetchedAt).isEqualTo(fetchedAt)
+        actual.map { it.id.value }
+            .shouldContainInOrder(client.subscriptionsRelevanceOrderedIds.map { it.value })
+        repository.subscriptionsRelevanceOrderedFetchedAt shouldBe fetchedAt
     }
 
     @Test
@@ -176,10 +176,9 @@ class YouTubeRemoteMediatorTest {
         FakeDateTimeProviderModule.instant = fetchedAt
         val actual = pagerFactory.create(PagingConfig(20)).flow.asSnapshot()
         // verify
-        assertThat(actual.map { it.id.value })
-            .containsExactlyElementsIn(client.subscriptionsRelevanceOrderedIds.map { it.value })
-            .inOrder()
-        assertThat(repository.subscriptionsRelevanceOrderedFetchedAt).isEqualTo(fetchedAt)
+        actual.map { it.id.value }
+            .shouldContainInOrder(client.subscriptionsRelevanceOrderedIds.map { it.value })
+        repository.subscriptionsRelevanceOrderedFetchedAt shouldBe fetchedAt
     }
 }
 

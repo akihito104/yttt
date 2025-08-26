@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
+    alias(libs.plugins.yttt.kotest)
 }
 
 android {
@@ -46,10 +47,7 @@ dependencies {
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
 
-    testImplementation(libs.junit)
     testImplementation(libs.mockk)
-    testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.assertj.core)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -60,7 +58,7 @@ dependencies {
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.room.runtime)
-    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.kotest.assertions.core)
     androidTestImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.work.testing)
 }

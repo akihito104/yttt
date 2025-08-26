@@ -4,6 +4,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
+    alias(libs.plugins.yttt.kotest)
 }
 
 android {
@@ -18,7 +19,8 @@ android {
         if (twitchPFile.exists()) {
             FileInputStream(twitchPFile).use { twitchProperties.load(it) }
         }
-        manifestPlaceholders["scheme"] = twitchProperties.getOrDefault("twitch_redirect_uri_scheme", "")
+        manifestPlaceholders["scheme"] =
+            twitchProperties.getOrDefault("twitch_redirect_uri_scheme", "")
         manifestPlaceholders["host"] = twitchProperties.getOrDefault("twitch_redirect_uri_host", "")
     }
 
@@ -46,9 +48,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.paging.runtime)
 
-    testImplementation(libs.junit)
     testImplementation(libs.mockk)
-    testImplementation(libs.truth)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -61,5 +61,5 @@ dependencies {
     kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(libs.turbine)
-    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.kotest.assertions.core)
 }
