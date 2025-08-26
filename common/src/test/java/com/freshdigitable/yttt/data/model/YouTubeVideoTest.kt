@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.test.fromRemote
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import java.time.Duration
 import java.time.Instant
@@ -19,21 +20,20 @@ class YouTubeVideoTest : ShouldSpec({
             scheduledStartDateTime = scheduledStartDateTime,
         )
 
-        listOf(
+        withData(
+            nameFn = { (_, expected) -> "updatable after $expected" },
             base to YouTubeVideo.MAX_AGE_DEFAULT,
             base + Duration.ofMillis(1) to YouTubeVideo.MAX_AGE_DEFAULT.minusMillis(1),
             scheduledStartDateTime to Duration.ofMillis(0),
             scheduledStartDateTime + Duration.ofMillis(1) to Duration.ofMillis(-1),
             scheduledStartDateTime + YouTubeVideo.MAX_AGE_LIMIT_SOON to YouTubeVideo.MAX_AGE_LIMIT_SOON.negated(),
             scheduledStartDateTime + YouTubeVideo.MAX_AGE_LIMIT_SOON.plusMillis(1) to YouTubeVideo.MAX_AGE_DEFAULT,
-        ).forEach { (fetchedAt, expected) ->
-            should("updatable after $expected") {
-                // exercise
-                val sut = video.toUpdatable(CacheControl.fromRemote(fetchedAt))
-                    .extend(old = null, isFreeChat = false)
-                // verify
-                sut.cacheControl.maxAge shouldBe expected
-            }
+        ) { (fetchedAt, expected) ->
+            // exercise
+            val sut = video.toUpdatable(CacheControl.fromRemote(fetchedAt))
+                .extend(old = null, isFreeChat = false)
+            // verify
+            sut.cacheControl.maxAge shouldBe expected
         }
     }
 

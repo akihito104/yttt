@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.test
 
+import io.kotest.inspectors.forAll
 import io.kotest.matchers.Matcher
 import io.kotest.matchers.MatcherResult
 import io.kotest.matchers.should
@@ -14,18 +15,15 @@ class CallerVerifier : Verifier() {
     }
 
     override fun verify() {
-        recorder.run {
-            forEach {
-                it.actual should Matcher { value ->
-                    MatcherResult(
-                        it.actual == it.expected,
-                        { "expected($it) calls ${it.expected} but was ${it.actual}" },
-                        { throw NotImplementedError() },
-                    )
-                }
+        recorder.forAll {
+            it.actual should Matcher { value ->
+                MatcherResult(
+                    it.actual == it.expected,
+                    { "expected($it) calls ${it.expected} but was ${it.actual}" },
+                    { throw NotImplementedError() },
+                )
             }
-            clear()
-        }
+        }.clear()
     }
 }
 
