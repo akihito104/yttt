@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
+    alias(libs.plugins.yttt.kotest)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -22,11 +23,7 @@ android {
         }
     }
 }
-android.testOptions {
-    unitTests.all {
-        it.useJUnitPlatform()
-    }
-}
+
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
@@ -40,9 +37,6 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
 
     testImplementation(project(":common-test"))
-    testImplementation(libs.kotest.runner.junit5)
-    testImplementation(libs.kotest.assertions.core)
-    testImplementation(libs.kotest.framework.datatest)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

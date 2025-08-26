@@ -147,3 +147,4 @@ yttt-android-application-compose = { id = "yttt.android.application.compose" }
 yttt-android-library = { id = "yttt.android.library" }
 yttt-android-library-compose = { id = "yttt.android.library.compose" }
 yttt-hilt = { id = "yttt.hilt" }
+yttt-kotest = { id = "yttt.kotest" }

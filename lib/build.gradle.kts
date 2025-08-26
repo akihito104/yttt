@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
+    alias(libs.plugins.yttt.kotest)
 }
 
 android {
@@ -28,11 +29,6 @@ android {
     hilt {
         enableAggregatingTask = true
     }
-    testOptions { // Added testOptions for JUnit Platform
-        unitTests.all {
-            it.useJUnitPlatform()
-        }
-    }
 }
 
 dependencies {
@@ -55,9 +51,6 @@ dependencies {
     implementation(libs.androidx.paging.compose)
 
     testImplementation(libs.mockk)
-    testImplementation(libs.kotest.runner.junit5)
-    testImplementation(libs.kotest.assertions.core)
-    testImplementation(libs.kotest.framework.datatest)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
