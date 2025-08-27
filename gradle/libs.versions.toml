@@ -10,9 +10,9 @@ licensee = "1.13.0"
 oss-license-plugin = "0.10.7"
 oss-license-lib = "17.2.1"
 
-androidxComposeBom = "2025.07.00"
-compose-runtime = "1.8.3"
-compose-animation = "1.8.3"
+androidxComposeBom = "2025.08.00"
+compose-runtime = "1.9.0"
+compose-animation = "1.9.0"
 accompanistPermissions = "0.37.3"
 # https://developer.android.com/jetpack/androidx/explorer
 androidxActivityKtx = "1.10.1"
