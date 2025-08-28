@@ -6,10 +6,10 @@ import org.gradle.api.Project
 
 fun Project.configureAndroidSdk(commonExtension: CommonExtension<*, *, *, *, *, *>) {
     commonExtension.apply {
-        compileSdk = 35
+        compileSdk = 36
 
         defaultConfig {
-            (this as? ApplicationDefaultConfig)?.targetSdk = 35
+            (this as? ApplicationDefaultConfig)?.targetSdk = 36
             minSdk = 26
         }
     }
