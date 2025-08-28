@@ -123,9 +123,11 @@ private fun MainScreen(
             )
         },
     ) {
-        val backStack = navController.currentBackStackEntryFlow
-            .map { it.destination.route == startDestination }
-            .collectAsState(initial = true)
+        val flow = remember(navController.currentBackStackEntryFlow, startDestination) {
+            navController.currentBackStackEntryFlow
+                .map { it.destination.route == startDestination }
+        }
+        val backStack = flow.collectAsState(initial = true)
         val topAppBarStateHolder = remember {
             val navIconState = NavigationIconStateImpl(
                 isRoot = { backStack.value },
