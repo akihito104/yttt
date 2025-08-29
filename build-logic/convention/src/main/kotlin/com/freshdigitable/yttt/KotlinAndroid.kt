@@ -47,6 +47,5 @@ fun Project.configureKotest(commonExtension: CommonExtension<*, *, *, *, *, *>) 
         dependencies {
             testImplementation(libs.findLibrary("kotest-runner-junit5"))
             testImplementation(libs.findLibrary("kotest-assertions-core"))
-            testImplementation(libs.findLibrary("kotest-framework-datatest"))
         }
     }

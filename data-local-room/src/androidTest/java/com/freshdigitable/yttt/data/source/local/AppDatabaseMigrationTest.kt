@@ -6,20 +6,21 @@ import android.database.sqlite.SQLiteDatabase
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Nested
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.RegisterExtension
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.experimental.runners.Enclosed
+import org.junit.runner.RunWith
 import io.kotest.matchers.string.shouldBeEmpty as shouldBeEmptyString
 
+@RunWith(Enclosed::class)
 class AppDatabaseMigrationTest {
     private companion object {
         private const val TABLE_STREAM_SCHEDULE = "twitch_channel_schedule_stream"
         private const val TABLE_CATEGORY = "twitch_category"
     }
 
-    @Nested
-    inner class From13To14 {
+    class From13To14 {
         private val schedule = listOf(
             twitchChannelStreamSchedule13(0, "cid0", "0"),
             twitchChannelStreamSchedule13(1, null, "1"),
@@ -27,11 +28,10 @@ class AppDatabaseMigrationTest {
             twitchChannelStreamSchedule13(3, "cid1", "3")
         )
 
-        @JvmField
-        @RegisterExtension
+        @get:Rule
         val rule = AppMigrationTestRule(13, 14, MIGRATION_13_14)
 
-        @BeforeEach
+        @Before
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup(
                 "twitch_user" to (0..3).map { twitchUser(it) },
@@ -87,8 +87,7 @@ class AppDatabaseMigrationTest {
         }
     }
 
-    @Nested
-    inner class From15To16 {
+    class From15To16 {
         private val user = (0..3).map { twitchUser(it) }
         private val category = listOf(
             twitchCategory(0),
@@ -101,11 +100,10 @@ class AppDatabaseMigrationTest {
             twitchStream15(3, user[3].getAsString("id"), "2"),
         )
 
-        @JvmField
-        @RegisterExtension
+        @get:Rule
         val rule = AppMigrationTestRule(15, 16, MIGRATION_15_16)
 
-        @BeforeEach
+        @Before
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup(
                 "twitch_user" to user,
@@ -162,14 +160,12 @@ class AppDatabaseMigrationTest {
         }
     }
 
-    @Nested
-    inner class From18To19 {
-        @JvmField
-        @RegisterExtension
+    class From18To19 {
+        @get:Rule
         val rule = AppMigrationTestRule(18, 19, MIGRATION_18_19)
         private val playlist = (0..2).map { youtubePlaylist18(it) }
 
-        @BeforeEach
+        @Before
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup("playlist" to playlist)
         }
@@ -272,13 +268,11 @@ class AppDatabaseMigrationTest {
         }
     }
 
-    @Nested
-    inner class From23To24 {
-        @JvmField
-        @RegisterExtension
+    class From23To24 {
+        @get:Rule
         val rule = AppMigrationTestRule(23, 24, MIGRATION_23_24)
 
-        @BeforeEach
+        @Before
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup("channel" to listOf(ContentValues().apply {
                 put("id", "channel_0")

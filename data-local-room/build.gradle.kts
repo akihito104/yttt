@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.yttt.android.library)
     alias(libs.plugins.yttt.hilt)
     alias(libs.plugins.android.room)
-    id("de.mannodermaus.android-junit5")
 }
 
 android {
@@ -10,10 +9,6 @@ android {
 
     defaultConfig {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        testInstrumentationRunnerArguments.put(
-            "runnerBuilder",
-            "de.mannodermaus.junit5.AndroidJUnit5Builder"
-        )
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -35,21 +30,10 @@ android {
         schemaDirectory("$projectDir/schemas")
     }
     packaging {
-        resources.excludes.addAll(
-            listOf(
-                "META-INF/versions/9/OSGI-INF/MANIFEST.MF",
-                "META-INF/AL2.0",
-                "META-INF/LGPL2.1",
-                "META-INF/LICENSE.md",
-                "META-INF/LICENSE-notice.md",
-            )
-        )
+        resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
     }
 }
-junitPlatform {
-    instrumentationTests.includeExtensions.set(true)
-    instrumentationTests.version.set("1.8.0")
-}
+
 dependencies {
     api(project(":common"))
 
@@ -64,11 +48,8 @@ dependencies {
 
     androidTestImplementation(project(":common-test"))
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.test.runner)
-    androidTestImplementation(libs.junit.jupiter.api)
-    androidTestImplementation(libs.android.junit5.core)
-    androidTestRuntimeOnly(libs.android.junit5.runner)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.kotest.assertions.core)
     androidTestImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.room.testing)
