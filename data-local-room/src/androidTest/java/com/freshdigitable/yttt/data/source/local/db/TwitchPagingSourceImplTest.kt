@@ -3,20 +3,17 @@ package com.freshdigitable.yttt.data.source.local.db
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import com.freshdigitable.yttt.data.source.local.fixture.DatabaseExtension
-import com.freshdigitable.yttt.data.source.local.fixture.TwitchDataSourceExtension
-import com.freshdigitable.yttt.data.source.local.fixture.TwitchDataSourceTestScope
+import com.freshdigitable.yttt.data.source.local.TwitchDataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.userDetail
 import com.freshdigitable.yttt.test.zero
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
 import java.time.Duration
 import java.time.Instant
 
-@ExtendWith(DatabaseExtension::class, TwitchDataSourceExtension::class)
 class TwitchPagingSourceImplTest {
     private companion object {
         private val me = userDetail(id = "user_me")
@@ -26,13 +23,15 @@ class TwitchPagingSourceImplTest {
             TwitchFollowings.create(me.id, emptyList(), CacheControl.create(fetchedAt, maxAge))
     }
 
+    @get:Rule
+    internal val rule = TwitchDataSourceTestRule()
     internal lateinit var sut: TwitchPagingSourceImpl
 
-    @BeforeEach
-    internal fun TwitchDataSourceTestScope.setup() = scopedTest {
+    @Before
+    fun setup() = rule.runWithLocalSource {
         dataSource.setMe(me.toUpdatable(CacheControl.zero()))
         dataSource.replaceAllFollowings(followings)
-        sut = TwitchPagingSourceImpl(database)
+        sut = TwitchPagingSourceImpl(rule.database)
     }
 
     @Test
