@@ -11,7 +11,6 @@ import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
-import com.freshdigitable.yttt.data.source.local.db.DateTimeProviderFake
 import com.freshdigitable.yttt.data.source.local.db.NopImageDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
 import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoImpl
@@ -21,8 +20,6 @@ import com.freshdigitable.yttt.test.zero
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -194,9 +191,7 @@ private fun broadcaster(
     override val followedAt: Instant get() = followedAt
 }
 
-internal class TwitchDataSourceTestRule(
-    baseTime: Instant = Instant.EPOCH,
-) : DataSourceTestRule<TwitchDao, TwitchLocalDataSource>(baseTime) {
+internal class TwitchDataSourceTestRule : DataSourceTestRule<TwitchDao, TwitchLocalDataSource>() {
     override fun createDao(database: AppDatabase): TwitchDao = TwitchDao(
         database,
         TwitchUserDaoImpl(database),
@@ -204,15 +199,6 @@ internal class TwitchDataSourceTestRule(
         TwitchStreamDaoImpl(database),
     )
 
-    override fun createTestScope(testScope: TestScope): DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
-        val dataSource = TwitchLocalDataSource(
-            dao, IoScope(StandardTestDispatcher(testScope.testScheduler)), NopImageDataSource,
-        )
-        return object : DatabaseTestScope<TwitchDao, TwitchLocalDataSource> {
-            override val testScope: TestScope get() = testScope
-            override val dateTimeProvider: DateTimeProviderFake get() = this@TwitchDataSourceTestRule.dateTimeProvider
-            override val dao: TwitchDao get() = this@TwitchDataSourceTestRule.dao
-            override val dataSource: TwitchLocalDataSource get() = dataSource
-        }
-    }
+    override fun createLocalSource(ioScope: IoScope): TwitchLocalDataSource =
+        TwitchLocalDataSource(dao, ioScope, NopImageDataSource)
 }
