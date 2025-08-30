@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.local
 import android.content.ContentValues
 import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
+import com.freshdigitable.yttt.data.source.local.fixture.AppMigrationTestRule
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.longs.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
@@ -29,7 +30,7 @@ class AppDatabaseMigrationTest {
         )
 
         @get:Rule
-        val rule = AppMigrationTestRule(13, 14, MIGRATION_13_14)
+        internal val rule = AppMigrationTestRule(13, 14, MIGRATION_13_14)
 
         @Before
         fun setup(): Unit = rule.oldDb.use {
@@ -101,7 +102,7 @@ class AppDatabaseMigrationTest {
         )
 
         @get:Rule
-        val rule = AppMigrationTestRule(15, 16, MIGRATION_15_16)
+        internal val rule = AppMigrationTestRule(15, 16, MIGRATION_15_16)
 
         @Before
         fun setup(): Unit = rule.oldDb.use {
@@ -162,7 +163,7 @@ class AppDatabaseMigrationTest {
 
     class From18To19 {
         @get:Rule
-        val rule = AppMigrationTestRule(18, 19, MIGRATION_18_19)
+        internal val rule = AppMigrationTestRule(18, 19, MIGRATION_18_19)
         private val playlist = (0..2).map { youtubePlaylist18(it) }
 
         @Before
@@ -270,7 +271,7 @@ class AppDatabaseMigrationTest {
 
     class From23To24 {
         @get:Rule
-        val rule = AppMigrationTestRule(23, 24, MIGRATION_23_24)
+        internal val rule = AppMigrationTestRule(23, 24, MIGRATION_23_24)
 
         @Before
         fun setup(): Unit = rule.oldDb.use {

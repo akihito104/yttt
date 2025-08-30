@@ -9,13 +9,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import com.freshdigitable.yttt.data.source.IoScope
-import com.freshdigitable.yttt.data.source.local.db.DataSourceTestRule
-import com.freshdigitable.yttt.data.source.local.db.NopImageDataSource
-import com.freshdigitable.yttt.data.source.local.db.TwitchDao
-import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoImpl
-import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoImpl
-import com.freshdigitable.yttt.data.source.local.db.TwitchUserDaoImpl
+import com.freshdigitable.yttt.data.source.local.fixture.TwitchDataSourceTestRule
 import com.freshdigitable.yttt.test.zero
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -189,16 +183,4 @@ private fun broadcaster(
     followedAt: Instant = Instant.EPOCH,
 ): TwitchBroadcaster = object : TwitchBroadcaster, TwitchUser by user {
     override val followedAt: Instant get() = followedAt
-}
-
-internal class TwitchDataSourceTestRule : DataSourceTestRule<TwitchDao, TwitchLocalDataSource>() {
-    override fun createDao(database: AppDatabase): TwitchDao = TwitchDao(
-        database,
-        TwitchUserDaoImpl(database),
-        TwitchScheduleDaoImpl(database),
-        TwitchStreamDaoImpl(database),
-    )
-
-    override fun createLocalSource(ioScope: IoScope): TwitchLocalDataSource =
-        TwitchLocalDataSource(dao, ioScope, NopImageDataSource)
 }

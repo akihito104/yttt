@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt.data.source.local.db
+package com.freshdigitable.yttt.data.source.local.fixture
 
 import android.content.Context
 import android.database.Cursor

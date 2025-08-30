@@ -15,9 +15,9 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.liveFinished
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import com.freshdigitable.yttt.data.source.local.db.toDbEntity
+import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
 import io.kotest.matchers.collections.shouldBeEmpty
