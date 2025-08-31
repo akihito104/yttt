@@ -72,11 +72,23 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.addSubscriptionEtag(YouTubeSubscriptionEtagTable(offset, nextPageToken, eTag))
     }
 
-    override suspend fun removeSubscribesByRemainingIds(subscriptions: Set<YouTubeSubscription.Id>) =
-        database.withTransaction {
-            dao.removeSubscriptionsRelevanceOrderedByRemainingIds(subscriptions)
-            dao.removeSubscriptionsByRemainingIds(subscriptions)
-        }
+    override suspend fun cleanUpByRemainingSubscriptionIds(
+        subscriptions: Set<YouTubeSubscription.Id>,
+    ) = database.withTransaction {
+        database.deferForeignKeys()
+        val removed = dao.findSubscriptionsByRemainingIds(subscriptions)
+        val summaries = dao.findSubscriptionSummaries(removed)
+        val uploadedPlaylistId = summaries.mapNotNull { it.uploadedPlaylistId }
+        val videoIds = dao.findVideoIsByPlaylistId(uploadedPlaylistId)
+        val channelIds = summaries.map { it.channelId }.toSet()
+
+        uploadedPlaylistId.forEach { dao.removePlaylistItemEntitiesByPlaylistId(it) }
+        dao.removePlaylistEntitiesByPlaylistId(uploadedPlaylistId)
+        dao.removeSubscriptionsRelevanceOrdered(removed)
+        dao.removeSubscriptions(removed)
+        removeVideo(videoIds.toSet())
+        dao.removeChannelEntities(channelIds)
+    }
 
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,

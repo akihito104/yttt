@@ -45,6 +45,9 @@ internal data class YouTubeChannelTable(
         @Query("SELECT * FROM channel WHERE id IN (:id)")
         suspend fun findChannels(id: Set<YouTubeChannel.Id>): List<YouTubeChannelTable>
 
+        @Query("DELETE FROM channel WHERE id IN (:ids)")
+        suspend fun removeChannels(ids: Set<YouTubeChannel.Id>)
+
         @Query("DELETE FROM channel")
         override suspend fun deleteTable()
     }
@@ -98,6 +101,9 @@ internal data class YouTubeChannelAdditionTable(
         @Upsert
         suspend fun addChannelAddition(addition: Collection<YouTubeChannelAdditionTable>)
 
+        @Query("DELETE FROM channel_addition WHERE id IN (:ids)")
+        suspend fun removeChannelAddition(ids: Set<YouTubeChannel.Id>)
+
         @Query("DELETE FROM channel_addition")
         override suspend fun deleteTable()
     }
@@ -136,6 +142,9 @@ internal class YouTubeChannelRelatedPlaylistTable(
         @Query("SELECT * FROM yt_channel_related_playlist WHERE channel_id IN (:ids)")
         suspend fun findChannelRelatedPlaylists(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelRelatedPlaylistTable>
 
+        @Query("DELETE FROM yt_channel_related_playlist WHERE channel_id IN (:ids)")
+        suspend fun removeChannelRelatedPlaylists(ids: Set<YouTubeChannel.Id>)
+
         @Query("DELETE FROM yt_channel_related_playlist")
         override suspend fun deleteTable()
     }
@@ -163,6 +172,9 @@ internal data class YouTubeChannelAdditionExpireTable(
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addChannelAdditionExpire(entities: Collection<YouTubeChannelAdditionExpireTable>)
+
+        @Query("DELETE FROM channel_addition_expire WHERE channel_id IN (:ids)")
+        suspend fun removeChannelAdditionExpire(ids: Set<YouTubeChannel.Id>)
 
         @Query("DELETE FROM channel_addition_expire")
         override suspend fun deleteTable()
@@ -260,6 +272,9 @@ internal data class YouTubeChannelLogTable(
             channelId: YouTubeChannel.Id,
             maxResult: Long? = Long.MAX_VALUE,
         ): List<YouTubeChannelLogTable>
+
+        @Query("DELETE FROM channel_log WHERE channel_id IN (:ids)")
+        suspend fun removeChannelLogsByChannelId(ids: Set<YouTubeChannel.Id>)
 
         @Query("DELETE FROM channel_log")
         override suspend fun deleteTable()

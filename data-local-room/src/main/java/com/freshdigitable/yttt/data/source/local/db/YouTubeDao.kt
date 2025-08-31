@@ -7,6 +7,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
@@ -103,6 +104,14 @@ internal class YouTubeDao @Inject constructor(
             })
         }
 
+    suspend fun removeChannelEntities(id: Set<YouTubeChannel.Id>) = db.withTransaction {
+        removeChannelLogsByChannelId(id)
+        removeChannelAdditionExpire(id)
+        removeChannelRelatedPlaylists(id)
+        removeChannelAddition(id)
+        removeChannels(id)
+    }
+
     suspend fun addFreeChatItems(
         ids: Collection<YouTubeVideo.Id>,
         isFreeChat: Boolean,
@@ -126,8 +135,7 @@ internal class YouTubeDao @Inject constructor(
             addPlaylistWithItemsEtag(YouTubePlaylistWithItemsEtag(p.id, it))
         }
         if (item.items.any { it !is YouTubePlaylistItemDetailDb }) {
-            removePlaylistItemAdditionsByPlaylistId(p.id)
-            removePlaylistItemsByPlaylistId(p.id)
+            removePlaylistItemEntitiesByPlaylistId(p.id)
             if (item.items.isNotEmpty()) {
                 addPlaylistItems(item.items.map { it.toDbEntity() })
                 addPlaylistItemAdditions(
@@ -136,6 +144,17 @@ internal class YouTubeDao @Inject constructor(
                 )
             }
         }
+    }
+
+    internal suspend fun removePlaylistItemEntitiesByPlaylistId(id: YouTubePlaylist.Id) {
+        removePlaylistItemAdditionsByPlaylistId(id)
+        removePlaylistItemsByPlaylistId(id)
+    }
+
+    internal suspend fun removePlaylistEntitiesByPlaylistId(id: Collection<YouTubePlaylist.Id>) {
+        removePlaylistExpire(id)
+        removePlaylistWithItemsEtag(id)
+        removePlaylistById(id)
     }
 
     suspend fun updatePlaylistWithItemsCacheControl(

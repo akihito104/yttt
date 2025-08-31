@@ -102,7 +102,7 @@ interface YouTubeLiveDataSource {
     suspend fun addPagedSubscription(subscription: Collection<YouTubeSubscription>)
     suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String)
     suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionQuery?
-    suspend fun removeSubscribesByRemainingIds(subscriptions: Set<YouTubeSubscription.Id>)
+    suspend fun cleanUpByRemainingSubscriptionIds(subscriptions: Set<YouTubeSubscription.Id>)
 
     suspend fun updatePlaylistWithItems(
         item: YouTubePlaylistWithItem<*>,

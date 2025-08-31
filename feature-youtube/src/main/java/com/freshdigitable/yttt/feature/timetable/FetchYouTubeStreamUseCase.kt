@@ -147,7 +147,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         }.join()
         .onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
         .onSuccess {
-            liveRepository.removeSubscribesByRemainingIds(it.ids.toSet())
+            liveRepository.cleanUpByRemainingSubscriptionIds(it.ids.toSet())
         }.map { }
 
     private suspend fun updateSummary(

@@ -38,6 +38,9 @@ internal class YouTubePlaylistTable(
         @Query("SELECT * FROM playlist WHERE id = :id")
         suspend fun findPlaylistById(id: YouTubePlaylist.Id): YouTubePlaylistTable?
 
+        @Query("DELETE FROM playlist WHERE id IN (:id)")
+        suspend fun removePlaylistById(id: Collection<YouTubePlaylist.Id>)
+
         @Query("DELETE FROM playlist")
         override suspend fun deleteTable()
     }
@@ -70,6 +73,9 @@ internal class YouTubePlaylistExpireTable(
                 "WHERE p.id = :id"
         )
         suspend fun findUpdatablePlaylistById(id: YouTubePlaylist.Id): YouTubePlaylistUpdatableDb?
+
+        @Query("DELETE FROM playlist_expire WHERE playlist_id IN (:id)")
+        suspend fun removePlaylistExpire(id: Collection<YouTubePlaylist.Id>)
 
         @Query("DELETE FROM playlist_expire")
         override suspend fun deleteTable()
@@ -115,6 +121,9 @@ internal class YouTubePlaylistItemTable(
         @Upsert
         suspend fun addPlaylistItems(items: Collection<YouTubePlaylistItemTable>)
 
+        @Query("SELECT video_id FROM playlist_item WHERE playlist_id IN (:ids)")
+        suspend fun findVideoIsByPlaylistId(ids: Collection<YouTubePlaylist.Id>): List<YouTubeVideo.Id>
+
         @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
         suspend fun removePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id)
 
@@ -141,7 +150,7 @@ class YouTubePlaylistItemAdditionTable(
     @ColumnInfo(name = "thumbnail_url") val thumbnailUrl: String,
     @ColumnInfo(name = "description") val description: String,
     @ColumnInfo(name = "video_owner_channel_id", defaultValue = "null")
-    val videoOwnerChannelId: YouTubeChannel.Id? = null
+    val videoOwnerChannelId: YouTubeChannel.Id? = null,
 ) {
     constructor(item: YouTubePlaylistItemDetail) : this(
         item.id,
@@ -187,6 +196,9 @@ internal class YouTubePlaylistWithItemsEtag(
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addPlaylistWithItemsEtag(etag: YouTubePlaylistWithItemsEtag)
+
+        @Query("DELETE FROM playlist_with_items_etag WHERE playlist_id IN (:id)")
+        suspend fun removePlaylistWithItemsEtag(id: Collection<YouTubePlaylist.Id>)
 
         @Query("DELETE FROM playlist_with_items_etag")
         override suspend fun deleteTable()
@@ -268,7 +280,7 @@ internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylis
     YouTubePlaylistWithItemIdsDb.Dao, YouTubePlaylistWithItemsEtag.Dao
 
 internal class YouTubePlaylistDaoImpl @Inject constructor(
-    private val db: YouTubePlaylistDaoProviders
+    private val db: YouTubePlaylistDaoProviders,
 ) : YouTubePlaylistDao, YouTubePlaylistTable.Dao by db.youTubePlaylistDao,
     YouTubePlaylistExpireTable.Dao by db.youTubePlaylistExpireDao,
     YouTubePlaylistItemTable.Dao by db.youTubePlaylistItemDao,

@@ -43,11 +43,14 @@ internal class YouTubeSubscriptionTable(
         @Upsert
         suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscriptionTable>)
 
-        @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
-        suspend fun removeSubscriptionsByRemainingIds(id: Collection<YouTubeSubscription.Id>)
+        @Query("SELECT id FROM subscription WHERE id NOT IN (:id)")
+        suspend fun findSubscriptionsByRemainingIds(id: Collection<YouTubeSubscription.Id>): List<YouTubeSubscription.Id>
 
         @Query("SELECT id FROM subscription")
         suspend fun fetchAllSubscriptionIds(): List<YouTubeSubscription.Id>
+
+        @Query("DELETE FROM subscription WHERE id IN (:id)")
+        suspend fun removeSubscriptions(id: Collection<YouTubeSubscription.Id>)
 
         @Query("DELETE FROM subscription")
         override suspend fun deleteTable()
@@ -98,8 +101,8 @@ internal class YouTubeSubscriptionRelevanceOrderTable(
         @Upsert
         suspend fun addSubscriptionRelevanceOrders(order: Collection<YouTubeSubscriptionRelevanceOrderTable>)
 
-        @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
-        suspend fun removeSubscriptionsRelevanceOrderedByRemainingIds(id: Collection<YouTubeSubscription.Id>)
+        @Query("DELETE FROM subscription_relevance_order WHERE subscription_id IN (:id)")
+        suspend fun removeSubscriptionsRelevanceOrdered(id: Collection<YouTubeSubscription.Id>)
 
         @Query("DELETE FROM subscription_relevance_order")
         override suspend fun deleteTable()
