@@ -3,9 +3,6 @@ package com.freshdigitable.yttt.data.source.local.db
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
-import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
-import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -31,35 +28,13 @@ internal class YouTubeDao @Inject constructor(
     suspend fun addSubscriptions(
         subscriptions: Collection<YouTubeSubscription>,
     ) = db.withTransaction {
-        val channels = subscriptions.map { it.channel }.toSet()
-            .map { it.toDbEntity() }
-        addChannels(channels)
+        addChannelEntities(subscriptions.map { it.channel })
         addSubscriptionEntities(subscriptions.map { it.toDbEntity() })
         val orders = subscriptions.filterIsInstance<YouTubeSubscriptionRelevanceOrdered>()
             .map { YouTubeSubscriptionRelevanceOrderTable(it.id, it.order) }
         if (orders.isNotEmpty()) {
             addSubscriptionRelevanceOrders(orders)
         }
-    }
-
-    suspend fun addChannelLogs(logs: Collection<YouTubeChannelLog>) = db.withTransaction {
-        val channels = logs.map { it.channelId }.distinct()
-            .filter { findChannel(it) == null }
-            .map { YouTubeChannelTable(id = it) }
-        val vIds = logs.filter { it.videoId != null }.associateBy { it.videoId }
-        val found = findVideosById(vIds.keys.filterNotNull()).map { it.item.id }.toSet()
-        val needed = vIds.keys.filterNotNull() - found
-        val videos = needed.mapNotNull { vIds[it] }
-            .map {
-                YouTubeVideoTable(
-                    id = checkNotNull(it.videoId),
-                    channelId = it.channelId,
-                    thumbnailUrl = it.thumbnailUrl,
-                )
-            }
-        addChannels(channels)
-        addVideoEntities(videos)
-        addChannelLogEntities(logs.filter { it.videoId != null }.map { it.toDbEntity() })
     }
 
     suspend fun addVideos(
@@ -80,37 +55,14 @@ internal class YouTubeDao @Inject constructor(
         removeVideoEntities(videoIds)
     }
 
-    suspend fun addChannelDetails(
-        channelDetail: Collection<Updatable<YouTubeChannelDetail>>,
-    ) = db.withTransaction {
-        val channels = channelDetail.map { it.item.toDbEntity() }
-        val additions = channelDetail.map { it.item.toAddition() }
-        val expired = channelDetail
-            .map { YouTubeChannelAdditionExpireTable(it.item.id, it.cacheControl.toDb()) }
-        addChannels(channels)
-        addChannelRelatedPlaylistList(channelDetail.map { it.item })
-        addChannelAddition(additions)
-        addChannelAdditionExpire(expired)
-    }
-
     suspend fun addChannelRelatedPlaylistList(entities: Collection<YouTubeChannelRelatedPlaylist>) =
         db.withTransaction {
             val playlists = entities.mapNotNull { it.uploadedPlayList }
                 .distinct()
                 .map { YouTubePlaylistTable(it) }
             addPlaylists(playlists)
-            addChannelRelatedPlaylists(entities.mapNotNull { c ->
-                c.uploadedPlayList?.let { YouTubeChannelRelatedPlaylistTable(c.id, it) }
-            })
+            addChannelRelatedPlaylistEntities(entities)
         }
-
-    suspend fun removeChannelEntities(id: Set<YouTubeChannel.Id>) = db.withTransaction {
-        removeChannelLogsByChannelId(id)
-        removeChannelAdditionExpire(id)
-        removeChannelRelatedPlaylists(id)
-        removeChannelAddition(id)
-        removeChannels(id)
-    }
 
     suspend fun addFreeChatItems(
         ids: Collection<YouTubeVideo.Id>,
@@ -174,14 +126,6 @@ private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTube
     id = id, subscribeSince = subscribeSince, channelId = channel.id,
 )
 
-private fun YouTubeChannelLog.toDbEntity(): YouTubeChannelLogTable = YouTubeChannelLogTable(
-    id = id,
-    dateTime = dateTime,
-    videoId = checkNotNull(videoId),
-    channelId = channelId,
-    thumbnailUrl = thumbnailUrl,
-)
-
 private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
     id = id,
     title = title,
@@ -194,24 +138,6 @@ private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
     description = description,
     viewerCount = viewerCount,
     broadcastContent = liveBroadcastContent,
-)
-
-private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
-    YouTubeChannelAdditionTable(
-        id = id,
-        bannerUrl = bannerUrl,
-        description = description,
-        customUrl = customUrl,
-        isSubscriberHidden = isSubscriberHidden,
-        keywordsRaw = keywords.joinToString(","),
-        publishedAt = publishedAt,
-        subscriberCount = subscriberCount,
-        videoCount = videoCount,
-        viewsCount = viewsCount,
-    )
-
-internal fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
-    id = id, title = title, iconUrl = iconUrl,
 )
 
 private fun YouTubePlaylistWithItem<*>.toEntity(cacheControl: CacheControl): YouTubePlaylistExpireTable =

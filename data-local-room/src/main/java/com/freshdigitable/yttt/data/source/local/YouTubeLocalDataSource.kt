@@ -23,7 +23,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistUpdatableDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionEtagTable
@@ -102,7 +101,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>) {
-        dao.addChannelLogs(channelLogs)
+        dao.addChannelLogEntities(channelLogs)
     }
 
     override suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id> =
@@ -117,7 +116,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     }
 
     override suspend fun addChannelList(channel: Collection<YouTubeChannel>) {
-        dao.addChannels(channel.map { YouTubeChannelTable(it.id, it.title, it.iconUrl) })
+        dao.addChannelEntities(channel)
     }
 
     override suspend fun addChannelRelatedPlaylists(channel: List<YouTubeChannelRelatedPlaylist>) {
@@ -213,9 +212,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
     override suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> =
         ioScope.asResult { dao.findChannelDetail(ids) }
 
-    override suspend fun addChannelDetailList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>) {
-        dao.addChannelDetails(channelDetail)
-    }
+    override suspend fun addChannelDetailList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>) =
+        database.withTransaction {
+            dao.addChannelDetails(channelDetail)
+            dao.addChannelRelatedPlaylistList(channelDetail.map { it.item })
+        }
 
     private val channelSections = mutableMapOf<YouTubeChannel.Id, List<YouTubeChannelSection>>()
     override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> {

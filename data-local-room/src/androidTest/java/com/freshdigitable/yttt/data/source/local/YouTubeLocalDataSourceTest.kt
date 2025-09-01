@@ -5,6 +5,7 @@ import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -19,7 +20,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.liveFinished
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
-import com.freshdigitable.yttt.data.source.local.db.toDbEntity
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
@@ -70,8 +70,8 @@ class YouTubeLocalDataSourceTest {
                 YouTubeVideoEntity.archivedStream(),
             )
             val video = unfinished + inactive
-            val channels = video.map { it.item.channel.toDbEntity() }.distinctBy { it.id }
-            dao.addChannels(channels)
+            val channels = video.map { it.item.channel }.distinctBy { it.id }
+            dao.addChannelEntities(channels)
             // exercise
             dataSource.addVideo(video)
             // verify
@@ -106,8 +106,8 @@ class YouTubeLocalDataSourceTest {
 
         @Before
         fun setup() = rule.runWithLocalSource {
-            val channels = video.map { it.item.channel.toDbEntity() }.distinctBy { it.id }
-            dao.addChannels(channels)
+            val channels = video.map { it.item.channel }.distinctBy { it.id }
+            dao.addChannelEntities(channels)
             dataSource.addVideo(video)
         }
 
@@ -185,9 +185,8 @@ class YouTubeLocalDataSourceTest {
                     channel = channelTable(),
                 ),
             )
-            val channel = items.map { (it.channel as YouTubeChannel).toDbEntity() }
-                .distinctBy { it.id }
-            dao.addChannels(channel)
+            val channel = items.map { (it.channel as YouTubeChannel) }.distinctBy { it.id }
+            dao.addChannelEntities(channel)
             val updatable = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(playlistId),
                 items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
@@ -211,9 +210,8 @@ class YouTubeLocalDataSourceTest {
                     channel = channelTable(),
                 ),
             )
-            val channel = items.map { (it.channel as YouTubeChannel).toDbEntity() }
-                .distinctBy { it.id }
-            dao.addChannels(channel)
+            val channel = items.map { (it.channel as YouTubeChannel) }.distinctBy { it.id }
+            dao.addChannelEntities(channel)
             val updatable = YouTubePlaylistWithItem.newPlaylist(
                 playlist = playlist(playlistId),
                 items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
@@ -348,9 +346,8 @@ class YouTubeLocalDataSourceTest {
                 items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
             )
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
-            val channels = videos.map { it.item.channel.toDbEntity() }
-                .distinctBy { it.id }.toList()
-            dao.addChannels(channels)
+            val channels = videos.map { it.item.channel }.distinctBy { it.id }.toList()
+            dao.addChannelEntities(channels)
             dataSource.addVideo(videos)
         }
 
@@ -400,10 +397,7 @@ class YouTubeLocalDataSourceTest {
     }
 
     class WhenSubscriptionIsRemoved : Base() {
-        // 1. Prepare Channels (as domain models)
         private val allDomainChannels = (1..3).map { FakeYouTubeClient.channelDetail(it) }
-
-        // 2. Prepare and Add Subscriptions
         private val subscriptions = allDomainChannels.mapIndexed { i, ch ->
             object : YouTubeSubscriptionRelevanceOrdered,
                 YouTubeSubscription by FakeYouTubeClient.subscription("sub_${ch.id.value}}", ch) {
@@ -415,7 +409,6 @@ class YouTubeLocalDataSourceTest {
         fun setup() = rule.runWithLocalSource {
             dataSource.addPagedSubscription(subscriptions)
 
-            // 3. Prepare and Update ChannelDetails (to set uploadedPlayListId)
             val relatedPlaylists = allDomainChannels.map { ch ->
                 val uploadPlaylistId = YouTubePlaylist.Id("pl_${ch.id.value}")
                 object : YouTubeChannelRelatedPlaylist {
@@ -425,7 +418,6 @@ class YouTubeLocalDataSourceTest {
             }
             dataSource.addChannelRelatedPlaylists(relatedPlaylists)
 
-            // 4. Prepare Videos, PlaylistItems, and Playlists (as YouTubePlaylistWithItem)
             allDomainChannels.forEach { domainChannel ->
                 val videosForThisChannel = (1..3).map {
                     YouTubeVideoEntity.uploadedVideo(
@@ -433,8 +425,6 @@ class YouTubeLocalDataSourceTest {
                         channel = domainChannel,
                     )
                 }
-
-                // PlaylistItems for the upload playlist
                 val uploadPlaylistId = YouTubePlaylist.Id("pl_${domainChannel.id.value}")
                 val playlistItems = videosForThisChannel.mapIndexed { videoIndex, ytVideo ->
                     FakeYouTubeClient.playlistItemDetail(
@@ -444,8 +434,6 @@ class YouTubeLocalDataSourceTest {
                         videoId = ytVideo.item.id,
                     )
                 }
-
-                // Playlist domain model for the upload playlist
                 val playlistWithItems = YouTubePlaylistWithItem.newPlaylist(
                     playlist = playlist(uploadPlaylistId),
                     items = playlistItems.toUpdatable(),
@@ -489,6 +477,44 @@ class YouTubeLocalDataSourceTest {
             // exercise
             dataSource.cleanUpByRemainingSubscriptionIds(newSubs.toSet())
             // verify
+            dao.fetchAllSubscriptionIds().shouldContainExactly(newSubs)
+            dao.findSubscriptionSummaries(removed).shouldBeEmpty()
+            dao.findPlaylistWithItemIds(uploadedPlaylistId).shouldBeNull()
+            dao.findPlaylistItemByPlaylistId(uploadedPlaylistId).shouldBeEmpty()
+            dao.findPlaylistItemCacheControlByPlaylistId(uploadedPlaylistId).shouldBeNull()
+            val channelIds = setOf(removedSummary.channelId)
+            dao.findChannelRelatedPlaylists(channelIds).shouldBeEmpty()
+            dao.findChannelDetail(channelIds).shouldBeEmpty()
+            dao.findChannels(channelIds).shouldBeEmpty()
+            dao.findVideosById(items.map { it.videoId }).shouldBeEmpty()
+        }
+
+        @Test
+        fun hasLogs() = rule.runWithLocalSource {
+            // setup
+            val newSubs = subscriptions.take(2).map { it.id }
+            val removed = (subscriptions.map { it.id } - newSubs)
+            val removedSummary = dao.findSubscriptionSummaries(removed).first()
+            val uploadedPlaylistId = removedSummary.uploadedPlaylistId!!
+            val items = dao.findPlaylistItemByPlaylistId(uploadedPlaylistId).shouldHaveSize(3)
+            val videoId = dao.findVideoIdByPlaylistId(setOf(removedSummary.uploadedPlaylistId))
+            dataSource.addLiveChannelLogs(
+                listOf(
+                    object : YouTubeChannelLog {
+                        override val id: YouTubeChannelLog.Id get() = YouTubeChannelLog.Id("log1")
+                        override val dateTime: Instant get() = Instant.EPOCH
+                        override val videoId: YouTubeVideo.Id? get() = videoId.first()
+                        override val channelId: YouTubeChannel.Id get() = removedSummary.channelId
+                        override val thumbnailUrl: String get() = ""
+                        override val title: String get() = ""
+                        override val type: String get() = ""
+                    }
+                )
+            )
+            // exercise
+            dataSource.cleanUpByRemainingSubscriptionIds(newSubs.toSet())
+            // verify
+            dao.findChannelLogs(removedSummary.channelId).shouldBeEmpty()
             dao.fetchAllSubscriptionIds().shouldContainExactly(newSubs)
             dao.findSubscriptionSummaries(removed).shouldBeEmpty()
             dao.findPlaylistWithItemIds(uploadedPlaylistId).shouldBeNull()
