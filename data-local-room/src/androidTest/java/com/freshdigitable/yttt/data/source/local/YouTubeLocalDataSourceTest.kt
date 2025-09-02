@@ -154,6 +154,20 @@ class YouTubeLocalDataSourceTest {
             this.size shouldBe expected.size
             this.map { it.id }.shouldContainExactlyInAnyOrder(expected.map { it.id })
         }
+
+        private fun YouTubeDatabaseTestRule.queryVideoIsArchived(): List<YouTubeVideoIsArchivedTable> {
+            return query("select * from yt_video_is_archived") {
+                val videoIdIndex = it.getColumnIndex("video_id")
+                val isArchivedIndex = it.getColumnIndex("is_archived")
+                val res = ArrayList<YouTubeVideoIsArchivedTable>(it.count)
+                while (it.moveToNext()) {
+                    val id = it.getString(videoIdIndex)
+                    val isArchived = it.getInt(isArchivedIndex) == 1
+                    res.add(YouTubeVideoIsArchivedTable(YouTubeVideo.Id(id), isArchived))
+                }
+                res
+            }
+        }
     }
 
     class UpdatePlaylistWithItems : Base() {
@@ -380,20 +394,6 @@ class YouTubeLocalDataSourceTest {
             rule.queryVideoIsArchived().map { it.videoId }
                 .shouldContainExactlyInAnyOrder(live.item.id, archivedInPlaylist.item.id)
         }
-
-        private fun YouTubeDatabaseTestRule.queryVideoIsArchived(): List<YouTubeVideoIsArchivedTable> {
-            return query("select * from yt_video_is_archived") {
-                val videoIdIndex = it.getColumnIndex("video_id")
-                val isArchivedIndex = it.getColumnIndex("is_archived")
-                val res = ArrayList<YouTubeVideoIsArchivedTable>(it.count)
-                while (it.moveToNext()) {
-                    val id = it.getString(videoIdIndex)
-                    val isArchived = it.getInt(isArchivedIndex) == 1
-                    res.add(YouTubeVideoIsArchivedTable(YouTubeVideo.Id(id), isArchived))
-                }
-                res
-            }
-        }
     }
 
     class WhenSubscriptionIsRemoved : Base() {
@@ -525,6 +525,7 @@ class YouTubeLocalDataSourceTest {
             dao.findChannelDetail(channelIds).shouldBeEmpty()
             dao.findChannels(channelIds).shouldBeEmpty()
             dao.findVideosById(items.map { it.videoId }).shouldBeEmpty()
+            rule.queryVideoIsArchived().shouldBeEmpty()
         }
     }
 

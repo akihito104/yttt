@@ -26,7 +26,6 @@ import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistUpdatableDb
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionEtagTable
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
@@ -78,14 +77,14 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val removed = dao.findSubscriptionsByRemainingIds(subscriptions)
         val summaries = dao.findSubscriptionSummaries(removed)
         val uploadedPlaylistId = summaries.mapNotNull { it.uploadedPlaylistId }
-        val videoIds = dao.findVideoIsByPlaylistId(uploadedPlaylistId)
+        val videoIds = dao.findVideoIdByPlaylistId(uploadedPlaylistId)
         val channelIds = summaries.map { it.channelId }.toSet()
 
         uploadedPlaylistId.forEach { dao.removePlaylistItemEntitiesByPlaylistId(it) }
         dao.removePlaylistEntitiesByPlaylistId(uploadedPlaylistId)
         dao.removeSubscriptionsRelevanceOrdered(removed)
         dao.removeSubscriptions(removed)
-        removeVideo(videoIds.toSet())
+        removeVideo(videoIds.toSet(), false)
         dao.removeChannelEntities(channelIds)
     }
 
@@ -163,15 +162,15 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
-        dao.addFreeChatItems(ids, true, YouTubeVideo.MAX_AGE_FREE_CHAT)
+        dao.addFreeChatItemEntities(ids, true, YouTubeVideo.MAX_AGE_FREE_CHAT)
     }
 
     override suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>) {
-        dao.addFreeChatItems(ids, false, YouTubeVideo.MAX_AGE_DEFAULT)
+        dao.addFreeChatItemEntities(ids, false, YouTubeVideo.MAX_AGE_DEFAULT)
     }
 
     override suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>) =
-        ioScope.asResult { dao.addVideos(video) }.getOrThrow()
+        ioScope.asResult { dao.addVideoEntities(video) }.getOrThrow()
 
     override suspend fun cleanUp() {
         database.youTubeChannelLogDao.deleteTable()
@@ -191,17 +190,12 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
     }
 
-    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
-        val thumbs = dao.findThumbnailUrlByIds(ids)
-        fetchByIds(ids) { i ->
-            val items = i.map { YouTubeVideoIsArchivedTable(it, true) }
-            database.withTransaction {
-                addVideoIsArchivedEntities(items)
-                removeVideos(i)
-            }
-        }
-        removeImageByUrl(thumbs)
-    }.getOrThrow()
+    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>, isPreserved: Boolean): Unit =
+        ioScope.asResult {
+            val thumbs = dao.findThumbnailUrlByIds(ids)
+            fetchByIds(ids) { removeVideoEntities(it, isPreserved) }
+            removeImageByUrl(thumbs)
+        }.getOrThrow()
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> =
         ioScope.asResult { dao.findChannels(ids) }

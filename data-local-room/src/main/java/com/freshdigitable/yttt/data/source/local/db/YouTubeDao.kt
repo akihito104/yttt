@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.CacheControl
-import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -10,11 +9,8 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
-import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
-import java.time.Duration
 import javax.inject.Inject
 
 internal class YouTubeDao @Inject constructor(
@@ -37,24 +33,6 @@ internal class YouTubeDao @Inject constructor(
         }
     }
 
-    suspend fun addVideos(
-        videos: Collection<Updatable<YouTubeVideoExtended>>,
-    ) = db.withTransaction {
-        val v = videos.filter { it.item !is YouTubeVideoDb }
-        val entity = v.map { it.item.toDbEntity() }
-        val freeChat = v.map { FreeChatTable(it.item.id, it.item.isFreeChat) }
-        val expiring = v.map { YouTubeVideoExpireTable(it.item.id, it.cacheControl.toDb()) }
-        addVideoEntities(entity)
-        addFreeChatItemEntities(freeChat)
-        addLiveVideoExpire(expiring)
-    }
-
-    suspend fun removeVideos(videoIds: Collection<YouTubeVideo.Id>) = db.withTransaction {
-        removeFreeChatItems(videoIds)
-        removeLiveVideoExpire(videoIds)
-        removeVideoEntities(videoIds)
-    }
-
     suspend fun addChannelRelatedPlaylistList(entities: Collection<YouTubeChannelRelatedPlaylist>) =
         db.withTransaction {
             val playlists = entities.mapNotNull { it.uploadedPlayList }
@@ -63,16 +41,6 @@ internal class YouTubeDao @Inject constructor(
             addPlaylists(playlists)
             addChannelRelatedPlaylistEntities(entities)
         }
-
-    suspend fun addFreeChatItems(
-        ids: Collection<YouTubeVideo.Id>,
-        isFreeChat: Boolean,
-        maxAge: Duration,
-    ) = db.withTransaction {
-        val entities = ids.map { FreeChatTable(it, isFreeChat = isFreeChat) }
-        addFreeChatItemEntities(entities)
-        updateMaxAgeById(ids, maxAge)
-    }
 
     suspend fun updatePlaylistWithItems(
         item: YouTubePlaylistWithItem<*>,
@@ -124,20 +92,6 @@ internal class YouTubeDao @Inject constructor(
 
 private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTubeSubscriptionTable(
     id = id, subscribeSince = subscribeSince, channelId = channel.id,
-)
-
-private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
-    id = id,
-    title = title,
-    channelId = channel.id,
-    scheduledStartDateTime = scheduledStartDateTime,
-    scheduledEndDateTime = scheduledEndDateTime,
-    actualStartDateTime = actualStartDateTime,
-    actualEndDateTime = actualEndDateTime,
-    thumbnailUrl = thumbnailUrl,
-    description = description,
-    viewerCount = viewerCount,
-    broadcastContent = liveBroadcastContent,
 )
 
 private fun YouTubePlaylistWithItem<*>.toEntity(cacheControl: CacheControl): YouTubePlaylistExpireTable =

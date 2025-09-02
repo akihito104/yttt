@@ -62,9 +62,9 @@ class YouTubeVideoTablesTest {
                 )
             }
             dao.addChannels(listOf(channel))
-            dao.addVideoEntities(videos)
+            dao.addVideos(videos)
             dao.addLiveVideoExpire(expire)
-            dao.addFreeChatItemEntities(listOf(FreeChatTable(freechat, true)))
+            dao.addFreeChatItems(listOf(FreeChatTable(freechat, true)))
         }
 
         @Test
@@ -132,7 +132,7 @@ class YouTubeVideoTablesTest {
             dao.addChannels(listOf(YouTubeChannelTable(channelId)))
             val live = YouTubeVideo.Id("test_live")
             val upcoming = YouTubeVideo.Id("test_upcoming")
-            dao.addVideoEntities(
+            dao.addVideos(
                 listOf(
                     YouTubeVideoTable(
                         id = live,
