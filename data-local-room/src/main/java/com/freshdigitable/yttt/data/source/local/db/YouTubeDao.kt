@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.data.source.local.db
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import javax.inject.Inject
@@ -16,16 +15,11 @@ internal class YouTubeDao @Inject constructor(
     private val channelDao: YouTubeChannelDaoImpl,
 ) : YouTubeVideoDao by videoDao, YouTubePlaylistDao by playlistDao,
     YouTubeSubscriptionDao by subscriptionDao, YouTubeChannelDao by channelDao {
-    suspend fun addSubscriptions(
+    suspend fun addSubscriptionList(
         subscriptions: Collection<YouTubeSubscription>,
     ) = db.withTransaction {
         addChannelEntities(subscriptions.map { it.channel })
-        addSubscriptionEntities(subscriptions.map { it.toDbEntity() })
-        val orders = subscriptions.filterIsInstance<YouTubeSubscriptionRelevanceOrdered>()
-            .map { YouTubeSubscriptionRelevanceOrderTable(it.id, it.order) }
-        if (orders.isNotEmpty()) {
-            addSubscriptionRelevanceOrders(orders)
-        }
+        addSubscriptionEntities(subscriptions)
     }
 
     suspend fun addChannelRelatedPlaylistList(entities: Collection<YouTubeChannelRelatedPlaylist>) =
@@ -39,10 +33,6 @@ internal class YouTubeDao @Inject constructor(
         listOf(videoDao, channelDao, subscriptionDao, playlistDao).forEach { it.deleteTable() }
     }
 }
-
-private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable = YouTubeSubscriptionTable(
-    id = id, subscribeSince = subscribeSince, channelId = channel.id,
-)
 
 internal interface YouTubeDaoProviders : YouTubeChannelDaoProviders, YouTubeVideoDaoProviders,
     YouTubePlaylistDaoProviders, YouTubeSubscriptionDaoProviders, YouTubePageSourceDaoProviders

@@ -8,12 +8,14 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
 import javax.inject.Inject
@@ -41,7 +43,7 @@ internal class YouTubeSubscriptionTable(
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscriptionTable>)
+        suspend fun addSubscriptions(subscriptions: Collection<YouTubeSubscriptionTable>)
 
         @Query("SELECT id FROM subscription WHERE id NOT IN (:id)")
         suspend fun findSubscriptionsByRemainingIds(id: Collection<YouTubeSubscription.Id>): List<YouTubeSubscription.Id>
@@ -179,20 +181,63 @@ internal interface YouTubeSubscriptionDaoProviders {
 
 internal interface YouTubeSubscriptionDao : YouTubeSubscriptionTable.Dao,
     YouTubeSubscriptionDb.Dao, YouTubeSubscriptionEtagTable.Dao,
-    YouTubeSubscriptionRelevanceOrderTable.Dao, YouTubeSubscriptionSummaryDb.Dao
+    YouTubeSubscriptionRelevanceOrderTable.Dao, YouTubeSubscriptionSummaryDb.Dao {
+    suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscription>)
+    suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String)
+    suspend fun findRemovedSubscriptionSummariesByRemainingIds(id: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummaryDb>
+    suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>)
+}
 
 internal class YouTubeSubscriptionDaoImpl @Inject constructor(
-    private val db: YouTubeSubscriptionDaoProviders,
+    private val db: AppDatabase,
 ) : YouTubeSubscriptionDao, YouTubeSubscriptionTable.Dao by db.youTubeSubscriptionDao,
     YouTubeSubscriptionDb.Dao by db.youTubeSubscriptionDbDao,
     YouTubeSubscriptionEtagTable.Dao by db.youTubeSubscriptionEtagDao,
     YouTubeSubscriptionRelevanceOrderTable.Dao by db.youTubeSubscriptionRelevanceOrderDao,
     YouTubeSubscriptionSummaryDb.Dao by db.youTubeSubscriptionSummaryDbDao {
+    override suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscription>) =
+        db.withTransaction {
+            addSubscriptions(subscriptions.map { it.toDbEntity() })
+            val orders = subscriptions.filterIsInstance<YouTubeSubscriptionRelevanceOrdered>()
+                .map { YouTubeSubscriptionRelevanceOrderTable(it.id, it.order) }
+            if (orders.isNotEmpty()) {
+                addSubscriptionRelevanceOrders(orders)
+            }
+        }
+
+    override suspend fun addSubscriptionEtag(
+        offset: Int,
+        nextPageToken: String?,
+        eTag: String,
+    ) {
+        addSubscriptionEtag(YouTubeSubscriptionEtagTable(offset, nextPageToken, eTag))
+    }
+
+    override suspend fun findRemovedSubscriptionSummariesByRemainingIds(
+        id: Collection<YouTubeSubscription.Id>,
+    ): List<YouTubeSubscriptionSummaryDb> = db.withTransaction {
+        val removed = findSubscriptionsByRemainingIds(id)
+        findSubscriptionSummaries(removed)
+    }
+
+    override suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>) =
+        db.withTransaction {
+            removeSubscriptionsRelevanceOrdered(id)
+            removeSubscriptions(id)
+        }
+
     override suspend fun deleteTable() {
         listOf(
             db.youTubeSubscriptionDao,
             db.youTubeSubscriptionEtagDao,
             db.youTubeSubscriptionRelevanceOrderDao,
         ).forEach { it.deleteTable() }
+    }
+
+    companion object {
+        private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable =
+            YouTubeSubscriptionTable(
+                id = id, subscribeSince = subscribeSince, channelId = channel.id,
+            )
     }
 }
