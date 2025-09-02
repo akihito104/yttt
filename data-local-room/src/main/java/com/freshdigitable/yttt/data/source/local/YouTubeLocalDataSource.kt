@@ -80,8 +80,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val videoIds = dao.findVideoIdByPlaylistId(uploadedPlaylistId)
         val channelIds = summaries.map { it.channelId }.toSet()
 
-        uploadedPlaylistId.forEach { dao.removePlaylistItemEntitiesByPlaylistId(it) }
-        dao.removePlaylistEntitiesByPlaylistId(uploadedPlaylistId)
+        dao.removePlaylistWithItemsEntitiesByPlaylistId(uploadedPlaylistId)
         dao.removeSubscriptionsRelevanceOrdered(removed)
         dao.removeSubscriptions(removed)
         removeVideo(videoIds.toSet(), false)
@@ -127,11 +126,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         maxResult: Long,
         cache: YouTubePlaylistWithItem<*>?,
     ): Result<Updatable<YouTubePlaylistWithItemDetails>?> = ioScope.asResult {
-        database.withTransaction {
-            val playlist = dao.findUpdatablePlaylistById(id) ?: return@withTransaction null
-            val items = dao.findPlaylistItemByPlaylistId(id)
-            YouTubePlaylistWithItem.fromCache(playlist, items)
-        }
+        dao.findPlaylistWithItemDetails(id, maxResult, cache)
     }
 
     override suspend fun fetchPlaylistWithItems(

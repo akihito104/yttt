@@ -9,13 +9,19 @@ import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Upsert
+import androidx.room.withTransaction
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
 import javax.inject.Inject
@@ -122,7 +128,7 @@ internal class YouTubePlaylistItemTable(
         suspend fun addPlaylistItems(items: Collection<YouTubePlaylistItemTable>)
 
         @Query("SELECT video_id FROM playlist_item WHERE playlist_id IN (:ids)")
-        suspend fun findVideoIsByPlaylistId(ids: Collection<YouTubePlaylist.Id>): List<YouTubeVideo.Id>
+        suspend fun findVideoIdByPlaylistId(ids: Collection<YouTubePlaylist.Id>): List<YouTubeVideo.Id>
 
         @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
         suspend fun removePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id)
@@ -258,9 +264,6 @@ internal data class YouTubePlaylistItemDetailDb(
                 "WHERE p.playlist_id = :id"
         )
         suspend fun findPlaylistItemByPlaylistId(id: YouTubePlaylist.Id): List<YouTubePlaylistItemDetailDb>
-
-        @Query("SELECT p.fetched_at AS fetched_at, p.max_age AS max_age FROM playlist_expire AS p WHERE p.playlist_id = :id")
-        suspend fun findPlaylistItemCacheControlByPlaylistId(id: YouTubePlaylist.Id): CacheControlDb?
     }
 }
 
@@ -274,13 +277,32 @@ internal interface YouTubePlaylistDaoProviders {
     val youTubePlaylistWithItemsEtagDao: YouTubePlaylistWithItemsEtag.Dao
 }
 
-internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistExpireTable.Dao,
-    YouTubePlaylistItemTable.Dao, YouTubePlaylistItemDetailDb.Dao,
-    YouTubePlaylistItemAdditionTable.Dao,
-    YouTubePlaylistWithItemIdsDb.Dao, YouTubePlaylistWithItemsEtag.Dao
+internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylistItemTable.Dao,
+    YouTubePlaylistItemDetailDb.Dao, YouTubePlaylistWithItemIdsDb.Dao {
+    suspend fun addPlaylistEntities(playlistId: Collection<YouTubePlaylist.Id>)
+    suspend fun findPlaylistWithItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        cache: YouTubePlaylistWithItem<*>?,
+    ): Updatable<YouTubePlaylistWithItemDetails>?
+
+    suspend fun updatePlaylistWithItems(
+        item: YouTubePlaylistWithItem<*>,
+        cacheControl: CacheControl,
+    )
+
+    suspend fun updatePlaylistWithItemsCacheControl(
+        item: YouTubePlaylistWithItem<*>,
+        cacheControl: CacheControl,
+    )
+
+    suspend fun removePlaylistWithItemsEntitiesByPlaylistId(ids: Collection<YouTubePlaylist.Id>)
+    suspend fun removePlaylistItemEntitiesByPlaylistId(id: YouTubePlaylist.Id)
+    suspend fun removePlaylistEntitiesByPlaylistId(id: Collection<YouTubePlaylist.Id>)
+}
 
 internal class YouTubePlaylistDaoImpl @Inject constructor(
-    private val db: YouTubePlaylistDaoProviders,
+    private val db: AppDatabase,
 ) : YouTubePlaylistDao, YouTubePlaylistTable.Dao by db.youTubePlaylistDao,
     YouTubePlaylistExpireTable.Dao by db.youTubePlaylistExpireDao,
     YouTubePlaylistItemTable.Dao by db.youTubePlaylistItemDao,
@@ -288,6 +310,70 @@ internal class YouTubePlaylistDaoImpl @Inject constructor(
     YouTubePlaylistItemDetailDb.Dao by db.youTubePlaylistItemDbDao,
     YouTubePlaylistWithItemIdsDb.Dao by db.youTubePlaylistWithItemIdsDao,
     YouTubePlaylistWithItemsEtag.Dao by db.youTubePlaylistWithItemsEtagDao {
+    override suspend fun addPlaylistEntities(playlistId: Collection<YouTubePlaylist.Id>) {
+        addPlaylists(playlistId.toSet().map { YouTubePlaylistTable(it) })
+    }
+
+    override suspend fun findPlaylistWithItemDetails(
+        id: YouTubePlaylist.Id,
+        maxResult: Long,
+        cache: YouTubePlaylistWithItem<*>?,
+    ): Updatable<YouTubePlaylistWithItemDetails>? = db.withTransaction {
+        val playlist = findUpdatablePlaylistById(id) ?: return@withTransaction null
+        val items = findPlaylistItemByPlaylistId(id)
+        YouTubePlaylistWithItem.fromCache(playlist, items)
+    }
+
+    override suspend fun updatePlaylistWithItems(
+        item: YouTubePlaylistWithItem<*>,
+        cacheControl: CacheControl,
+    ) = db.withTransaction {
+        val p = item.playlist
+        if (p !is YouTubePlaylistTable) {
+            addPlaylist(YouTubePlaylistTable(p.id, p.title, p.thumbnailUrl))
+        }
+        addPlaylistExpire(item.toEntity(cacheControl))
+        item.eTag?.let {
+            addPlaylistWithItemsEtag(YouTubePlaylistWithItemsEtag(p.id, it))
+        }
+        if (item.items.any { it !is YouTubePlaylistItemDetailDb }) {
+            removePlaylistItemEntitiesByPlaylistId(p.id)
+            if (item.items.isNotEmpty()) {
+                addPlaylistItems(item.items.map { it.toDbEntity() })
+                addPlaylistItemAdditions(
+                    item.items.filterIsInstance<YouTubePlaylistItemDetail>()
+                        .map { YouTubePlaylistItemAdditionTable(it) }
+                )
+            }
+        }
+    }
+
+    override suspend fun updatePlaylistWithItemsCacheControl(
+        item: YouTubePlaylistWithItem<*>,
+        cacheControl: CacheControl,
+    ) {
+        addPlaylistExpire(item.toEntity(cacheControl))
+    }
+
+    override suspend fun removePlaylistWithItemsEntitiesByPlaylistId(ids: Collection<YouTubePlaylist.Id>) =
+        db.withTransaction {
+            ids.forEach { removePlaylistItemEntitiesByPlaylistId(it) }
+            removePlaylistEntitiesByPlaylistId(ids)
+        }
+
+    override suspend fun removePlaylistItemEntitiesByPlaylistId(id: YouTubePlaylist.Id) =
+        db.withTransaction {
+            removePlaylistItemAdditionsByPlaylistId(id)
+            removePlaylistItemsByPlaylistId(id)
+        }
+
+    override suspend fun removePlaylistEntitiesByPlaylistId(id: Collection<YouTubePlaylist.Id>) =
+        db.withTransaction {
+            removePlaylistExpire(id)
+            removePlaylistWithItemsEtag(id)
+            removePlaylistById(id)
+        }
+
     override suspend fun deleteTable() {
         listOf(
             db.youTubePlaylistDao,
@@ -297,4 +383,29 @@ internal class YouTubePlaylistDaoImpl @Inject constructor(
             db.youTubePlaylistWithItemsEtagDao,
         ).forEach { it.deleteTable() }
     }
+
+    companion object {
+        private fun YouTubePlaylistWithItem<*>.toEntity(cacheControl: CacheControl): YouTubePlaylistExpireTable =
+            YouTubePlaylistExpireTable(
+                id = playlist.id,
+                cacheControl = cacheControl.toDb(),
+            )
+
+        private fun YouTubePlaylistItem.toDbEntity(): YouTubePlaylistItemTable =
+            YouTubePlaylistItemTable(this)
+
+        private fun YouTubePlaylistWithItem.Companion.fromCache(
+            playlist: YouTubePlaylistUpdatableDb,
+            items: List<YouTubePlaylistItemDetail>,
+        ): Updatable<YouTubePlaylistWithItemDetails> =
+            PlaylistAndItemsLocal(playlist, items).toUpdatable(playlist.cacheControl)
+    }
+}
+
+private class PlaylistAndItemsLocal(
+    private val _playlist: YouTubePlaylistUpdatableDb,
+    override val items: List<YouTubePlaylistItemDetail>,
+) : YouTubePlaylistWithItemDetails {
+    override val playlist: YouTubePlaylist get() = _playlist.item
+    override val eTag: String? get() = _playlist.eTag
 }
