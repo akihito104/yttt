@@ -127,9 +127,6 @@ internal class YouTubePlaylistItemTable(
         @Upsert
         suspend fun addPlaylistItems(items: Collection<YouTubePlaylistItemTable>)
 
-        @Query("SELECT video_id FROM playlist_item WHERE playlist_id IN (:ids)")
-        suspend fun findVideoIdByPlaylistId(ids: Collection<YouTubePlaylist.Id>): List<YouTubeVideo.Id>
-
         @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
         suspend fun removePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id)
 
