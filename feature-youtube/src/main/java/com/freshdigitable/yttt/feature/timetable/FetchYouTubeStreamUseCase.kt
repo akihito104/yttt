@@ -90,13 +90,12 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                             }
                     }.toList().awaitAll()
                 if (task.any { it.isFailure }) {
-                    task.first { it.isFailure }.map { }
+                    task.first { it.isFailure }.map { {} }
                 } else {
-                    Result.success(Unit)
+                    Result.success { liveRepository.cleanUp() }
                 }
             }.onFailure { return Result.failure(it) }
 
-            liveRepository.cleanUp()
             trace = null
         }
         return Result.success(Unit)
@@ -111,7 +110,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun fetchUploadedPlaylists(
         coroutineScope: CoroutineScope,
         videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>,
-    ): Result<Unit> = liveRepository.fetchAllSubscription(dateTimeProvider.now())
+    ): Result<DeferredTask> = liveRepository.fetchAllSubscription(dateTimeProvider.now())
         .fold(PlaylistUpdateTaskCache()) { acc, value ->
             val summary = value.onFailure { return@fold acc.apply { failureResults.add(it) } }
                 .getOrNull()?.item ?: throw AssertionError()
@@ -149,9 +148,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             acc.update(summary.map { it.subscriptionId }, tasks, job)
         }.join()
         .onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
-        .onSuccess {
-            liveRepository.cleanUpByRemainingSubscriptionIds(it.ids.toSet())
-        }.map { }
+        .map {
+            { liveRepository.cleanUpByRemainingSubscriptionIds(it.ids.toSet()) }
+        }
 
     private suspend fun updateSummary(
         summary: Collection<YouTubeSubscriptionSummary>,
@@ -182,24 +181,29 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
     private suspend inline fun fetchAsync(
         crossinline updateCurrentVideoItemsTask: suspend (SendChannel<List<YouTubeVideo.Id>>) -> Unit,
-        crossinline updateFromPlaylistTask: suspend (CoroutineScope, SendChannel<List<YouTubeVideo.Id>>) -> Result<Unit>,
-        crossinline fetchVideoItemsTask: suspend (CoroutineScope, ReceiveChannel<List<YouTubeVideo.Id>>) -> Result<Unit>,
+        crossinline updateFromPlaylistTask: suspend (CoroutineScope, SendChannel<List<YouTubeVideo.Id>>) -> Result<DeferredTask>,
+        crossinline fetchVideoItemsTask: suspend (CoroutineScope, ReceiveChannel<List<YouTubeVideo.Id>>) -> Result<DeferredTask>,
     ): Result<Unit> = coroutineScope {
         val videoUpdateTaskChannel = Channel<List<YouTubeVideo.Id>>(Channel.BUFFERED)
-        val t = async { fetchVideoItemsTask(this, videoUpdateTaskChannel) }
+        val fetchVideo = async { fetchVideoItemsTask(this, videoUpdateTaskChannel) }
         val tasks = listOf(
             async { Result.success(updateCurrentVideoItemsTask(videoUpdateTaskChannel)) },
-            async { updateFromPlaylistTask(this, videoUpdateTaskChannel) },
+            async { updateFromPlaylistTask(this, videoUpdateTaskChannel) }
         ).awaitAll()
         videoUpdateTaskChannel.close()
-        val res = tasks + t.await()
+        val fetchVideoRes = fetchVideo.await()
+        val res = tasks + fetchVideoRes
+        fetchVideoRes.onSuccess { it() }
+        @Suppress("UNCHECKED_CAST")
+        (tasks[1] as Result<DeferredTask>).onSuccess { it() }
         if (res.any { it.isFailure }) {
             res.first { it.isFailure }
         } else {
             Result.success(Unit)
-        }
+        }.map { }
     }
 }
+typealias DeferredTask = suspend () -> Unit
 
 private class PlaylistUpdateTaskCache {
     private val updateTasks = mutableSetOf<Deferred<Result<*>>>()
