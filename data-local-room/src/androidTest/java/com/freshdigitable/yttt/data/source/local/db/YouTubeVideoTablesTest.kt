@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -61,9 +62,9 @@ class YouTubeVideoTablesTest {
                 )
             }
             dao.addChannels(listOf(channel))
-            dao.addVideoEntities(videos)
+            dao.addVideos(videos)
             dao.addLiveVideoExpire(expire)
-            dao.addFreeChatItemEntities(listOf(FreeChatTable(freechat, true)))
+            dao.addFreeChatItems(listOf(FreeChatTable(freechat, true)))
         }
 
         @Test
@@ -131,7 +132,7 @@ class YouTubeVideoTablesTest {
             dao.addChannels(listOf(YouTubeChannelTable(channelId)))
             val live = YouTubeVideo.Id("test_live")
             val upcoming = YouTubeVideo.Id("test_upcoming")
-            dao.addVideoEntities(
+            dao.addVideos(
                 listOf(
                     YouTubeVideoTable(
                         id = live,

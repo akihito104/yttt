@@ -8,10 +8,12 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
@@ -58,7 +60,7 @@ internal class YouTubeVideoTable(
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addVideoEntities(videos: Collection<YouTubeVideoTable>)
+        suspend fun addVideos(videos: Collection<YouTubeVideoTable>)
 
         @Query(
             "SELECT id FROM (SELECT id FROM video WHERE broadcast_content IS 'none') AS v " +
@@ -70,8 +72,11 @@ internal class YouTubeVideoTable(
         @Query("SELECT thumbnail FROM video WHERE id IN (:ids)")
         suspend fun findThumbnailUrlByIds(ids: Collection<YouTubeVideo.Id>): List<String>
 
+        @Query("SELECT id FROM video WHERE channel_id IN (:channelIds)")
+        suspend fun findVideoIdsByChannelId(channelIds: Collection<YouTubeChannel.Id>): List<YouTubeVideo.Id>
+
         @Query("DELETE FROM video WHERE id IN (:videoIds)")
-        suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
+        suspend fun removeVideos(videoIds: Collection<YouTubeVideo.Id>)
 
         @Query("SELECT id FROM video WHERE broadcast_content = 'none'")
         suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
@@ -170,7 +175,7 @@ internal class FreeChatTable(
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addFreeChatItemEntities(entities: Collection<FreeChatTable>)
+        suspend fun addFreeChatItems(entities: Collection<FreeChatTable>)
 
         @Query("SELECT * FROM free_chat WHERE video_id IN (:ids)")
         suspend fun findFreeChatItems(ids: Collection<YouTubeVideo.Id>): List<FreeChatTable>
@@ -253,19 +258,82 @@ internal interface YouTubeVideoDaoProviders {
 }
 
 internal interface YouTubeVideoDao : YouTubeVideoTable.Dao, YouTubeVideoDb.Dao,
-    YouTubeVideoExpireTable.Dao, YouTubeVideoIsArchivedTable.Dao, FreeChatTable.Dao
+    YouTubeVideoExpireTable.Dao, YouTubeVideoIsArchivedTable.Dao, FreeChatTable.Dao {
+    suspend fun addVideoEntities(videos: Collection<Updatable<YouTubeVideoExtended>>)
+    suspend fun removeVideoEntities(
+        videoIds: Collection<YouTubeVideo.Id>,
+        isPreserved: Boolean = true,
+    )
+
+    suspend fun addFreeChatItemEntities(
+        ids: Collection<YouTubeVideo.Id>,
+        isFreeChat: Boolean,
+        maxAge: Duration,
+    )
+}
 
 internal class YouTubeVideoDaoImpl @Inject constructor(
-    private val db: YouTubeVideoDaoProviders
+    private val db: AppDatabase,
 ) : YouTubeVideoDao, YouTubeVideoTable.Dao by db.youTubeVideoDao,
     YouTubeVideoDb.Dao by db.youtubeVideoDbDao,
     YouTubeVideoExpireTable.Dao by db.youTubeVideoExpireDao,
     YouTubeVideoIsArchivedTable.Dao by db.youTubeVideoIsArchivedDao,
     FreeChatTable.Dao by db.youTubeFreeChatDao {
+    override suspend fun addVideoEntities(
+        videos: Collection<Updatable<YouTubeVideoExtended>>,
+    ) = db.withTransaction {
+        val v = videos.filter { it.item !is YouTubeVideoDb }
+        val entity = v.map { it.item.toDbEntity() }
+        val freeChat = v.map { FreeChatTable(it.item.id, it.item.isFreeChat) }
+        val expiring = v.map { YouTubeVideoExpireTable(it.item.id, it.cacheControl.toDb()) }
+        addVideos(entity)
+        addFreeChatItems(freeChat)
+        addLiveVideoExpire(expiring)
+    }
+
+    override suspend fun removeVideoEntities(
+        videoIds: Collection<YouTubeVideo.Id>,
+        isPreserved: Boolean,
+    ) = db.withTransaction {
+        if (isPreserved) {
+            val items = videoIds.map { YouTubeVideoIsArchivedTable(it, true) }
+            addVideoIsArchivedEntities(items)
+        }
+        removeFreeChatItems(videoIds)
+        removeLiveVideoExpire(videoIds)
+        removeVideos(videoIds)
+    }
+
+    override suspend fun addFreeChatItemEntities(
+        ids: Collection<YouTubeVideo.Id>,
+        isFreeChat: Boolean,
+        maxAge: Duration,
+    ) = db.withTransaction {
+        val entities = ids.map { FreeChatTable(it, isFreeChat = isFreeChat) }
+        addFreeChatItems(entities)
+        updateMaxAgeById(ids, maxAge)
+    }
+
     override suspend fun deleteTable() {
         listOf(
             db.youTubeVideoDao, db.youTubeVideoIsArchivedDao,
             db.youTubeVideoExpireDao, db.youTubeFreeChatDao
         ).forEach { it.deleteTable() }
+    }
+
+    companion object {
+        private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
+            id = id,
+            title = title,
+            channelId = channel.id,
+            scheduledStartDateTime = scheduledStartDateTime,
+            scheduledEndDateTime = scheduledEndDateTime,
+            actualStartDateTime = actualStartDateTime,
+            actualEndDateTime = actualEndDateTime,
+            thumbnailUrl = thumbnailUrl,
+            description = description,
+            viewerCount = viewerCount,
+            broadcastContent = liveBroadcastContent,
+        )
     }
 }

@@ -8,12 +8,14 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
 import javax.inject.Inject
@@ -41,13 +43,16 @@ internal class YouTubeSubscriptionTable(
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscriptionTable>)
+        suspend fun addSubscriptions(subscriptions: Collection<YouTubeSubscriptionTable>)
 
-        @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
-        suspend fun removeSubscriptionsByRemainingIds(id: Collection<YouTubeSubscription.Id>)
+        @Query("SELECT id FROM subscription WHERE id NOT IN (:id)")
+        suspend fun findSubscriptionIdsByRemainingIds(id: Collection<YouTubeSubscription.Id>): List<YouTubeSubscription.Id>
 
         @Query("SELECT id FROM subscription")
         suspend fun fetchAllSubscriptionIds(): List<YouTubeSubscription.Id>
+
+        @Query("DELETE FROM subscription WHERE id IN (:id)")
+        suspend fun removeSubscriptions(id: Collection<YouTubeSubscription.Id>)
 
         @Query("DELETE FROM subscription")
         override suspend fun deleteTable()
@@ -66,7 +71,7 @@ internal data class YouTubeSubscriptionEtagTable(
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addSubscriptionEtag(etag: YouTubeSubscriptionEtagTable)
+        suspend fun addSubscriptionEtag(etag: List<YouTubeSubscriptionEtagTable>)
 
         @Query("SELECT * FROM subscription_alphabetical_order_etag AS e WHERE `offset` = :offset")
         suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionEtagTable?
@@ -98,8 +103,8 @@ internal class YouTubeSubscriptionRelevanceOrderTable(
         @Upsert
         suspend fun addSubscriptionRelevanceOrders(order: Collection<YouTubeSubscriptionRelevanceOrderTable>)
 
-        @Query("DELETE FROM subscription WHERE id NOT IN (:id)")
-        suspend fun removeSubscriptionsRelevanceOrderedByRemainingIds(id: Collection<YouTubeSubscription.Id>)
+        @Query("DELETE FROM subscription_relevance_order WHERE subscription_id IN (:id)")
+        suspend fun removeSubscriptionsRelevanceOrdered(id: Collection<YouTubeSubscription.Id>)
 
         @Query("DELETE FROM subscription_relevance_order")
         override suspend fun deleteTable()
@@ -176,20 +181,55 @@ internal interface YouTubeSubscriptionDaoProviders {
 
 internal interface YouTubeSubscriptionDao : YouTubeSubscriptionTable.Dao,
     YouTubeSubscriptionDb.Dao, YouTubeSubscriptionEtagTable.Dao,
-    YouTubeSubscriptionRelevanceOrderTable.Dao, YouTubeSubscriptionSummaryDb.Dao
+    YouTubeSubscriptionRelevanceOrderTable.Dao, YouTubeSubscriptionSummaryDb.Dao {
+    suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscription>)
+    suspend fun addSubscriptionQuery(query: Collection<YouTubeSubscriptionQuery>)
+    suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>)
+}
 
 internal class YouTubeSubscriptionDaoImpl @Inject constructor(
-    private val db: YouTubeSubscriptionDaoProviders,
+    private val db: AppDatabase,
 ) : YouTubeSubscriptionDao, YouTubeSubscriptionTable.Dao by db.youTubeSubscriptionDao,
     YouTubeSubscriptionDb.Dao by db.youTubeSubscriptionDbDao,
     YouTubeSubscriptionEtagTable.Dao by db.youTubeSubscriptionEtagDao,
     YouTubeSubscriptionRelevanceOrderTable.Dao by db.youTubeSubscriptionRelevanceOrderDao,
     YouTubeSubscriptionSummaryDb.Dao by db.youTubeSubscriptionSummaryDbDao {
-    override suspend fun deleteTable() {
+    override suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscription>) =
+        db.withTransaction {
+            addSubscriptions(subscriptions.map { it.toDbEntity() })
+            val orders = subscriptions.filterIsInstance<YouTubeSubscriptionRelevanceOrdered>()
+                .map { YouTubeSubscriptionRelevanceOrderTable(it.id, it.order) }
+            if (orders.isNotEmpty()) {
+                addSubscriptionRelevanceOrders(orders)
+            }
+        }
+
+    override suspend fun addSubscriptionQuery(query: Collection<YouTubeSubscriptionQuery>) {
+        check(query.all { it.order == YouTubeSubscriptionQuery.Order.ALPHABETICAL })
+        val t = query.map {
+            YouTubeSubscriptionEtagTable(it.offset, it.nextPageToken, checkNotNull(it.eTag))
+        }
+        db.withTransaction { addSubscriptionEtag(t) }
+    }
+
+    override suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>) =
+        db.withTransaction {
+            removeSubscriptionsRelevanceOrdered(id)
+            removeSubscriptions(id)
+        }
+
+    override suspend fun deleteTable() = db.withTransaction {
         listOf(
             db.youTubeSubscriptionDao,
             db.youTubeSubscriptionEtagDao,
             db.youTubeSubscriptionRelevanceOrderDao,
         ).forEach { it.deleteTable() }
+    }
+
+    companion object {
+        private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable =
+            YouTubeSubscriptionTable(
+                id = id, subscribeSince = subscribeSince, channelId = channel.id,
+            )
     }
 }

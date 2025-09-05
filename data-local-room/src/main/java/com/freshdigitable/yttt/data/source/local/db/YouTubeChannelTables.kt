@@ -9,6 +9,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelAddition
@@ -18,6 +19,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.math.BigInteger
 import java.time.Instant
@@ -44,6 +46,12 @@ internal data class YouTubeChannelTable(
 
         @Query("SELECT * FROM channel WHERE id IN (:id)")
         suspend fun findChannels(id: Set<YouTubeChannel.Id>): List<YouTubeChannelTable>
+
+        @Query("SELECT id FROM channel WHERE id NOT IN (SELECT channel_id FROM subscription)")
+        suspend fun findUnsubscribedChannelIds(): List<YouTubeChannel.Id>
+
+        @Query("DELETE FROM channel WHERE id IN (:ids)")
+        suspend fun removeChannels(ids: Set<YouTubeChannel.Id>)
 
         @Query("DELETE FROM channel")
         override suspend fun deleteTable()
@@ -98,6 +106,9 @@ internal data class YouTubeChannelAdditionTable(
         @Upsert
         suspend fun addChannelAddition(addition: Collection<YouTubeChannelAdditionTable>)
 
+        @Query("DELETE FROM channel_addition WHERE id IN (:ids)")
+        suspend fun removeChannelAddition(ids: Set<YouTubeChannel.Id>)
+
         @Query("DELETE FROM channel_addition")
         override suspend fun deleteTable()
     }
@@ -136,6 +147,9 @@ internal class YouTubeChannelRelatedPlaylistTable(
         @Query("SELECT * FROM yt_channel_related_playlist WHERE channel_id IN (:ids)")
         suspend fun findChannelRelatedPlaylists(ids: Set<YouTubeChannel.Id>): List<YouTubeChannelRelatedPlaylistTable>
 
+        @Query("DELETE FROM yt_channel_related_playlist WHERE channel_id IN (:ids)")
+        suspend fun removeChannelRelatedPlaylists(ids: Set<YouTubeChannel.Id>)
+
         @Query("DELETE FROM yt_channel_related_playlist")
         override suspend fun deleteTable()
     }
@@ -163,6 +177,9 @@ internal data class YouTubeChannelAdditionExpireTable(
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addChannelAdditionExpire(entities: Collection<YouTubeChannelAdditionExpireTable>)
+
+        @Query("DELETE FROM channel_addition_expire WHERE channel_id IN (:ids)")
+        suspend fun removeChannelAdditionExpire(ids: Set<YouTubeChannel.Id>)
 
         @Query("DELETE FROM channel_addition_expire")
         override suspend fun deleteTable()
@@ -209,13 +226,8 @@ internal data class UpdatableYouTubeChannelDetailDb(
             parentColumns = ["id"],
             childColumns = ["channel_id"],
         ),
-        ForeignKey(
-            entity = YouTubeVideoTable::class,
-            parentColumns = ["id"],
-            childColumns = ["video_id"],
-        ),
     ],
-    indices = [Index("channel_id"), Index("video_id")],
+    indices = [Index("channel_id")],
 )
 internal data class YouTubeChannelLogTable(
     @PrimaryKey(autoGenerate = false)
@@ -239,7 +251,7 @@ internal data class YouTubeChannelLogTable(
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLogTable>)
+        suspend fun addChannelLogs(logs: Collection<YouTubeChannelLogTable>)
 
         @Query(
             "SELECT * FROM channel_log" +
@@ -261,6 +273,9 @@ internal data class YouTubeChannelLogTable(
             maxResult: Long? = Long.MAX_VALUE,
         ): List<YouTubeChannelLogTable>
 
+        @Query("DELETE FROM channel_log WHERE channel_id IN (:ids)")
+        suspend fun removeChannelLogsByChannelId(ids: Set<YouTubeChannel.Id>)
+
         @Query("DELETE FROM channel_log")
         override suspend fun deleteTable()
     }
@@ -275,18 +290,61 @@ internal interface YouTubeChannelDaoProviders {
     val youTubeChannelAdditionExpireDao: YouTubeChannelAdditionExpireTable.Dao
 }
 
-internal interface YouTubeChannelDao : YouTubeChannelTable.Dao, YouTubeChannelAdditionTable.Dao,
-    YouTubeChannelLogTable.Dao, YouTubeChannelDetailDb.Dao, YouTubeChannelRelatedPlaylistTable.Dao,
-    YouTubeChannelAdditionExpireTable.Dao
+internal interface YouTubeChannelDao : YouTubeChannelTable.Dao, YouTubeChannelLogTable.Dao,
+    YouTubeChannelDetailDb.Dao, YouTubeChannelRelatedPlaylistTable.Dao {
+    suspend fun addChannelEntities(channels: Collection<YouTubeChannel>)
+    suspend fun addChannelDetails(channelDetail: Collection<Updatable<YouTubeChannelDetail>>)
+    suspend fun addChannelRelatedPlaylistEntities(entities: Collection<YouTubeChannelRelatedPlaylist>)
+    suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLog>)
+    suspend fun removeChannelEntities(id: Set<YouTubeChannel.Id>)
+}
 
 internal class YouTubeChannelDaoImpl @Inject constructor(
-    private val db: YouTubeChannelDaoProviders,
+    private val db: AppDatabase,
 ) : YouTubeChannelDao, YouTubeChannelTable.Dao by db.youTubeChannelDao,
-    YouTubeChannelAdditionTable.Dao by db.youTubeChannelAdditionDao,
     YouTubeChannelLogTable.Dao by db.youTubeChannelLogDao,
     YouTubeChannelDetailDb.Dao by db.youTubeChannelDetailDbDao,
-    YouTubeChannelRelatedPlaylistTable.Dao by db.youTubeChannelRelatedPlaylistDbDao,
-    YouTubeChannelAdditionExpireTable.Dao by db.youTubeChannelAdditionExpireDao {
+    YouTubeChannelRelatedPlaylistTable.Dao by db.youTubeChannelRelatedPlaylistDbDao {
+    override suspend fun addChannelEntities(channels: Collection<YouTubeChannel>) {
+        val entities = channels.map { it.toDbEntity() }
+        addChannels(entities)
+    }
+
+    override suspend fun addChannelDetails(
+        channelDetail: Collection<Updatable<YouTubeChannelDetail>>,
+    ) = db.withTransaction {
+        val additions = channelDetail.map { it.item.toAddition() }
+        val expired = channelDetail
+            .map { YouTubeChannelAdditionExpireTable(it.item.id, it.cacheControl.toDb()) }
+        addChannelEntities(channelDetail.map { it.item as YouTubeChannel })
+        db.youTubeChannelAdditionDao.addChannelAddition(additions)
+        db.youTubeChannelAdditionExpireDao.addChannelAdditionExpire(expired)
+    }
+
+    override suspend fun addChannelRelatedPlaylistEntities(entities: Collection<YouTubeChannelRelatedPlaylist>) {
+        val e = entities.mapNotNull { c ->
+            c.uploadedPlayList?.let { YouTubeChannelRelatedPlaylistTable(c.id, it) }
+        }
+        addChannelRelatedPlaylists(e)
+    }
+
+    override suspend fun addChannelLogEntities(logs: Collection<YouTubeChannelLog>) =
+        db.withTransaction {
+            val channels = logs.map { it.channelId }.distinct()
+                .filter { findChannel(it) == null }
+                .map { YouTubeChannelTable(id = it) }
+            addChannels(channels)
+            addChannelLogs(logs.filter { it.videoId != null }.map { it.toDbEntity() })
+        }
+
+    override suspend fun removeChannelEntities(id: Set<YouTubeChannel.Id>) = db.withTransaction {
+        removeChannelLogsByChannelId(id)
+        db.youTubeChannelAdditionExpireDao.removeChannelAdditionExpire(id)
+        removeChannelRelatedPlaylists(id)
+        db.youTubeChannelAdditionDao.removeChannelAddition(id)
+        removeChannels(id)
+    }
+
     override suspend fun deleteTable() {
         listOf(
             db.youTubeChannelDao,
@@ -295,5 +353,33 @@ internal class YouTubeChannelDaoImpl @Inject constructor(
             db.youTubeChannelRelatedPlaylistDbDao,
             db.youTubeChannelAdditionExpireDao,
         ).forEach { it.deleteTable() }
+    }
+
+    companion object {
+        private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
+            id = id, title = title, iconUrl = iconUrl,
+        )
+
+        private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =
+            YouTubeChannelAdditionTable(
+                id = id,
+                bannerUrl = bannerUrl,
+                description = description,
+                customUrl = customUrl,
+                isSubscriberHidden = isSubscriberHidden,
+                keywordsRaw = keywords.joinToString(","),
+                publishedAt = publishedAt,
+                subscriberCount = subscriberCount,
+                videoCount = videoCount,
+                viewsCount = viewsCount,
+            )
+
+        private fun YouTubeChannelLog.toDbEntity(): YouTubeChannelLogTable = YouTubeChannelLogTable(
+            id = id,
+            dateTime = dateTime,
+            videoId = checkNotNull(videoId),
+            channelId = channelId,
+            thumbnailUrl = thumbnailUrl,
+        )
     }
 }

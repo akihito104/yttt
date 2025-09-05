@@ -86,7 +86,7 @@ interface YouTubeLiveDataSource {
     val videos: Flow<List<YouTubeVideoExtended>>
     suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>>
     suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>)
-    suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
+    suspend fun removeVideo(ids: Set<YouTubeVideo.Id>, isPreserved: Boolean = true)
 
     suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
@@ -100,9 +100,11 @@ interface YouTubeLiveDataSource {
     ): List<YouTubeSubscriptionSummary>
 
     suspend fun addPagedSubscription(subscription: Collection<YouTubeSubscription>)
-    suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String)
     suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionQuery?
-    suspend fun removeSubscribesByRemainingIds(subscriptions: Set<YouTubeSubscription.Id>)
+    suspend fun syncSubscriptionList(
+        subscriptions: Set<YouTubeSubscription.Id>,
+        query: List<YouTubeSubscriptionQuery>,
+    )
 
     suspend fun updatePlaylistWithItems(
         item: YouTubePlaylistWithItem<*>,

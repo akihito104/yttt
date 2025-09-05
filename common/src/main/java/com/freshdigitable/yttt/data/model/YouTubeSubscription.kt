@@ -30,6 +30,12 @@ interface YouTubeSubscriptionQuery {
             nextPageToken: String?,
             eTag: String? = null,
         ): YouTubeSubscriptionQuery = Impl(offset, nextPageToken, eTag, Order.RELEVANCE)
+
+        fun forAlphabetical(
+            offset: Int,
+            nextPageToken: String?,
+            eTag: String? = null,
+        ): YouTubeSubscriptionQuery = Impl(offset, nextPageToken, eTag, Order.ALPHABETICAL)
     }
 
     private data class Impl(

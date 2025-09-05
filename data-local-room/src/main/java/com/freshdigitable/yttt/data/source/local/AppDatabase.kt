@@ -94,7 +94,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     views = [
         TwitchUserDetailDbView::class,
     ],
-    version = 24,
+    version = 25,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -119,6 +119,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 20, to = 21),
         AutoMigration(from = 21, to = 22, spec = AppDatabase.MigrateSeparatePlaylistItem::class),
         AutoMigration(from = 22, to = 23, spec = AppDatabase.MigrateSubscriptionOrder::class),
+        AutoMigration(from = 24, to = 25),
     ]
 )
 @TypeConverters(

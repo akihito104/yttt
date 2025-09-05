@@ -3,7 +3,7 @@ package com.freshdigitable.yttt.data.source.local.db
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import com.freshdigitable.yttt.data.source.local.TwitchDataSourceTestRule
+import com.freshdigitable.yttt.data.source.local.fixture.TwitchDataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.userDetail
 import com.freshdigitable.yttt.test.zero
 import io.kotest.matchers.shouldBe

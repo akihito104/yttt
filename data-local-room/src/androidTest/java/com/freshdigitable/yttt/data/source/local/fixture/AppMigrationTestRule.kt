@@ -1,4 +1,4 @@
-package com.freshdigitable.yttt.data.source.local
+package com.freshdigitable.yttt.data.source.local.fixture
 
 import android.content.ContentValues
 import android.database.sqlite.SQLiteDatabase
@@ -6,10 +6,11 @@ import androidx.room.migration.Migration
 import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.platform.app.InstrumentationRegistry
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import io.kotest.inspectors.shouldForAll
 import org.junit.runner.Description
 
-class AppMigrationTestRule(
+internal class AppMigrationTestRule(
     private val versionFrom: Int,
     private val versionTo: Int,
     private val migration: Migration,
