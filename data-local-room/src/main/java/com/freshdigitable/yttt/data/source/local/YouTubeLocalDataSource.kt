@@ -63,22 +63,15 @@ internal class YouTubeLocalDataSource @Inject constructor(
     override suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id> =
         dao.fetchAllSubscriptionIds().toSet()
 
-    override suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String) {
-        dao.addSubscriptionEtag(offset, nextPageToken, eTag)
-    }
-
-    override suspend fun cleanUpByRemainingSubscriptionIds(
+    override suspend fun syncSubscriptionList(
         subscriptions: Set<YouTubeSubscription.Id>,
+        query: List<YouTubeSubscriptionQuery>,
     ) = database.withTransaction {
-        database.deferForeignKeys()
-        val summaries = dao.findRemovedSubscriptionSummariesByRemainingIds(subscriptions)
-        val channelIds = summaries.map { it.channelId }.toSet()
-        val videoIds = dao.findVideoIdsByChannelId(channelIds)
-
-        dao.removePlaylistWithItemsEntitiesByPlaylistId(summaries.mapNotNull { it.uploadedPlaylistId })
-        dao.removeSubscriptionEntities(summaries.map { it.subscriptionId })
-        removeVideo(videoIds.toSet(), false)
-        dao.removeChannelEntities(channelIds)
+        if (query.isNotEmpty()) {
+            dao.addSubscriptionQuery(query)
+        }
+        val subs = dao.findSubscriptionIdsByRemainingIds(subscriptions)
+        dao.removeSubscriptionEntities(subs)
     }
 
     override suspend fun fetchLiveChannelLogs(
@@ -88,8 +81,9 @@ internal class YouTubeLocalDataSource @Inject constructor(
     ): Result<List<YouTubeChannelLog>> = runCatching {
         if (publishedAfter != null) {
             dao.findChannelLogs(channelId, publishedAfter, maxResult)
+        } else {
+            dao.findChannelLogs(channelId, maxResult)
         }
-        dao.findChannelLogs(channelId, maxResult)
     }
 
     override suspend fun addLiveChannelLogs(channelLogs: Collection<YouTubeChannelLog>) {
@@ -163,6 +157,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun cleanUp() {
         database.youTubeChannelLogDao.deleteTable()
+        removeUnusedChannels()
         removeNotExistVideos()
     }
 
@@ -177,6 +172,19 @@ internal class YouTubeLocalDataSource @Inject constructor(
             val archivedIds = dao.findAllArchivedVideos().toSet()
             removeVideo(archivedIds)
         }
+    }
+
+    private suspend fun removeUnusedChannels() = database.withTransaction {
+        database.deferForeignKeys()
+        val channelIds = dao.findUnsubscribedChannelIds().toSet()
+        if (channelIds.isEmpty()) {
+            return@withTransaction
+        }
+        val videoIds = dao.findVideoIdsByChannelId(channelIds)
+        val playlists = dao.findChannelRelatedPlaylists(channelIds)
+        dao.removePlaylistWithItemsEntitiesByPlaylistId(playlists.mapNotNull { it.uploadedPlayList })
+        removeVideo(videoIds.toSet(), false)
+        dao.removeChannelEntities(channelIds)
     }
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>, isPreserved: Boolean): Unit =

@@ -46,7 +46,7 @@ internal class YouTubeSubscriptionTable(
         suspend fun addSubscriptions(subscriptions: Collection<YouTubeSubscriptionTable>)
 
         @Query("SELECT id FROM subscription WHERE id NOT IN (:id)")
-        suspend fun findSubscriptionsByRemainingIds(id: Collection<YouTubeSubscription.Id>): List<YouTubeSubscription.Id>
+        suspend fun findSubscriptionIdsByRemainingIds(id: Collection<YouTubeSubscription.Id>): List<YouTubeSubscription.Id>
 
         @Query("SELECT id FROM subscription")
         suspend fun fetchAllSubscriptionIds(): List<YouTubeSubscription.Id>
@@ -71,7 +71,7 @@ internal data class YouTubeSubscriptionEtagTable(
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addSubscriptionEtag(etag: YouTubeSubscriptionEtagTable)
+        suspend fun addSubscriptionEtag(etag: List<YouTubeSubscriptionEtagTable>)
 
         @Query("SELECT * FROM subscription_alphabetical_order_etag AS e WHERE `offset` = :offset")
         suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionEtagTable?
@@ -183,8 +183,7 @@ internal interface YouTubeSubscriptionDao : YouTubeSubscriptionTable.Dao,
     YouTubeSubscriptionDb.Dao, YouTubeSubscriptionEtagTable.Dao,
     YouTubeSubscriptionRelevanceOrderTable.Dao, YouTubeSubscriptionSummaryDb.Dao {
     suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscription>)
-    suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String)
-    suspend fun findRemovedSubscriptionSummariesByRemainingIds(id: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummaryDb>
+    suspend fun addSubscriptionQuery(query: Collection<YouTubeSubscriptionQuery>)
     suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>)
 }
 
@@ -205,19 +204,12 @@ internal class YouTubeSubscriptionDaoImpl @Inject constructor(
             }
         }
 
-    override suspend fun addSubscriptionEtag(
-        offset: Int,
-        nextPageToken: String?,
-        eTag: String,
-    ) {
-        addSubscriptionEtag(YouTubeSubscriptionEtagTable(offset, nextPageToken, eTag))
-    }
-
-    override suspend fun findRemovedSubscriptionSummariesByRemainingIds(
-        id: Collection<YouTubeSubscription.Id>,
-    ): List<YouTubeSubscriptionSummaryDb> = db.withTransaction {
-        val removed = findSubscriptionsByRemainingIds(id)
-        findSubscriptionSummaries(removed)
+    override suspend fun addSubscriptionQuery(query: Collection<YouTubeSubscriptionQuery>) {
+        check(query.all { it.order == YouTubeSubscriptionQuery.Order.ALPHABETICAL })
+        val t = query.map {
+            YouTubeSubscriptionEtagTable(it.offset, it.nextPageToken, checkNotNull(it.eTag))
+        }
+        db.withTransaction { addSubscriptionEtag(t) }
     }
 
     override suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>) =
@@ -226,7 +218,7 @@ internal class YouTubeSubscriptionDaoImpl @Inject constructor(
             removeSubscriptions(id)
         }
 
-    override suspend fun deleteTable() {
+    override suspend fun deleteTable() = db.withTransaction {
         listOf(
             db.youTubeSubscriptionDao,
             db.youTubeSubscriptionEtagDao,

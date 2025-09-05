@@ -47,6 +47,9 @@ internal data class YouTubeChannelTable(
         @Query("SELECT * FROM channel WHERE id IN (:id)")
         suspend fun findChannels(id: Set<YouTubeChannel.Id>): List<YouTubeChannelTable>
 
+        @Query("SELECT id FROM channel WHERE id NOT IN (SELECT channel_id FROM subscription)")
+        suspend fun findUnsubscribedChannelIds(): List<YouTubeChannel.Id>
+
         @Query("DELETE FROM channel WHERE id IN (:ids)")
         suspend fun removeChannels(ids: Set<YouTubeChannel.Id>)
 

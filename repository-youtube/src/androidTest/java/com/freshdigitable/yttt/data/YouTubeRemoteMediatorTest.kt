@@ -169,7 +169,7 @@ class YouTubeRemoteMediatorTest {
                 override val order: YouTubeSubscriptionQuery.Order get() = YouTubeSubscriptionQuery.Order.ALPHABETICAL
             }
         ).onSuccess {
-            repository.addSubscriptionEtag(0, it.nextPageToken, it.eTag!!)
+            repository.syncSubscriptionList(it.item.map { i -> i.id }.toSet(), emptyList())
             repository.subscriptionsFetchedAt = it.cacheControl.fetchedAt!!
         }
         val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")

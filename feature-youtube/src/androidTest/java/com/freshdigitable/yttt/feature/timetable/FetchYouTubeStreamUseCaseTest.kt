@@ -47,6 +47,7 @@ import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.result.shouldBeFailure
 import io.kotest.matchers.result.shouldBeSuccess
 import io.kotest.matchers.should
@@ -442,6 +443,8 @@ class FetchYouTubeStreamUseCaseTest {
                 fakeClient = FakeYouTubeClientModule.setup(150, 2, current)
                 hiltRule.inject()
                 sut.invoke()
+                localSource.findSubscriptionQuery(0).shouldNotBeNull()
+                    .eTag.shouldNotBeNull()
             },
         )
 

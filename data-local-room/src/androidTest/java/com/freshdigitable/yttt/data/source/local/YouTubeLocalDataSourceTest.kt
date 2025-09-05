@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.update
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -363,6 +364,9 @@ class YouTubeLocalDataSourceTest {
             )
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             val channels = videos.map { it.item.channel }.distinctBy { it.id }.toList()
+            dataSource.addPagedSubscription(channels.map {
+                FakeYouTubeClient.subscription("subs_${it.id.value}", it)
+            })
             dao.addChannelEntities(channels)
             dataSource.addVideo(videos)
         }
@@ -478,7 +482,11 @@ class YouTubeLocalDataSourceTest {
             val uploadedPlaylistId = removedSummary.uploadedPlaylistId!!
             val items = dao.findPlaylistItemByPlaylistId(uploadedPlaylistId).shouldHaveSize(3)
             // exercise
-            dataSource.cleanUpByRemainingSubscriptionIds(newSubs.toSet())
+            dataSource.syncSubscriptionList(
+                newSubs.toSet(),
+                listOf(YouTubeSubscriptionQuery.forAlphabetical(0, null, "valid_etag")),
+            )
+            dataSource.cleanUp()
             // verify
             dao.check(removedSummary, items)
         }
@@ -504,11 +512,15 @@ class YouTubeLocalDataSourceTest {
                 )
             )
             // exercise
-            dataSource.cleanUpByRemainingSubscriptionIds(newSubs.toSet())
+            dataSource.syncSubscriptionList(
+                newSubs.toSet(),
+                listOf(YouTubeSubscriptionQuery.forAlphabetical(0, null, "valid_etag")),
+            )
+            dataSource.cleanUp()
             // verify
             dao.findChannelLogs(removedSummary.channelId).shouldBeEmpty()
             dao.check(removedSummary, items)
-            rule.queryVideoIsArchived().shouldBeEmpty()
+            rule.queryVideoIsArchived() shouldHaveSize 6
         }
 
         @Test
@@ -519,7 +531,11 @@ class YouTubeLocalDataSourceTest {
             val items = dao.findPlaylistItemByPlaylistId(uploadedPlaylistId).shouldHaveSize(3)
             dataSource.addVideo(listOf(YouTubeVideoEntity.liveStreaming(channel = allDomainChannels.last())))
             // exercise
-            dataSource.cleanUpByRemainingSubscriptionIds(newSubs.toSet())
+            dataSource.syncSubscriptionList(
+                newSubs.toSet(),
+                listOf(YouTubeSubscriptionQuery.forAlphabetical(0, null, "valid_etag")),
+            )
+            dataSource.cleanUp()
             // verify
             dao.check(removedSummary, items)
         }
@@ -539,6 +555,8 @@ class YouTubeLocalDataSourceTest {
             findChannelDetail(channelIds).shouldBeEmpty()
             findChannels(channelIds).shouldBeEmpty()
             findVideosById(items.map { it.videoId }).shouldBeEmpty()
+            findSubscriptionQuery(0).shouldNotBeNull()
+                .eTag shouldBe "valid_etag"
         }
     }
 

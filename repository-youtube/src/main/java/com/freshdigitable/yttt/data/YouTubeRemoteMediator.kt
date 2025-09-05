@@ -68,7 +68,8 @@ internal class YouTubeRemoteMediator @Inject constructor(
                 token = r.nextPageToken
             }
         } while (token != null)
-        repository.cleanUpByRemainingSubscriptionIds(items.map { it.id }.toSet())
+        repository.syncSubscriptionList(items.map { it.id }.toSet(), emptyList())
+        repository.cleanUp()
         return MediatorResult.Success(true)
     }
 }

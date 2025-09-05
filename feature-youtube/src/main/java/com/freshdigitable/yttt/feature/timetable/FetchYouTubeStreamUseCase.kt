@@ -145,11 +145,11 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             val job = coroutineScope.launch {
                 tasks.awaitAll()
             }
-            acc.update(summary.map { it.subscriptionId }, tasks, job)
+            acc.update(summary.map { it.subscriptionId }, tasks, job, value.getOrNull()?.saveEtag)
         }.join()
         .onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
         .map {
-            { liveRepository.cleanUpByRemainingSubscriptionIds(it.ids.toSet()) }
+            { liveRepository.syncSubscriptionList(it.ids.toSet(), it.queries) }
         }
 
     private suspend fun updateSummary(
@@ -211,15 +211,18 @@ private class PlaylistUpdateTaskCache {
     val failureResults = mutableListOf<Throwable>()
     private val _ids = mutableListOf<YouTubeSubscription.Id>()
     val ids: List<YouTubeSubscription.Id> get() = _ids
+    val queries: MutableList<YouTubeSubscriptionQuery> = mutableListOf()
 
     fun update(
         added: List<YouTubeSubscription.Id>,
         tasks: List<Deferred<Result<*>>>,
         job: Job?,
+        query: YouTubeSubscriptionQuery? = null,
     ): PlaylistUpdateTaskCache = apply {
         _ids.addAll(added)
         updateTasks.addAll(tasks)
         if (job != null) jobs.add(job)
+        if (query != null) queries.add(query)
     }
 
     val pendingSummary: MutableList<YouTubeSubscriptionSummary> = mutableListOf()
@@ -279,9 +282,7 @@ internal fun YouTubeRepository.fetchAllSubscription(
     flow {
         var summary = YouTubeSubscriptionSummaries(query = findSubscriptionQuery(0))
         do {
-            val s = fetchPagedSubscription(summary).onSuccess {
-                addSubscriptionEtag(summary.offset, summary.nextPageToken, checkNotNull(it.eTag))
-            }.map {
+            val s = fetchPagedSubscription(summary).map {
                 val o = summary.offset + MAX_BATCH_SIZE
                 YouTubeSubscriptionSummaries(
                     item = findSubscriptionSummaries(it.item.map { i -> i.id }),
@@ -289,6 +290,11 @@ internal fun YouTubeRepository.fetchAllSubscription(
                     query = findSubscriptionQuery(o),
                     _token = it.nextPageToken,
                     fetchedAt = it.cacheControl.fetchedAt,
+                    saveEtag = YouTubeSubscriptionQuery.forAlphabetical(
+                        summary.offset,
+                        summary.nextPageToken,
+                        it.eTag,
+                    )
                 )
             }.recoverFromNotModified {
                 val o = summary.offset + MAX_BATCH_SIZE
@@ -317,6 +323,7 @@ internal class YouTubeSubscriptionSummaries(
     private val query: YouTubeSubscriptionQuery? = null,
     private val _token: String? = null,
     val fetchedAt: Instant? = null,
+    val saveEtag: YouTubeSubscriptionQuery? = null,
 ) : YouTubeSubscriptionQuery {
     override val nextPageToken: String? get() = _token ?: query?.nextPageToken
     override val eTag: String? get() = query?.eTag

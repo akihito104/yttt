@@ -100,9 +100,11 @@ interface YouTubeLiveDataSource {
     ): List<YouTubeSubscriptionSummary>
 
     suspend fun addPagedSubscription(subscription: Collection<YouTubeSubscription>)
-    suspend fun addSubscriptionEtag(offset: Int, nextPageToken: String?, eTag: String)
     suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionQuery?
-    suspend fun cleanUpByRemainingSubscriptionIds(subscriptions: Set<YouTubeSubscription.Id>)
+    suspend fun syncSubscriptionList(
+        subscriptions: Set<YouTubeSubscription.Id>,
+        query: List<YouTubeSubscriptionQuery>,
+    )
 
     suspend fun updatePlaylistWithItems(
         item: YouTubePlaylistWithItem<*>,
