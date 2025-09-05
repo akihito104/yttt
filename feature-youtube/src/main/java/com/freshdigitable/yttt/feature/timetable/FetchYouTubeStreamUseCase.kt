@@ -193,9 +193,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         videoUpdateTaskChannel.close()
         val fetchVideoRes = fetchVideo.await()
         val res = tasks + fetchVideoRes
-        fetchVideoRes.onSuccess { it() }
         @Suppress("UNCHECKED_CAST")
         (tasks[1] as Result<DeferredTask>).onSuccess { it() }
+        fetchVideoRes.onSuccess { it() }
         if (res.any { it.isFailure }) {
             res.first { it.isFailure }
         } else {
