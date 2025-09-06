@@ -43,7 +43,8 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import dagger.multibindings.IntoMap
-import io.kotest.matchers.booleans.shouldBeTrue
+import io.kotest.assertions.asClue
+import io.kotest.inspectors.shouldForAll
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.ints.shouldBeGreaterThan
@@ -384,9 +385,10 @@ class FetchYouTubeStreamUseCaseTest {
             // verify
             actual.shouldBeSuccess()
             localSource.videos.test {
-                val a = awaitItem()
-                a shouldHaveSize 30
-                a.map { it.isNowOnAir() }.all { it }.shouldBeTrue()
+                awaitItem().asClue { a ->
+                    a shouldHaveSize 30
+                    a.shouldForAll { it.isNowOnAir() }
+                }
             }
             localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }

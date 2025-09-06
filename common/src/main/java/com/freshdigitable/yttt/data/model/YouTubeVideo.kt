@@ -28,7 +28,7 @@ interface YouTubeVideo {
     val actualEndDateTime: Instant?
     val description: String
     val viewerCount: BigInteger?
-    val liveBroadcastContent: BroadcastType?
+    val liveBroadcastContent: BroadcastType
 
     fun isLiveStream(): Boolean = isNowOnAir() || isUpcoming()
     fun isNowOnAir(): Boolean = liveBroadcastContent == BroadcastType.LIVE
@@ -42,7 +42,7 @@ interface YouTubeVideo {
         internal val UPCOMING_DEADLINE: Duration = Duration.ofHours(6)
         val YouTubeVideo.url: String get() = "https://youtube.com/watch?v=${id.value}"
         val YouTubeVideo.isArchived: Boolean
-            get() = liveBroadcastContent != null && (!isLiveStream() || actualEndDateTime != null)
+            get() = !isLiveStream() || actualEndDateTime != null
         internal val YouTubeVideo.isFreeChatTitle: Boolean
             get() = regex.any { title.contains(it) }
         private val regex = listOf(

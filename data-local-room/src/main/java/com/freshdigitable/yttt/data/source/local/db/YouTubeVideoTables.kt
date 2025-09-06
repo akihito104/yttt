@@ -21,24 +21,70 @@ import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
 
+@Entity(tableName = "video")
+internal class YouTubeVideoTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo(name = "id")
+    val id: YouTubeVideo.Id,
+    @ColumnInfo(name = "broadcast_content")
+    val broadcastContent: YouTubeVideo.BroadcastType,
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addVideos(videos: Collection<YouTubeVideoTable>)
+
+        @Query(
+            "SELECT id FROM (SELECT id FROM video WHERE broadcast_content IS 'none') AS v " +
+                "WHERE NOT EXISTS (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
+                " UNION SELECT video_id FROM (SELECT video_id FROM free_chat WHERE is_free_chat IS 1) AS f WHERE v.id = f.video_id)"
+        )
+        suspend fun findUnusedVideoIds(): List<YouTubeVideo.Id>
+
+        @Query("DELETE FROM video WHERE id IN (:videoIds)")
+        suspend fun removeVideos(videoIds: Collection<YouTubeVideo.Id>)
+
+        @Query("SELECT id FROM video WHERE broadcast_content = 'none'")
+        suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
+
+        @Query(
+            "SELECT v.id FROM video AS v " +
+                "LEFT OUTER JOIN video_detail AS a ON a.video_id = v.id " +
+                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
+                "WHERE (broadcast_content IS NULL OR broadcast_content = 'none')" +
+                " AND (e.fetched_at IS NULL OR e.max_age IS NULL OR (e.fetched_at + e.max_age) < :current)"
+        )
+        suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
+
+        @Query("DELETE FROM video")
+        override suspend fun deleteTable()
+    }
+
+    override fun toString(): String = id.toString()
+}
+
 @Entity(
-    tableName = "video",
+    tableName = "video_detail",
     foreignKeys = [
+        ForeignKey(
+            entity = YouTubeVideoTable::class,
+            parentColumns = ["id"],
+            childColumns = ["video_id"],
+        ),
         ForeignKey(
             entity = YouTubeChannelTable::class,
             parentColumns = ["id"],
             childColumns = ["channel_id"],
         ),
     ],
-    indices = [Index("channel_id")],
 )
-internal class YouTubeVideoTable(
+internal class YouTubeVideoDetailTable(
     @PrimaryKey(autoGenerate = false)
-    @ColumnInfo(name = "id")
-    val id: YouTubeVideo.Id,
+    @ColumnInfo("video_id")
+    val videoId: YouTubeVideo.Id,
     @ColumnInfo(name = "title", defaultValue = "")
     val title: String = "",
-    @ColumnInfo(name = "channel_id")
+    @ColumnInfo(name = "channel_id", index = true)
     val channelId: YouTubeChannel.Id,
     @ColumnInfo(name = "schedule_start_datetime")
     val scheduledStartDateTime: Instant? = null,
@@ -54,59 +100,38 @@ internal class YouTubeVideoTable(
     val description: String = "",
     @ColumnInfo(name = "viewer_count", defaultValue = "null")
     val viewerCount: BigInteger? = null,
-    @ColumnInfo(name = "broadcast_content", defaultValue = "null")
-    val broadcastContent: YouTubeVideo.BroadcastType? = null,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addVideos(videos: Collection<YouTubeVideoTable>)
+        suspend fun addVideoDetails(items: Collection<YouTubeVideoDetailTable>)
 
-        @Query(
-            "SELECT id FROM (SELECT id FROM video WHERE broadcast_content IS 'none') AS v " +
-                "WHERE NOT EXISTS (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
-                " UNION SELECT video_id FROM (SELECT video_id FROM free_chat WHERE is_free_chat IS 1) AS f WHERE v.id = f.video_id)"
-        )
-        suspend fun findUnusedVideoIds(): List<YouTubeVideo.Id>
-
-        @Query("SELECT thumbnail FROM video WHERE id IN (:ids)")
+        @Query("SELECT thumbnail FROM video_detail WHERE video_id IN (:ids)")
         suspend fun findThumbnailUrlByIds(ids: Collection<YouTubeVideo.Id>): List<String>
 
-        @Query("SELECT id FROM video WHERE channel_id IN (:channelIds)")
+        @Query("SELECT video_id FROM video_detail WHERE channel_id IN (:channelIds)")
         suspend fun findVideoIdsByChannelId(channelIds: Collection<YouTubeChannel.Id>): List<YouTubeVideo.Id>
 
-        @Query("DELETE FROM video WHERE id IN (:videoIds)")
-        suspend fun removeVideos(videoIds: Collection<YouTubeVideo.Id>)
+        @Query("DELETE FROM video_detail WHERE video_id IN (:ids)")
+        suspend fun removeVideoDetails(ids: Collection<YouTubeVideo.Id>)
 
-        @Query("SELECT id FROM video WHERE broadcast_content = 'none'")
-        suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
-
-        @Query(
-            "SELECT v.id FROM video AS v " +
-                "LEFT OUTER JOIN yt_video_is_archived AS a ON a.video_id = v.id " +
-                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
-                "WHERE (a.is_archived IS NULL OR a.is_archived = 0)" +
-                " AND (e.fetched_at IS NULL OR e.max_age IS NULL OR (e.fetched_at + e.max_age) < :current)"
-        )
-        suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
-
-        @Query("DELETE FROM video")
+        @Query("DELETE FROM video_detail")
         override suspend fun deleteTable()
     }
-
-    override fun toString(): String = id.toString()
 }
 
 internal data class YouTubeVideoDb(
     @Embedded
-    private val video: YouTubeVideoTable,
+    private val video: YouTubeVideoDetailTable,
     @Embedded("c_")
     override val channel: YouTubeChannelTable,
     @ColumnInfo("is_free_chat")
     override val isFreeChat: Boolean?,
+    @ColumnInfo("broadcast_content")
+    override val liveBroadcastContent: YouTubeVideo.BroadcastType,
 ) : YouTubeVideoExtended {
     override val id: YouTubeVideo.Id
-        get() = video.id
+        get() = video.videoId
     override val title: String
         get() = video.title
     override val thumbnailUrl: String
@@ -123,26 +148,26 @@ internal data class YouTubeVideoDb(
         get() = video.description
     override val viewerCount: BigInteger?
         get() = video.viewerCount
-    override val liveBroadcastContent: YouTubeVideo.BroadcastType?
-        get() = video.broadcastContent
 
     @androidx.room.Dao
     internal interface Dao {
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
-                " e.fetched_at AS fetched_at, e.max_age AS max_age FROM video AS v " +
-                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
+                " e.fetched_at AS fetched_at, e.max_age AS max_age, video.broadcast_content AS broadcast_content FROM video_detail AS v " +
+                "INNER JOIN video ON video.id = v.video_id " +
+                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.video_id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
-                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
-                "WHERE v.id IN (:ids)"
+                "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
+                "WHERE v.video_id IN (:ids)"
         )
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<UpdatableYouTubeVideoDb>
 
         @Query(
-            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat " +
-                "FROM video AS v " +
+            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
+                " video.broadcast_content AS broadcast_content FROM video_detail AS v " +
+                "INNER JOIN video ON video.id = v.video_id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
-                "LEFT OUTER JOIN free_chat AS f ON v.id = f.video_id " +
+                "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
                 "WHERE broadcast_content IS NOT 'none'"
         )
         fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
@@ -222,43 +247,16 @@ internal class YouTubeVideoExpireTable(
     }
 }
 
-@Entity(tableName = "yt_video_is_archived")
-internal class YouTubeVideoIsArchivedTable(
-    @PrimaryKey(autoGenerate = false)
-    @ColumnInfo("video_id")
-    val videoId: YouTubeVideo.Id, // archived video is not cached so not to be constrained by foreign key
-    @ColumnInfo("is_archived")
-    val isArchived: Boolean? = null,
-) {
-    @androidx.room.Dao
-    internal interface Dao : TableDeletable {
-        @Upsert
-        suspend fun addVideoIsArchivedEntities(items: Collection<YouTubeVideoIsArchivedTable>)
-
-        @Query("DELETE FROM yt_video_is_archived WHERE video_id IN (:ids)")
-        suspend fun removeVideoIsArchivedEntities(ids: Collection<YouTubeVideo.Id>)
-
-        @Query(
-            "DELETE FROM yt_video_is_archived WHERE video_id NOT IN " +
-                "(SELECT video_id FROM playlist_item UNION SELECT video_id FROM free_chat)"
-        )
-        suspend fun removeUnusedEntities()
-
-        @Query("DELETE FROM yt_video_is_archived")
-        override suspend fun deleteTable()
-    }
-}
-
 internal interface YouTubeVideoDaoProviders {
     val youTubeVideoDao: YouTubeVideoTable.Dao
+    val youTubeVideoDetailDao: YouTubeVideoDetailTable.Dao
     val youtubeVideoDbDao: YouTubeVideoDb.Dao
     val youTubeVideoExpireDao: YouTubeVideoExpireTable.Dao
     val youTubeFreeChatDao: FreeChatTable.Dao
-    val youTubeVideoIsArchivedDao: YouTubeVideoIsArchivedTable.Dao
 }
 
 internal interface YouTubeVideoDao : YouTubeVideoTable.Dao, YouTubeVideoDb.Dao,
-    YouTubeVideoExpireTable.Dao, YouTubeVideoIsArchivedTable.Dao, FreeChatTable.Dao {
+    YouTubeVideoExpireTable.Dao, YouTubeVideoDetailTable.Dao, FreeChatTable.Dao {
     suspend fun addVideoEntities(videos: Collection<Updatable<YouTubeVideoExtended>>)
     suspend fun removeVideoEntities(
         videoIds: Collection<YouTubeVideo.Id>,
@@ -277,7 +275,7 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
 ) : YouTubeVideoDao, YouTubeVideoTable.Dao by db.youTubeVideoDao,
     YouTubeVideoDb.Dao by db.youtubeVideoDbDao,
     YouTubeVideoExpireTable.Dao by db.youTubeVideoExpireDao,
-    YouTubeVideoIsArchivedTable.Dao by db.youTubeVideoIsArchivedDao,
+    YouTubeVideoDetailTable.Dao by db.youTubeVideoDetailDao,
     FreeChatTable.Dao by db.youTubeFreeChatDao {
     override suspend fun addVideoEntities(
         videos: Collection<Updatable<YouTubeVideoExtended>>,
@@ -286,7 +284,8 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
         val entity = v.map { it.item.toDbEntity() }
         val freeChat = v.map { FreeChatTable(it.item.id, it.item.isFreeChat) }
         val expiring = v.map { YouTubeVideoExpireTable(it.item.id, it.cacheControl.toDb()) }
-        addVideos(entity)
+        addVideos(videos.map { YouTubeVideoTable(it.item.id, it.item.liveBroadcastContent) })
+        addVideoDetails(entity)
         addFreeChatItems(freeChat)
         addLiveVideoExpire(expiring)
     }
@@ -295,13 +294,12 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
         videoIds: Collection<YouTubeVideo.Id>,
         isPreserved: Boolean,
     ) = db.withTransaction {
-        if (isPreserved) {
-            val items = videoIds.map { YouTubeVideoIsArchivedTable(it, true) }
-            addVideoIsArchivedEntities(items)
-        }
         removeFreeChatItems(videoIds)
         removeLiveVideoExpire(videoIds)
-        removeVideos(videoIds)
+        removeVideoDetails(videoIds)
+        if (!isPreserved) {
+            removeVideos(videoIds)
+        }
     }
 
     override suspend fun addFreeChatItemEntities(
@@ -316,24 +314,24 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
 
     override suspend fun deleteTable() {
         listOf(
-            db.youTubeVideoDao, db.youTubeVideoIsArchivedDao,
+            db.youTubeVideoDao, db.youTubeVideoDetailDao,
             db.youTubeVideoExpireDao, db.youTubeFreeChatDao
         ).forEach { it.deleteTable() }
     }
 
     companion object {
-        private fun YouTubeVideo.toDbEntity(): YouTubeVideoTable = YouTubeVideoTable(
-            id = id,
-            title = title,
-            channelId = channel.id,
-            scheduledStartDateTime = scheduledStartDateTime,
-            scheduledEndDateTime = scheduledEndDateTime,
-            actualStartDateTime = actualStartDateTime,
-            actualEndDateTime = actualEndDateTime,
-            thumbnailUrl = thumbnailUrl,
-            description = description,
-            viewerCount = viewerCount,
-            broadcastContent = liveBroadcastContent,
-        )
+        private fun YouTubeVideo.toDbEntity(): YouTubeVideoDetailTable =
+            YouTubeVideoDetailTable(
+                videoId = id,
+                title = title,
+                channelId = channel.id,
+                scheduledStartDateTime = scheduledStartDateTime,
+                scheduledEndDateTime = scheduledEndDateTime,
+                actualStartDateTime = actualStartDateTime,
+                actualEndDateTime = actualEndDateTime,
+                thumbnailUrl = thumbnailUrl,
+                description = description,
+                viewerCount = viewerCount,
+            )
     }
 }
