@@ -49,9 +49,8 @@ internal class YouTubeVideoTable(
 
         @Query(
             "SELECT v.id FROM video AS v " +
-                "LEFT OUTER JOIN video_detail AS a ON a.video_id = v.id " +
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
-                "WHERE (broadcast_content IS NULL OR broadcast_content = 'none')" +
+                "WHERE (broadcast_content IS NULL OR broadcast_content != 'none')" +
                 " AND (e.fetched_at IS NULL OR e.max_age IS NULL OR (e.fetched_at + e.max_age) < :current)"
         )
         suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>

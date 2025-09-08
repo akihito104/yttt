@@ -175,6 +175,7 @@ class FetchYouTubeStreamUseCaseTest {
             localSource.videos.test {
                 awaitItem() shouldHaveSize 20
             }
+            localSource.fetchUpdatableVideoIds(current + Duration.ofHours(3)) shouldHaveSize 20
         }
 
         @Test

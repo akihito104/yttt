@@ -117,7 +117,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun findVideosById_hasNoExpireEntity_isNotFound() = dbRule.runWithDao { dao ->
+        fun findVideosById_hasNoExpireEntity_found1Item() = dbRule.runWithDao { dao ->
             // setup
             val target = hasNoExpire
             // exercise
@@ -131,6 +131,24 @@ class YouTubeVideoTablesTest {
                     c.maxAge.shouldBeNull()
                 }
             }
+        }
+
+        @Test
+        fun findVideosById_hasNoTypeEntity_isNotFound() = dbRule.runWithDao { dao ->
+            // setup
+            val target = hasNoType
+            // exercise
+            val actual = dao.findVideosById(listOf(target))
+            // verify
+            actual.shouldBeEmpty()
+        }
+
+        @Test
+        fun fetchUpdatableVideoIds_found2Items() = dbRule.runWithDao { dao ->
+            // exercise
+            val actual = dao.fetchUpdatableVideoIds(Instant.EPOCH)
+            // verify
+            actual.shouldContainAll(hasNoType, hasNoExpire)
         }
 
         @Test
