@@ -164,11 +164,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
     private suspend fun removeNotExistVideos() {
         database.withTransaction {
             val archivedIds = dao.findAllArchivedVideos().toSet()
-            removeVideo(archivedIds)
+            removeVideo(archivedIds, isPreserved = true)
         }
         database.withTransaction {
             val removingId = dao.findUnusedVideoIds().toSet()
-            removeVideo(removingId, false)
+            removeVideo(removingId)
         }
     }
 
@@ -181,7 +181,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
         val videoIds = dao.findVideoIdsByChannelId(channelIds)
         val playlists = dao.findChannelRelatedPlaylists(channelIds)
         dao.removePlaylistWithItemsEntitiesByPlaylistId(playlists.mapNotNull { it.uploadedPlayList })
-        removeVideo(videoIds.toSet(), false)
+        removeVideo(videoIds.toSet())
         dao.removeChannelEntities(channelIds)
     }
 

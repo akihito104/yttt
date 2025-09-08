@@ -70,12 +70,12 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                                 val v = video.map { it.item }
                                 val archived = v.filter { it.isArchived }.map { it.id }.toSet()
                                 if (archived.isNotEmpty()) {
-                                    liveRepository.removeVideo(archived)
+                                    liveRepository.removeVideo(archived, isPreserved = true)
                                     incrementMetric("update_remove", archived.size.toLong())
                                 }
                                 val removed = ids - v.map { it.id }.toSet()
                                 if (removed.isNotEmpty()) {
-                                    liveRepository.removeVideo(removed.toSet(), false)
+                                    liveRepository.removeVideo(removed.toSet())
                                     incrementMetric("update_remove", removed.size.toLong())
                                 }
 
