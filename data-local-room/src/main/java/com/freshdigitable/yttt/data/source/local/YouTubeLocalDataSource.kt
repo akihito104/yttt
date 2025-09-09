@@ -187,9 +187,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>, isPreserved: Boolean): Unit =
         ioScope.asResult {
-            val thumbs = dao.findThumbnailUrlByIds(ids)
-            fetchByIds(ids) { removeVideoEntities(it, isPreserved) }
-            removeImageByUrl(thumbs)
+            fetchByIds(ids) {
+                val thumbs = findThumbnailUrlByIds(it)
+                removeImageByUrl(thumbs)
+                removeVideoEntities(it, isPreserved)
+            }.forEach { _ -> }
         }.getOrThrow()
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> =

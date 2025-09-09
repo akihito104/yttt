@@ -354,7 +354,8 @@ internal val MIGRATION_25_26 = object : Migration(25, 26) {
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_video_detail_channel_id` ON `video_detail` (`channel_id`)")
         db.execSQL("CREATE TABLE IF NOT EXISTS `_new_video` (`id` TEXT NOT NULL, `broadcast_content` TEXT, PRIMARY KEY(`id`))")
-        db.execSQL("INSERT INTO `_new_video` (`id`,`broadcast_content`) SELECT `id`,`broadcast_content` FROM `video`")
+        db.execSQL("INSERT INTO `_new_video` (`id`,`broadcast_content`) SELECT `video_id`,'none' FROM `playlist_item` GROUP BY `video_id`")
+        db.execSQL("INSERT OR REPLACE INTO `_new_video` (`id`,`broadcast_content`) SELECT `id`,`broadcast_content` FROM `video`")
         db.execSQL(
             "INSERT INTO `video_detail` (`video_id`,`title`,`channel_id`,`schedule_start_datetime`," +
                 "`schedule_end_datetime`,`actual_start_datetime`,`actual_end_datetime`,`thumbnail`,`description`,`viewer_count`) " +
@@ -382,13 +383,25 @@ internal val MIGRATION_25_26 = object : Migration(25, 26) {
 internal fun SupportSQLiteDatabase.foreignKeyCheck(tableName: String) {
     query("PRAGMA foreign_key_check('$tableName')").use {
         if (it.count > 0) {
+            var rowCount = 0
+            val fkParentTables = mutableMapOf<String, String>()
             val msg = buildString {
                 while (it.moveToNext()) {
-                    if (it.isFirst) {
+                    if (rowCount == 0) {
                         append("foreign key violation: ")
                         append(it.getString(0)).append("\n")
                     }
-                    append(it.getString(3)).append(",").append(it.getString(2)).append("\n")
+                    val constraintIndex = it.getString(3)
+                    if (!fkParentTables.containsKey(constraintIndex)) {
+                        fkParentTables[constraintIndex] = it.getString(2)
+                    }
+                    rowCount++
+                }
+                for ((key, value) in fkParentTables) {
+                    append("\tParent Table = ")
+                    append(value)
+                    append(", Foreign Key Constraint Index = ")
+                    append(key).append("\n")
                 }
             }
             throw SQLiteConstraintException(msg)

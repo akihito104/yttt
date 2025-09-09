@@ -162,7 +162,7 @@ internal data class YouTubeVideoDb(
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.video_id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
-                "WHERE v.video_id IN (:ids)"
+                "WHERE broadcast_content IS NOT NULL AND v.video_id IN (:ids)"
         )
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<UpdatableYouTubeVideoDb>
 
@@ -172,7 +172,7 @@ internal data class YouTubeVideoDb(
                 "INNER JOIN video ON video.id = v.video_id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
-                "WHERE broadcast_content IS NOT 'none'"
+                "WHERE broadcast_content IS NOT NULL AND broadcast_content IS NOT 'none'"
         )
         fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
     }

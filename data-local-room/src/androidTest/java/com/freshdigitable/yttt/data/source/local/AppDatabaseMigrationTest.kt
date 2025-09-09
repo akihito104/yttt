@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.source.local
 import android.content.ContentValues
 import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteException
 import androidx.core.database.getLongOrNull
 import com.freshdigitable.yttt.data.source.local.fixture.AppMigrationTestRule
 import io.kotest.assertions.throwables.shouldThrow
@@ -401,15 +402,38 @@ class AppDatabaseMigrationTest {
                     put("broadcast_content", "upcoming")
                 }),
                 "yt_video_is_archived" to listOf(ContentValues().apply {
-                    put("video_id", "video_0")
+                    put("video_id", "video_2")
                     put("is_archived", true)
                 }),
+                "playlist" to listOf(ContentValues().apply {
+                    put("id", "channel_1-playlist_uploaded")
+                    put("title", "uploaded")
+                    put("thumbnail_url", "")
+                }),
+                "playlist_item" to listOf(
+                    ContentValues().apply {
+                        put("id", "playlist_id_1")
+                        put("playlist_id", "channel_1-playlist_uploaded")
+                        put("video_id", "video_1")
+                        put("published_at", 0)
+                    },
+                    ContentValues().apply {
+                        put("id", "playlist_id_2")
+                        put("playlist_id", "channel_1-playlist_uploaded")
+                        put("video_id", "video_2")
+                        put("published_at", 0)
+                    },
+                ),
             )
         }
 
         @Test
         fun init(): Unit = rule.run {
+            shouldThrow<SQLiteException> { newDb.query("SELECT * FROM video_is_archived") }
             newDb.query("SELECT * FROM video").use { c ->
+                c.moveToNext()
+                c.getString(c.getColumnIndexOrThrow("id")) shouldBe "video_2"
+                c.getString(c.getColumnIndexOrThrow("broadcast_content")) shouldBe "none"
                 c.moveToNext()
                 c.getString(c.getColumnIndexOrThrow("id")) shouldBe "video_1"
                 c.getString(c.getColumnIndexOrThrow("broadcast_content")) shouldBe "upcoming"
@@ -431,14 +455,9 @@ class AppDatabaseMigrationTest {
 
         @Test
         fun fkConstraint_playlistItem_to_video(): Unit = rule.run {
-            newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
-                put("id", "channel_1-playlist_uploaded")
-                put("title", "uploaded")
-                put("thumbnail_url", "")
-            })
             shouldThrow<SQLiteConstraintException> {
                 newDb.insert("playlist_item", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
-                    put("id", "playlist_id_1")
+                    put("id", "playlist_id_2")
                     put("playlist_id", "channel_1-playlist_uploaded")
                     put("video_id", "video_100")
                     put("published_at", 0)
