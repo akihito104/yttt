@@ -25,6 +25,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
+import io.kotest.assertions.asClue
 import io.kotest.assertions.assertSoftly
 import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -175,24 +176,27 @@ class YouTubeLocalDataSourceTest {
             dao.findPlaylistById(id)?.id shouldBe id
         }
 
+        val playlistId = YouTubePlaylist.Id("test")
+        val videoId = YouTubeVideo.Id("video")
+        private val channel = channelTable()
+        val items = listOf(
+            FakeYouTubeClient.playlistItemDetail(
+                id = YouTubePlaylistItem.Id("playlist"),
+                playlistId = playlistId,
+                videoId = videoId,
+                channel = channel,
+            ),
+        )
+        val channels = items.map { (it.channel as YouTubeChannel) }.distinctBy { it.id }
+        val updatable = YouTubePlaylistWithItem.newPlaylist(
+            playlist = playlist(playlistId),
+            items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+        )
+
         @Test
         fun addedWithItems_returnsItems() = rule.runWithLocalSource {
             // setup
-            val playlistId = YouTubePlaylist.Id("test")
-            val items = listOf(
-                FakeYouTubeClient.playlistItemDetail(
-                    id = YouTubePlaylistItem.Id("playlist"),
-                    playlistId = playlistId,
-                    videoId = YouTubeVideo.Id("video"),
-                    channel = channelTable(),
-                ),
-            )
-            val channel = items.map { (it.channel as YouTubeChannel) }.distinctBy { it.id }
-            dao.addChannelEntities(channel)
-            val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId),
-                items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-            )
+            dao.addChannelEntities(channels)
             // exercise
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // verify
@@ -201,23 +205,27 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
+        fun videoIsAlreadyAdded_videoIsNotUpdated() = rule.runWithLocalSource {
+            // setup
+            dao.addChannelEntities(channels)
+            val video = YouTubeVideoEntity.upcomingStream(videoId.value, channel = channel)
+            dataSource.addVideo(listOf(video))
+            // exercise
+            dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
+            // verify
+            dao.findPlaylistItemByPlaylistId(playlistId).size shouldBe 1
+            dao.findPlaylistById(playlistId)?.id shouldBe playlistId
+            dao.findVideosById(setOf(videoId)).asClue {
+                it.size shouldBe 1
+                it.first().item.id shouldBe videoId
+                it.first().item.liveBroadcastContent shouldBe YouTubeVideo.BroadcastType.UPCOMING
+            }
+        }
+
+        @Test
         fun itemWasReplaced_returnsItems() = rule.runWithLocalSource {
             // setup
-            val playlistId = YouTubePlaylist.Id("test")
-            val items = listOf(
-                FakeYouTubeClient.playlistItemDetail(
-                    id = YouTubePlaylistItem.Id("playlist"),
-                    playlistId = playlistId,
-                    videoId = YouTubeVideo.Id("video"),
-                    channel = channelTable(),
-                ),
-            )
-            val channel = items.map { (it.channel as YouTubeChannel) }.distinctBy { it.id }
-            dao.addChannelEntities(channel)
-            val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId),
-                items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-            )
+            dao.addChannelEntities(channels)
             dataSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // exercise
             val u = YouTubePlaylistWithItem.newPlaylist(

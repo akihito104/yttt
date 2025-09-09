@@ -353,7 +353,7 @@ internal val MIGRATION_25_26 = object : Migration(25, 26) {
                 "FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )"
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_video_detail_channel_id` ON `video_detail` (`channel_id`)")
-        db.execSQL("CREATE TABLE IF NOT EXISTS `_new_video` (`id` TEXT NOT NULL, `broadcast_content` TEXT NOT NULL, PRIMARY KEY(`id`))")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `_new_video` (`id` TEXT NOT NULL, `broadcast_content` TEXT, PRIMARY KEY(`id`))")
         db.execSQL("INSERT INTO `_new_video` (`id`,`broadcast_content`) SELECT `id`,`broadcast_content` FROM `video`")
         db.execSQL(
             "INSERT INTO `video_detail` (`video_id`,`title`,`channel_id`,`schedule_start_datetime`," +
@@ -363,6 +363,14 @@ internal val MIGRATION_25_26 = object : Migration(25, 26) {
         )
         db.execSQL("DROP TABLE `video`")
         db.execSQL("ALTER TABLE `_new_video` RENAME TO `video`")
+
+        db.execSQL("CREATE TABLE IF NOT EXISTS `_new_playlist_item` (`id` TEXT NOT NULL, `playlist_id` TEXT NOT NULL, `video_id` TEXT NOT NULL, `published_at` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )")
+        db.execSQL("INSERT INTO `_new_playlist_item` (`id`,`playlist_id`,`video_id`,`published_at`) SELECT `id`,`playlist_id`,`video_id`,`published_at` FROM `playlist_item`")
+        db.execSQL("DROP TABLE `playlist_item`")
+        db.execSQL("ALTER TABLE `_new_playlist_item` RENAME TO `playlist_item`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_item_playlist_id` ON `playlist_item` (`playlist_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_item_video_id` ON `playlist_item` (`video_id`)")
+        db.foreignKeyCheck("playlist_item")
 
         db.execSQL(
             "CREATE VIEW `twitch_user_detail_view` AS SELECT u.login_name, u.display_name, " +

@@ -102,6 +102,11 @@ internal class YouTubePlaylistUpdatableDb(
             parentColumns = ["id"],
             childColumns = ["playlist_id"],
         ),
+        ForeignKey(
+            entity = YouTubeVideoTable::class,
+            parentColumns = ["id"],
+            childColumns = ["video_id"],
+        ),
     ],
 )
 internal class YouTubePlaylistItemTable(
@@ -110,7 +115,7 @@ internal class YouTubePlaylistItemTable(
     override val id: YouTubePlaylistItem.Id,
     @ColumnInfo(name = "playlist_id", index = true)
     override val playlistId: YouTubePlaylist.Id,
-    @ColumnInfo(name = "video_id")
+    @ColumnInfo(name = "video_id", index = true)
     override val videoId: YouTubeVideo.Id,
     @ColumnInfo(name = "published_at")
     override val publishedAt: Instant,
@@ -129,6 +134,9 @@ internal class YouTubePlaylistItemTable(
 
         @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
         suspend fun removePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id)
+
+        @Query("DELETE FROM playlist_item WHERE video_id IN (:ids)")
+        suspend fun removePlaylistItemsByVideoIds(ids: Collection<YouTubeVideo.Id>)
 
         @Query("DELETE FROM playlist_item")
         override suspend fun deleteTable()
@@ -337,10 +345,11 @@ internal class YouTubePlaylistDaoImpl @Inject constructor(
             removePlaylistItemEntitiesByPlaylistId(p.id)
             if (item.items.isNotEmpty()) {
                 addPlaylistItems(item.items.map { it.toDbEntity() })
-                addPlaylistItemAdditions(
-                    item.items.filterIsInstance<YouTubePlaylistItemDetail>()
-                        .map { YouTubePlaylistItemAdditionTable(it) }
-                )
+                val details = item.items.filterIsInstance<YouTubePlaylistItemDetail>()
+                    .map { YouTubePlaylistItemAdditionTable(it) }
+                if (details.isNotEmpty()) {
+                    addPlaylistItemAdditions(details)
+                }
             }
         }
     }

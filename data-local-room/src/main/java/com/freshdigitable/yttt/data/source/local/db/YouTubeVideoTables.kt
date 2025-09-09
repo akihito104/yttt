@@ -5,6 +5,8 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
@@ -27,12 +29,15 @@ internal class YouTubeVideoTable(
     @ColumnInfo(name = "id")
     val id: YouTubeVideo.Id,
     @ColumnInfo(name = "broadcast_content")
-    val broadcastContent: YouTubeVideo.BroadcastType,
+    val broadcastContent: YouTubeVideo.BroadcastType?,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
         suspend fun addVideos(videos: Collection<YouTubeVideoTable>)
+
+        @Insert(onConflict = OnConflictStrategy.IGNORE)
+        suspend fun insertOrIgnoreVideos(videos: Collection<YouTubeVideoTable>)
 
         @Query(
             "SELECT id FROM (SELECT id FROM video WHERE broadcast_content IS 'none') AS v " +
@@ -257,6 +262,7 @@ internal interface YouTubeVideoDaoProviders {
 internal interface YouTubeVideoDao : YouTubeVideoTable.Dao, YouTubeVideoDb.Dao,
     YouTubeVideoExpireTable.Dao, YouTubeVideoDetailTable.Dao, FreeChatTable.Dao {
     suspend fun addVideoEntities(videos: Collection<Updatable<YouTubeVideoExtended>>)
+    suspend fun insertOrIgnoreVideoEntities(videos: Collection<YouTubeVideo.Id>)
     suspend fun removeVideoEntities(
         videoIds: Collection<YouTubeVideo.Id>,
         isPreserved: Boolean = true,
@@ -287,6 +293,10 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
         addVideoDetails(entity)
         addFreeChatItems(freeChat)
         addLiveVideoExpire(expiring)
+    }
+
+    override suspend fun insertOrIgnoreVideoEntities(videos: Collection<YouTubeVideo.Id>) {
+        insertOrIgnoreVideos(videos.map { YouTubeVideoTable(it, null) })
     }
 
     override suspend fun removeVideoEntities(

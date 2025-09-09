@@ -428,6 +428,23 @@ class AppDatabaseMigrationTest {
                 c.getString(c.getColumnIndexOrThrow("description")) shouldBe "description"
             }
         }
+
+        @Test
+        fun fkConstraint_playlistItem_to_video(): Unit = rule.run {
+            newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
+                put("id", "channel_1-playlist_uploaded")
+                put("title", "uploaded")
+                put("thumbnail_url", "")
+            })
+            shouldThrow<SQLiteConstraintException> {
+                newDb.insert("playlist_item", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
+                    put("id", "playlist_id_1")
+                    put("playlist_id", "channel_1-playlist_uploaded")
+                    put("video_id", "video_100")
+                    put("published_at", 0)
+                })
+            }
+        }
     }
 }
 

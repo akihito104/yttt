@@ -9,6 +9,7 @@ import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import io.kotest.assertions.asClue
 import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
@@ -52,6 +53,7 @@ class YouTubeVideoTablesTest {
         private val simple = YouTubeVideo.Id("test")
         private val freechat = YouTubeVideo.Id("test_freechat")
         private val hasNoExpire = YouTubeVideo.Id("test_no_expire")
+        private val hasNoType = YouTubeVideo.Id("test_no_type")
 
         @Before
         fun setup() = dbRule.runWithDao { dao ->
@@ -76,6 +78,7 @@ class YouTubeVideoTablesTest {
             )
             dao.addLiveVideoExpire(expire)
             dao.addFreeChatItems(listOf(FreeChatTable(freechat, true)))
+            dao.insertOrIgnoreVideoEntities(listOf(hasNoType))
         }
 
         @Test
