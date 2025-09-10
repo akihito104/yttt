@@ -331,9 +331,10 @@ class YouTubeLocalDataSourceTest {
     }
 
     class CleanUp : Base() {
-        private val upcoming = YouTubeVideoEntity.upcomingStream()
-        private val live = YouTubeVideoEntity.liveStreaming()
-        private val archivedInPlaylist = YouTubeVideoEntity.archivedStream()
+        private val channel = channelTable()
+        private val upcoming = YouTubeVideoEntity.upcomingStream(channel = channel)
+        private val live = YouTubeVideoEntity.liveStreaming(channel = channel)
+        private val archivedInPlaylist = YouTubeVideoEntity.archivedStream(channel = channel)
         private val videosInPlaylist = listOf(upcoming, live, archivedInPlaylist)
         private val freeChat = YouTubeVideoEntity.freeChat()
         private val unusedArchive = YouTubeVideoEntity.archivedStream(id = "unused_archive")
@@ -361,6 +362,12 @@ class YouTubeLocalDataSourceTest {
                 FakeYouTubeClient.subscription("subs_${it.id.value}", it)
             })
             dao.addChannelEntities(channels)
+            dataSource.addChannelRelatedPlaylists(
+                listOf(object : YouTubeChannelRelatedPlaylist {
+                    override val id: YouTubeChannel.Id get() = channel.id
+                    override val uploadedPlayList: YouTubePlaylist.Id? get() = playlistId
+                })
+            )
             dataSource.addVideo(videos)
         }
 

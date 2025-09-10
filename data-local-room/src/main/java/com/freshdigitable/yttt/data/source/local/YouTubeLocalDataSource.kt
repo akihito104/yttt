@@ -155,14 +155,23 @@ internal class YouTubeLocalDataSource @Inject constructor(
     override suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>) =
         ioScope.asResult { dao.addVideoEntities(video) }.getOrThrow()
 
-    override suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>) {
-        dao.updateAsArchivedVideoEntities(ids)
-    }
-
     override suspend fun cleanUp() {
         database.youTubeChannelLogDao.deleteTable()
+        removePlaylistWithItemsEntities()
         removeUnusedChannels()
         removeNotExistVideos()
+    }
+
+    private suspend fun removePlaylistWithItemsEntities() = database.withTransaction {
+        val playlists = dao.fetchPlaylistByUploadedPlaylist()
+        if (playlists.isEmpty()) {
+            return@withTransaction
+        }
+        val videoIds = dao.findVideoByPlaylistIds(playlists)
+        dao.removePlaylistWithItemsEntitiesByPlaylistIds(playlists)
+        if (videoIds.isNotEmpty()) {
+            removeVideo(videoIds.toSet())
+        }
     }
 
     private suspend fun removeNotExistVideos() {
@@ -184,10 +193,18 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
         val videoIds = dao.findVideoIdsByChannelId(channelIds)
         val playlists = dao.findChannelRelatedPlaylists(channelIds)
-        dao.removePlaylistWithItemsEntitiesByPlaylistId(playlists.mapNotNull { it.uploadedPlayList })
+        dao.removePlaylistWithItemsEntitiesByPlaylistIds(playlists.mapNotNull { it.uploadedPlayList })
         removeVideo(videoIds.toSet())
         dao.removeChannelEntities(channelIds)
     }
+
+    override suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+        fetchByIds(ids) {
+            val thumbs = findThumbnailUrlByIds(it)
+            dao.updateAsArchivedVideoEntities(it)
+            removeImageByUrl(thumbs)
+        }.forEach { _ -> }
+    }.getOrThrow()
 
     override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
         fetchByIds(ids) {

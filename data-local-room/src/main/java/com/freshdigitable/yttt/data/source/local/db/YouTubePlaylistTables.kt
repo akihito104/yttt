@@ -44,6 +44,9 @@ internal class YouTubePlaylistTable(
         @Query("SELECT * FROM playlist WHERE id = :id")
         suspend fun findPlaylistById(id: YouTubePlaylist.Id): YouTubePlaylistTable?
 
+        @Query("SELECT p.id FROM playlist AS p WHERE p.id NOT IN (SELECT c.uploaded_playlist_id FROM yt_channel_related_playlist AS c)")
+        suspend fun fetchPlaylistByUploadedPlaylist(): List<YouTubePlaylist.Id>
+
         @Query("DELETE FROM playlist WHERE id IN (:id)")
         suspend fun removePlaylistById(id: Collection<YouTubePlaylist.Id>)
 
@@ -132,8 +135,14 @@ internal class YouTubePlaylistItemTable(
         @Upsert
         suspend fun addPlaylistItems(items: Collection<YouTubePlaylistItemTable>)
 
+        @Query("SELECT i.video_id FROM playlist_item AS i WHERE i.playlist_id IN (:ids)")
+        suspend fun findVideoByPlaylistIds(ids: Collection<YouTubePlaylist.Id>): List<YouTubeVideo.Id>
+
         @Query("DELETE FROM playlist_item WHERE playlist_id = :id")
         suspend fun removePlaylistItemsByPlaylistId(id: YouTubePlaylist.Id)
+
+        @Query("DELETE FROM playlist_item WHERE playlist_id IN (:ids)")
+        suspend fun removePlaylistItemsByPlaylistIds(ids: Collection<YouTubePlaylist.Id>)
 
         @Query("DELETE FROM playlist_item WHERE video_id IN (:ids)")
         suspend fun removePlaylistItemsByVideoIds(ids: Collection<YouTubeVideo.Id>)
@@ -182,6 +191,12 @@ class YouTubePlaylistItemAdditionTable(
                 " (SELECT i.id FROM playlist_item AS i WHERE i.playlist_id = :id)"
         )
         suspend fun removePlaylistItemAdditionsByPlaylistId(id: YouTubePlaylist.Id)
+
+        @Query(
+            "DELETE FROM playlist_item_addition WHERE item_id IN" +
+                " (SELECT i.id FROM playlist_item AS i WHERE i.playlist_id IN (:ids))"
+        )
+        suspend fun removePlaylistItemAdditionsByPlaylistIds(ids: Collection<YouTubePlaylist.Id>)
 
         @Query("DELETE FROM playlist_item_addition")
         override suspend fun deleteTable()
@@ -301,9 +316,8 @@ internal interface YouTubePlaylistDao : YouTubePlaylistTable.Dao, YouTubePlaylis
         cacheControl: CacheControl,
     )
 
-    suspend fun removePlaylistWithItemsEntitiesByPlaylistId(ids: Collection<YouTubePlaylist.Id>)
+    suspend fun removePlaylistWithItemsEntitiesByPlaylistIds(ids: Collection<YouTubePlaylist.Id>)
     suspend fun removePlaylistItemEntitiesByPlaylistId(id: YouTubePlaylist.Id)
-    suspend fun removePlaylistEntitiesByPlaylistId(id: Collection<YouTubePlaylist.Id>)
 }
 
 internal class YouTubePlaylistDaoImpl @Inject constructor(
@@ -361,24 +375,24 @@ internal class YouTubePlaylistDaoImpl @Inject constructor(
         addPlaylistExpire(item.toEntity(cacheControl))
     }
 
-    override suspend fun removePlaylistWithItemsEntitiesByPlaylistId(ids: Collection<YouTubePlaylist.Id>) =
-        db.withTransaction {
-            ids.forEach { removePlaylistItemEntitiesByPlaylistId(it) }
-            removePlaylistEntitiesByPlaylistId(ids)
-        }
-
     override suspend fun removePlaylistItemEntitiesByPlaylistId(id: YouTubePlaylist.Id) =
         db.withTransaction {
             removePlaylistItemAdditionsByPlaylistId(id)
             removePlaylistItemsByPlaylistId(id)
         }
 
-    override suspend fun removePlaylistEntitiesByPlaylistId(id: Collection<YouTubePlaylist.Id>) =
+    override suspend fun removePlaylistWithItemsEntitiesByPlaylistIds(ids: Collection<YouTubePlaylist.Id>) =
         db.withTransaction {
-            removePlaylistExpire(id)
-            removePlaylistWithItemsEtag(id)
-            removePlaylistById(id)
+            removePlaylistItemAdditionsByPlaylistIds(ids)
+            removePlaylistItemsByPlaylistIds(ids)
+            removePlaylistEntitiesByPlaylistId(ids)
         }
+
+    private suspend fun removePlaylistEntitiesByPlaylistId(id: Collection<YouTubePlaylist.Id>) {
+        removePlaylistExpire(id)
+        removePlaylistWithItemsEtag(id)
+        removePlaylistById(id)
+    }
 
     override suspend fun deleteTable() {
         listOf(
