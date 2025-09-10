@@ -155,6 +155,27 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
+        fun removeVideoEntities() = dbRule.runWithDao { dao ->
+            // setup
+            val videoIds = listOf(simple, freechat, hasNoExpire, hasNoType)
+            // exercise
+            dao.removeVideoEntities(videoIds)
+            // verify
+            dao.findAllArchivedVideos().shouldBeEmpty()
+        }
+
+        @Test
+        fun updateAsArchivedVideoEntities() = dbRule.runWithDao { dao ->
+            // setup
+            val videoIds = listOf(simple, freechat, hasNoExpire, hasNoType)
+            // exercise
+            dao.updateAsArchivedVideoEntities(videoIds)
+            // verify
+            dao.findAllArchivedVideos().shouldContainExactlyInAnyOrder(videoIds)
+            dao.fetchUpdatableVideoIds(Instant.EPOCH).shouldBeEmpty()
+        }
+
+        @Test
         fun watchAllUnfinishedVideos() = dbRule.runWithDao { dao ->
             // setup
             val channelId = YouTubeChannel.Id("channel_")

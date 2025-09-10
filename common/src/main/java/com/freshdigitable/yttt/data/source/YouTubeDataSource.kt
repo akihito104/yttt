@@ -86,7 +86,8 @@ interface YouTubeLiveDataSource {
     val videos: Flow<List<YouTubeVideoExtended>>
     suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>>
     suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>)
-    suspend fun removeVideo(ids: Set<YouTubeVideo.Id>, isPreserved: Boolean = false)
+    suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>)
+    suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
 
     suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
     suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)

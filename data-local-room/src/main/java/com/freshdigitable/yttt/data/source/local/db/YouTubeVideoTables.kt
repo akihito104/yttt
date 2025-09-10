@@ -263,11 +263,8 @@ internal interface YouTubeVideoDao : YouTubeVideoTable.Dao, YouTubeVideoDb.Dao,
     YouTubeVideoExpireTable.Dao, YouTubeVideoDetailTable.Dao, FreeChatTable.Dao {
     suspend fun addVideoEntities(videos: Collection<Updatable<YouTubeVideoExtended>>)
     suspend fun insertOrIgnoreVideoEntities(videos: Collection<YouTubeVideo.Id>)
-    suspend fun removeVideoEntities(
-        videoIds: Collection<YouTubeVideo.Id>,
-        isPreserved: Boolean = true,
-    )
-
+    suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
+    suspend fun updateAsArchivedVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
     suspend fun addFreeChatItemEntities(
         ids: Collection<YouTubeVideo.Id>,
         isFreeChat: Boolean,
@@ -301,14 +298,24 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
 
     override suspend fun removeVideoEntities(
         videoIds: Collection<YouTubeVideo.Id>,
-        isPreserved: Boolean,
+    ) = db.withTransaction {
+        removeVideoDetailEntities(videoIds)
+        removeVideos(videoIds)
+    }
+
+    override suspend fun updateAsArchivedVideoEntities(
+        videoIds: Collection<YouTubeVideo.Id>,
+    ) = db.withTransaction {
+        removeVideoDetailEntities(videoIds)
+        addVideos(videoIds.map { YouTubeVideoTable(it, YouTubeVideo.BroadcastType.NONE) })
+    }
+
+    private suspend fun removeVideoDetailEntities(
+        videoIds: Collection<YouTubeVideo.Id>,
     ) = db.withTransaction {
         removeFreeChatItems(videoIds)
         removeLiveVideoExpire(videoIds)
         removeVideoDetails(videoIds)
-        if (!isPreserved) {
-            removeVideos(videoIds)
-        }
     }
 
     override suspend fun addFreeChatItemEntities(

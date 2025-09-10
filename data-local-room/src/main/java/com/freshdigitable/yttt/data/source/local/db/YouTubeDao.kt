@@ -41,12 +41,9 @@ internal class YouTubeDao @Inject constructor(
 
     override suspend fun removeVideoEntities(
         videoIds: Collection<YouTubeVideo.Id>,
-        isPreserved: Boolean,
     ) = db.withTransaction {
-        if (!isPreserved) {
-            playlistDao.removePlaylistItemsByVideoIds(videoIds)
-        }
-        videoDao.removeVideoEntities(videoIds, isPreserved)
+        playlistDao.removePlaylistItemsByVideoIds(videoIds)
+        videoDao.removeVideoEntities(videoIds)
     }
 
     override suspend fun deleteTable() = db.withTransaction {

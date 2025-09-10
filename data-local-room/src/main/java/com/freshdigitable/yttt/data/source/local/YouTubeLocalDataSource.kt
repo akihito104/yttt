@@ -155,6 +155,10 @@ internal class YouTubeLocalDataSource @Inject constructor(
     override suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>) =
         ioScope.asResult { dao.addVideoEntities(video) }.getOrThrow()
 
+    override suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>) {
+        dao.updateAsArchivedVideoEntities(ids)
+    }
+
     override suspend fun cleanUp() {
         database.youTubeChannelLogDao.deleteTable()
         removeUnusedChannels()
@@ -164,7 +168,7 @@ internal class YouTubeLocalDataSource @Inject constructor(
     private suspend fun removeNotExistVideos() {
         database.withTransaction {
             val archivedIds = dao.findAllArchivedVideos().toSet()
-            removeVideo(archivedIds, isPreserved = true)
+            updateAsArchivedVideo(archivedIds)
         }
         database.withTransaction {
             val removingId = dao.findUnusedVideoIds().toSet()
@@ -185,14 +189,13 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.removeChannelEntities(channelIds)
     }
 
-    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>, isPreserved: Boolean): Unit =
-        ioScope.asResult {
-            fetchByIds(ids) {
-                val thumbs = findThumbnailUrlByIds(it)
-                removeImageByUrl(thumbs)
-                removeVideoEntities(it, isPreserved)
-            }.forEach { _ -> }
-        }.getOrThrow()
+    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+        fetchByIds(ids) {
+            val thumbs = findThumbnailUrlByIds(it)
+            removeImageByUrl(thumbs)
+            removeVideoEntities(it)
+        }.forEach { _ -> }
+    }.getOrThrow()
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> =
         ioScope.asResult { dao.findChannels(ids) }
