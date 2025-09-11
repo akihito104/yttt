@@ -15,6 +15,7 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.video.FindLiveVideoUseCase
+import com.freshdigitable.yttt.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -64,6 +65,9 @@ internal class TimetableTabViewModel @AssistedInject constructor(
                     } else {
                         val failed = checkNotNull(tasks.first { it.isFailure }.exceptionOrNull())
                         sender.send(SnackbarMessage.fromThrowable(failed))
+                        tasks.filter { it.isFailure }.forEach {
+                            logE(throwable = it.exceptionOrNull()) { "error: ${it.exceptionOrNull()?.message}" }
+                        }
                     }
                 }
                 _isLoading.postValue(false)

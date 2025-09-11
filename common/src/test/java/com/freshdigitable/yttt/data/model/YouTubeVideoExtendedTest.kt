@@ -360,7 +360,7 @@ internal data class YouTubeVideoImpl(
     override val actualEndDateTime: Instant? = null,
     override val description: String = "",
     override val viewerCount: BigInteger? = null,
-    override val liveBroadcastContent: YouTubeVideo.BroadcastType?,
+    override val liveBroadcastContent: YouTubeVideo.BroadcastType,
 ) : YouTubeVideo
 
 internal fun YouTubeVideoImpl.extended(isFreeChat: Boolean): YouTubeVideoExtended =

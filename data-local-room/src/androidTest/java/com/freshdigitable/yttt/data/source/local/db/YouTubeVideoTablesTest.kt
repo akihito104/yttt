@@ -4,10 +4,15 @@ import app.cash.turbine.test
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
+import io.kotest.assertions.asClue
 import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.Before
 import org.junit.Rule
@@ -48,23 +53,32 @@ class YouTubeVideoTablesTest {
         private val simple = YouTubeVideo.Id("test")
         private val freechat = YouTubeVideo.Id("test_freechat")
         private val hasNoExpire = YouTubeVideo.Id("test_no_expire")
+        private val hasNoType = YouTubeVideo.Id("test_no_type")
 
         @Before
         fun setup() = dbRule.runWithDao { dao ->
             val channel = YouTubeChannelTable(id = YouTubeChannel.Id("channel"))
-            val videos = listOf(simple, freechat, hasNoExpire).map {
-                YouTubeVideoTable(id = it, channelId = channel.id)
-            }
+            val videos = listOf(
+                YouTubeVideoEntity.upcomingStream(id = simple.value, channel = channel),
+                YouTubeVideoEntity.freeChat(id = freechat.value, channel = channel),
+            )
             val expire = listOf(simple, freechat).map {
                 YouTubeVideoExpireTable(
                     videoId = it,
                     cacheControl = CacheControlDb(Instant.ofEpochMilli(100), Duration.ZERO),
                 )
             }
-            dao.addChannels(listOf(channel))
-            dao.addVideos(videos)
+            dao.addChannelEntities(listOf(channel))
+            dao.addVideoEntities(videos)
+            dao.addVideos(
+                listOf(YouTubeVideoTable(hasNoExpire, YouTubeVideo.BroadcastType.UPCOMING))
+            )
+            dao.addVideoDetails(
+                listOf(YouTubeVideoDetailTable(hasNoExpire, channelId = channel.id))
+            )
             dao.addLiveVideoExpire(expire)
             dao.addFreeChatItems(listOf(FreeChatTable(freechat, true)))
+            dao.insertOrIgnoreVideoEntities(listOf(hasNoType))
         }
 
         @Test
@@ -99,66 +113,99 @@ class YouTubeVideoTablesTest {
                 .filter { it.isFresh(Instant.ofEpochMilli(99)) }
             // verify
             actual.size shouldBe 1
-            actual.first().item.id shouldBe target
-            actual.first().item.isFreeChat shouldBe true
+            actual.first().item.asClue {
+                it.id shouldBe target
+                it.isFreeChat shouldBe true
+            }
         }
 
         @Test
-        fun findVideosById_hasNoExpireEntity_isNotFound() = dbRule.runWithDao { dao ->
+        fun findVideosById_hasNoExpireEntity_found1Item() = dbRule.runWithDao { dao ->
             // setup
             val target = hasNoExpire
             // exercise
             val actual = dao.findVideosById(listOf(target))
-                .filter { it.isFresh(Instant.ofEpochMilli(100)) }
+            // verify
+            actual.shouldHaveSize(1)
+            actual.first().asClue {
+                it.item.id shouldBe target
+                it.cacheControl.asClue { c ->
+                    c.fetchedAt.shouldBeNull()
+                    c.maxAge.shouldBeNull()
+                }
+            }
+        }
+
+        @Test
+        fun findVideosById_hasNoTypeEntity_isNotFound() = dbRule.runWithDao { dao ->
+            // setup
+            val target = hasNoType
+            // exercise
+            val actual = dao.findVideosById(listOf(target))
             // verify
             actual.shouldBeEmpty()
         }
 
         @Test
-        fun findVideosById_found1Item() = dbRule.runWithDao { dao ->
-            // setup
-            val target = listOf(simple, hasNoExpire)
+        fun fetchUpdatableVideoIds_found2Items() = dbRule.runWithDao { dao ->
             // exercise
-            val actual = dao.findVideosById(target)
-                .filter { it.isFresh(Instant.ofEpochMilli(99)) }
+            val actual = dao.fetchUpdatableVideoIds(Instant.EPOCH)
             // verify
-            actual.map { it.item.id }.shouldContainExactlyInAnyOrder(simple)
+            actual.shouldContainAll(hasNoType, hasNoExpire)
+        }
+
+        @Test
+        fun removeVideoEntities() = dbRule.runWithDao { dao ->
+            // setup
+            val videoIds = listOf(simple, freechat, hasNoExpire, hasNoType)
+            // exercise
+            dao.removeVideoEntities(videoIds)
+            // verify
+            dao.findAllArchivedVideos().shouldBeEmpty()
+        }
+
+        @Test
+        fun updateAsArchivedVideoEntities() = dbRule.runWithDao { dao ->
+            // setup
+            val videoIds = listOf(simple, freechat, hasNoExpire, hasNoType)
+            // exercise
+            dao.updateAsArchivedVideoEntities(videoIds)
+            // verify
+            dao.findAllArchivedVideos().shouldContainExactlyInAnyOrder(videoIds)
+            dao.fetchUpdatableVideoIds(Instant.EPOCH).shouldBeEmpty()
         }
 
         @Test
         fun watchAllUnfinishedVideos() = dbRule.runWithDao { dao ->
             // setup
             val channelId = YouTubeChannel.Id("channel_")
-            dao.addChannels(listOf(YouTubeChannelTable(channelId)))
+            val channel = YouTubeChannelTable(channelId)
+            dao.addChannels(listOf(channel))
             val live = YouTubeVideo.Id("test_live")
             val upcoming = YouTubeVideo.Id("test_upcoming")
-            dao.addVideos(
+            dao.addVideoEntities(
                 listOf(
-                    YouTubeVideoTable(
-                        id = live,
-                        channelId = channelId,
+                    YouTubeVideoEntity.liveStreaming(
+                        id = live.value,
+                        channel = channel,
                         scheduledStartDateTime = Instant.ofEpochMilli(10),
                         actualStartDateTime = Instant.ofEpochMilli(14),
-                        broadcastContent = YouTubeVideo.BroadcastType.LIVE,
                     ),
-                    YouTubeVideoTable(
-                        id = upcoming,
-                        channelId = channelId,
+                    YouTubeVideoEntity.upcomingStream(
+                        id = upcoming.value,
+                        channel = channel,
                         scheduledStartDateTime = Instant.ofEpochMilli(30),
-                        broadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
                     ),
-                    YouTubeVideoTable(
-                        id = YouTubeVideo.Id("test_archived"),
-                        channelId = channelId,
+                    YouTubeVideoEntity.archivedStream(
+                        id = "test_archived",
+                        channel = channel,
                         scheduledStartDateTime = Instant.ofEpochMilli(50),
                         actualStartDateTime = Instant.ofEpochMilli(51),
                         actualEndDateTime = Instant.ofEpochMilli(70),
-                        broadcastContent = YouTubeVideo.BroadcastType.NONE,
                     ),
-                    YouTubeVideoTable(
-                        id = YouTubeVideo.Id("test_shorts"),
-                        channelId = channelId,
-                        broadcastContent = YouTubeVideo.BroadcastType.NONE,
+                    YouTubeVideoEntity.uploadedVideo(
+                        id = "test_shorts",
+                        channel = channel,
                     ),
                 )
             )
@@ -167,11 +214,12 @@ class YouTubeVideoTablesTest {
             // verify
             actual.test {
                 val item = awaitItem()
-                item.size shouldBe 5
-                item.forAll { it.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
-                item.map { it.id }.shouldContainExactlyInAnyOrder(
-                    simple, freechat, hasNoExpire, live, upcoming,
-                )
+                item.asClue {
+                    it.forAll { i -> i.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
+                    it.map { i -> i.id }.shouldContainExactlyInAnyOrder(
+                        simple, freechat, hasNoExpire, live, upcoming,
+                    )
+                }
             }
         }
     }

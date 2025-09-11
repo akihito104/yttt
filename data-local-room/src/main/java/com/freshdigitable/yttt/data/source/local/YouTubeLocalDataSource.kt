@@ -157,20 +157,31 @@ internal class YouTubeLocalDataSource @Inject constructor(
 
     override suspend fun cleanUp() {
         database.youTubeChannelLogDao.deleteTable()
+        removePlaylistWithItemsEntities()
         removeUnusedChannels()
         removeNotExistVideos()
     }
 
+    private suspend fun removePlaylistWithItemsEntities() = database.withTransaction {
+        val playlists = dao.fetchPlaylistByUploadedPlaylist()
+        if (playlists.isEmpty()) {
+            return@withTransaction
+        }
+        val videoIds = dao.findVideoByPlaylistIds(playlists)
+        dao.removePlaylistWithItemsEntitiesByPlaylistIds(playlists)
+        if (videoIds.isNotEmpty()) {
+            removeVideo(videoIds.toSet())
+        }
+    }
+
     private suspend fun removeNotExistVideos() {
+        database.withTransaction {
+            val archivedIds = dao.findAllArchivedVideos().toSet()
+            updateAsArchivedVideo(archivedIds)
+        }
         database.withTransaction {
             val removingId = dao.findUnusedVideoIds().toSet()
             removeVideo(removingId)
-            dao.removeVideoIsArchivedEntities(removingId)
-            database.youTubeVideoIsArchivedDao.removeUnusedEntities()
-        }
-        database.withTransaction {
-            val archivedIds = dao.findAllArchivedVideos().toSet()
-            removeVideo(archivedIds)
         }
     }
 
@@ -182,17 +193,26 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }
         val videoIds = dao.findVideoIdsByChannelId(channelIds)
         val playlists = dao.findChannelRelatedPlaylists(channelIds)
-        dao.removePlaylistWithItemsEntitiesByPlaylistId(playlists.mapNotNull { it.uploadedPlayList })
-        removeVideo(videoIds.toSet(), false)
+        dao.removePlaylistWithItemsEntitiesByPlaylistIds(playlists.mapNotNull { it.uploadedPlayList })
+        removeVideo(videoIds.toSet())
         dao.removeChannelEntities(channelIds)
     }
 
-    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>, isPreserved: Boolean): Unit =
-        ioScope.asResult {
-            val thumbs = dao.findThumbnailUrlByIds(ids)
-            fetchByIds(ids) { removeVideoEntities(it, isPreserved) }
+    override suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+        fetchByIds(ids) {
+            val thumbs = findThumbnailUrlByIds(it)
+            dao.updateAsArchivedVideoEntities(it)
             removeImageByUrl(thumbs)
-        }.getOrThrow()
+        }.forEach { _ -> }
+    }.getOrThrow()
+
+    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+        fetchByIds(ids) {
+            val thumbs = findThumbnailUrlByIds(it)
+            removeImageByUrl(thumbs)
+            removeVideoEntities(it)
+        }.forEach { _ -> }
+    }.getOrThrow()
 
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> =
         ioScope.asResult { dao.findChannels(ids) }

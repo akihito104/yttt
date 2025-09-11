@@ -3,9 +3,12 @@ package com.freshdigitable.yttt.data.source.local
 import android.content.ContentValues
 import android.database.sqlite.SQLiteConstraintException
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteException
+import androidx.core.database.getLongOrNull
 import com.freshdigitable.yttt.data.source.local.fixture.AppMigrationTestRule
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.longs.shouldBeGreaterThan
+import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import org.junit.Before
 import org.junit.Rule
@@ -369,6 +372,96 @@ class AppDatabaseMigrationTest {
                         put("channel_id", "channel_99")
                         put("uploaded_playlist_id", "channel_99-playlist_uploaded")
                     })
+            }
+        }
+    }
+
+    class From25To26 {
+        @get:Rule
+        internal val rule = AppMigrationTestRule(25, 26, MIGRATION_25_26)
+
+        @Before
+        fun setup(): Unit = rule.oldDb.use {
+            rule.insertForSetup(
+                "channel" to listOf(ContentValues().apply {
+                    put("id", "channel_1")
+                    put("title", "channel_title_0")
+                    put("icon", "")
+                }),
+                "video" to listOf(ContentValues().apply {
+                    put("id", "video_1")
+                    put("title", "title")
+                    put("channel_id", "channel_1")
+                    put("schedule_start_datetime", 0)
+                    putNull("schedule_end_datetime")
+                    put("actual_start_datetime", 100)
+                    put("actual_end_datetime", 10000)
+                    put("thumbnail", "<thumbnail url>")
+                    put("viewer_count", 300)
+                    put("description", "description")
+                    put("broadcast_content", "upcoming")
+                }),
+                "yt_video_is_archived" to listOf(ContentValues().apply {
+                    put("video_id", "video_2")
+                    put("is_archived", true)
+                }),
+                "playlist" to listOf(ContentValues().apply {
+                    put("id", "channel_1-playlist_uploaded")
+                    put("title", "uploaded")
+                    put("thumbnail_url", "")
+                }),
+                "playlist_item" to listOf(
+                    ContentValues().apply {
+                        put("id", "playlist_id_1")
+                        put("playlist_id", "channel_1-playlist_uploaded")
+                        put("video_id", "video_1")
+                        put("published_at", 0)
+                    },
+                    ContentValues().apply {
+                        put("id", "playlist_id_2")
+                        put("playlist_id", "channel_1-playlist_uploaded")
+                        put("video_id", "video_2")
+                        put("published_at", 0)
+                    },
+                ),
+            )
+        }
+
+        @Test
+        fun init(): Unit = rule.run {
+            shouldThrow<SQLiteException> { newDb.query("SELECT * FROM video_is_archived") }
+            newDb.query("SELECT * FROM video").use { c ->
+                c.moveToNext()
+                c.getString(c.getColumnIndexOrThrow("id")) shouldBe "video_2"
+                c.getString(c.getColumnIndexOrThrow("broadcast_content")) shouldBe "none"
+                c.moveToNext()
+                c.getString(c.getColumnIndexOrThrow("id")) shouldBe "video_1"
+                c.getString(c.getColumnIndexOrThrow("broadcast_content")) shouldBe "upcoming"
+            }
+            newDb.query("SELECT * FROM video_detail").use { c ->
+                c.moveToNext()
+                c.getString(c.getColumnIndexOrThrow("video_id")) shouldBe "video_1"
+                c.getString(c.getColumnIndexOrThrow("title")) shouldBe "title"
+                c.getString(c.getColumnIndexOrThrow("channel_id")) shouldBe "channel_1"
+                c.getLong(c.getColumnIndexOrThrow("schedule_start_datetime")) shouldBe 0
+                c.getLongOrNull(c.getColumnIndexOrThrow("schedule_end_datetime")).shouldBeNull()
+                c.getLong(c.getColumnIndexOrThrow("actual_start_datetime")) shouldBe 100
+                c.getLong(c.getColumnIndexOrThrow("actual_end_datetime")) shouldBe 10000
+                c.getLong(c.getColumnIndexOrThrow("viewer_count")) shouldBe 300
+                c.getString(c.getColumnIndexOrThrow("thumbnail")) shouldBe "<thumbnail url>"
+                c.getString(c.getColumnIndexOrThrow("description")) shouldBe "description"
+            }
+        }
+
+        @Test
+        fun fkConstraint_playlistItem_to_video(): Unit = rule.run {
+            shouldThrow<SQLiteConstraintException> {
+                newDb.insert("playlist_item", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
+                    put("id", "playlist_id_2")
+                    put("playlist_id", "channel_1-playlist_uploaded")
+                    put("video_id", "video_100")
+                    put("published_at", 0)
+                })
             }
         }
     }

@@ -54,9 +54,9 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionIdConvert
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionRelevanceOrderTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoBroadcastType
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDetailTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIdConverter
-import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIsArchivedTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
 
 @Database(
@@ -70,7 +70,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         YouTubeSubscriptionRelevanceOrderTable::class,
         YouTubeSubscriptionEtagTable::class,
         YouTubeVideoTable::class,
-        YouTubeVideoIsArchivedTable::class,
+        YouTubeVideoDetailTable::class,
         FreeChatTable::class,
         YouTubeVideoExpireTable::class,
         YouTubePlaylistTable::class,
@@ -94,7 +94,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     views = [
         TwitchUserDetailDbView::class,
     ],
-    version = 25,
+    version = 26,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -196,7 +196,10 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
         private const val DATABASE_NAME = "ytttdb"
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name)
-                .addMigrations(MIGRATION_13_14, MIGRATION_15_16, MIGRATION_18_19, MIGRATION_23_24)
+                .addMigrations(
+                    MIGRATION_13_14, MIGRATION_15_16, MIGRATION_18_19, MIGRATION_23_24,
+                    MIGRATION_25_26,
+                )
                 .build()
     }
 }
@@ -336,17 +339,69 @@ internal val MIGRATION_23_24 = object : Migration(23, 24) {
         )
     }
 }
+internal val MIGRATION_25_26 = object : Migration(25, 26) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP VIEW twitch_user_detail_view")
+        db.execSQL("DROP TABLE `yt_video_is_archived`")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `video_detail` (`video_id` TEXT NOT NULL, " +
+                "`title` TEXT NOT NULL DEFAULT '', `channel_id` TEXT NOT NULL, `schedule_start_datetime` INTEGER, " +
+                "`schedule_end_datetime` INTEGER, `actual_start_datetime` INTEGER, `actual_end_datetime` INTEGER, " +
+                "`thumbnail` TEXT NOT NULL DEFAULT '', `description` TEXT NOT NULL DEFAULT '', " +
+                "`viewer_count` INTEGER DEFAULT null, PRIMARY KEY(`video_id`), " +
+                "FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , " +
+                "FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_video_detail_channel_id` ON `video_detail` (`channel_id`)")
+        db.execSQL("CREATE TABLE IF NOT EXISTS `_new_video` (`id` TEXT NOT NULL, `broadcast_content` TEXT, PRIMARY KEY(`id`))")
+        db.execSQL("INSERT INTO `_new_video` (`id`,`broadcast_content`) SELECT `video_id`,'none' FROM `playlist_item` GROUP BY `video_id`")
+        db.execSQL("INSERT OR REPLACE INTO `_new_video` (`id`,`broadcast_content`) SELECT `id`,`broadcast_content` FROM `video`")
+        db.execSQL(
+            "INSERT INTO `video_detail` (`video_id`,`title`,`channel_id`,`schedule_start_datetime`," +
+                "`schedule_end_datetime`,`actual_start_datetime`,`actual_end_datetime`,`thumbnail`,`description`,`viewer_count`) " +
+                "SELECT `id`,`title`,`channel_id`,`schedule_start_datetime`,`schedule_end_datetime`," +
+                "`actual_start_datetime`,`actual_end_datetime`,`thumbnail`,`description`,`viewer_count` FROM `video`"
+        )
+        db.execSQL("DROP TABLE `video`")
+        db.execSQL("ALTER TABLE `_new_video` RENAME TO `video`")
+
+        db.execSQL("CREATE TABLE IF NOT EXISTS `_new_playlist_item` (`id` TEXT NOT NULL, `playlist_id` TEXT NOT NULL, `video_id` TEXT NOT NULL, `published_at` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )")
+        db.execSQL("INSERT INTO `_new_playlist_item` (`id`,`playlist_id`,`video_id`,`published_at`) SELECT `id`,`playlist_id`,`video_id`,`published_at` FROM `playlist_item`")
+        db.execSQL("DROP TABLE `playlist_item`")
+        db.execSQL("ALTER TABLE `_new_playlist_item` RENAME TO `playlist_item`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_item_playlist_id` ON `playlist_item` (`playlist_id`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_item_video_id` ON `playlist_item` (`video_id`)")
+        db.foreignKeyCheck("playlist_item")
+
+        db.execSQL(
+            "CREATE VIEW `twitch_user_detail_view` AS SELECT u.login_name, u.display_name, " +
+                "d.* FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
+        )
+    }
+}
 
 internal fun SupportSQLiteDatabase.foreignKeyCheck(tableName: String) {
     query("PRAGMA foreign_key_check('$tableName')").use {
         if (it.count > 0) {
+            var rowCount = 0
+            val fkParentTables = mutableMapOf<String, String>()
             val msg = buildString {
                 while (it.moveToNext()) {
-                    if (it.isFirst) {
+                    if (rowCount == 0) {
                         append("foreign key violation: ")
                         append(it.getString(0)).append("\n")
                     }
-                    append(it.getString(3)).append(",").append(it.getString(2)).append("\n")
+                    val constraintIndex = it.getString(3)
+                    if (!fkParentTables.containsKey(constraintIndex)) {
+                        fkParentTables[constraintIndex] = it.getString(2)
+                    }
+                    rowCount++
+                }
+                for ((key, value) in fkParentTables) {
+                    append("\tParent Table = ")
+                    append(value)
+                    append(", Foreign Key Constraint Index = ")
+                    append(key).append("\n")
                 }
             }
             throw SQLiteConstraintException(msg)
