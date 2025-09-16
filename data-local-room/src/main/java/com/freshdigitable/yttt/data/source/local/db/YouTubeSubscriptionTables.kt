@@ -95,7 +95,7 @@ internal class YouTubeSubscriptionRelevanceOrderTable(
     @PrimaryKey(autoGenerate = false)
     @ColumnInfo(name = "subscription_id")
     val id: YouTubeSubscription.Id,
-    @ColumnInfo(name = "subs_order", defaultValue = (-1).toString())
+    @ColumnInfo(name = "subs_order", defaultValue = "-1")
     val order: Int = -1,
 ) {
     @androidx.room.Dao
