@@ -2,9 +2,9 @@
 androidGradlePlugin = "8.13.0"
 desugarJdkLib = "2.1.5"
 androidTools = "31.13.0"
-kotlin = "2.2.10"
-ksp = "2.2.10-2.0.2"
-kotlinxCoroutinesCore = "1.10.2"
+kotlin = "2.2.20"
+ksp = "2.2.20-2.0.3" # https://github.com/google/ksp/releases
+kotlinxCoroutinesCore = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
 kotlinxSerializationJson = "1.9.0"
 licensee = "1.13.0"
 oss-license-plugin = "0.10.7"
