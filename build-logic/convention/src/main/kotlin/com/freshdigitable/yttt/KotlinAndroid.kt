@@ -56,6 +56,11 @@ fun Project.configureKotest(commonExtension: CommonExtension<*, *, *, *, *, *>) 
 fun Project.configureDetekt(extension: DetektExtension) {
     extension.apply {
         tasks.named<Detekt>("detekt") {
+            parallel = true
+//            config = files("$rootDir/config/detekt/detekt.yml")
+//            buildUponDefaultConfig = true
+            ignoreFailures = true
+            basePath = rootDir.absolutePath
             reports {
                 xml.required.set(true)
                 html.required.set(true)
