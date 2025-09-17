@@ -1,10 +1,13 @@
 package com.freshdigitable.yttt
 
 import com.android.build.api.dsl.CommonExtension
+import io.gitlab.arturbosch.detekt.Detekt
+import io.gitlab.arturbosch.detekt.extensions.DetektExtension
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.dependencies
+import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.provideDelegate
 import org.jetbrains.kotlin.gradle.dsl.JvmDefaultMode
 import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
@@ -49,3 +52,20 @@ fun Project.configureKotest(commonExtension: CommonExtension<*, *, *, *, *, *>) 
             testImplementation(libs.findLibrary("kotest-assertions-core"))
         }
     }
+
+fun Project.configureDetekt(extension: DetektExtension) {
+    extension.apply {
+        tasks.named<Detekt>("detekt") {
+            reports {
+                xml.required.set(true)
+                html.required.set(true)
+                txt.required.set(false)
+                sarif.required.set(true)
+                md.required.set(false)
+            }
+        }
+        dependencies {
+            "detektPlugins"("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.8")
+        }
+    }
+}

@@ -17,6 +17,7 @@ fun PluginManager.applyKotlinAndroid() = apply("org.jetbrains.kotlin.android")
 fun PluginManager.applyComposeCompiler() = apply("org.jetbrains.kotlin.plugin.compose")
 fun PluginManager.applyKsp() = apply("com.google.devtools.ksp")
 fun PluginManager.applyHiltAndroid() = apply("dagger.hilt.android.plugin")
+fun PluginManager.applyDetekt() = apply("io.gitlab.arturbosch.detekt")
 
 fun DependencyHandlerScope.implementation(dependency: Provider<MinimalExternalModuleDependency>) =
     add(IMPLEMENTATION, dependency)

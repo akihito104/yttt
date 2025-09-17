@@ -43,6 +43,7 @@ okhttp = "5.1.0"
 retrofit = "3.0.0"
 kermit = "2.0.8"
 leakcanaryAndroid = "2.14"
+detekt = "1.23.8"
 
 junit = "4.13.2"
 kotest = "6.0.3"
@@ -121,6 +122,7 @@ android-tools-common = { group = "com.android.tools", name = "common", version.r
 compose-gradlePlugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+detekt-gradlePlugin = { group = "io.gitlab.arturbosch.detekt", name = "detekt-gradle-plugin", version.ref = "detekt" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
@@ -133,6 +135,7 @@ android-room = { id = "androidx.room", version.ref = "room-ktx" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 licensee = { id = "app.cash.licensee", version.ref = "licensee" }
 oss-license-plugin = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "oss-license-plugin" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 ## for build-logic
 yttt-android-application = { id = "yttt.android.application" }
 yttt-android-application-compose = { id = "yttt.android.application.compose" }

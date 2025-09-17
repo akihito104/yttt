@@ -23,6 +23,7 @@ dependencies {
     compileOnly(libs.compose.gradlePlugin)
     compileOnly(libs.kotlin.gradlePlugin)
     compileOnly(libs.ksp.gradlePlugin)
+    compileOnly(libs.detekt.gradlePlugin)
 }
 
 gradlePlugin {
@@ -50,6 +51,10 @@ gradlePlugin {
         register("kotest") {
             id = "yttt.kotest"
             implementationClass = "KotestConventionPlugin"
+        }
+        register("detekt") {
+            id = "yttt.detekt"
+            implementationClass = "DetektConventionPlugin"
         }
     }
 }
