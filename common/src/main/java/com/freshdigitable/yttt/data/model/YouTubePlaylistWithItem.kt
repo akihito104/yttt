@@ -12,6 +12,7 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
     val eTag: String? get() = null
 
     companion object {
+        private const val DAYS_OF_WEEK = 7
         private val YouTubePlaylistWithItem<*>.itemId: List<YouTubePlaylistItem.Id> get() = items.map { it.id }
         fun <T : YouTubePlaylistItem> YouTubePlaylistWithItem<*>.update(
             newItems: Updatable<List<T>>,
@@ -26,11 +27,11 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
         ): Updatable<YouTubePlaylistWithItem<T>> = NewPlaylist(playlist.item, items)
             .toUpdatable(
                 Updatable.latest(playlist, items).cacheControl
-                    .overrideMaxAge(if (items.item.isEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT)
+                    .overrideMaxAge(if (items.item.isEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT),
             )
 
         internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
-        val MAX_AGE_DEFAULT: Duration = MAX_AGE_MAX.dividedBy(2.0.pow(n = 7).toLong())
+        val MAX_AGE_DEFAULT: Duration = MAX_AGE_MAX.dividedBy(2.0.pow(n = DAYS_OF_WEEK).toLong())
     }
 
     private class ForUpdate<T : YouTubePlaylistItem>(
@@ -64,7 +65,7 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
                     if (isNotModified) {
                         val latest = items.maxOf { it.publishedAt }
                         val inactionDays =
-                            Duration.between(latest, fetchedAt).toDays().coerceIn(0L..7)
+                            Duration.between(latest, fetchedAt).toDays().coerceIn(0L..DAYS_OF_WEEK)
                         val pow = 2.0.pow(inactionDays.toDouble())
                         MAX_AGE_DEFAULT.multipliedBy(pow.toLong())
                     } else {
@@ -88,8 +89,12 @@ typealias YouTubePlaylistWithItems = YouTubePlaylistWithItem<YouTubePlaylistItem
 typealias YouTubePlaylistWithItemDetails = YouTubePlaylistWithItem<YouTubePlaylistItemDetail>
 
 internal fun Updatable.Companion.latest(u1: Updatable<*>, u2: Updatable<*>): Updatable<*> {
-    check(u1.cacheControl.fetchedAt != null || u2.cacheControl.fetchedAt != null)
-    val f1 = u1.cacheControl.fetchedAt ?: return u2
-    val f2 = u2.cacheControl.fetchedAt ?: return u1
-    return if (f1 < f2) u2 else u1
+    val f1 = u1.cacheControl.fetchedAt
+    val f2 = u2.cacheControl.fetchedAt
+    check(f1 != null || f2 != null)
+    return when {
+        f1 == null -> u2
+        f2 == null -> u1
+        else -> if (f1 < f2) u2 else u1
+    }
 }

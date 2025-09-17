@@ -26,7 +26,9 @@ interface YouTubeDataSource {
         const val MAX_PAGE_SIZE = 50
     }
 
-    suspend fun fetchPagedSubscription(query: YouTubeSubscriptionQuery): Result<NetworkResponse<List<YouTubeSubscription>>>
+    suspend fun fetchPagedSubscription(
+        query: YouTubeSubscriptionQuery,
+    ): Result<NetworkResponse<List<YouTubeSubscription>>>
 
     suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,
@@ -35,11 +37,21 @@ interface YouTubeDataSource {
     ): Result<List<YouTubeChannelLog>>
 
     suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>>
-    suspend fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelRelatedPlaylist>>
-    suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>>
+
+    suspend fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<YouTubeChannelRelatedPlaylist>>
+
+    suspend fun fetchChannelDetailList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<Updatable<YouTubeChannelDetail>>>
+
     suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>>
 
-    suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>>
+    suspend fun fetchPlaylist(
+        ids: Set<YouTubePlaylist.Id>,
+    ): Result<List<Updatable<YouTubePlaylist>>>
+
     suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
@@ -52,10 +64,15 @@ interface YouTubeDataSource {
         cache: YouTubePlaylistWithItem<*>? = null,
     ): Result<Updatable<YouTubePlaylistWithItemDetails>?>
 
-    interface Local : YouTubeDataSource, YouTubeLiveDataSource, ImageDataSource {
+    interface Local :
+        YouTubeDataSource,
+        YouTubeLiveDataSource,
+        ImageDataSource {
         suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id>
-        override suspend fun fetchPagedSubscription(query: YouTubeSubscriptionQuery): Result<NetworkResponse<List<YouTubeSubscription>>> =
-            throw NotImplementedError()
+
+        override suspend fun fetchPagedSubscription(
+            query: YouTubeSubscriptionQuery,
+        ): Result<NetworkResponse<List<YouTubeSubscription>>> = throw NotImplementedError()
 
         suspend fun addPlaylist(playlist: Collection<Updatable<YouTubePlaylist>>)
 

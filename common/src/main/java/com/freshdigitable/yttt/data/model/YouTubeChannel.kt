@@ -42,8 +42,8 @@ interface YouTubeChannelAddition {
     val viewsCount: BigInteger
 }
 
-interface YouTubeChannelDetail : YouTubeChannel, YouTubeChannelAddition,
-    YouTubeChannelRelatedPlaylist {
+interface YouTubeChannelDetail :
+    YouTubeChannel, YouTubeChannelAddition, YouTubeChannelRelatedPlaylist {
     companion object {
         val MAX_AGE: Duration = Duration.ofDays(1)
     }

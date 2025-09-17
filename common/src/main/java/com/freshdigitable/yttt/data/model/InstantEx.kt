@@ -6,10 +6,6 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-interface DateTimeProvider {
-    fun now(): Instant
-}
-
 /**
  * yyyy/MM/dd
  */

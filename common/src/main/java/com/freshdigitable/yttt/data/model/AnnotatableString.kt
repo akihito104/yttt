@@ -50,9 +50,9 @@ interface AnnotatableString {
             return (url + youtubeUrl).toList().sortedBy { it.range.first }
         }
 
-        private val REGEX_HASHTAG =
         // Pattern.UNICODE_CHARACTER_CLASS is not supported
-//            Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+        // Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+        private val REGEX_HASHTAG =
             Regex("""([#＃])[^\s　$PARENTHESIS#$'"$SEPARATOR]+""")
 
         private fun hashTagAnnotationRange(annotatable: String): List<LinkAnnotationRange> {
@@ -106,7 +106,7 @@ interface AnnotatableString {
 
     private data class AnnotatableStringImpl(
         override val annotatable: String,
-        override val annotationRangeItems: List<LinkAnnotationRange>
+        override val annotationRangeItems: List<LinkAnnotationRange>,
     ) : AnnotatableString
 
     private object EmptyAnnotatableString : AnnotatableString {

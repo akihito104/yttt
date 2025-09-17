@@ -58,8 +58,7 @@ interface YouTubeVideo {
 
         fun YouTubeVideo.isPostponedLive(current: Instant): Boolean {
             val s = scheduledStartDateTime ?: return false
-            return isUpcoming() && s <= current
-                && Duration.between(s, current) > MAX_AGE_LIMIT_SOON
+            return isUpcoming() && s <= current && Duration.between(s, current) > MAX_AGE_LIMIT_SOON
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -128,17 +127,19 @@ interface YouTubeVideoExtended : YouTubeVideo {
 private class YouTubeVideoExtendedImpl(
     private val old: Updatable<YouTubeVideoExtended>?,
     private val video: Updatable<YouTubeVideo>,
-    private val _isFreeChat: Boolean?,
+    private val isNewFreeChat: Boolean?,
 ) : YouTubeVideoExtended, YouTubeVideo by video.item {
     override val channel: YouTubeChannel
         get() = old?.item?.channel?.update(video.item.channel) ?: video.item.channel.toChannel()
     override val isFreeChat: Boolean
-        get() = isFreeChat(old?.item, video.item, _isFreeChat)
+        get() = isFreeChat(old?.item, video.item, isNewFreeChat)
     override val isThumbnailUpdatable: Boolean
         get() {
             val o = old ?: return false
             return when {
-                isFreeChat -> o.isUpdatable(checkNotNull(video.cacheControl.fetchedAt)) // at same time of updating this entity
+                isFreeChat -> // at same time of updating this entity
+                    o.isUpdatable(checkNotNull(video.cacheControl.fetchedAt))
+
                 isLiveStream() -> (o.item.title != title || (o.item.isUpcoming() && isNowOnAir()))
                 else -> false
             }
@@ -149,7 +150,7 @@ private class YouTubeVideoExtendedImpl(
             YouTubeVideoExtendedImpl(
                 old = this.old,
                 video = this.video,
-                _isFreeChat = true,
+                isNewFreeChat = true,
             )
 
         fun isFreeChat(

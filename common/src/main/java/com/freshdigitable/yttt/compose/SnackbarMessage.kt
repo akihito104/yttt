@@ -3,6 +3,8 @@ package com.freshdigitable.yttt.compose
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarVisuals
 import com.freshdigitable.yttt.data.source.NetworkResponse
+import com.freshdigitable.yttt.data.source.NetworkResponse.Exception.Companion.HTTP_STATUS_INTERNAL_ERROR_RANGE
+import com.freshdigitable.yttt.data.source.NetworkResponse.Exception.Companion.HTTP_STATUS_USER_ERROR_RANGE
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
@@ -20,9 +22,9 @@ data class SnackbarMessage(
             val message = if (throwable is NetworkResponse.Exception) {
                 if (throwable.isQuotaExceeded) {
                     "we have reached the usage limit. please try again later."
-                } else if (throwable.statusCode in 400..499) {
+                } else if (throwable.statusCode in HTTP_STATUS_USER_ERROR_RANGE) {
                     "we have encountered an error. please contact to app developer."
-                } else if (throwable.statusCode in 500..599) {
+                } else if (throwable.statusCode in HTTP_STATUS_INTERNAL_ERROR_RANGE) {
                     "service temporarily unavailable. please try again later."
                 } else {
                     "unknown error"

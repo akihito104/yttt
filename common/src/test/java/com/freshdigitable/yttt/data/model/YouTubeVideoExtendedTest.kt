@@ -75,11 +75,9 @@ class YouTubeVideoExtendedTest : ShouldSpec({
 
         should("extendedObjectIsNotExtendedAnyMore") {
             // setup
-            val current = object : YouTubeVideoExtended,
-                YouTubeVideo by old.copy(title = "changed title") {
-                override val channel: YouTubeChannel get() = old.channel
-                override val isFreeChat: Boolean = true
-            }.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+            val current = old.copy(title = "changed title")
+                .extended(true, old.channel)
+                .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
@@ -175,11 +173,9 @@ class YouTubeVideoExtendedTest : ShouldSpec({
 
         should("objectIsNotCreatedByExtendCreator_returnsFalse") {
             // setup
-            val current = object : YouTubeVideoExtended,
-                YouTubeVideo by old.copy(title = "changed title") {
-                override val channel: YouTubeChannel get() = old.channel
-                override val isFreeChat: Boolean = true
-            }.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+            val current = old.copy(title = "changed title")
+                .extended(channel = old.channel, isFreeChat = true)
+                .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
@@ -260,11 +256,9 @@ class YouTubeVideoExtendedTest : ShouldSpec({
 
         should("changeToExtended_returnsSameObject") {
             // setup
-            val current = object : YouTubeVideoExtended,
-                YouTubeVideo by old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE) {
-                override val channel: YouTubeChannel get() = old.channel
-                override val isFreeChat: Boolean = false
-            }.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+            val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
+                .extended(isFreeChat = false, channel = old.channel)
+                .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
             // exercise
             val actual = current.extend(oldEx)
             // verify
@@ -363,8 +357,10 @@ internal data class YouTubeVideoImpl(
     override val liveBroadcastContent: YouTubeVideo.BroadcastType,
 ) : YouTubeVideo
 
-internal fun YouTubeVideoImpl.extended(isFreeChat: Boolean): YouTubeVideoExtended =
-    object : YouTubeVideoExtended, YouTubeVideo by this {
-        override val channel: YouTubeChannel get() = this@extended.channel
-        override val isFreeChat: Boolean = isFreeChat
-    }
+internal fun YouTubeVideoImpl.extended(
+    isFreeChat: Boolean,
+    channel: YouTubeChannel = this.channel,
+): YouTubeVideoExtended = object : YouTubeVideoExtended, YouTubeVideo by this {
+    override val channel: YouTubeChannel get() = channel
+    override val isFreeChat: Boolean = isFreeChat
+}

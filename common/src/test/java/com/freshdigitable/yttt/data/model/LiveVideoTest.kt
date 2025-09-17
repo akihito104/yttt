@@ -148,14 +148,15 @@ internal data class LiveVideoFreeChatEntity(
     override val title: String,
 ) : LiveVideo.FreeChat {
     override val channel: LiveChannel
-        get() = object : LiveChannel {
-            override val id: LiveChannel.Id get() = channelId
-            override val title: String get() = throw UnsupportedOperationException()
-            override val iconUrl: String get() = throw UnsupportedOperationException()
-            override val platform: LivePlatform get() = throw UnsupportedOperationException()
-            override fun equals(other: Any?): Boolean = throw UnsupportedOperationException()
-            override fun hashCode(): Int = throw UnsupportedOperationException()
-        }
+        get() = LiveChannelEntity(
+            id = channelId,
+            title = "",
+            iconUrl = "",
+            platform = object : LivePlatform {
+                override val name: String get() = "dummy"
+                override val color: Long get() = 0xFF000000
+            },
+        )
     override val scheduledEndDateTime: Instant get() = throw UnsupportedOperationException()
     override val actualStartDateTime: Instant get() = throw UnsupportedOperationException()
     override val actualEndDateTime: Instant get() = throw UnsupportedOperationException()

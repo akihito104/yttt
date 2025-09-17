@@ -28,13 +28,15 @@ internal abstract class IdBaseSerializer<T : LiveId>(
         var type: KClass<out IdBase>? = null
         while (true) {
             when (val i = decodeElementIndex(descriptor)) {
-                0 -> type =
-                    decodeSerializableElement(descriptor, i, serializer<KClass<out IdBase>>())
+                0 -> {
+                    val deserializer = serializer<KClass<out IdBase>>()
+                    type = decodeSerializableElement(descriptor, i, deserializer)
+                }
 
                 1 -> value = decodeStringElement(descriptor, i)
 
                 CompositeDecoder.DECODE_DONE -> break
-                else -> throw IllegalStateException("Unexpected index: $i")
+                else -> error("Unexpected index: $i")
             }
         }
         deserializeLiveId(
@@ -46,7 +48,10 @@ internal abstract class IdBaseSerializer<T : LiveId>(
     override fun serialize(encoder: Encoder, value: T) {
         encoder.encodeStructure(descriptor) {
             encodeSerializableElement(
-                descriptor, 0, serializer<KClass<out IdBase>>(), value.type,
+                descriptor,
+                0,
+                serializer<KClass<out IdBase>>(),
+                value.type,
             )
             encodeStringElement(descriptor, 1, value.value)
         }
