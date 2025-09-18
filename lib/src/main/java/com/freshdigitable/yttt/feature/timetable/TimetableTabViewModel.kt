@@ -39,7 +39,8 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     private val dateTimeProvider: DateTimeProvider,
     timetablePageDelegate: TimetablePageDelegate,
     @Assisted private val sender: SnackbarMessageBus.Sender,
-) : ViewModel(), TimetablePageDelegate by timetablePageDelegate,
+) : ViewModel(),
+    TimetablePageDelegate by timetablePageDelegate,
     HorizontalPagerTabViewModel<TimetableTabData> {
     @AssistedFactory
     interface Factory {

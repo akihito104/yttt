@@ -138,12 +138,15 @@ internal interface TwitchStreamDaoProviders {
     val twitchStreamViewDao: TwitchStreamDbView.Dao
 }
 
-internal interface TwitchStreamDao : TwitchStreamTable.Dao, TwitchStreamExpireTable.Dao,
+internal interface TwitchStreamDao :
+    TwitchStreamTable.Dao,
+    TwitchStreamExpireTable.Dao,
     TwitchStreamDbView.Dao
 
 internal class TwitchStreamDaoImpl @Inject constructor(
     private val db: TwitchStreamDaoProviders,
-) : TwitchStreamDao, TwitchStreamTable.Dao by db.twitchStreamDao,
+) : TwitchStreamDao,
+    TwitchStreamTable.Dao by db.twitchStreamDao,
     TwitchStreamExpireTable.Dao by db.twitchStreamExpireDao,
     TwitchStreamDbView.Dao by db.twitchStreamViewDao {
     override suspend fun deleteTable() {

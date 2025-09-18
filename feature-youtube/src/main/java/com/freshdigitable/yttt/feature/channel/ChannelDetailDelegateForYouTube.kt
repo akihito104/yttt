@@ -72,7 +72,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         YouTubeChannelDetailTab.Uploaded,
         YouTubeChannelDetailTab.Sections,
         YouTubeChannelDetailTab.Actions,
-        if (BuildConfig.DEBUG) YouTubeChannelDetailTab.Debug else null
+        if (BuildConfig.DEBUG) YouTubeChannelDetailTab.Debug else null,
     )
     private val detail: Flow<YouTubeChannelDetail?> = flowOf(id).map { i ->
         repository.fetchChannelDetailList(setOf(i.mapTo())).map { it.firstOrNull() }
@@ -164,9 +164,11 @@ internal data class LiveChannelDetailYouTube(
 
     companion object {
         private fun YouTubeChannelDetail.statsText(zoneId: ZoneId): String {
-            val subscriberCount = if (!isSubscriberHidden)
+            val subscriberCount = if (!isSubscriberHidden) {
                 "Followers:${subscriberCount.toStringWithUnitPrefix}"
-            else null
+            } else {
+                null
+            }
             return listOfNotNull(
                 customUrl,
                 subscriberCount,

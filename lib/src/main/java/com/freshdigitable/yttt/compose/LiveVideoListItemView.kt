@@ -98,7 +98,7 @@ private fun LiveVideoListItemView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
+                .wrapContentHeight(),
         ) {
             ThumbnailView(video.thumbnail, modifier = thumbnailModifier)
             Column(
@@ -119,7 +119,7 @@ private fun LiveVideoListItemView(
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .wrapContentHeight()
+                        .wrapContentHeight(),
                 )
             }
         }
@@ -130,7 +130,7 @@ private fun LiveVideoListItemView(
                 .then(titleModifier)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
-                .padding(top = 4.dp)
+                .padding(top = 4.dp),
         )
     }
 }
@@ -176,14 +176,13 @@ private fun LiveVideoListItemViewPreview(
     }
 }
 
-
 @LightDarkModePreview
 @Composable
 fun LiveVideoHeaderViewPreview() {
     AppTheme {
         LiveVideoHeaderView(
             label = LocalDateTime.now(ZoneId.systemDefault())
-                .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter)
+                .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter),
         )
     }
 }

@@ -61,6 +61,7 @@ fun Project.configureDetekt(extension: DetektExtension) {
 //            buildUponDefaultConfig = true
             ignoreFailures = true
             basePath = rootDir.absolutePath
+            autoCorrect = true
             reports {
                 xml.required.set(true)
                 html.required.set(true)
@@ -71,6 +72,7 @@ fun Project.configureDetekt(extension: DetektExtension) {
         }
         dependencies {
             "detektPlugins"("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.8")
+            "detektPlugins"("io.nlopez.compose.rules:detekt:0.4.23")
         }
     }
 }

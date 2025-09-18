@@ -77,7 +77,7 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
     }
 
     private val YouTubeChannelLog.text: String
-        get() = "[${type}]$title (${dateTime.toLocalFormattedText(dateTimeSecondFormatter())})"
+        get() = "[$type]$title (${dateTime.toLocalFormattedText(dateTimeSecondFormatter())})"
 }
 
 @Composable

@@ -27,14 +27,18 @@ internal interface TimetableTabModules {
     @IntoMap
     @TimetableTabKey(TimetablePage.Upcoming)
     fun bindUpcomingSources(
-        @TimetableTabQualifier(TimetablePage.Upcoming) source: Set<@JvmSuppressWildcards FetchTimetableItemSourceUseCase>,
+        @TimetableTabQualifier(
+            TimetablePage.Upcoming,
+        ) source: Set<@JvmSuppressWildcards FetchTimetableItemSourceUseCase>,
     ): Set<FetchTimetableItemSourceUseCase>
 
     @Binds
     @IntoMap
     @TimetableTabKey(TimetablePage.FreeChat)
     fun bindFreeChatSources(
-        @TimetableTabQualifier(TimetablePage.FreeChat) source: Set<@JvmSuppressWildcards FetchTimetableItemSourceUseCase>,
+        @TimetableTabQualifier(
+            TimetablePage.FreeChat,
+        ) source: Set<@JvmSuppressWildcards FetchTimetableItemSourceUseCase>,
     ): Set<FetchTimetableItemSourceUseCase>
 
     @Binds

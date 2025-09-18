@@ -50,7 +50,7 @@ sealed class MainNavRoute(override val root: String) : NavRoute {
                 onError = {
                     val message = SnackbarMessage.fromThrowable(it)
                     snackbarBusSender?.send(message)
-                }
+                },
             )
         }
     }
@@ -101,7 +101,8 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
         private val AnimatedSharedTransitionScope.thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier
             get() = {
                 Modifier.Companion.sharedElement(
-                    rememberSharedContentState(key = it.thumbnailTransitionKey), this,
+                    rememberSharedContentState(key = it.thumbnailTransitionKey),
+                    this,
                 )
             }
 
@@ -109,7 +110,8 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
         private val AnimatedSharedTransitionScope.titleModifier: @Composable (LiveVideo.Id) -> Modifier
             get() = {
                 Modifier.Companion.sharedElement(
-                    rememberSharedContentState(key = it.titleTransitionKey), this,
+                    rememberSharedContentState(key = it.titleTransitionKey),
+                    this,
                 )
             }
     }

@@ -68,7 +68,7 @@ internal class TwitchDao @Inject constructor(
         addBroadcasters(followings.item.followerId, followings.item.followings)
         val expires = TwitchBroadcasterExpireTable(
             followings.item.followerId,
-            followings.cacheControl.toDb()
+            followings.cacheControl.toDb(),
         )
         addBroadcasterExpireEntity(expires)
     }
@@ -97,7 +97,7 @@ internal class TwitchDao @Inject constructor(
     }
 
     suspend fun findStreamSchedule(
-        id: TwitchChannelSchedule.Stream.Id
+        id: TwitchChannelSchedule.Stream.Id,
     ): TwitchLiveVideo<TwitchChannelSchedule.Stream.Id>? = findLiveSchedule(id)
 
     suspend fun findChannelSchedule(
@@ -129,7 +129,7 @@ internal class TwitchDao @Inject constructor(
     suspend fun replaceAllStreams(streams: Updatable<out TwitchStreams>) = db.withTransaction {
         db.twitchStreamDao.deleteTable()
         setStreamExpire(
-            TwitchStreamExpireTable(streams.item.followerId, streams.cacheControl.toDb())
+            TwitchStreamExpireTable(streams.item.followerId, streams.cacheControl.toDb()),
         )
         addUsers(streams.item.streams.map { it.user.toTable() })
         addCategories(streams.item.streams.map { TwitchCategoryTable(it.gameId, it.gameName) })
@@ -198,5 +198,8 @@ private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
     viewCount = viewCount,
 )
 
-internal interface TwitchDaoProviders : TwitchUserDaoProviders, TwitchStreamDaoProviders,
-    TwitchScheduleDaoProviders, TwitchPageSourceDaoProviders
+internal interface TwitchDaoProviders :
+    TwitchUserDaoProviders,
+    TwitchStreamDaoProviders,
+    TwitchScheduleDaoProviders,
+    TwitchPageSourceDaoProviders

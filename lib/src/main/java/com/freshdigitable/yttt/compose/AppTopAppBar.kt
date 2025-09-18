@@ -135,7 +135,7 @@ private fun HamburgerMenuIcon(
             if (showMenuBadge()) {
                 Badge(containerColor = Color.Red)
             }
-        }
+        },
     ) {
         Icon(
             Icons.Filled.Menu,
@@ -168,7 +168,6 @@ class TopAppBarStateHolder(
     fun updateMenuItems(menuItems: List<TopAppBarMenuItem>) {
         this.menuItems = menuItems
     }
-
 }
 
 sealed interface TopAppBarMenuItem {
@@ -216,7 +215,7 @@ private fun AppTopAppBarPreview() {
                     override val isBadgeShown: () -> Boolean = { false }
                     override val onMenuIconClicked: suspend () -> Unit = {}
                     override val onUpClicked: () -> Unit = {}
-                }
+                },
             ).apply {
                 update(
                     title = title,
@@ -244,7 +243,7 @@ private fun HamburgerMenuIconPreview() {
                     override val isBadgeShown: () -> Boolean = { true }
                     override val onMenuIconClicked: suspend () -> Unit = {}
                     override val onUpClicked: () -> Unit = {}
-                }
+                },
             ).apply {
                 update(title = "Title")
             },

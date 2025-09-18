@@ -53,7 +53,8 @@ fun LazyListScope.simpleContent(
 ) {
     itemsIndexed(
         items = itemsProvider(),
-        key = { _, item -> item.id.value }) { _, item ->
+        key = { _, item -> item.id.value },
+    ) { _, item ->
         LiveVideoListItemView(
             video = item,
             thumbnailModifier = thumbnailModifier(item.id),
@@ -78,7 +79,8 @@ fun LazyListScope.groupedContent(
         }
         itemsIndexed(
             items = items,
-            key = { _, item -> item.id.value }) { _, item ->
+            key = { _, item -> item.id.value },
+        ) { _, item ->
             LiveVideoListItemView(
                 video = item,
                 thumbnailModifier = thumbnailModifier(item.id),

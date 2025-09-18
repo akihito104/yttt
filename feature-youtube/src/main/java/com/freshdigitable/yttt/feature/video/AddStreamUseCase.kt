@@ -34,8 +34,8 @@ class AddStreamUseCase @Inject constructor(
             }
 
             private val Uri.isYouTubeUri: Boolean
-                get() = scheme == "https" && host?.endsWith("youtube.com") == true
-                    && pathSegments.firstOrNull() == "live"
+                get() = scheme == "https" && host?.endsWith("youtube.com") == true &&
+                    pathSegments.firstOrNull() == "live"
         }
     }
 }

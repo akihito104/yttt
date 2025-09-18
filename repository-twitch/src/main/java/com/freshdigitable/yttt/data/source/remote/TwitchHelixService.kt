@@ -50,7 +50,7 @@ internal interface TwitchHelixService {
         @Query("after") cursor: String? = null,
     ): Call<FollowingStreamsResponse>
 
-    /// https://dev.twitch.tv/docs/api/reference/#get-channel-stream-schedule
+    // https://dev.twitch.tv/docs/api/reference/#get-channel-stream-schedule
     // 403 Forbidden: Only partners and affiliates may add non-recurring broadcast segments.
     // 404 Not Found: The broadcaster has not created a streaming schedule.
     @GET("helix/schedule")

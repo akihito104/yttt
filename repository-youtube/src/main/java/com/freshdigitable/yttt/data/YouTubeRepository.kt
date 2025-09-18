@@ -37,7 +37,9 @@ class YouTubeRepository @Inject constructor(
     private val localSource: YouTubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
 ) : YouTubeDataSource, YouTubeLiveDataSource by localSource {
-    override suspend fun fetchPagedSubscription(query: YouTubeSubscriptionQuery): Result<NetworkResponse<List<YouTubeSubscription>>> =
+    override suspend fun fetchPagedSubscription(
+        query: YouTubeSubscriptionQuery,
+    ): Result<NetworkResponse<List<YouTubeSubscription>>> =
         remoteSource.fetchPagedSubscription(query).onSuccess {
             localSource.addPagedSubscription(it.item)
             if (it.nextPageToken == null) {

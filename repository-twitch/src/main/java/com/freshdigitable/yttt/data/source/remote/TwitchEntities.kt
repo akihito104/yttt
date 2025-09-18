@@ -36,7 +36,7 @@ internal class TwitchUserDetailRemote(
 internal class TwitchUserRemote(
     override val id: TwitchUser.Id,
     override val loginName: String,
-    override val displayName: String
+    override val displayName: String,
 ) : TwitchUser
 
 internal class Broadcaster(
@@ -82,7 +82,9 @@ internal data class FollowingStream(
 ) : TwitchStream {
     override val user: TwitchUser
         get() = TwitchUserRemote(
-            TwitchUser.Id(userId), loginName = loginName, displayName = displayName
+            TwitchUser.Id(userId),
+            loginName = loginName,
+            displayName = displayName,
         )
 }
 
@@ -207,7 +209,7 @@ internal fun createGson(): Gson = GsonBuilder()
             deserializerWithType { TwitchCategory.Id(it.asString) },
             deserializerWithType { TwitchChannelSchedule.Stream.Id(it.asString) },
             deserializerWithType { TwitchVideo.Id(it.asString) },
-        )
+        ),
     )
     .create()
 
@@ -218,20 +220,26 @@ private inline fun <reified T> deserializerWithType(noinline deserialize: Deseri
 
 private inline fun <reified T> GsonBuilder.registerTypeHierarchyDeserializer(
     table: Map<Type, Deserializer<T>>,
-): GsonBuilder = registerTypeHierarchyAdapter(T::class.java, object : JsonDeserializer<T> {
-    override fun deserialize(
-        json: JsonElement,
-        typeOfT: Type,
-        context: JsonDeserializationContext,
-    ): T = checkNotNull(table[typeOfT]?.invoke(json)) { "unsupported type: $typeOfT" }
-})
+): GsonBuilder = registerTypeHierarchyAdapter(
+    T::class.java,
+    object : JsonDeserializer<T> {
+        override fun deserialize(
+            json: JsonElement,
+            typeOfT: Type,
+            context: JsonDeserializationContext,
+        ): T = checkNotNull(table[typeOfT]?.invoke(json)) { "unsupported type: $typeOfT" }
+    },
+)
 
 private inline fun <reified O> GsonBuilder.registerJsonDeserializer(
     crossinline deserialize: Deserializer<O>,
-): GsonBuilder = registerTypeAdapter(O::class.java, object : JsonDeserializer<O> {
-    override fun deserialize(
-        json: JsonElement,
-        typeOfT: Type,
-        context: JsonDeserializationContext,
-    ): O = deserialize(json)
-})
+): GsonBuilder = registerTypeAdapter(
+    O::class.java,
+    object : JsonDeserializer<O> {
+        override fun deserialize(
+            json: JsonElement,
+            typeOfT: Type,
+            context: JsonDeserializationContext,
+        ): O = deserialize(json)
+    },
+)

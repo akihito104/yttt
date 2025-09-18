@@ -54,7 +54,9 @@ interface YouTubeClient {
 
     fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>>
     fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>>
-    fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelRelatedPlaylist>>
+    fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): NetworkResponse<List<YouTubeChannelRelatedPlaylist>>
 
     fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>>
     fun fetchPlaylistItems(
@@ -118,8 +120,9 @@ internal class YouTubeClientImpl(
 
     override fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> {
         return youtube.fetchChannelList(
-            ids, YouTubeChannelRelatedPlaylistRemote.factory,
-            YouTubeChannelRelatedPlaylistRemote.part
+            ids,
+            YouTubeChannelRelatedPlaylistRemote.factory,
+            YouTubeChannelRelatedPlaylistRemote.part,
         )
     }
 
@@ -147,14 +150,21 @@ internal class YouTubeClientImpl(
         maxResult: Long,
         eTag: String?,
     ): NetworkResponse<List<YouTubePlaylistItem>> = youtube.fetchPlaylistItem(
-        id, maxResult, PlaylistItemRemote.factory(id), PlaylistItemRemote.part, eTag,
+        id,
+        maxResult,
+        PlaylistItemRemote.factory(id),
+        PlaylistItemRemote.part,
+        eTag,
     )
 
     override fun fetchPlaylistItemDetails(
         id: YouTubePlaylist.Id,
         maxResult: Long,
     ): NetworkResponse<List<YouTubePlaylistItemDetail>> = youtube.fetchPlaylistItem(
-        id, maxResult, PlaylistItemDetailRemote.factory, PlaylistItemDetailRemote.part,
+        id,
+        maxResult,
+        PlaylistItemDetailRemote.factory,
+        PlaylistItemDetailRemote.part,
     )
 
     private fun <T : YouTubePlaylistItem> YouTube.fetchPlaylistItem(
@@ -399,7 +409,8 @@ private class YouTubeChannelRelatedPlaylistRemote(
 
 private data class YouTubeChannelDetailImpl(
     private val channel: Channel,
-) : YouTubeChannelDetail, YouTubeChannel by YouTubeChannelRemote(channel),
+) : YouTubeChannelDetail,
+    YouTubeChannel by YouTubeChannelRemote(channel),
     YouTubeChannelRelatedPlaylist by YouTubeChannelRelatedPlaylistRemote(channel) {
     override val id: YouTubeChannel.Id get() = YouTubeChannel.Id(channel.id)
     override val customUrl: String get() = channel.snippet.customUrl ?: ""
@@ -482,11 +493,11 @@ private data class YouTubeChannelSectionImpl(
                 YouTubeChannelSection.Type.SINGLE_PLAYLIST,
                 YouTubeChannelSection.Type.MULTIPLE_PLAYLIST,
                     -> YouTubeChannelSection.Content.Playlist(
-                    contentDetails.playlists.map { YouTubePlaylist.Id(it) }
+                    contentDetails.playlists.map { YouTubePlaylist.Id(it) },
                 )
 
                 YouTubeChannelSection.Type.MULTIPLE_CHANNEL -> YouTubeChannelSection.Content.Channels(
-                    contentDetails.channels.map { YouTubeChannel.Id(it) }
+                    contentDetails.channels.map { YouTubeChannel.Id(it) },
                 )
 
                 else -> throw IllegalStateException("unknown type: $snippet")

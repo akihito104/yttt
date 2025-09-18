@@ -149,7 +149,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         }.join()
         .onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
         .map {
-            { liveRepository.syncSubscriptionList(it.ids.toSet(), it.queries) }
+            {
+                liveRepository.syncSubscriptionList(it.ids.toSet(), it.queries)
+            }
         }
 
     private suspend fun updateSummary(
@@ -181,14 +183,20 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
     private suspend inline fun fetchAsync(
         crossinline updateCurrentVideoItemsTask: suspend (SendChannel<List<YouTubeVideo.Id>>) -> Unit,
-        crossinline updateFromPlaylistTask: suspend (CoroutineScope, SendChannel<List<YouTubeVideo.Id>>) -> Result<DeferredTask>,
-        crossinline fetchVideoItemsTask: suspend (CoroutineScope, ReceiveChannel<List<YouTubeVideo.Id>>) -> Result<DeferredTask>,
+        crossinline updateFromPlaylistTask: suspend (
+            CoroutineScope,
+            SendChannel<List<YouTubeVideo.Id>>,
+        ) -> Result<DeferredTask>,
+        crossinline fetchVideoItemsTask: suspend (
+            CoroutineScope,
+            ReceiveChannel<List<YouTubeVideo.Id>>,
+        ) -> Result<DeferredTask>,
     ): Result<Unit> = coroutineScope {
         val videoUpdateTaskChannel = Channel<List<YouTubeVideo.Id>>(Channel.BUFFERED)
         val fetchVideo = async { fetchVideoItemsTask(this, videoUpdateTaskChannel) }
         val tasks = listOf(
             async { Result.success(updateCurrentVideoItemsTask(videoUpdateTaskChannel)) },
-            async { updateFromPlaylistTask(this, videoUpdateTaskChannel) }
+            async { updateFromPlaylistTask(this, videoUpdateTaskChannel) },
         ).awaitAll()
         videoUpdateTaskChannel.close()
         val fetchVideoRes = fetchVideo.await()
@@ -294,7 +302,7 @@ internal fun YouTubeRepository.fetchAllSubscription(
                         summary.offset,
                         summary.nextPageToken,
                         it.eTag,
-                    )
+                    ),
                 )
             }.recoverFromNotModified {
                 val o = summary.offset + MAX_BATCH_SIZE

@@ -49,7 +49,9 @@ fun AuthScreen(
                 viewModel.onInitialSetupCompleted()
                 onSetupCompleted.invoke()
             }
-        } else null,
+        } else {
+            null
+        },
     )
 }
 
@@ -88,7 +90,7 @@ private fun AuthListItem(
             Box(
                 Modifier
                     .background(Color(platform.color))
-                    .size(24.dp)
+                    .size(24.dp),
             )
         },
         headlineContent = { Text(body.title) },

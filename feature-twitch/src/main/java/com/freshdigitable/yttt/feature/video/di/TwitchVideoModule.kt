@@ -25,7 +25,9 @@ internal interface TwitchVideoModule {
     @Binds
     @IntoMap
     @IdBaseClassKey(TwitchChannelSchedule.Stream.Id::class)
-    fun bindFindLiveVideoFromTwitchUseCaseForStreamScheduleId(useCase: FindLiveVideoFromTwitchUseCase): FindLiveVideoUseCase
+    fun bindFindLiveVideoFromTwitchUseCaseForStreamScheduleId(
+        useCase: FindLiveVideoFromTwitchUseCase,
+    ): FindLiveVideoUseCase
 
     @Binds
     @IntoMap
@@ -35,5 +37,7 @@ internal interface TwitchVideoModule {
     @Binds
     @IntoMap
     @IdBaseClassKey(TwitchChannelSchedule.Stream.Id::class)
-    fun bindTwitchAnnotatableStringFactoryForStreamScheduleId(useCase: TwitchAnnotatableStringFactory): AnnotatableStringFactory
+    fun bindTwitchAnnotatableStringFactoryForStreamScheduleId(
+        useCase: TwitchAnnotatableStringFactory,
+    ): AnnotatableStringFactory
 }
