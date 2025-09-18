@@ -29,11 +29,11 @@ import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.elli
 
 @Composable
 fun AnnotatableText(
-    modifier: Modifier = Modifier,
     fontSize: TextUnit,
-    linkStyle: TextLinkStyles = linkStyles,
     annotatableString: AnnotatableString,
     dialog: LinkAnnotationDialogState,
+    modifier: Modifier = Modifier,
+    linkStyle: TextLinkStyles = linkStyles,
 ) {
     if (annotatableString.annotationRangeItems.isEmpty()) {
         Text(
@@ -80,8 +80,8 @@ private fun AnnotatableString.annotate(
     toLink: (LinkAnnotationRange) -> LinkAnnotation,
 ): AnnotatedString {
     val items = annotationRangeItems.map {
-        if (it is LinkAnnotationRange.Url && it.text.length > 40) {
-            it.ellipsize(totalLength = 40, ellipsis = "...")
+        if (it is LinkAnnotationRange.Url && it.text.length > LinkAnnotationRange.Url.ELLIPSIS_THRESHOLD) {
+            it.ellipsize()
         } else {
             it
         }
@@ -119,17 +119,17 @@ fun LinkAnnotationDialog(state: LinkAnnotationDialogState) {
     when (val d = state.currentDialog) {
         is LinkAnnotationRange.EllipsizedUrl -> EllipsizedUrlConfirmDialog(
             text = d.url,
-            onConfirmClicked = {
+            onConfirmClick = {
                 urlHandler.openUri(d.url)
                 state.dismiss()
             },
-            onDismissClicked = { state.dismiss() },
+            onDismissClick = { state.dismiss() },
         )
 
         is LinkAnnotationRange.Account -> AccountDialog(
             account = d.text,
             urls = d.urlCandidate,
-            onUrlClicked = {
+            onUrlClick = {
                 urlHandler.openUri(it)
                 state.dismiss()
             },
@@ -140,26 +140,26 @@ fun LinkAnnotationDialog(state: LinkAnnotationDialogState) {
             // NOP
         }
 
-        else -> throw IllegalStateException("not supported type: $d")
+        else -> error("not supported type: $d")
     }
 }
 
 @Composable
 private fun EllipsizedUrlConfirmDialog(
     text: String,
-    onConfirmClicked: () -> Unit,
-    onDismissClicked: () -> Unit,
-    onDismissRequest: () -> Unit = onDismissClicked,
+    onConfirmClick: () -> Unit,
+    onDismissClick: () -> Unit,
+    onDismissRequest: () -> Unit = onDismissClick,
 ) {
     AlertDialog(
         text = { Text(text = text) },
         confirmButton = {
-            Button(onClick = onConfirmClicked) {
+            Button(onClick = onConfirmClick) {
                 Text(text = "go to website")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismissClicked) {
+            TextButton(onClick = onDismissClick) {
                 Text(text = "dismiss")
             }
         },
@@ -171,9 +171,9 @@ private fun EllipsizedUrlConfirmDialog(
 private fun AccountDialog(
     account: String,
     urls: List<String>,
-    onUrlClicked: (String) -> Unit,
+    onUrlClick: (String) -> Unit,
     onDismissRequest: () -> Unit,
-    onConfirmClicked: () -> Unit = onDismissRequest,
+    onConfirmClick: () -> Unit = onDismissRequest,
 ) {
     AlertDialog(
         title = { Text(text = "Choose URL for $account") },
@@ -190,13 +190,13 @@ private fun AccountDialog(
                                 ),
                             )
                         },
-                        modifier = Modifier.clickable { onUrlClicked(it) },
+                        modifier = Modifier.clickable { onUrlClick(it) },
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirmClicked) {
+            TextButton(onClick = onConfirmClick) {
                 Text(text = "dismiss")
             }
         },
@@ -210,8 +210,8 @@ private fun EllipsizedUrlConfirmDialogPreview() {
     AppTheme {
         EllipsizedUrlConfirmDialog(
             text = "https://www.example.com/veryverylongurl",
-            onConfirmClicked = { },
-            onDismissClicked = { },
+            onConfirmClick = { },
+            onDismissClick = { },
         )
     }
 }
@@ -223,7 +223,7 @@ private fun AccountDialogPreview() {
         AccountDialog(
             account = "@account01",
             urls = listOf("https://example.com/1/@account01", "https://example.com/2/@account01"),
-            onUrlClicked = {},
+            onUrlClick = {},
             onDismissRequest = {},
         )
     }

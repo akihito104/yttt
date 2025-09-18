@@ -146,7 +146,7 @@ sealed interface LinkAnnotationRange {
         override val url: String = text,
     ) : LinkAnnotationRange {
         private fun ellipsizeTextIfNeeded(
-            totalLength: Int = 40,
+            totalLength: Int = ELLIPSIS_THRESHOLD,
             ellipsis: String = "...",
         ): String {
             if (text.length <= totalLength) return text
@@ -154,7 +154,11 @@ sealed interface LinkAnnotationRange {
         }
 
         companion object {
-            fun Url.ellipsize(totalLength: Int = 40, ellipsis: String = "..."): EllipsizedUrl =
+            const val ELLIPSIS_THRESHOLD = 40
+            fun Url.ellipsize(
+                totalLength: Int = ELLIPSIS_THRESHOLD,
+                ellipsis: String = "...",
+            ): EllipsizedUrl =
                 EllipsizedUrl(range, ellipsizeTextIfNeeded(totalLength, ellipsis), url)
         }
     }

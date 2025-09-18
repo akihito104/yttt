@@ -27,10 +27,10 @@ import java.math.BigInteger
 @Composable
 fun VideoDetailScreen(
     viewModel: VideoDetailViewModel,
+    topAppBarStateHolder: TopAppBarStateHolder,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    topAppBarStateHolder: TopAppBarStateHolder,
-    onChannelClicked: (LiveChannel.Id) -> Unit,
+    onChannelClick: (LiveChannel.Id) -> Unit,
 ) {
     val menuItems = viewModel.contextMenuItems.collectAsState(initial = emptyList())
     topAppBarStateHolder.updateMenuItems(menuItems.value)
@@ -39,7 +39,7 @@ fun VideoDetailScreen(
         videoProvider = { item.value },
         thumbnailModifier = thumbnailModifier,
         titleModifier = titleModifier,
-        onChannelClicked = onChannelClicked,
+        onChannelClick = onChannelClick,
     )
 }
 
@@ -48,7 +48,7 @@ private fun VideoDetailScreen(
     videoProvider: () -> LiveVideoDetailItem?,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    onChannelClicked: (LiveChannel.Id) -> Unit = {},
+    onChannelClick: (LiveChannel.Id) -> Unit = {},
 ) {
     val dialog = remember { LinkAnnotationDialogState() }
     Column(
@@ -87,7 +87,7 @@ private fun VideoDetailScreen(
                 iconUrl = video.channel.iconUrl,
                 title = video.channel.title,
                 platformColor = Color(video.channel.platform.color),
-                onClick = { onChannelClicked(video.channel.id) },
+                onClick = { onChannelClick(video.channel.id) },
             )
             AnnotatableText(
                 annotatableString = video.annotatableDescription,

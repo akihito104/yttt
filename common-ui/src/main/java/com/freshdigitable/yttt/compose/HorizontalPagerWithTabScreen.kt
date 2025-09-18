@@ -21,28 +21,28 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun <T : TabData<T>> HorizontalPagerWithTabScreen(
+    viewModel: HorizontalPagerTabViewModel<T>,
     tabModifier: Modifier = Modifier,
     edgePadding: Dp = TabRowDefaults.ScrollableTabRowEdgeStartPadding,
-    viewModel: HorizontalPagerTabViewModel<T>,
     page: @Composable PagerScope.(T) -> Unit,
 ) {
     AppLogger.logD("HorizontalPager(VM)") { "start:" }
     val tab = viewModel.tabData.collectAsState(initial = viewModel.initialTab)
     HorizontalPagerWithTabScreen(
-        tabModifier = tabModifier,
-        edgePadding = edgePadding,
         tabCount = tab.value.size,
         tab = { tab.value[it].title() },
+        tabModifier = tabModifier,
+        edgePadding = edgePadding,
         page = { page(tab.value[it]) },
     )
 }
 
 @Composable
 fun HorizontalPagerWithTabScreen(
-    tabModifier: Modifier = Modifier,
-    edgePadding: Dp = TabRowDefaults.ScrollableTabRowEdgeStartPadding,
     tabCount: Int,
     tab: @Composable (Int) -> String,
+    tabModifier: Modifier = Modifier,
+    edgePadding: Dp = TabRowDefaults.ScrollableTabRowEdgeStartPadding,
     page: @Composable PagerScope.(Int) -> Unit,
 ) {
     AppLogger.logD("HorizontalPager") { "start:" }

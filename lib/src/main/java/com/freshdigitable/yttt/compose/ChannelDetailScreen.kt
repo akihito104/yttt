@@ -51,32 +51,6 @@ import dagger.hilt.android.components.ActivityComponent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
-@EntryPoint
-@InstallIn(ActivityComponent::class)
-internal interface ChannelDetailEntryPoint {
-    val factory: IdBaseClassMap<ChannelDetailPageComposableFactory>
-}
-
-private lateinit var factoryEntryPoint: ChannelDetailEntryPoint
-
-@Composable
-private fun requireChannelDetailPageComposableFactory(): IdBaseClassMap<ChannelDetailPageComposableFactory> {
-    if (!::factoryEntryPoint.isInitialized) {
-        factoryEntryPoint =
-            EntryPointAccessors.fromActivity<ChannelDetailEntryPoint>(LocalContext.current.getActivity())
-    }
-    return factoryEntryPoint.factory
-}
-
-private fun Context.getActivity(): Activity {
-    var context: Context = this
-    while (context is ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    error("activity is not found.")
-}
-
 @Composable
 fun ChannelDetailScreen(
     viewModel: ChannelViewModel,
@@ -101,8 +75,8 @@ fun ChannelDetailScreen(
 @Composable
 private fun ChannelDetailScreen(
     channelDetail: () -> LiveChannelDetailBody?,
-    pages: Map<ChannelDetailPageTab<*>, ChannelDetailPageComposable> = emptyMap(),
     pageScope: ChannelDetailPageScope,
+    pages: Map<ChannelDetailPageTab<*>, ChannelDetailPageComposable> = emptyMap(),
 ) {
     Column(Modifier.fillMaxSize()) {
         ChannelDetailHeader(channelDetail)
@@ -176,7 +150,7 @@ private fun ChannelDetailPageScope.Companion.create(
     override fun <T> list(
         itemProvider: () -> List<T>,
         idProvider: (T) -> IdBase,
-        content: @Composable (T) -> Unit
+        content: @Composable (T) -> Unit,
     ): @Composable () -> Unit = {
         PlainListPage(listProvider = itemProvider, idProvider = idProvider, content = content)
     }
@@ -195,7 +169,7 @@ private fun AnnotatedTextPage(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(8.dp)
+            .padding(8.dp),
     ) {
         AnnotatableText(
             fontSize = 14.sp,
@@ -232,7 +206,7 @@ private fun VideoListItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth(fraction = 0.5f)
-                .aspectRatio(16f / 9f)
+                .aspectRatio(ImageLoadableView.THUMBNAIL_ASPECT_RATIO)
                 .align(Alignment.Top),
         ) {
             ImageLoadableView.Thumbnail(
@@ -250,13 +224,40 @@ private fun VideoListItem(
     }
 }
 
+@EntryPoint
+@InstallIn(ActivityComponent::class)
+internal interface ChannelDetailEntryPoint {
+    val factory: IdBaseClassMap<ChannelDetailPageComposableFactory>
+}
+
+private lateinit var factoryEntryPoint: ChannelDetailEntryPoint
+
+@Composable
+private fun requireChannelDetailPageComposableFactory(): IdBaseClassMap<ChannelDetailPageComposableFactory> {
+    if (!::factoryEntryPoint.isInitialized) {
+        factoryEntryPoint =
+            EntryPointAccessors.fromActivity<ChannelDetailEntryPoint>(LocalContext.current.getActivity())
+    }
+    return factoryEntryPoint.factory
+}
+
+private fun Context.getActivity(): Activity {
+    var context: Context = this
+    while (context is ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    error("activity is not found.")
+}
+
 @PreviewLightDarkMode
 @Composable
 private fun ChannelScreenPreview() {
     val channelDetail = object : LiveChannelDetailBody {
         override val id: LiveChannel.Id get() = LiveChannel.Id("a", LiveChannel.Id::class)
         override val title: String = "channel title"
-        override val statsText: String get() = "@custom_url・Subscribers:52.4k・Videos:132・Views:38,498,283・Published:2021/04/13"
+        override val statsText: String
+            get() = "@custom_url・Subscribers:52.4k・Videos:132・Views:38,498,283・Published:2021/04/13"
         override val bannerUrl: String? get() = null
         override val iconUrl: String get() = ""
         override val platform: LivePlatform

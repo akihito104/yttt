@@ -46,13 +46,13 @@ import java.time.temporal.ChronoUnit
 @Composable
 fun LiveVideoListItemView(
     video: TimelineItem,
+    onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    onItemClick: () -> Unit,
-    onMenuClicked: (() -> Unit)? = null,
+    onMenuClick: (() -> Unit)? = null,
 ) {
-    if (onMenuClicked == null) {
+    if (onMenuClick == null) {
         LiveVideoListItemView(
             video = video,
             modifier = modifier,
@@ -61,10 +61,9 @@ fun LiveVideoListItemView(
             onItemClick = onItemClick,
         )
     } else {
-        Box(modifier = Modifier) {
+        Box(modifier = modifier) {
             LiveVideoListItemView(
                 video = video,
-                modifier = modifier,
                 thumbnailModifier = thumbnailModifier,
                 titleModifier = titleModifier,
                 onItemClick = onItemClick,
@@ -74,7 +73,7 @@ fun LiveVideoListItemView(
                 modifier = Modifier
                     .size(20.dp)
                     .align(alignment = TopEnd)
-                    .clickable(onClick = onMenuClicked),
+                    .clickable(onClick = onMenuClick),
                 contentDescription = "",
             )
         }
@@ -84,10 +83,10 @@ fun LiveVideoListItemView(
 @Composable
 private fun LiveVideoListItemView(
     video: TimelineItem,
+    onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    onItemClick: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -151,8 +150,14 @@ private fun RowScope.ThumbnailView(
 }
 
 @Composable
-fun LiveVideoHeaderView(label: String) {
-    Surface(color = MaterialTheme.colorScheme.primaryContainer) {
+fun LiveVideoHeaderView(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier,
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

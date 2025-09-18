@@ -25,15 +25,17 @@ import com.freshdigitable.yttt.logD
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableScreen(
-    lazyListState: LazyListState = rememberLazyListState(),
     refreshingProvider: () -> Boolean,
     onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+    lazyListState: LazyListState = rememberLazyListState(),
     listContent: LazyListScope.() -> Unit,
 ) {
     AppLogger.logD("Timetable") { "start:" }
     PullToRefreshBox(
         isRefreshing = refreshingProvider(),
         onRefresh = onRefresh,
+        modifier = modifier,
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -60,7 +62,7 @@ fun LazyListScope.simpleContent(
             thumbnailModifier = thumbnailModifier(item.id),
             titleModifier = titleModifier(item.id),
             onItemClick = { onListItemClicked(item.id) },
-            onMenuClicked = { onMenuClicked(item.id) },
+            onMenuClick = { onMenuClicked(item.id) },
         )
     }
 }
@@ -86,7 +88,7 @@ fun LazyListScope.groupedContent(
                 thumbnailModifier = thumbnailModifier(item.id),
                 titleModifier = titleModifier(item.id),
                 onItemClick = { onListItemClicked(item.id) },
-                onMenuClicked = { onMenuClicked(item.id) },
+                onMenuClick = { onMenuClicked(item.id) },
             )
         }
     }

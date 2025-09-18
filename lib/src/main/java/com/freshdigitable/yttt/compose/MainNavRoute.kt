@@ -46,7 +46,7 @@ sealed class MainNavRoute(override val root: String) : NavRoute {
         override fun body(): ScopedNavContent = {
             topAppBarState?.update(title = stringResource(id = R.string.title_subscription))
             SubscriptionListScreen(
-                onListItemClicked = navController::navigate,
+                onListItemClick = navController::navigate,
                 onError = {
                     val message = SnackbarMessage.fromThrowable(it)
                     snackbarBusSender?.send(message)
@@ -123,7 +123,7 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
                     viewModel = hiltViewModel { f: TimetableTabViewModel.Factory ->
                         f.create(checkNotNull(snackbarBusSender))
                     },
-                    onListItemClicked = navController::navigate,
+                    onListItemClick = navController::navigate,
                     tabModifier = Modifier
                         .renderInSharedTransitionScopeOverlay(zIndexInOverlay = 1f)
                         .animateEnterExit(
@@ -163,7 +163,7 @@ sealed class LiveVideoSharedTransitionRoute(override val root: String) : MainNav
                     thumbnailModifier = thumbnailModifier(id),
                     titleModifier = titleModifier(id).skipToLookaheadSize(),
                     topAppBarStateHolder = topAppBar,
-                    onChannelClicked = navController::navigate,
+                    onChannelClick = navController::navigate,
                 )
             }
         }

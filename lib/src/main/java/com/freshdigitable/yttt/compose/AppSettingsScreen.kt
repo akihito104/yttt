@@ -25,14 +25,14 @@ fun AppSettingsScreen(
     val text = viewModel.changeDateTime.collectAsState()
     AppSettingsScreen(
         text = { text.value },
-        onClicked = { viewModel.onClick(it) },
+        onClick = { viewModel.onClick(it) },
     )
 }
 
 @Composable
 private fun AppSettingsScreen(
     text: () -> String,
-    onClicked: (Int) -> Unit,
+    onClick: (Int) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         var isExpanded by remember { mutableStateOf(false) }
@@ -49,7 +49,7 @@ private fun AppSettingsScreen(
                             DropdownMenuItem(
                                 text = { Text(text = "$it:00") },
                                 onClick = {
-                                    onClicked(it)
+                                    onClick(it)
                                     isExpanded = false
                                 },
                             )
@@ -68,6 +68,6 @@ private fun AppSettingsScreen(
 @Composable
 private fun AppSettingsScreenPreview() {
     AppTheme {
-        AppSettingsScreen(text = { "24:00" }, onClicked = {})
+        AppSettingsScreen(text = { "24:00" }, onClick = {})
     }
 }

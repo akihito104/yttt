@@ -47,12 +47,12 @@ internal fun AppTopAppBar(
                 NavigationIcon(
                     isRootProvider = it.isRoot,
                     showMenuBadge = it.isBadgeShown,
-                    onMenuIconClicked = {
+                    onMenuIconClick = {
                         coroutineScope.launch {
                             it.onMenuIconClicked()
                         }
                     },
-                    onUpClicked = it.onUpClicked,
+                    onUpClick = it.onUpClicked,
                 )
             }
         } ?: {},
@@ -111,16 +111,16 @@ internal fun RowScope.TopAppBarActionMenu(
 private fun NavigationIcon(
     isRootProvider: () -> Boolean,
     showMenuBadge: () -> Boolean,
-    onMenuIconClicked: () -> Unit,
-    onUpClicked: () -> Unit,
+    onMenuIconClick: () -> Unit,
+    onUpClick: () -> Unit,
 ) {
     if (isRootProvider()) {
-        HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
+        HamburgerMenuIcon(showMenuBadge, onMenuIconClick)
     } else {
         Icon(
             Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "",
-            modifier = Modifier.clickable(onClick = onUpClicked),
+            modifier = Modifier.clickable(onClick = onUpClick),
         )
     }
 }
@@ -128,7 +128,7 @@ private fun NavigationIcon(
 @Composable
 private fun HamburgerMenuIcon(
     showMenuBadge: () -> Boolean,
-    onMenuIconClicked: () -> Unit,
+    onMenuIconClick: () -> Unit,
 ) {
     BadgedBox(
         badge = {
@@ -140,7 +140,7 @@ private fun HamburgerMenuIcon(
         Icon(
             Icons.Filled.Menu,
             contentDescription = "",
-            modifier = Modifier.clickable(onClick = onMenuIconClicked),
+            modifier = Modifier.clickable(onClick = onMenuIconClick),
         )
     }
 }

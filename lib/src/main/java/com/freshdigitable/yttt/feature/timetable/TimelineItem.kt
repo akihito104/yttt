@@ -33,7 +33,7 @@ data class TimelineItem(
             is LiveVideo.OnAir -> video.actualStartDateTime
             is LiveVideo.Upcoming -> video.scheduledStartDateTime
             is LiveVideo.FreeChat -> video.scheduledStartDateTime
-            else -> throw IllegalStateException("unsupported LiveVideo type: ${video.javaClass.name}")
+            else -> error("unsupported LiveVideo type: ${video.javaClass.name}")
         }
     val localDateTimeText: String
         get() {

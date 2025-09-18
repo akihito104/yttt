@@ -85,13 +85,13 @@ fun MainScreen(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun MainScreen(
-    navController: NavHostController = rememberNavController(),
     navigation: Set<NavRoute>,
     startDestination: String,
     showMenuBadge: () -> Boolean,
     drawerItems: () -> List<DrawerMenuListItem>,
     snackbarMessage: Flow<SnackbarAction>,
     snackbarMessageSender: SnackbarMessageBus.Sender,
+    navController: NavHostController = rememberNavController(),
     onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -114,7 +114,7 @@ private fun MainScreen(
         drawerContent = {
             NavigationDrawerImpl(
                 items = drawerItems,
-                onClicked = {
+                onClick = {
                     onDrawerMenuClick(it)
                     coroutineScope.launch {
                         drawerState.close()
@@ -173,7 +173,7 @@ private class NavigationIconStateImpl(
 @Composable
 private fun NavigationDrawerImpl(
     items: () -> Collection<DrawerMenuListItem>,
-    onClicked: (DrawerMenuItem) -> Unit,
+    onClick: (DrawerMenuItem) -> Unit,
 ) {
     ModalDrawerSheet {
         items().forEach {
@@ -181,7 +181,7 @@ private fun NavigationDrawerImpl(
                 label = { Text(it.item.text()) },
                 badge = { if (it.showBadge) Badge(containerColor = Color.Red) },
                 selected = false,
-                onClick = { onClicked(it.item) },
+                onClick = { onClick(it.item) },
             )
         }
     }
@@ -217,7 +217,7 @@ private fun NavDrawerPreview() {
                     DrawerMenuItem.OSS_LICENSE.toListItem(),
                 )
             },
-            onClicked = {},
+            onClick = {},
         )
     }
 }

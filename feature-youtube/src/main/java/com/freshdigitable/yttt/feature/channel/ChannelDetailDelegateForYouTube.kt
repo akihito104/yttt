@@ -185,13 +185,14 @@ internal data class LiveChannelDetailYouTube(
                 return if (precision <= 3) {
                     this.toString()
                 } else {
-                    val prefixGrade = (precision - 1) / 3
-                    val shift = prefixGrade * 3
+                    val prefixGrade = (precision - 1) / DIGIT_GROUPING_SIZE
+                    val shift = prefixGrade * DIGIT_GROUPING_SIZE
                     val digit = DecimalFormat("#.##").format(decimal.movePointLeft(shift))
                     "${digit}${unitPrefix[prefixGrade]}"
                 }
             }
         private val unitPrefix = arrayOf("", "k", "M", "G", "T", "P", "E")
+        private const val DIGIT_GROUPING_SIZE = 3
     }
 }
 
@@ -204,9 +205,9 @@ internal sealed class YouTubeChannelDetailTab(
     override fun compareTo(other: YouTubeChannelDetailTab): Int =
         ordinal.compareTo(other.ordinal)
 
-    data object About : YouTubeChannelDetailTab(title = "ABOUT", 0)
-    data object Uploaded : YouTubeChannelDetailTab(title = "UPLOADED", 1)
-    data object Sections : YouTubeChannelDetailTab(title = "CHANNEL SECTIONS", 2)
-    data object Actions : YouTubeChannelDetailTab(title = "ACTIVITY", 3)
-    data object Debug : YouTubeChannelDetailTab(title = "DEBUG", 99)
+    data object About : YouTubeChannelDetailTab(title = "ABOUT", ordinal = 0)
+    data object Uploaded : YouTubeChannelDetailTab(title = "UPLOADED", ordinal = 1)
+    data object Sections : YouTubeChannelDetailTab(title = "CHANNEL SECTIONS", ordinal = 2)
+    data object Actions : YouTubeChannelDetailTab(title = "ACTIVITY", ordinal = 3)
+    data object Debug : YouTubeChannelDetailTab(title = "DEBUG", ordinal = 99)
 }

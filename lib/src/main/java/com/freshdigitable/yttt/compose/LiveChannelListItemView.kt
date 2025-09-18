@@ -26,9 +26,9 @@ import com.freshdigitable.yttt.data.model.YouTube
  */
 @Composable
 fun LiveChannelListItemView(
-    modifier: Modifier = Modifier,
     iconUrl: String,
     title: String,
+    modifier: Modifier = Modifier,
     platformColor: Color? = null,
     iconSize: Dp = 40.dp,
     textOffset: Dp = 16.dp,
@@ -53,9 +53,9 @@ fun LiveChannelListItemView(
  */
 @Composable
 fun LiveChannelContentView(
-    modifier: Modifier = Modifier,
     iconUrl: String,
     title: String,
+    modifier: Modifier = Modifier,
     platformColor: Color? = null,
     iconSize: Dp = 36.dp,
     textOffset: Dp = 8.dp,
@@ -90,12 +90,14 @@ fun LiveChannelContentView(
     }
 }
 
+private const val PLATFORM_MARK_SIZE_FACTOR = 0.3f
+
 @Composable
 fun LiveChannelIcon(
-    modifier: Modifier = Modifier,
     iconUrl: String,
-    platformColor: Color? = null,
     iconSize: Dp,
+    modifier: Modifier = Modifier,
+    platformColor: Color? = null,
 ) {
     Box(
         modifier = Modifier
@@ -103,7 +105,6 @@ fun LiveChannelIcon(
             .size(iconSize),
     ) {
         ImageLoadableView.UserIcon(
-            modifier = modifier,
             url = iconUrl,
             size = iconSize,
         )
@@ -111,8 +112,8 @@ fun LiveChannelIcon(
             Box(
                 Modifier
                     .background(color = platformColor)
-                    .size(iconSize * 0.3f)
-                    .align(Alignment.BottomEnd)
+                    .size(iconSize * PLATFORM_MARK_SIZE_FACTOR)
+                    .align(Alignment.BottomEnd),
             )
         }
     }
