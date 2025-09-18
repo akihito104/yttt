@@ -64,8 +64,9 @@ abstract class FakeYouTubeClient : YouTubeClient {
     override fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
         throw NotImplementedError()
 
-    override fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> =
-        throw NotImplementedError()
+    override fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> = throw NotImplementedError()
 
     override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
         throw NotImplementedError()
