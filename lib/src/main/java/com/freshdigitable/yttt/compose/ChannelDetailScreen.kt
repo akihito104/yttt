@@ -27,7 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.AppLogger
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
@@ -250,7 +250,7 @@ private fun VideoListItem(
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun ChannelScreenPreview() {
     val channelDetail = object : LiveChannelDetailBody {
@@ -291,7 +291,7 @@ private fun ChannelScreenPreview() {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun LazyColumnPreview() {
     AppTheme {

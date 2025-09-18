@@ -1,0 +1,19 @@
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - "Composable"
+
+style:
+  MagicNumber:
+    ignorePropertyDeclaration: true
+  UnusedPrivateMember:
+    ignoreAnnotated:
+      - "Preview"
+      - "PreviewLightMode"
+      - "PreviewDarkMode"
+      - "PreviewLightDarkMode"
+
+complexity:
+  TooManyFunctions:
+    ignoreAnnotatedFunctions:
+      - "Preview"

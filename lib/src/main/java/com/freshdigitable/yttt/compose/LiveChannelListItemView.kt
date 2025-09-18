@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.YouTube
 
 /**
@@ -118,7 +118,7 @@ fun LiveChannelIcon(
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun LiveChannelListItemViewPreview() {
     AppTheme {
@@ -130,7 +130,7 @@ private fun LiveChannelListItemViewPreview() {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun LiveChannelContentViewPreview() {
     AppTheme {

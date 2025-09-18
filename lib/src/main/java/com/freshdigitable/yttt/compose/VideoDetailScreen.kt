@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
@@ -99,20 +99,22 @@ private fun VideoDetailScreen(
     LinkAnnotationDialog(state = dialog)
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
-fun VideoDetailComposePreview() {
+private fun VideoDetailComposePreview() {
     val detail = LiveVideoPreviewParamProvider.liveVideo(
         description = "description\nhttps://example.com",
         viewerCount = BigInteger.valueOf(100),
     )
     AppTheme {
-        VideoDetailScreen(videoProvider = {
-            LiveVideoDetailItem(
-                video = detail,
-                annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
-                annotatableTitle = AnnotatableString.empty()
-            )
-        })
+        VideoDetailScreen(
+            videoProvider = {
+                LiveVideoDetailItem(
+                    video = detail,
+                    annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
+                    annotatableTitle = AnnotatableString.empty(),
+                )
+            },
+        )
     }
 }

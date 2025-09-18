@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.ImageLoadableView
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
@@ -166,7 +166,7 @@ private fun MultiChannelContent(item: YouTubeChannel, modifier: Modifier = Modif
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun ChannelListItemPreview() {
     AppTheme {

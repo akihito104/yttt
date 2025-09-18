@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.liveVideo
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.timelineItem
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
-import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
+import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.feature.timetable.TimelineItem
 import com.freshdigitable.yttt.logD
@@ -92,7 +92,7 @@ fun LazyListScope.groupedContent(
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun SimpleTimetableScreenPreview() {
     AppTheme {
@@ -108,7 +108,7 @@ private fun SimpleTimetableScreenPreview() {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun GroupedTimetableScreenPreview() {
     val items = mapOf("2023/06/29(木)" to listOf(timelineItem(liveVideo())))

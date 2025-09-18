@@ -26,7 +26,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -166,7 +166,7 @@ fun LiveVideoHeaderView(label: String) {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun LiveVideoListItemViewPreview(
     @PreviewParameter(LiveVideoPreviewParamProvider::class) video: TimelineItem,
@@ -176,9 +176,9 @@ private fun LiveVideoListItemViewPreview(
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
-fun LiveVideoHeaderViewPreview() {
+private fun LiveVideoHeaderViewPreview() {
     AppTheme {
         LiveVideoHeaderView(
             label = LocalDateTime.now(ZoneId.systemDefault())

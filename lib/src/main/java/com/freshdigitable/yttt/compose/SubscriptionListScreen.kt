@@ -22,7 +22,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.freshdigitable.yttt.AppLogger
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveSubscription
@@ -59,7 +59,7 @@ fun SubscriptionListScreen(
             itemProvider = { items[index] },
             listState = listState[index],
             onListItemClicked = { onListItemClicked(it) },
-            onError = onError
+            onError = onError,
         )
     }
 }
@@ -114,7 +114,7 @@ private fun SubscriptionListContent(
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun SubscriptionListContentPreview() {
     val items = MutableStateFlow(

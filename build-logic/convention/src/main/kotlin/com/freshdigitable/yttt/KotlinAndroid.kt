@@ -57,8 +57,8 @@ fun Project.configureDetekt(extension: DetektExtension) {
     extension.apply {
         tasks.named<Detekt>("detekt") {
             parallel = true
-//            config = files("$rootDir/config/detekt/detekt.yml")
-//            buildUponDefaultConfig = true
+            config = files("$rootDir/config/detekt/detekt.yml")
+            buildUponDefaultConfig = true
             ignoreFailures = true
             basePath = rootDir.absolutePath
             autoCorrect = true

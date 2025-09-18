@@ -28,7 +28,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.freshdigitable.yttt.AppLogger
-import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
@@ -178,7 +178,7 @@ private fun ColumnScope.MenuContent(
 @Immutable
 internal class TimetableTabData(
     internal val page: TimetablePage,
-    private val count: Int
+    private val count: Int,
 ) : TabData<TimetableTabData> {
     @Composable
     @ReadOnlyComposable
@@ -192,7 +192,7 @@ internal class TimetableTabData(
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun TimetableTabScreenPreview() {
     val tabs = listOf(
@@ -210,7 +210,7 @@ private fun TimetableTabScreenPreview() {
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun ModalSheetPreview() {
     AppTheme {
@@ -221,7 +221,7 @@ private fun ModalSheetPreview() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun ListItemMenuSheetPreview() {
     AppTheme {

@@ -21,7 +21,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.TextUnit
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange
@@ -64,7 +64,7 @@ private fun rangeToLink(
                 styles = linkStyle,
                 linkInteractionListener = {
                     dialog.showDialog(LinkAnnotationRange.createFromTag(r.tag))
-                }
+                },
             )
         }
 
@@ -190,7 +190,7 @@ private fun AccountDialog(
                                 ),
                             )
                         },
-                        modifier = Modifier.clickable { onUrlClicked(it) }
+                        modifier = Modifier.clickable { onUrlClicked(it) },
                     )
                 }
             }
@@ -204,7 +204,7 @@ private fun AccountDialog(
     )
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun EllipsizedUrlConfirmDialogPreview() {
     AppTheme {
@@ -216,7 +216,7 @@ private fun EllipsizedUrlConfirmDialogPreview() {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun AccountDialogPreview() {
     AppTheme {

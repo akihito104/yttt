@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.freshdigitable.yttt.AppSettingsViewModel
-import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 
 @Composable
 fun AppSettingsScreen(
@@ -64,9 +64,9 @@ private fun AppSettingsScreen(
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
-fun AppSettingsScreenPreview() {
+private fun AppSettingsScreenPreview() {
     AppTheme {
         AppSettingsScreen(text = { "24:00" }, onClicked = {})
     }

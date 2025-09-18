@@ -37,7 +37,7 @@ import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.di.LivePlatformMap
 import com.freshdigitable.yttt.lib.R
@@ -154,7 +154,7 @@ private fun MainScreen(
                             this@SharedTransitionLayout,
                             snackbarBus = snackbarMessageSender,
                         ),
-                        navRoutes = navigation
+                        navRoutes = navigation,
                     )
                 }
             }
@@ -204,18 +204,21 @@ internal enum class DrawerMenuItem(
     ),
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun NavDrawerPreview() {
     AppTheme {
-        NavigationDrawerImpl(items = {
-            listOf(
-                DrawerMenuItem.SUBSCRIPTION.toListItem(),
-                DrawerMenuItem.AUTH_STATUS.toListItem(true),
-                DrawerMenuItem.APP_SETTING.toListItem(),
-                DrawerMenuItem.OSS_LICENSE.toListItem(),
-            )
-        }, onClicked = {})
+        NavigationDrawerImpl(
+            items = {
+                listOf(
+                    DrawerMenuItem.SUBSCRIPTION.toListItem(),
+                    DrawerMenuItem.AUTH_STATUS.toListItem(true),
+                    DrawerMenuItem.APP_SETTING.toListItem(),
+                    DrawerMenuItem.OSS_LICENSE.toListItem(),
+                )
+            },
+            onClicked = {},
+        )
     }
 }
 
@@ -241,7 +244,7 @@ class MainViewModel @AssistedInject constructor(
             isTokenInvalid.map { DrawerMenuItem.AUTH_STATUS.toListItem(it == true) },
             flowOf(DrawerMenuItem.APP_SETTING.toListItem()),
             flowOf(DrawerMenuItem.OSS_LICENSE.toListItem()),
-        )
+        ),
     ) {
         it.toList()
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -259,7 +262,7 @@ class MainViewModel @AssistedInject constructor(
                     actionLabel = "account setting",
                     withDismissAction = false,
                     duration = SnackbarDuration.Long,
-                )
+                ),
             ) {
                 it.navigate(MainNavRoute.Auth.route)
             }

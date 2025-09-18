@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.lib.R
 import kotlinx.coroutines.launch
 
@@ -203,7 +203,7 @@ private class OnAppBar(
     override suspend fun consumeMenuItem() = consume()
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun AppTopAppBarPreview() {
     AppTheme {
@@ -232,7 +232,7 @@ private fun AppTopAppBarPreview() {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun HamburgerMenuIconPreview() {
     AppTheme {

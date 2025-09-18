@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.YouTube
@@ -170,9 +170,9 @@ fun DisconnectConfirmingDialog(
     )
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
-fun AuthListItemPreview() {
+private fun AuthListItemPreview() {
     AppTheme {
         Column {
             AuthListItem(
@@ -199,7 +199,7 @@ fun AuthListItemPreview() {
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun DisconnectConfirmingDialogPreview() {
     AppTheme {
@@ -210,7 +210,7 @@ private fun DisconnectConfirmingDialogPreview() {
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun AuthScreenPreview() {
     AppTheme {
