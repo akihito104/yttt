@@ -4,12 +4,14 @@ import com.freshdigitable.yttt.AppPerformance.Companion.trace
 import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.TwitchRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
+import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
+import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.AccountRepository
@@ -18,7 +20,6 @@ import com.freshdigitable.yttt.logE
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import java.time.Duration
 import javax.inject.Inject
 
 internal class FetchTwitchStreamUseCase @Inject constructor(
@@ -27,30 +28,42 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke(): Result<Unit> {
+        val account = checkAccount()
+        val me = account.getOrNull()
+        if (account.isFailure || me == null) {
+            return account.map {}
+        }
+        return trace("loadList_t") {
+            val taskRes = doUpdateTasks(me, this)
+            if (taskRes.isFailure) {
+                taskRes
+            } else {
+                val userIds = checkNotNull(taskRes.getOrNull())
+                twitchRepository.findUsersById(userIds)
+            }
+        }.map {}
+    }
+
+    private suspend fun checkAccount(): Result<TwitchUserDetail?> {
         if (!accountRepository.hasAccount()) {
-            return Result.success(Unit)
+            return Result.success(null)
         }
-        trace("loadList_t") {
-            val meRes = twitchRepository.fetchMe()
-                .mapCatching { it ?: throw IllegalStateException("twitch: me was null.") }
-                .onFailure { return Result.failure(it) }
-            val me = checkNotNull(meRes.getOrNull())
+        return twitchRepository.fetchMe().mapCatching { it?.item ?: error("twitch: me was null.") }
+    }
 
-            val streams = updateOnAirStreams(me.item)
-                .onFailure { return Result.failure(it) }
-                .onSuccess { putMetric("streaming_channel", it.size.toLong()) }
-                .getOrDefault(emptyList())
-
-            val schedules = updateChannelSchedules(me.item, this)
-                .onFailure { return Result.failure(it) }
-                .onSuccess { putMetric("schedule", it.size.toLong()) }
-                .getOrDefault(emptyList())
-
-            val users = streams.map { it.user.id } + schedules.map { it.broadcaster.id }
-            twitchRepository.findUsersById(users.toSet())
-                .onFailure { return Result.failure(it) }
+    private suspend fun doUpdateTasks(
+        me: TwitchUserDetail,
+        trace: AppTrace,
+    ): Result<Set<TwitchUser.Id>> = coroutineScope {
+        val tasks = listOf(
+            async { updateOnAirStreams(me).map { u -> u.map { it.user.id } } },
+            async { updateChannelSchedules(me, trace).map { s -> s.map { it.broadcaster.id } } },
+        ).awaitAll()
+        if (tasks.all { it.isSuccess }) {
+            Result.success(tasks.mapNotNull { it.getOrNull() }.flatten().toSet())
+        } else {
+            Result.failure(tasks.first { it.isFailure }.exceptionOrNull()!!)
         }
-        return Result.success(Unit)
     }
 
     private suspend fun updateOnAirStreams(me: TwitchUserDetail): Result<List<TwitchStream>> =
@@ -79,23 +92,21 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
             }.map { it.item.followings }
             .getOrDefault(emptyList())
         t.putMetric("subs", followings.size.toLong())
-        if (followings.isEmpty()) {
-            return Result.success(emptyList())
+        return fetchAllSchedule(followings).onSuccess { schedule ->
+            val categoryId = schedule.flatMap { s ->
+                s.segments?.mapNotNull { it.category?.id } ?: emptyList()
+            }.toSet()
+            if (categoryId.isNotEmpty()) {
+                twitchRepository.fetchCategory(categoryId)
+                    .onFailure { logE(throwable = it) { "updateChannelSchedules: " } }
+            }
         }
-        val schedules = fetchAllSchedule(followings)
-            .onFailure { return Result.failure(it) }
-            .getOrDefault(emptyList())
-
-        val categoryId = schedules
-            .flatMap { s -> s.segments?.mapNotNull { it.category?.id } ?: emptyList() }.toSet()
-        if (categoryId.isNotEmpty()) {
-            twitchRepository.fetchCategory(categoryId)
-                .onFailure { logE(throwable = it) { "updateChannelSchedules: " } }
-        }
-        return Result.success(schedules)
     }
 
     private suspend fun fetchAllSchedule(following: List<TwitchBroadcaster>): Result<List<TwitchChannelSchedule>> {
+        if (following.isEmpty()) {
+            return Result.success(emptyList())
+        }
         val tasks = coroutineScope {
             following.map { async { updateChannelSchedule(it) } }
         }
@@ -112,7 +123,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
             val segments = s.item?.segments ?: return@onSuccess
             val current = dateTimeProvider.now()
             val finished = segments.filter {
-                (it.startTime + Duration.ofHours(6)) < current ||
+                (it.startTime + LiveVideo.UPCOMING_DEADLINE) < current ||
                     (it.endTime != null && checkNotNull(it.endTime) < current)
             }.map { it.id }
             if (finished.isNotEmpty()) {

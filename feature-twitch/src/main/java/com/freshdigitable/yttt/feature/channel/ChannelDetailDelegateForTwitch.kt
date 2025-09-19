@@ -54,7 +54,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     override val tabs: List<ChannelDetailPageTab<*>> = listOfNotNull(
         TwitchChannelDetailTab.About,
         TwitchChannelDetailTab.Vod,
-        if (BuildConfig.DEBUG) TwitchChannelDetailTab.Debug else null
+        if (BuildConfig.DEBUG) TwitchChannelDetailTab.Debug else null,
     )
     private val detail: Flow<TwitchUserDetail?> = flowOf(id).map { i ->
         repository.findUsersById(setOf(i.mapTo()))
@@ -120,7 +120,7 @@ internal sealed class TwitchChannelDetailTab(
     override fun title(): String = title
     override fun compareTo(other: TwitchChannelDetailTab): Int = ordinal.compareTo(other.ordinal)
 
-    data object About : TwitchChannelDetailTab(title = "ABOUT", 0)
-    data object Vod : TwitchChannelDetailTab(title = "VOD", 1)
-    data object Debug : TwitchChannelDetailTab(title = "DEBUG", 99)
+    data object About : TwitchChannelDetailTab(title = "ABOUT", ordinal = 0)
+    data object Vod : TwitchChannelDetailTab(title = "VOD", ordinal = 1)
+    data object Debug : TwitchChannelDetailTab(title = "DEBUG", ordinal = 99)
 }
