@@ -207,7 +207,7 @@ internal data class YouTubeChannelDetailDb(
                 "INNER JOIN channel_addition AS a ON c.id = a.id " +
                 "INNER JOIN channel_addition_expire AS e ON c.id = e.channel_id " +
                 "LEFT OUTER JOIN yt_channel_related_playlist AS p ON c.id = p.channel_id " +
-                "WHERE c.id IN (:id)"
+                "WHERE c.id IN (:id)",
         )
         suspend fun findChannelDetail(id: Collection<YouTubeChannel.Id>): List<UpdatableYouTubeChannelDetailDb>
     }
@@ -256,7 +256,7 @@ internal data class YouTubeChannelLogTable(
         @Query(
             "SELECT * FROM channel_log" +
                 " WHERE channel_id = :channelId AND datetime >= :publishedAfter" +
-                " ORDER BY datetime DESC LIMIT :maxResult"
+                " ORDER BY datetime DESC LIMIT :maxResult",
         )
         suspend fun findChannelLogs(
             channelId: YouTubeChannel.Id,
@@ -266,7 +266,7 @@ internal data class YouTubeChannelLogTable(
 
         @Query(
             "SELECT * FROM channel_log WHERE channel_id = :channelId" +
-                " ORDER BY datetime DESC LIMIT :maxResult"
+                " ORDER BY datetime DESC LIMIT :maxResult",
         )
         suspend fun findChannelLogs(
             channelId: YouTubeChannel.Id,
@@ -290,8 +290,11 @@ internal interface YouTubeChannelDaoProviders {
     val youTubeChannelAdditionExpireDao: YouTubeChannelAdditionExpireTable.Dao
 }
 
-internal interface YouTubeChannelDao : YouTubeChannelTable.Dao, YouTubeChannelLogTable.Dao,
-    YouTubeChannelDetailDb.Dao, YouTubeChannelRelatedPlaylistTable.Dao {
+internal interface YouTubeChannelDao :
+    YouTubeChannelTable.Dao,
+    YouTubeChannelLogTable.Dao,
+    YouTubeChannelDetailDb.Dao,
+    YouTubeChannelRelatedPlaylistTable.Dao {
     suspend fun addChannelEntities(channels: Collection<YouTubeChannel>)
     suspend fun addChannelDetails(channelDetail: Collection<Updatable<YouTubeChannelDetail>>)
     suspend fun addChannelRelatedPlaylistEntities(entities: Collection<YouTubeChannelRelatedPlaylist>)
@@ -301,7 +304,8 @@ internal interface YouTubeChannelDao : YouTubeChannelTable.Dao, YouTubeChannelLo
 
 internal class YouTubeChannelDaoImpl @Inject constructor(
     private val db: AppDatabase,
-) : YouTubeChannelDao, YouTubeChannelTable.Dao by db.youTubeChannelDao,
+) : YouTubeChannelDao,
+    YouTubeChannelTable.Dao by db.youTubeChannelDao,
     YouTubeChannelLogTable.Dao by db.youTubeChannelLogDao,
     YouTubeChannelDetailDb.Dao by db.youTubeChannelDetailDbDao,
     YouTubeChannelRelatedPlaylistTable.Dao by db.youTubeChannelRelatedPlaylistDbDao {
@@ -357,7 +361,9 @@ internal class YouTubeChannelDaoImpl @Inject constructor(
 
     companion object {
         private fun YouTubeChannel.toDbEntity(): YouTubeChannelTable = YouTubeChannelTable(
-            id = id, title = title, iconUrl = iconUrl,
+            id = id,
+            title = title,
+            iconUrl = iconUrl,
         )
 
         private fun YouTubeChannelDetail.toAddition(): YouTubeChannelAdditionTable =

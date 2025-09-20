@@ -32,13 +32,9 @@ import javax.inject.Inject
     indices = [Index("channel_id")],
 )
 internal class YouTubeSubscriptionTable(
-    @PrimaryKey(autoGenerate = false)
-    @ColumnInfo(name = "id")
-    val id: YouTubeSubscription.Id,
-    @ColumnInfo(name = "subscription_since")
-    val subscribeSince: Instant,
-    @ColumnInfo(name = "channel_id")
-    val channelId: YouTubeChannel.Id,
+    @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "id") val id: YouTubeSubscription.Id,
+    @ColumnInfo(name = "subscription_since") val subscribeSince: Instant,
+    @ColumnInfo(name = "channel_id") val channelId: YouTubeChannel.Id,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -46,7 +42,9 @@ internal class YouTubeSubscriptionTable(
         suspend fun addSubscriptions(subscriptions: Collection<YouTubeSubscriptionTable>)
 
         @Query("SELECT id FROM subscription WHERE id NOT IN (:id)")
-        suspend fun findSubscriptionIdsByRemainingIds(id: Collection<YouTubeSubscription.Id>): List<YouTubeSubscription.Id>
+        suspend fun findSubscriptionIdsByRemainingIds(
+            id: Collection<YouTubeSubscription.Id>,
+        ): List<YouTubeSubscription.Id>
 
         @Query("SELECT id FROM subscription")
         suspend fun fetchAllSubscriptionIds(): List<YouTubeSubscription.Id>
@@ -63,8 +61,7 @@ internal class YouTubeSubscriptionTable(
     tableName = "subscription_alphabetical_order_etag",
 )
 internal data class YouTubeSubscriptionEtagTable(
-    @PrimaryKey
-    @ColumnInfo(name = "offset") override val offset: Int,
+    @PrimaryKey @ColumnInfo(name = "offset") override val offset: Int,
     @ColumnInfo(name = "next_page_token") override val nextPageToken: String?,
     @ColumnInfo(name = "etag") override val eTag: String,
 ) : YouTubeSubscriptionQuery {
@@ -92,11 +89,8 @@ internal data class YouTubeSubscriptionEtagTable(
     ],
 )
 internal class YouTubeSubscriptionRelevanceOrderTable(
-    @PrimaryKey(autoGenerate = false)
-    @ColumnInfo(name = "subscription_id")
-    val id: YouTubeSubscription.Id,
-    @ColumnInfo(name = "subs_order", defaultValue = "-1")
-    val order: Int = -1,
+    @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "subscription_id") val id: YouTubeSubscription.Id,
+    @ColumnInfo(name = "subs_order", defaultValue = "-1") val order: Int = -1,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -112,14 +106,10 @@ internal class YouTubeSubscriptionRelevanceOrderTable(
 }
 
 internal data class YouTubeSubscriptionDb(
-    @ColumnInfo(name = "id")
-    override val id: YouTubeSubscription.Id,
-    @ColumnInfo(name = "subscription_since")
-    override val subscribeSince: Instant,
-    @Embedded(prefix = "channel_")
-    override val channel: YouTubeChannelTable,
-    @ColumnInfo(name = "subs_order")
-    override val order: Int,
+    @ColumnInfo(name = "id") override val id: YouTubeSubscription.Id,
+    @ColumnInfo(name = "subscription_since") override val subscribeSince: Instant,
+    @Embedded(prefix = "channel_") override val channel: YouTubeChannelTable,
+    @ColumnInfo(name = "subs_order") override val order: Int,
 ) : YouTubeSubscriptionRelevanceOrdered {
     @androidx.room.Dao
     internal interface Dao {
@@ -128,21 +118,17 @@ internal data class YouTubeSubscriptionDb(
                 "FROM subscription AS s " +
                 "INNER JOIN channel AS c ON c.id = s.channel_id " +
                 "INNER JOIN subscription_relevance_order AS o ON s.id = o.subscription_id " +
-                "ORDER BY subs_order ASC"
+                "ORDER BY subs_order ASC",
         )
         suspend fun findAllSubscriptions(): List<YouTubeSubscriptionDb>
     }
 }
 
 internal data class YouTubeSubscriptionSummaryDb(
-    @ColumnInfo("subscription_id")
-    override val subscriptionId: YouTubeSubscription.Id,
-    @ColumnInfo("channel_id")
-    override val channelId: YouTubeChannel.Id,
-    @ColumnInfo("uploaded_playlist_id")
-    override val uploadedPlaylistId: YouTubePlaylist.Id?,
-    @Embedded
-    override val cacheControl: CacheControlDb,
+    @ColumnInfo("subscription_id") override val subscriptionId: YouTubeSubscription.Id,
+    @ColumnInfo("channel_id") override val channelId: YouTubeChannel.Id,
+    @ColumnInfo("uploaded_playlist_id") override val uploadedPlaylistId: YouTubePlaylist.Id?,
+    @Embedded override val cacheControl: CacheControlDb,
 ) : YouTubeSubscriptionSummary {
     @androidx.room.Dao
     internal interface Dao {
@@ -151,7 +137,7 @@ internal data class YouTubeSubscriptionSummaryDb(
                 " pe.fetched_at AS fetched_at, pe.max_age AS max_age FROM subscription AS s " +
                 "LEFT OUTER JOIN yt_channel_related_playlist AS ca ON s.channel_id = ca.channel_id " +
                 "LEFT OUTER JOIN playlist_expire AS pe ON pe.playlist_id = ca.uploaded_playlist_id " +
-                "WHERE subscription_id IN (:ids)"
+                "WHERE subscription_id IN (:ids)",
         )
         fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummaryDb>
 
@@ -162,7 +148,7 @@ internal data class YouTubeSubscriptionSummaryDb(
                 "LEFT OUTER JOIN yt_channel_related_playlist AS ca ON s.channel_id = ca.channel_id " +
                 "LEFT OUTER JOIN playlist_expire AS pe ON pe.playlist_id = ca.uploaded_playlist_id " +
                 "ORDER BY LOWER(c.title) ASC " +
-                "LIMIT :pageSize OFFSET :offset"
+                "LIMIT :pageSize OFFSET :offset",
         )
         fun findSubscriptionSummariesByOffset(
             offset: Int,
@@ -179,9 +165,12 @@ internal interface YouTubeSubscriptionDaoProviders {
     val youTubeSubscriptionSummaryDbDao: YouTubeSubscriptionSummaryDb.Dao
 }
 
-internal interface YouTubeSubscriptionDao : YouTubeSubscriptionTable.Dao,
-    YouTubeSubscriptionDb.Dao, YouTubeSubscriptionEtagTable.Dao,
-    YouTubeSubscriptionRelevanceOrderTable.Dao, YouTubeSubscriptionSummaryDb.Dao {
+internal interface YouTubeSubscriptionDao :
+    YouTubeSubscriptionTable.Dao,
+    YouTubeSubscriptionDb.Dao,
+    YouTubeSubscriptionEtagTable.Dao,
+    YouTubeSubscriptionRelevanceOrderTable.Dao,
+    YouTubeSubscriptionSummaryDb.Dao {
     suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscription>)
     suspend fun addSubscriptionQuery(query: Collection<YouTubeSubscriptionQuery>)
     suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>)
@@ -189,7 +178,8 @@ internal interface YouTubeSubscriptionDao : YouTubeSubscriptionTable.Dao,
 
 internal class YouTubeSubscriptionDaoImpl @Inject constructor(
     private val db: AppDatabase,
-) : YouTubeSubscriptionDao, YouTubeSubscriptionTable.Dao by db.youTubeSubscriptionDao,
+) : YouTubeSubscriptionDao,
+    YouTubeSubscriptionTable.Dao by db.youTubeSubscriptionDao,
     YouTubeSubscriptionDb.Dao by db.youTubeSubscriptionDbDao,
     YouTubeSubscriptionEtagTable.Dao by db.youTubeSubscriptionEtagDao,
     YouTubeSubscriptionRelevanceOrderTable.Dao by db.youTubeSubscriptionRelevanceOrderDao,
@@ -229,7 +219,9 @@ internal class YouTubeSubscriptionDaoImpl @Inject constructor(
     companion object {
         private fun YouTubeSubscription.toDbEntity(): YouTubeSubscriptionTable =
             YouTubeSubscriptionTable(
-                id = id, subscribeSince = subscribeSince, channelId = channel.id,
+                id = id,
+                subscribeSince = subscribeSince,
+                channelId = channel.id,
             )
     }
 }

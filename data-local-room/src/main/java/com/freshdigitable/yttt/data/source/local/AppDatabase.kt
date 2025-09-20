@@ -120,7 +120,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 21, to = 22, spec = AppDatabase.MigrateSeparatePlaylistItem::class),
         AutoMigration(from = 22, to = 23, spec = AppDatabase.MigrateSubscriptionOrder::class),
         AutoMigration(from = 24, to = 25),
-    ]
+    ],
 )
 @TypeConverters(
     InstantConverter::class,
@@ -189,7 +189,7 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
     internal class MigrateSeparatePlaylistItem : AutoMigrationSpec
 
     @DeleteColumn.Entries(
-        DeleteColumn(tableName = "subscription", columnName = "subs_order")
+        DeleteColumn(tableName = "subscription", columnName = "subs_order"),
     )
     internal class MigrateSubscriptionOrder : AutoMigrationSpec
     companion object {
@@ -197,7 +197,10 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
         internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name)
                 .addMigrations(
-                    MIGRATION_13_14, MIGRATION_15_16, MIGRATION_18_19, MIGRATION_23_24,
+                    MIGRATION_13_14,
+                    MIGRATION_15_16,
+                    MIGRATION_18_19,
+                    MIGRATION_23_24,
                     MIGRATION_25_26,
                 )
                 .build()
@@ -216,11 +219,11 @@ internal val MIGRATION_13_14 = object : Migration(13, 14) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `twitch_category` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, " +
-                "`art_url_base` TEXT, `igdb_id` TEXT, PRIMARY KEY(`id`))"
+                "`art_url_base` TEXT, `igdb_id` TEXT, PRIMARY KEY(`id`))",
         )
         db.execSQL(
             "INSERT INTO twitch_category SELECT category_id AS id, category_name AS name, null, null " +
-                "FROM twitch_channel_schedule_stream WHERE category_id IS NOT NULL GROUP BY category_id"
+                "FROM twitch_channel_schedule_stream WHERE category_id IS NOT NULL GROUP BY category_id",
         )
 
         db.execSQL(
@@ -228,17 +231,26 @@ internal val MIGRATION_13_14 = object : Migration(13, 14) {
                 "`start_time` INTEGER NOT NULL, `end_time` INTEGER, `title` TEXT NOT NULL, `canceled_until` TEXT, " +
                 "`category_id` TEXT, `is_recurring` INTEGER NOT NULL, `user_id` TEXT NOT NULL, PRIMARY KEY(`id`), " +
                 "FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, " +
-                "FOREIGN KEY(`category_id`) REFERENCES `twitch_category`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+                "FOREIGN KEY(`category_id`) REFERENCES `twitch_category`(`id`)" +
+                " ON UPDATE NO ACTION ON DELETE NO ACTION)",
         )
         db.execSQL(
-            "INSERT INTO __twitch_channel_schedule_stream (id, start_time, end_time, title, canceled_until, category_id, is_recurring, user_id) " +
-                "SELECT id, start_time, end_time, title, canceled_until, category_id, is_recurring, user_id FROM twitch_channel_schedule_stream"
+            "INSERT INTO __twitch_channel_schedule_stream (id, start_time, end_time, title, canceled_until," +
+                " category_id, is_recurring, user_id) " +
+                "SELECT id, start_time, end_time, title, canceled_until, category_id, is_recurring, user_id " +
+                "FROM twitch_channel_schedule_stream",
         )
         db.execSQL("DROP TABLE twitch_channel_schedule_stream")
         db.execSQL("ALTER TABLE __twitch_channel_schedule_stream RENAME TO twitch_channel_schedule_stream")
 
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_twitch_channel_schedule_stream_category_id` ON `twitch_channel_schedule_stream` (`category_id`)")
-        db.execSQL("CREATE INDEX IF NOT EXISTS `index_twitch_channel_schedule_stream_user_id` ON `twitch_channel_schedule_stream` (`user_id`)")
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_twitch_channel_schedule_stream_category_id`" +
+                " ON `twitch_channel_schedule_stream` (`category_id`)",
+        )
+        db.execSQL(
+            "CREATE INDEX IF NOT EXISTS `index_twitch_channel_schedule_stream_user_id`" +
+                " ON `twitch_channel_schedule_stream` (`user_id`)",
+        )
         db.foreignKeyCheck("twitch_channel_schedule_stream")
     }
 }
@@ -247,21 +259,23 @@ internal val MIGRATION_15_16 = object : Migration(15, 16) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
             "INSERT OR IGNORE INTO twitch_category (id, name) SELECT game_id AS id, game_name AS name " +
-                "FROM twitch_stream WHERE game_id IS NOT NULL GROUP BY game_id"
+                "FROM twitch_stream WHERE game_id IS NOT NULL GROUP BY game_id",
         )
 
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `__twitch_stream` (`id` TEXT NOT NULL, `user_id` TEXT NOT NULL, " +
                 "`title` TEXT NOT NULL, `thumbnail_url_base` TEXT NOT NULL, `view_count` INTEGER NOT NULL, " +
-                "`language` TEXT NOT NULL, `game_id` TEXT NOT NULL, `type` TEXT NOT NULL, `started_at` INTEGER NOT NULL, " +
-                "`tags` TEXT NOT NULL, `is_mature` INTEGER NOT NULL, PRIMARY KEY(`id`), " +
+                "`language` TEXT NOT NULL, `game_id` TEXT NOT NULL, `type` TEXT NOT NULL, " +
+                "`started_at` INTEGER NOT NULL, `tags` TEXT NOT NULL, `is_mature` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`), " +
                 "FOREIGN KEY(`user_id`) REFERENCES `twitch_user`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, " +
-                "FOREIGN KEY(`game_id`) REFERENCES `twitch_category`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+                "FOREIGN KEY(`game_id`) REFERENCES `twitch_category`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)",
         )
         db.execSQL(
             "INSERT INTO __twitch_stream (id, user_id, title, thumbnail_url_base, view_count, " +
                 "language, game_id, type, started_at, tags, is_mature) SELECT id, user_id, title, " +
-                "thumbnail_url_base, view_count, language, game_id, type, started_at, tags, is_mature FROM twitch_stream"
+                "thumbnail_url_base, view_count, language, game_id, type, started_at, tags, is_mature" +
+                " FROM twitch_stream",
         )
         db.execSQL("DROP TABLE twitch_stream")
         db.execSQL("ALTER TABLE __twitch_stream RENAME TO twitch_stream")
@@ -277,19 +291,19 @@ internal val MIGRATION_18_19 = object : Migration(18, 19) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `__playlist` (`id` TEXT NOT NULL, `title` TEXT NOT NULL DEFAULT '', " +
-                "`thumbnail_url` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`id`))"
+                "`thumbnail_url` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`id`))",
         )
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `__playlist_expire` (`playlist_id` TEXT NOT NULL, " +
                 "`fetched_at` INTEGER DEFAULT null, `max_age` INTEGER DEFAULT null, " +
                 "PRIMARY KEY(`playlist_id`), " +
-                "FOREIGN KEY(`playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+                "FOREIGN KEY(`playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)",
         )
 
         db.execSQL("INSERT INTO __playlist (id) SELECT id FROM playlist")
         db.execSQL(
             "INSERT INTO __playlist_expire (playlist_id, fetched_at, max_age) " +
-                "SELECT id, last_modified, max_age FROM playlist"
+                "SELECT id, last_modified, max_age FROM playlist",
         )
 
         db.execSQL("DROP TABLE playlist")
@@ -306,15 +320,16 @@ internal val MIGRATION_23_24 = object : Migration(23, 24) {
             "CREATE TABLE IF NOT EXISTS `yt_channel_related_playlist` (`channel_id` TEXT NOT NULL, " +
                 "`uploaded_playlist_id` TEXT, PRIMARY KEY(`channel_id`), " +
                 "FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, " +
-                "FOREIGN KEY(`uploaded_playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+                "FOREIGN KEY(`uploaded_playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION" +
+                " ON DELETE NO ACTION)",
         )
         db.execSQL(
             "CREATE INDEX IF NOT EXISTS `index_yt_channel_related_playlist_uploaded_playlist_id`" +
-                " ON `yt_channel_related_playlist` (`uploaded_playlist_id`)"
+                " ON `yt_channel_related_playlist` (`uploaded_playlist_id`)",
         )
         db.execSQL(
             "INSERT INTO `yt_channel_related_playlist` (`channel_id`, `uploaded_playlist_id`) " +
-                "SELECT `id` AS `channel_id`, `uploaded_playlist_id` FROM `channel_addition`"
+                "SELECT `id` AS `channel_id`, `uploaded_playlist_id` FROM `channel_addition`",
         )
 
         db.execSQL(
@@ -322,20 +337,20 @@ internal val MIGRATION_23_24 = object : Migration(23, 24) {
                 "`subscriber_count` INTEGER NOT NULL, `is_subscriber_hidden` INTEGER NOT NULL, " +
                 "`video_count` INTEGER NOT NULL, `view_count` INTEGER NOT NULL, `published_at` INTEGER NOT NULL, " +
                 "`custom_url` TEXT NOT NULL, `keywords` TEXT NOT NULL, `description` TEXT, PRIMARY KEY(`id`), " +
-                "FOREIGN KEY(`id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)"
+                "FOREIGN KEY(`id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)",
         )
         db.execSQL(
             "INSERT INTO `_new_channel_addition` (`id`,`banner_url`,`subscriber_count`,`is_subscriber_hidden`," +
                 "`video_count`,`view_count`,`published_at`,`custom_url`,`keywords`,`description`) " +
                 "SELECT `id`,`banner_url`,`subscriber_count`,`is_subscriber_hidden`,`video_count`,`view_count`," +
-                "`published_at`,`custom_url`,`keywords`,`description` FROM `channel_addition`"
+                "`published_at`,`custom_url`,`keywords`,`description` FROM `channel_addition`",
         )
         db.execSQL("DROP TABLE `channel_addition`")
         db.execSQL("ALTER TABLE `_new_channel_addition` RENAME TO `channel_addition`")
         db.foreignKeyCheck("channel_addition")
         db.execSQL(
             "CREATE VIEW `twitch_user_detail_view` AS SELECT u.login_name, u.display_name, d.* " +
-                "FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
+                "FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id",
         )
     }
 }
@@ -350,23 +365,41 @@ internal val MIGRATION_25_26 = object : Migration(25, 26) {
                 "`thumbnail` TEXT NOT NULL DEFAULT '', `description` TEXT NOT NULL DEFAULT '', " +
                 "`viewer_count` INTEGER DEFAULT null, PRIMARY KEY(`video_id`), " +
                 "FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , " +
-                "FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )"
+                "FOREIGN KEY(`channel_id`) REFERENCES `channel`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_video_detail_channel_id` ON `video_detail` (`channel_id`)")
-        db.execSQL("CREATE TABLE IF NOT EXISTS `_new_video` (`id` TEXT NOT NULL, `broadcast_content` TEXT, PRIMARY KEY(`id`))")
-        db.execSQL("INSERT INTO `_new_video` (`id`,`broadcast_content`) SELECT `video_id`,'none' FROM `playlist_item` GROUP BY `video_id`")
-        db.execSQL("INSERT OR REPLACE INTO `_new_video` (`id`,`broadcast_content`) SELECT `id`,`broadcast_content` FROM `video`")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `_new_video` (`id` TEXT NOT NULL, `broadcast_content` TEXT, PRIMARY KEY(`id`))",
+        )
+        db.execSQL(
+            "INSERT INTO `_new_video` (`id`,`broadcast_content`) SELECT `video_id`,'none' FROM `playlist_item` " +
+                "GROUP BY `video_id`",
+        )
+        db.execSQL(
+            "INSERT OR REPLACE INTO `_new_video` (`id`,`broadcast_content`) SELECT `id`,`broadcast_content` " +
+                "FROM `video`",
+        )
         db.execSQL(
             "INSERT INTO `video_detail` (`video_id`,`title`,`channel_id`,`schedule_start_datetime`," +
-                "`schedule_end_datetime`,`actual_start_datetime`,`actual_end_datetime`,`thumbnail`,`description`,`viewer_count`) " +
+                "`schedule_end_datetime`,`actual_start_datetime`,`actual_end_datetime`,`thumbnail`,`description`," +
+                "`viewer_count`) " +
                 "SELECT `id`,`title`,`channel_id`,`schedule_start_datetime`,`schedule_end_datetime`," +
-                "`actual_start_datetime`,`actual_end_datetime`,`thumbnail`,`description`,`viewer_count` FROM `video`"
+                "`actual_start_datetime`,`actual_end_datetime`,`thumbnail`,`description`,`viewer_count` FROM `video`",
         )
         db.execSQL("DROP TABLE `video`")
         db.execSQL("ALTER TABLE `_new_video` RENAME TO `video`")
 
-        db.execSQL("CREATE TABLE IF NOT EXISTS `_new_playlist_item` (`id` TEXT NOT NULL, `playlist_id` TEXT NOT NULL, `video_id` TEXT NOT NULL, `published_at` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`playlist_id`) REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION , FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )")
-        db.execSQL("INSERT INTO `_new_playlist_item` (`id`,`playlist_id`,`video_id`,`published_at`) SELECT `id`,`playlist_id`,`video_id`,`published_at` FROM `playlist_item`")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `_new_playlist_item` (`id` TEXT NOT NULL, `playlist_id` TEXT NOT NULL, " +
+                "`video_id` TEXT NOT NULL, `published_at` INTEGER NOT NULL, " +
+                "PRIMARY KEY(`id`), FOREIGN KEY(`playlist_id`)" +
+                " REFERENCES `playlist`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, " +
+                "FOREIGN KEY(`video_id`) REFERENCES `video`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        )
+        db.execSQL(
+            "INSERT INTO `_new_playlist_item` (`id`,`playlist_id`,`video_id`,`published_at`) " +
+                "SELECT `id`,`playlist_id`,`video_id`,`published_at` FROM `playlist_item`",
+        )
         db.execSQL("DROP TABLE `playlist_item`")
         db.execSQL("ALTER TABLE `_new_playlist_item` RENAME TO `playlist_item`")
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_playlist_item_playlist_id` ON `playlist_item` (`playlist_id`)")
@@ -375,11 +408,13 @@ internal val MIGRATION_25_26 = object : Migration(25, 26) {
 
         db.execSQL(
             "CREATE VIEW `twitch_user_detail_view` AS SELECT u.login_name, u.display_name, " +
-                "d.* FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id"
+                "d.* FROM twitch_user_detail AS d INNER JOIN twitch_user AS u ON d.user_id = u.id",
         )
     }
 }
 
+private const val COLUMN_PARENT_TABLE = 2
+private const val COLUMN_CONSTRAINT = 3
 internal fun SupportSQLiteDatabase.foreignKeyCheck(tableName: String) {
     query("PRAGMA foreign_key_check('$tableName')").use {
         if (it.count > 0) {
@@ -391,9 +426,9 @@ internal fun SupportSQLiteDatabase.foreignKeyCheck(tableName: String) {
                         append("foreign key violation: ")
                         append(it.getString(0)).append("\n")
                     }
-                    val constraintIndex = it.getString(3)
+                    val constraintIndex = it.getString(COLUMN_CONSTRAINT)
                     if (!fkParentTables.containsKey(constraintIndex)) {
-                        fkParentTables[constraintIndex] = it.getString(2)
+                        fkParentTables[constraintIndex] = it.getString(COLUMN_PARENT_TABLE)
                     }
                     rowCount++
                 }

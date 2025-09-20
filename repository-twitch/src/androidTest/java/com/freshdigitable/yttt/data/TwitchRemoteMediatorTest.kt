@@ -276,7 +276,7 @@ class TwitchRemoteMediatorTest {
             broadcaster: Broadcaster,
             channelIconUrl: String? = null,
         ): TwitchLiveSubscription = TwitchLiveSubscription(
-            _id = authUser.id,
+            idValue = authUser.id,
             subscribeSince = Instant.EPOCH,
             channelId = broadcaster.id,
             channelName = broadcaster.displayName,

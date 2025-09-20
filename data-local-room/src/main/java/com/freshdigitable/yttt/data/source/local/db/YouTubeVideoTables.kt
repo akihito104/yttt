@@ -42,7 +42,8 @@ internal class YouTubeVideoTable(
         @Query(
             "SELECT id FROM (SELECT id FROM video WHERE broadcast_content IS 'none') AS v " +
                 "WHERE NOT EXISTS (SELECT video_id FROM playlist_item AS p WHERE v.id = p.video_id" +
-                " UNION SELECT video_id FROM (SELECT video_id FROM free_chat WHERE is_free_chat IS 1) AS f WHERE v.id = f.video_id)"
+                " UNION SELECT video_id FROM (SELECT video_id FROM free_chat WHERE is_free_chat IS 1) AS f " +
+                "WHERE v.id = f.video_id)",
         )
         suspend fun findUnusedVideoIds(): List<YouTubeVideo.Id>
 
@@ -56,7 +57,7 @@ internal class YouTubeVideoTable(
             "SELECT v.id FROM video AS v " +
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.id " +
                 "WHERE (broadcast_content IS NULL OR broadcast_content != 'none')" +
-                " AND (e.fetched_at IS NULL OR e.max_age IS NULL OR (e.fetched_at + e.max_age) < :current)"
+                " AND (e.fetched_at IS NULL OR e.max_age IS NULL OR (e.fetched_at + e.max_age) < :current)",
         )
         suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
 
@@ -157,12 +158,13 @@ internal data class YouTubeVideoDb(
     internal interface Dao {
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
-                " e.fetched_at AS fetched_at, e.max_age AS max_age, video.broadcast_content AS broadcast_content FROM video_detail AS v " +
+                " e.fetched_at AS fetched_at, e.max_age AS max_age, video.broadcast_content AS broadcast_content " +
+                "FROM video_detail AS v " +
                 "INNER JOIN video ON video.id = v.video_id " +
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.video_id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
-                "WHERE broadcast_content IS NOT NULL AND v.video_id IN (:ids)"
+                "WHERE broadcast_content IS NOT NULL AND v.video_id IN (:ids)",
         )
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<UpdatableYouTubeVideoDb>
 
@@ -172,7 +174,7 @@ internal data class YouTubeVideoDb(
                 "INNER JOIN video ON video.id = v.video_id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
-                "WHERE broadcast_content IS NOT NULL AND broadcast_content IS NOT 'none'"
+                "WHERE broadcast_content IS NOT NULL AND broadcast_content IS NOT 'none'",
         )
         fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
     }
@@ -259,8 +261,12 @@ internal interface YouTubeVideoDaoProviders {
     val youTubeFreeChatDao: FreeChatTable.Dao
 }
 
-internal interface YouTubeVideoDao : YouTubeVideoTable.Dao, YouTubeVideoDb.Dao,
-    YouTubeVideoExpireTable.Dao, YouTubeVideoDetailTable.Dao, FreeChatTable.Dao {
+internal interface YouTubeVideoDao :
+    YouTubeVideoTable.Dao,
+    YouTubeVideoDb.Dao,
+    YouTubeVideoExpireTable.Dao,
+    YouTubeVideoDetailTable.Dao,
+    FreeChatTable.Dao {
     suspend fun addVideoEntities(videos: Collection<Updatable<YouTubeVideoExtended>>)
     suspend fun insertOrIgnoreVideoEntities(videos: Collection<YouTubeVideo.Id>)
     suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
@@ -274,7 +280,8 @@ internal interface YouTubeVideoDao : YouTubeVideoTable.Dao, YouTubeVideoDb.Dao,
 
 internal class YouTubeVideoDaoImpl @Inject constructor(
     private val db: AppDatabase,
-) : YouTubeVideoDao, YouTubeVideoTable.Dao by db.youTubeVideoDao,
+) : YouTubeVideoDao,
+    YouTubeVideoTable.Dao by db.youTubeVideoDao,
     YouTubeVideoDb.Dao by db.youtubeVideoDbDao,
     YouTubeVideoExpireTable.Dao by db.youTubeVideoExpireDao,
     YouTubeVideoDetailTable.Dao by db.youTubeVideoDetailDao,
@@ -330,8 +337,10 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
 
     override suspend fun deleteTable() {
         listOf(
-            db.youTubeVideoDao, db.youTubeVideoDetailDao,
-            db.youTubeVideoExpireDao, db.youTubeFreeChatDao
+            db.youTubeVideoDao,
+            db.youTubeVideoDetailDao,
+            db.youTubeVideoExpireDao,
+            db.youTubeFreeChatDao,
         ).forEach { it.deleteTable() }
     }
 

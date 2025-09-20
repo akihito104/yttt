@@ -25,7 +25,7 @@ import javax.inject.Singleton
 
 data class TwitchLiveSubscription(
     @ColumnInfo(name = "follower_user_id")
-    private val _id: TwitchUser.Id,
+    private val idValue: TwitchUser.Id,
     @ColumnInfo(name = "followed_at")
     override val subscribeSince: Instant,
     @ColumnInfo(name = "channel_id")
@@ -36,7 +36,7 @@ data class TwitchLiveSubscription(
     private val channelIconUrl: String?,
 ) : LiveSubscription {
     override val id: LiveSubscription.Id
-        get() = _id.mapTo()
+        get() = idValue.mapTo()
     override val channel: LiveChannel
         get() = LiveChannelEntity(
             id = channelId.mapTo(),

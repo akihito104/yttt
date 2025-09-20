@@ -104,14 +104,14 @@ internal data class TwitchUserDetailDbUpdatable(
             "SELECT u.*, e.fetched_at AS fetched_at, e.max_age AS max_age FROM twitch_auth_user AS a " +
                 "INNER JOIN twitch_user_detail_view AS u ON a.user_id = u.user_id " +
                 "LEFT OUTER JOIN twitch_user_detail_expire AS e ON u.user_id = e.user_id " +
-                "LIMIT 1"
+                "LIMIT 1",
         )
         suspend fun findMe(): TwitchUserDetailDbUpdatable?
 
         @Query(
             "SELECT v.*, e.fetched_at AS fetched_at, e.max_age AS max_age " +
                 "FROM (SELECT * FROM twitch_user_detail_view WHERE user_id IN (:ids)) AS v " +
-                "LEFT OUTER JOIN twitch_user_detail_expire AS e ON v.user_id = e.user_id"
+                "LEFT OUTER JOIN twitch_user_detail_expire AS e ON v.user_id = e.user_id",
         )
         suspend fun findUserDetail(ids: Collection<TwitchUser.Id>): List<TwitchUserDetailDbUpdatable>
     }
@@ -160,7 +160,7 @@ internal class TwitchUserDetailExpireTable(
             childColumns = ["follower_user_id"],
         ),
     ],
-    primaryKeys = ["user_id", "follower_user_id"]
+    primaryKeys = ["user_id", "follower_user_id"],
 )
 internal class TwitchBroadcasterTable(
     @ColumnInfo(name = "user_id")
@@ -181,7 +181,7 @@ internal class TwitchBroadcasterTable(
         @Query(
             "SELECT b.user_id AS user_id, COUNT(follower_user_id) > 0 AS is_followed " +
                 "FROM twitch_broadcaster AS b WHERE user_id IN (:ids) " +
-                "GROUP BY user_id"
+                "GROUP BY user_id",
         )
         suspend fun isBroadcasterFollowed(ids: Collection<TwitchUser.Id>):
             Map<@MapColumn("user_id") TwitchUser.Id, @MapColumn("is_followed") Boolean>
@@ -231,7 +231,7 @@ internal data class TwitchBroadcasterDb(
         @Query(
             "SELECT u.*, b.followed_at FROM twitch_broadcaster AS b " +
                 "INNER JOIN twitch_user AS u ON b.user_id = u.id " +
-                "WHERE b.follower_user_id = :id"
+                "WHERE b.follower_user_id = :id",
         )
         suspend fun findBroadcastersByFollowerId(id: TwitchUser.Id): List<TwitchBroadcasterDb>
     }
@@ -279,13 +279,20 @@ internal interface TwitchUserDaoProviders {
     val twitchUserDetailViewDao: TwitchUserDetailDbUpdatable.Dao
 }
 
-internal interface TwitchUserDao : TwitchUserTable.Dao, TwitchUserDetailTable.Dao,
-    TwitchUserDetailExpireTable.Dao, TwitchBroadcasterTable.Dao, TwitchBroadcasterExpireTable.Dao,
-    TwitchAuthorizedUserTable.Dao, TwitchBroadcasterDb.Dao, TwitchUserDetailDbUpdatable.Dao
+internal interface TwitchUserDao :
+    TwitchUserTable.Dao,
+    TwitchUserDetailTable.Dao,
+    TwitchUserDetailExpireTable.Dao,
+    TwitchBroadcasterTable.Dao,
+    TwitchBroadcasterExpireTable.Dao,
+    TwitchAuthorizedUserTable.Dao,
+    TwitchBroadcasterDb.Dao,
+    TwitchUserDetailDbUpdatable.Dao
 
 internal class TwitchUserDaoImpl @Inject constructor(
-    private val db: TwitchUserDaoProviders
-) : TwitchUserDao, TwitchUserTable.Dao by db.twitchUserDao,
+    private val db: TwitchUserDaoProviders,
+) : TwitchUserDao,
+    TwitchUserTable.Dao by db.twitchUserDao,
     TwitchUserDetailTable.Dao by db.twitchUserDetailDao,
     TwitchUserDetailExpireTable.Dao by db.twitchUserDetailExpireDao,
     TwitchBroadcasterTable.Dao by db.twitchBroadcasterDao,

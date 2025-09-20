@@ -52,7 +52,7 @@ internal class TwitchChannelVacationScheduleTable(
                 "FROM twitch_channel_schedule_vacation AS v " +
                 "INNER JOIN twitch_user AS u ON u.id = :userId " +
                 "LEFT OUTER JOIN twitch_channel_schedule_expire AS e ON e.user_id = :userId " +
-                "WHERE v.user_id = :userId"
+                "WHERE v.user_id = :userId",
         )
         suspend fun findChannelVacationUpdatable(userId: TwitchUser.Id): TwitchChannelVacationUpdatableDb?
     }
@@ -240,9 +240,13 @@ internal interface TwitchScheduleDaoProviders {
     val twitchLiveScheduleDao: TwitchLiveScheduleDb.Dao
 }
 
-internal interface TwitchScheduleDao : TwitchChannelVacationScheduleTable.Dao,
-    TwitchStreamScheduleTable.Dao, TwitchChannelScheduleExpireTable.Dao,
-    TwitchCategoryTable.Dao, TwitchChannelScheduleStream.Dao, TwitchLiveScheduleDb.Dao
+internal interface TwitchScheduleDao :
+    TwitchChannelVacationScheduleTable.Dao,
+    TwitchStreamScheduleTable.Dao,
+    TwitchChannelScheduleExpireTable.Dao,
+    TwitchCategoryTable.Dao,
+    TwitchChannelScheduleStream.Dao,
+    TwitchLiveScheduleDb.Dao
 
 internal class TwitchScheduleDaoImpl @Inject constructor(
     private val db: TwitchScheduleDaoProviders,
