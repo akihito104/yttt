@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.remote
 
 import com.freshdigitable.yttt.data.BuildConfig
+import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.TwitchAccountDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -16,13 +17,10 @@ internal class TwitchTokenInterceptor @Inject constructor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        if (request.url.host != "api.twitch.tv") {
+        if (request.url.host != "api.twitch.tv" || !accountDataSource.hasValidToken()) {
             return chain.proceed(request)
         }
-        if (!accountDataSource.hasValidToken()) {
-            return chain.proceed(request)
-        }
-        val token = accountDataSource.twitchToken.value ?: return chain.proceed(request)
+        val token = checkNotNull(accountDataSource.twitchToken.value)
         val req = request.newBuilder()
             .header(HEADER_AUTHORIZATION, toAuthorizationValue(token))
             .header("Client-Id", BuildConfig.TWITCH_CLIENT_ID)
@@ -30,7 +28,7 @@ internal class TwitchTokenInterceptor @Inject constructor(
         val response = chain.proceed(req)
         // https://dev.twitch.tv/docs/authentication/#tokens-dont-last-forever
         // >> If a token becomes invalid, your API requests return HTTP status code 401 Unauthorized.
-        if (response.code == 401) {
+        if (response.code == NetworkResponse.Exception.HTTP_STATUS_UNAUTHORIZED) {
             coroutineScope.launch {
                 accountDataSource.invalidateTwitchToken()
             }

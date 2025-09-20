@@ -61,11 +61,15 @@ internal class YouTubeRemoteDataSource(
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> =
         fetchList(ids) { fetchChannelList(it) }.map { r -> r.map { it.item } }
 
-    override suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> =
-        fetchList(ids) { fetchChannelDetailList(it) }
+    override suspend fun fetchChannelDetailList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<Updatable<YouTubeChannelDetail>>> = fetchList(ids) { fetchChannelDetailList(it) }
 
-    override suspend fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelRelatedPlaylist>> =
-        fetchList(ids) { fetchChannelRelatedPlaylistList(it) }.map { r -> r.map { it.item } }
+    override suspend fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<YouTubeChannelRelatedPlaylist>> = fetchList(ids) {
+        fetchChannelRelatedPlaylistList(it)
+    }.map { r -> r.map { it.item } }
 
     override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> =
         fetch { fetchChannelSection(id) }.map { it.item }

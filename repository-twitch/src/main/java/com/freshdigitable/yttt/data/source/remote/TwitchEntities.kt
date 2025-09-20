@@ -215,8 +215,9 @@ internal fun createGson(): Gson = GsonBuilder()
 
 typealias Deserializer<T> = (JsonElement) -> T
 
-private inline fun <reified T> deserializerWithType(noinline deserialize: Deserializer<T>): Pair<Class<T>, (JsonElement) -> T> =
-    T::class.java to deserialize
+private inline fun <reified T> deserializerWithType(
+    noinline deserialize: Deserializer<T>,
+): Pair<Class<T>, (JsonElement) -> T> = T::class.java to deserialize
 
 private inline fun <reified T> GsonBuilder.registerTypeHierarchyDeserializer(
     table: Map<Type, Deserializer<T>>,

@@ -1,3 +1,5 @@
+@file:Suppress("Unused", "detekt.style.UnusedPrivateProperty")
+
 package com.freshdigitable.yttt.compose
 
 import android.os.Build

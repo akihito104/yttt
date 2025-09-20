@@ -17,3 +17,9 @@ complexity:
   TooManyFunctions:
     ignoreAnnotatedFunctions:
       - "Preview"
+  LongParameterList:
+    ignoreAnnotated: [ "Entity", "Composable" ]
+    ignoreAnnotatedParameter:
+      - "ColumnInfo"
+      - "Query"
+      - "SerializedName"

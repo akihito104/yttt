@@ -31,22 +31,20 @@ class TwitchRepository @Inject constructor(
             val me = fetchMe()
             return me.map { listOfNotNull(it) }
         }
-        val cacheRes = localDataSource.findUsersById(ids)
-        if (cacheRes.isFailure) {
-            return cacheRes
+        return localDataSource.findUsersById(ids).mapCatching { cache ->
+            val current = dateTimeProvider.now()
+            val c = cache.filter { it.isFresh(current) }
+                .filter { it.item.profileImageUrl.isNotEmpty() }
+            val remoteIds = ids - c.map { it.item.id }
+            if (remoteIds.isEmpty()) {
+                cache
+            } else {
+                remoteDataSource.findUsersById(remoteIds)
+                    .map { u -> u.map { it.update(TwitchUserDetail.MAX_AGE_USER_DETAIL) } }
+                    .onSuccess { localDataSource.addUsers(it) }
+                    .getOrThrow() + c
+            }
         }
-        val current = dateTimeProvider.now()
-        val cache = cacheRes.getOrDefault(emptyList())
-            .filter { it.isFresh(current) }
-            .filter { it.item.profileImageUrl.isNotEmpty() }
-        val remoteIds = ids - cache.map { it.item.id }
-        if (remoteIds.isEmpty()) {
-            return cacheRes
-        }
-        return remoteDataSource.findUsersById(remoteIds)
-            .map { u -> u.map { it.update(TwitchUserDetail.MAX_AGE_USER_DETAIL) } }
-            .onSuccess { localDataSource.addUsers(it) }
-            .map { it + cache }
     }
 
     override suspend fun fetchMe(): Result<Updatable<TwitchUserDetail>?> {
@@ -59,32 +57,30 @@ class TwitchRepository @Inject constructor(
             .onSuccess { if (it != null) localDataSource.setMe(it) }
     }
 
-    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<Updatable<TwitchFollowings>> {
-        val cacheRes = localDataSource.fetchAllFollowings(userId)
-        if (cacheRes.isFailure) {
-            return cacheRes
+    override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<Updatable<TwitchFollowings>> =
+        localDataSource.fetchAllFollowings(userId).mapCatching { cache ->
+            if (cache.isFresh(dateTimeProvider.now())) {
+                cache
+            } else {
+                remoteDataSource.fetchAllFollowings(userId)
+                    .onSuccess { localDataSource.replaceAllFollowings(it) }
+                    .map { cache.update(it) }
+                    .getOrThrow()
+            }
         }
-        val cache = checkNotNull(cacheRes.getOrNull())
-        if (cache.isFresh(dateTimeProvider.now())) {
-            return cacheRes
-        }
-        return remoteDataSource.fetchAllFollowings(userId)
-            .onSuccess { localDataSource.replaceAllFollowings(it) }
-            .map { cache.update(it) }
-    }
 
     override suspend fun fetchFollowedStreams(me: TwitchUser.Id?): Result<Updatable<TwitchStreams>?> {
         val id = me ?: fetchMe().getOrNull()?.item?.id ?: return Result.success(null)
-        val cacheRes = localDataSource.fetchFollowedStreams(id)
-        if (cacheRes.isFailure) {
-            return cacheRes
+        return localDataSource.fetchFollowedStreams(id).mapCatching { cache ->
+            checkNotNull(cache)
+            if (cache.isFresh(dateTimeProvider.now())) {
+                cache
+            } else {
+                remoteDataSource.fetchFollowedStreams(id)
+                    .map { cache.update(checkNotNull(it)) }
+                    .getOrThrow()
+            }
         }
-        val cache = checkNotNull(cacheRes.getOrNull())
-        if (cache.isFresh(dateTimeProvider.now())) {
-            return cacheRes
-        }
-        return remoteDataSource.fetchFollowedStreams(id)
-            .map { cache.update(checkNotNull(it)) }
     }
 
     override suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>) {
@@ -110,21 +106,17 @@ class TwitchRepository @Inject constructor(
         }
     }
 
-    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> {
-        val cacheRes = localDataSource.fetchCategory(id)
-            .map { c -> c.filter { it.artUrlBase != null } }
-        if (cacheRes.isFailure) {
-            return cacheRes
+    override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =
+        localDataSource.fetchCategory(id).mapCatching { cache ->
+            val remoteIds = id - cache.filter { it.artUrlBase != null }.map { it.id }.toSet()
+            if (remoteIds.isEmpty()) {
+                cache
+            } else {
+                remoteDataSource.fetchCategory(remoteIds)
+                    .onSuccess { localDataSource.upsertCategory(it) }
+                    .getOrThrow() + cache
+            }
         }
-        val cache = cacheRes.getOrDefault(emptyList())
-        val remoteIds = id - cache.map { it.id }.toSet()
-        if (remoteIds.isEmpty()) {
-            return cacheRes
-        }
-        return remoteDataSource.fetchCategory(remoteIds)
-            .onSuccess { localDataSource.upsertCategory(it) }
-            .map { cache + it }
-    }
 
     override suspend fun fetchVideosByUserId(
         id: TwitchUser.Id,

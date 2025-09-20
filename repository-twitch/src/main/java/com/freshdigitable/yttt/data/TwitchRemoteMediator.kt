@@ -38,15 +38,20 @@ internal class TwitchRemoteMediator @Inject constructor(
         val me = repository.fetchMe()
             .onFailure { logE(throwable = it) { "load:" } }
             .getOrNull() ?: return MediatorResult.Success(endOfPaginationReached = true)
-        when (loadType) {
+        return when (loadType) {
             LoadType.REFRESH -> {
                 repository.fetchAllFollowings(me.item.id)
                     .map { followings -> followings.item.followings.map { it.id } }
-                    .onFailure {
-                        logE(throwable = it) { "load(refresh):" }
-                        return MediatorResult.Error(it)
-                    }
-                    .onSuccess { repository.findUsersById(it.toSet()) } // do not care
+                    .fold(
+                        onSuccess = {
+                            repository.findUsersById(it.toSet())
+                            MediatorResult.Success(true)
+                        },
+                        onFailure = {
+                            logE(throwable = it) { "load(refresh):" }
+                            MediatorResult.Error(it)
+                        },
+                    )
             }
 
             LoadType.PREPEND, LoadType.APPEND -> {
@@ -55,9 +60,9 @@ internal class TwitchRemoteMediator @Inject constructor(
                     .map { it.channel.id.mapTo() }
                 repository.findUsersById(items.toSet())
                     .onFailure { logE(throwable = it) { "load($loadType):" } }
+                MediatorResult.Success(true)
             }
         }
-        return MediatorResult.Success(true)
     }
 }
 

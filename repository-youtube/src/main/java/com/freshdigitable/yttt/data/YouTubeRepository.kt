@@ -78,44 +78,39 @@ class YouTubeRepository @Inject constructor(
         localSource.removeImageByUrl(url)
     }
 
-    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>> {
-        val cacheRes = localSource.fetchPlaylist(ids)
-        if (cacheRes.isFailure) {
-            return cacheRes
+    override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>> =
+        localSource.fetchPlaylist(ids).mapCatching { cache ->
+            val needed = ids - cache.map { it.item.id }.toSet()
+            if (needed.isEmpty()) {
+                cache
+            } else {
+                remoteSource.fetchPlaylist(needed)
+                    .onSuccess { localSource.addPlaylist(it) }
+                    .getOrThrow() + cache
+            }
         }
-        val cache = checkNotNull(cacheRes.getOrNull())
-        val needed = ids - cache.map { it.item.id }.toSet()
-        if (needed.isEmpty()) {
-            return cacheRes
-        }
-        return remoteSource.fetchPlaylist(needed).onSuccess {
-            localSource.addPlaylist(it)
-        }.map { it + cache }
-    }
 
     override suspend fun fetchPlaylistWithItemDetails(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         cache: YouTubePlaylistWithItem<*>?,
-    ): Result<Updatable<YouTubePlaylistWithItemDetails>> {
-        val cache = localSource.fetchPlaylistWithItemDetails(id, maxResult)
-            .onFailure { return Result.failure(it) }
-            .onSuccess { res ->
-                if (res?.isFresh(dateTimeProvider.now()) == true) {
-                    return Result.success(res)
-                }
-            }.getOrNull()
-        return remoteSource.fetchPlaylistWithItemDetails(id, maxResult, cache?.item)
-            .onSuccess { u ->
-                val uploadedAtAnotherChannel = u.item.items
-                    .filter { it.isFromAnotherChannel }
-                    .mapNotNull { it.videoOwnerChannelId }
-                if (uploadedAtAnotherChannel.isNotEmpty()) {
-                    fetchChannelList(uploadedAtAnotherChannel.toSet())
-                }
-                localSource.updatePlaylistWithItems(u.item, u.cacheControl)
+    ): Result<Updatable<YouTubePlaylistWithItemDetails>> =
+        localSource.fetchPlaylistWithItemDetails(id, maxResult).mapCatching { cache ->
+            if (cache?.isFresh(dateTimeProvider.now()) == true) {
+                cache
+            } else {
+                remoteSource.fetchPlaylistWithItemDetails(id, maxResult, cache?.item)
+                    .onSuccess { u ->
+                        val uploadedAtAnotherChannel = u.item.items
+                            .filter { it.isFromAnotherChannel }
+                            .mapNotNull { it.videoOwnerChannelId }
+                        if (uploadedAtAnotherChannel.isNotEmpty()) {
+                            fetchChannelList(uploadedAtAnotherChannel.toSet())
+                        }
+                        localSource.updatePlaylistWithItems(u.item, u.cacheControl)
+                    }.getOrThrow()
             }
-    }
+        }
 
     override suspend fun fetchPlaylistWithItems(
         id: YouTubePlaylist.Id,
@@ -133,109 +128,95 @@ class YouTubeRepository @Inject constructor(
             .map { it }
     }
 
-    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> {
-        val cache = localSource.fetchChannelList(ids)
-        if (cache.isFailure) {
-            return cache
-        }
-        val needed = ids - cache.getOrThrow().map { it.id }
+    override suspend fun fetchChannelList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<YouTubeChannel>> = localSource.fetchChannelList(ids).mapCatching { cache ->
+        val needed = ids - cache.map { it.id }
         if (needed.isEmpty()) {
-            return cache
+            cache
+        } else {
+            remoteSource.fetchChannelList(needed)
+                .onSuccess { localSource.addChannelList(it) }
+                .getOrThrow() + cache
         }
-        return remoteSource.fetchChannelList(needed)
-            .onSuccess { localSource.addChannelList(it) }
-            .map { cache.getOrThrow() + it }
     }
 
-    override suspend fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelRelatedPlaylist>> {
-        val cache = localSource.fetchChannelRelatedPlaylistList(ids)
-        if (cache.isFailure) {
-            return cache
+    override suspend fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<YouTubeChannelRelatedPlaylist>> =
+        localSource.fetchChannelRelatedPlaylistList(ids).mapCatching { cache ->
+            val needed = ids - cache.map { it.id }
+            if (needed.isEmpty()) {
+                cache
+            } else {
+                remoteSource.fetchChannelRelatedPlaylistList(needed)
+                    .onSuccess { localSource.addChannelRelatedPlaylists(it) }
+                    .getOrThrow() + cache
+            }
         }
-        val needed = ids - cache.getOrThrow().map { it.id }
+
+    override suspend fun fetchChannelDetailList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<Updatable<YouTubeChannelDetail>>> = localSource.fetchChannelDetailList(ids).mapCatching { cache ->
+        val current = dateTimeProvider.now()
+        val freshItems = cache.filter { it.isFresh(current) }
+        val needed = ids - freshItems.map { it.item.id }.toSet()
         if (needed.isEmpty()) {
-            return cache
+            cache
+        } else {
+            remoteSource.fetchChannelDetailList(needed)
+                .map { c -> c.map { it.overrideMaxAge(YouTubeChannelDetail.MAX_AGE) } }
+                .onSuccess { localSource.addChannelDetailList(it) }
+                .getOrThrow() + freshItems
         }
-        return remoteSource.fetchChannelRelatedPlaylistList(needed)
-            .onSuccess { localSource.addChannelRelatedPlaylists(it) }
-            .map { cache.getOrThrow() + it }
     }
 
-    override suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> {
-        if (ids.isEmpty()) {
-            return Result.success(emptyList())
-        }
-        val cacheRes = localSource.fetchChannelDetailList(ids).map { res ->
-            val current = dateTimeProvider.now()
-            res.filter { it.isFresh(current) }
-        }
-        if (cacheRes.isFailure) {
-            return cacheRes
-        }
-        val cache = cacheRes.getOrNull() ?: emptyList()
-        val needed = ids - cache.map { it.item.id }.toSet()
-        if (needed.isEmpty()) {
-            return cacheRes
-        }
-        return remoteSource.fetchChannelDetailList(needed)
-            .map { c -> c.map { it.overrideMaxAge(YouTubeChannelDetail.MAX_AGE) } }
-            .onSuccess { localSource.addChannelDetailList(it) }
-            .map { it + cache }
-    }
-
-    override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> {
-        val cacheRes = localSource.fetchChannelSection(id)
-        if (cacheRes.isFailure) {
-            return cacheRes
-        }
-        val cache = checkNotNull(cacheRes.getOrNull())
-        if (cache.isNotEmpty()) { // TODO: updatable
-            return cacheRes
-        }
-        return remoteSource.fetchChannelSection(id).onSuccess {
-            localSource.addChannelSection(it)
+    override suspend fun fetchChannelSection(
+        id: YouTubeChannel.Id,
+    ): Result<List<YouTubeChannelSection>> = localSource.fetchChannelSection(id).mapCatching { cache ->
+        cache.ifEmpty {
+            remoteSource.fetchChannelSection(id)
+                .onSuccess { localSource.addChannelSection(it) }
+                .getOrThrow()
         }
     }
 
     companion object {
         private val ACTIVITY_MAX_PERIOD = Period.ofDays(7)
+        private fun Updatable<YouTubeVideoExtended>?.hasIconUrl(): Boolean =
+            this?.item?.channel?.iconUrl.isNullOrEmpty()
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>> {
-        if (ids.isEmpty()) {
-            return Result.success(emptyList())
-        }
-        val cache = localSource.fetchVideoList(ids)
-            .onFailure { return Result.failure(it) }
-            .map { v -> v.associateBy { it.item.id } }
-            .getOrDefault(emptyMap())
-        val current = dateTimeProvider.now()
+    override suspend fun fetchVideoList(
+        ids: Set<YouTubeVideo.Id>,
+    ): Result<List<Updatable<YouTubeVideoExtended>>> = localSource.fetchVideoList(ids).mapCatching { video ->
+        val cache = video.associateBy { it.item.id }
         val notCached = ids - cache.keys
-        val updatable = cache.values.filter { it.isUpdatable(current) }.map { it.item.id }.toSet()
+        val current = dateTimeProvider.now()
+        val updatable = video.filter { it.isUpdatable(current) }.map { it.item.id }.toSet()
         val needed = notCached + updatable
         if (needed.isEmpty()) {
-            return Result.success(cache.values.toList())
-        }
-        return remoteSource.fetchVideoList(needed).mapCatching { v ->
-            val needsChannel =
-                v.filter { cache[it.item.id]?.item?.channel?.iconUrl.isNullOrEmpty() }
-            if (needsChannel.isEmpty()) {
-                v
+            video
+        } else {
+            val remoteVideo = remoteSource.fetchVideoList(needed).getOrThrow()
+            val updatableVideos = remoteVideo.filter { cache[it.item.id].hasIconUrl() }
+            if (updatableVideos.isEmpty()) {
+                remoteVideo
             } else {
-                fetchChannelList(needsChannel.map { it.item.channel.id }.toSet()).map { c ->
-                    val channels = c.associateBy { it.id }
-                    needsChannel.map { n ->
-                        val channel = channels.getValue(n.item.channel.id)
-                        n.map {
-                            object : YouTubeVideo by it {
-                                override val channel: YouTubeChannel get() = channel
-                            } as YouTubeVideo
-                        }
-                    }
-                }.map { it + (v - needsChannel.toSet()) }.getOrThrow()
-            }
-        }.map { v ->
-            v.map { it.extend(old = cache[it.item.id]) } + (ids - needed).mapNotNull { cache[it] }
+                val channelIds = updatableVideos.map { it.item.channel.id }.toSet()
+                val channels = fetchChannelList(channelIds).getOrThrow()
+                    .associateBy { it.id }
+                val updated = updatableVideos.map { u ->
+                    val channel = channels.getValue(u.item.channel.id)
+                    u.map { YouTubeVideoImpl(it, channel) as YouTubeVideo }
+                }
+                updated + (remoteVideo - updatableVideos.toSet())
+            }.map { it.extend(old = cache[it.item.id]) } + (ids - needed).mapNotNull { cache[it] }
         }
     }
 }
+
+private class YouTubeVideoImpl(
+    video: YouTubeVideo,
+    override val channel: YouTubeChannel,
+) : YouTubeVideo by video

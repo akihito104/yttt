@@ -118,7 +118,9 @@ internal class YouTubeClientImpl(
             YouTubeChannelDetailImpl.part,
         )
 
-    override fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> {
+    override fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> {
         return youtube.fetchChannelList(
             ids,
             YouTubeChannelRelatedPlaylistRemote.factory,
@@ -358,9 +360,10 @@ private fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
  * maxres: 720p, standard: 640x480, high: 480x360, medium: 240x180, default: 120x90.
  *
  * if original thumbnail size is `maxres` (16:9), sizes below `standard` (4:3) will have black bands at top and bottom.
+ * because of aspect ratio, maxres is removed from url candidate.
  */
 private val ThumbnailDetails.url: String
-    get() = (/*maxres ?:*/ standard ?: high ?: medium ?: default)?.url ?: ""
+    get() = (standard ?: high ?: medium ?: default)?.url ?: ""
 
 /**
  * high: 800px, medium: 240px, default: 88px
@@ -492,7 +495,7 @@ private data class YouTubeChannelSectionImpl(
             return when (type) {
                 YouTubeChannelSection.Type.SINGLE_PLAYLIST,
                 YouTubeChannelSection.Type.MULTIPLE_PLAYLIST,
-                    -> YouTubeChannelSection.Content.Playlist(
+                -> YouTubeChannelSection.Content.Playlist(
                     contentDetails.playlists.map { YouTubePlaylist.Id(it) },
                 )
 
@@ -500,7 +503,7 @@ private data class YouTubeChannelSectionImpl(
                     contentDetails.channels.map { YouTubeChannel.Id(it) },
                 )
 
-                else -> throw IllegalStateException("unknown type: $snippet")
+                else -> error("unknown type: $snippet")
             }
         }
     }
@@ -535,17 +538,19 @@ private class PlaylistItemRemote(
 
     companion object {
         val factory: (YouTubePlaylist.Id) -> ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItem>> =
-            { id ->
-                { res, cc ->
-                    NetworkResponse.create(
-                        item = res.items.map { PlaylistItemRemote(item = it, playlistId = id) },
-                        cacheControl = cc,
-                        nextPageToken = res.nextPageToken,
-                        eTag = res.etag,
-                    )
-                }
-            }
+            { responseFactory(it) }
         val part = listOf(PART_CONTENT_DETAILS)
+
+        private fun responseFactory(
+            id: YouTubePlaylist.Id,
+        ): ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItem>> = { res, cc ->
+            NetworkResponse.create(
+                item = res.items.map { PlaylistItemRemote(item = it, playlistId = id) },
+                cacheControl = cc,
+                nextPageToken = res.nextPageToken,
+                eTag = res.etag,
+            )
+        }
     }
 }
 

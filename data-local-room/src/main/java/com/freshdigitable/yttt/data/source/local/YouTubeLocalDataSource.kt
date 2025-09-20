@@ -139,10 +139,13 @@ internal class YouTubeLocalDataSource @Inject constructor(
         dao.updatePlaylistWithItemsCacheControl(item, cacheControl)
     }
 
-    override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>> =
-        ioScope.asResult {
-            fetchByIds(ids) { findVideosById(it) }.flatten()
-        }
+    override suspend fun fetchVideoList(
+        ids: Set<YouTubeVideo.Id>,
+    ): Result<List<Updatable<YouTubeVideoExtended>>> = if (ids.isEmpty()) {
+        Result.success(emptyList())
+    } else {
+        ioScope.asResult { fetchByIds(ids) { findVideosById(it) }.flatten() }
+    }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         dao.addFreeChatItemEntities(ids, true, YouTubeVideo.MAX_AGE_FREE_CHAT)
@@ -214,14 +217,29 @@ internal class YouTubeLocalDataSource @Inject constructor(
         }.forEach { _ -> }
     }.getOrThrow()
 
-    override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> =
+    override suspend fun fetchChannelList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<YouTubeChannel>> = if (ids.isEmpty()) {
+        Result.success(emptyList())
+    } else {
         ioScope.asResult { dao.findChannels(ids) }
+    }
 
-    override suspend fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelRelatedPlaylist>> =
+    override suspend fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<YouTubeChannelRelatedPlaylist>> = if (ids.isEmpty()) {
+        Result.success(emptyList())
+    } else {
         ioScope.asResult { dao.findChannelRelatedPlaylists(ids) }
+    }
 
-    override suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> =
+    override suspend fun fetchChannelDetailList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<Updatable<YouTubeChannelDetail>>> = if (ids.isEmpty()) {
+        Result.success(emptyList())
+    } else {
         ioScope.asResult { dao.findChannelDetail(ids) }
+    }
 
     override suspend fun addChannelDetailList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>) =
         database.withTransaction {

@@ -43,6 +43,7 @@ interface NetworkResponse<T> : Updatable<T> {
     abstract class Exception(throwable: Throwable?) : kotlin.Exception(throwable) {
         companion object {
             const val HTTP_STATUS_NOT_MODIFIED = 304
+            const val HTTP_STATUS_UNAUTHORIZED = 401
             const val HTTP_STATUS_NOT_FOUND = 404
             val HTTP_STATUS_USER_ERROR_RANGE = 400..499
             val HTTP_STATUS_INTERNAL_ERROR_RANGE = 500..599

@@ -70,7 +70,8 @@ internal interface TwitchHelixService {
 
     // https://dev.twitch.tv/docs/api/reference/#get-videos
     // 404 Not Found: The ID in the game_id query parameter was not found.
-    //                The ID in the id query parameter was not found. Returned only if all the IDs were not found; otherwise, the ID is ignored.
+    //                The ID in the id query parameter was not found. Returned only if all the IDs were not found;
+    //                otherwise, the ID is ignored.
     @GET("helix/videos")
     fun getVideoByUserId(
         @Query("user_id") userId: TwitchUser.Id,

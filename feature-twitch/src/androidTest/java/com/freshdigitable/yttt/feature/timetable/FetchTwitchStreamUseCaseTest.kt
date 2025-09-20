@@ -99,6 +99,7 @@ class FetchTwitchStreamUseCaseTest {
         fun failedToGetMe_returnAsFailure() = testScope.runTest {
             // setup
             FakeDateTimeProviderModule.instant = Instant.EPOCH
+            traceRule.isTraceable = false
             FakeTwitchHelixClient.apply {
                 hasAccount = true
                 meResponse = { throw TwitchException(400, "Bad request.") }
