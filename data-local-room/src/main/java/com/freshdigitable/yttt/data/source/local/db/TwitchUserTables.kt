@@ -6,7 +6,6 @@ import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Insert
-import androidx.room.MapColumn
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
@@ -163,12 +162,9 @@ internal class TwitchUserDetailExpireTable(
     primaryKeys = ["user_id", "follower_user_id"],
 )
 internal class TwitchBroadcasterTable(
-    @ColumnInfo(name = "user_id")
-    val id: TwitchUser.Id,
-    @ColumnInfo(name = "follower_user_id", index = true)
-    val followerId: TwitchUser.Id,
-    @ColumnInfo(name = "followed_at")
-    val followedAt: Instant,
+    @ColumnInfo(name = "user_id") val id: TwitchUser.Id,
+    @ColumnInfo(name = "follower_user_id", index = true) val followerId: TwitchUser.Id,
+    @ColumnInfo(name = "followed_at") val followedAt: Instant,
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
@@ -183,13 +179,17 @@ internal class TwitchBroadcasterTable(
                 "FROM twitch_broadcaster AS b WHERE user_id IN (:ids) " +
                 "GROUP BY user_id",
         )
-        suspend fun isBroadcasterFollowed(ids: Collection<TwitchUser.Id>):
-            Map<@MapColumn("user_id") TwitchUser.Id, @MapColumn("is_followed") Boolean>
+        suspend fun isBroadcasterFollowed(ids: Collection<TwitchUser.Id>): List<TwitchBroadcasterFollowed>
 
         @Query("DELETE FROM twitch_broadcaster")
         override suspend fun deleteTable()
     }
 }
+
+internal class TwitchBroadcasterFollowed(
+    @ColumnInfo("user_id") val userId: TwitchUser.Id,
+    @ColumnInfo("is_followed") val isFollowed: Boolean,
+)
 
 @Entity(
     tableName = "twitch_broadcaster_expire",

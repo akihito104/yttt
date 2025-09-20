@@ -137,7 +137,7 @@ internal class TwitchDao @Inject constructor(
     }
 
     suspend fun cleanUpByUserId(id: Collection<TwitchUser.Id>) = db.withTransaction {
-        val isFollowed = isBroadcasterFollowed(id.toSet())
+        val isFollowed = isBroadcasterFollowed(id.toSet()).associate { it.userId to it.isFollowed }
         val removed = id.associateWith { isFollowed[it] == true }.filter { !it.value }.keys
         removeChannelSchedules(removed)
         val me = findAuthorizedUser(removed)
