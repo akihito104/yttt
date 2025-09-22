@@ -9,10 +9,13 @@ import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
+import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
+import com.freshdigitable.yttt.data.model.TwitchFollowings
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.time.Instant
 import javax.inject.Inject
@@ -67,7 +70,7 @@ internal class TwitchUserDetailTable(
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
         @Upsert
-        suspend fun addUserDetailEntities(details: Collection<TwitchUserDetailTable>)
+        suspend fun addUserDetails(details: Collection<TwitchUserDetailTable>)
 
         @Query("DELETE FROM twitch_user_detail WHERE user_id IN (:id)")
         suspend fun removeUserDetail(id: Collection<TwitchUser.Id>)
@@ -287,10 +290,15 @@ internal interface TwitchUserDao :
     TwitchBroadcasterExpireTable.Dao,
     TwitchAuthorizedUserTable.Dao,
     TwitchBroadcasterDb.Dao,
-    TwitchUserDetailDbUpdatable.Dao
+    TwitchUserDetailDbUpdatable.Dao {
+    suspend fun setMeEntities(me: Updatable<TwitchUserDetail>)
+    suspend fun addUserEntities(users: Collection<TwitchUser>)
+    suspend fun addUserDetailEntities(users: Collection<Updatable<TwitchUserDetail>>)
+    suspend fun replaceAllBroadcasterEntities(followings: Updatable<TwitchFollowings>)
+}
 
 internal class TwitchUserDaoImpl @Inject constructor(
-    private val db: TwitchUserDaoProviders,
+    private val db: AppDatabase,
 ) : TwitchUserDao,
     TwitchUserTable.Dao by db.twitchUserDao,
     TwitchUserDetailTable.Dao by db.twitchUserDetailDao,
@@ -300,6 +308,43 @@ internal class TwitchUserDaoImpl @Inject constructor(
     TwitchAuthorizedUserTable.Dao by db.twitchAuthUserDao,
     TwitchBroadcasterDb.Dao by db.twitchBroadcasterDbDao,
     TwitchUserDetailDbUpdatable.Dao by db.twitchUserDetailViewDao {
+    override suspend fun setMeEntities(me: Updatable<TwitchUserDetail>) = db.withTransaction {
+        addUserDetailEntities(listOf(me))
+        setMeEntity(TwitchAuthorizedUserTable(me.item.id))
+    }
+
+    override suspend fun addUserEntities(users: Collection<TwitchUser>) {
+        addUsers(users.map(TwitchUser::toTable))
+    }
+
+    override suspend fun addUserDetailEntities(users: Collection<Updatable<TwitchUserDetail>>) = db.withTransaction {
+        val details = users.map { it.item.toTable() }
+        val expires = users.map {
+            TwitchUserDetailExpireTable(it.item.id, it.cacheControl.toDb())
+        }
+        addUsers(users.map { (it.item as TwitchUser).toTable() })
+        addUserDetails(details)
+        addUserDetailExpireEntities(expires)
+    }
+
+    override suspend fun replaceAllBroadcasterEntities(followings: Updatable<TwitchFollowings>) = db.withTransaction {
+        removeBroadcastersByFollowerId(followings.item.followerId)
+        addBroadcasters(followings.item.followerId, followings.item.followings)
+        val expires = TwitchBroadcasterExpireTable(
+            followings.item.followerId,
+            followings.cacheControl.toDb(),
+        )
+        addBroadcasterExpireEntity(expires)
+    }
+
+    private suspend fun addBroadcasters(
+        followerId: TwitchUser.Id,
+        broadcasters: Collection<TwitchBroadcaster>,
+    ) = db.withTransaction {
+        addUsers(broadcasters.map { TwitchUserTable(it.id, it.loginName, it.displayName) })
+        addBroadcasterEntities(broadcasters.map { it.toTable(followerId) })
+    }
+
     override suspend fun deleteTable() {
         listOf(
             db.twitchUserDao,
@@ -311,3 +356,14 @@ internal class TwitchUserDaoImpl @Inject constructor(
         ).forEach { it.deleteTable() }
     }
 }
+
+private fun TwitchUser.toTable(): TwitchUserTable = TwitchUserTable(id, loginName, displayName)
+private fun TwitchUserDetail.toTable(): TwitchUserDetailTable =
+    TwitchUserDetailTable(id, profileImageUrl, createdAt, description)
+
+private fun TwitchBroadcaster.toTable(followerId: TwitchUser.Id): TwitchBroadcasterTable =
+    TwitchBroadcasterTable(
+        id = id,
+        followerId = followerId,
+        followedAt = followedAt,
+    )

@@ -10,7 +10,10 @@ import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -141,15 +144,40 @@ internal interface TwitchStreamDaoProviders {
 internal interface TwitchStreamDao :
     TwitchStreamTable.Dao,
     TwitchStreamExpireTable.Dao,
-    TwitchStreamDbView.Dao
+    TwitchStreamDbView.Dao {
+    suspend fun setStreamExpireEntity(streams: Updatable<out TwitchStreams>)
+    suspend fun addStreamEntities(streams: Collection<TwitchStream>)
+}
 
 internal class TwitchStreamDaoImpl @Inject constructor(
-    private val db: TwitchStreamDaoProviders,
+    private val db: AppDatabase,
 ) : TwitchStreamDao,
     TwitchStreamTable.Dao by db.twitchStreamDao,
     TwitchStreamExpireTable.Dao by db.twitchStreamExpireDao,
     TwitchStreamDbView.Dao by db.twitchStreamViewDao {
+    override suspend fun setStreamExpireEntity(streams: Updatable<out TwitchStreams>) {
+        setStreamExpire(TwitchStreamExpireTable(streams.item.followerId, streams.cacheControl.toDb()))
+    }
+
+    override suspend fun addStreamEntities(streams: Collection<TwitchStream>) {
+        addStreams(streams.map { it.toTable() })
+    }
+
     override suspend fun deleteTable() {
         listOf(db.twitchStreamDao, db.twitchStreamExpireDao).forEach { it.deleteTable() }
     }
 }
+
+private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
+    userId = user.id,
+    title = title,
+    id = id,
+    gameId = gameId,
+    isMature = isMature,
+    language = language,
+    startedAt = startedAt,
+    tags = tags,
+    thumbnailUrlBase = thumbnailUrlBase,
+    type = type,
+    viewCount = viewCount,
+)

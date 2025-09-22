@@ -41,7 +41,7 @@ class TwitchLiveLocalDataSourceTest {
             dataSource.addUsers(listOf(broadcaster.toUpdatable(CacheControl.zero())))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
             val updatable = schedule.toUpdatable<TwitchChannelSchedule?>(CacheControl.zero())
-            dao.replaceChannelSchedules(broadcaster.id, updatable)
+            dao.replaceChannelScheduleEntities(broadcaster.id, updatable)
             // verify
             dao.findStreamScheduleEntity(streamSchedule.id).shouldNotBeNull()
         }
@@ -87,7 +87,7 @@ class TwitchLiveLocalDataSourceTest {
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
             val updatable = schedule.toUpdatable<TwitchChannelSchedule?>(CacheControl.zero())
-            dao.replaceChannelSchedules(broadcaster.id, updatable)
+            dao.replaceChannelScheduleEntities(broadcaster.id, updatable)
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             entity?.id shouldBe streamSchedule.id

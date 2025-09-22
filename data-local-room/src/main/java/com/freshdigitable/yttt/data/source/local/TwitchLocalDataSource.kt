@@ -35,21 +35,21 @@ internal class TwitchLocalDataSource @Inject constructor(
     }
 
     override suspend fun addUsers(users: Collection<Updatable<TwitchUserDetail>>) {
-        dao.addUserDetails(users)
+        dao.addUserDetailEntities(users)
     }
 
     override suspend fun fetchMe(): Result<Updatable<TwitchUserDetail>?> =
         ioScope.asResult { dao.findMe() }
 
     override suspend fun setMe(me: Updatable<TwitchUserDetail>) {
-        dao.setMe(me)
+        dao.setMeEntities(me)
     }
 
     override suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<Updatable<TwitchFollowings>> =
         ioScope.asResult { dao.findFollowingsByFollowerId(userId) }
 
     override suspend fun replaceAllFollowings(followings: Updatable<TwitchFollowings>) {
-        dao.replaceAllBroadcasters(followings)
+        dao.replaceAllBroadcasterEntities(followings)
     }
 
     override suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>) {
@@ -77,14 +77,14 @@ internal class TwitchLocalDataSource @Inject constructor(
         ioScope.asResult { dao.fetchCategory(id) }
 
     override suspend fun upsertCategory(category: Collection<TwitchCategory>) {
-        dao.upsertCategory(category)
+        dao.upsertCategoryEntities(category)
     }
 
     override suspend fun setFollowedStreamSchedule(
         userId: TwitchUser.Id,
         schedule: Updatable<TwitchChannelSchedule?>
     ) {
-        dao.replaceChannelSchedules(userId, schedule)
+        dao.replaceChannelScheduleEntities(userId, schedule)
     }
 
     override suspend fun fetchVideosByUserId(
