@@ -22,9 +22,9 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
+import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotModified
 import java.time.Instant
 import java.time.Period
@@ -36,7 +36,7 @@ class YouTubeRepository @Inject constructor(
     private val remoteSource: YouTubeDataSource.Remote,
     private val localSource: YouTubeDataSource.Local,
     private val dateTimeProvider: DateTimeProvider,
-) : YouTubeDataSource, YouTubeLiveDataSource by localSource {
+) : YouTubeDataSource, YouTubeDataSource.Extended by localSource, ImageDataSource by localSource {
     override suspend fun fetchPagedSubscription(
         query: YouTubeSubscriptionQuery,
     ): Result<NetworkResponse<List<YouTubeSubscription>>> =
@@ -70,12 +70,8 @@ class YouTubeRepository @Inject constructor(
             cache?.dateTime?.plusSeconds(1) ?: (dateTimeProvider.now() - ACTIVITY_MAX_PERIOD)
         }
         return remoteSource.fetchLiveChannelLogs(channelId, pa, maxResult).onSuccess {
-            localSource.addLiveChannelLogs(it)
+            localSource.addChannelLogs(it)
         }
-    }
-
-    fun removeImageByUrl(url: Collection<String>) {
-        localSource.removeImageByUrl(url)
     }
 
     override suspend fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): Result<List<Updatable<YouTubePlaylist>>> =
@@ -184,7 +180,7 @@ class YouTubeRepository @Inject constructor(
     companion object {
         private val ACTIVITY_MAX_PERIOD = Period.ofDays(7)
         private fun Updatable<YouTubeVideoExtended>?.hasIconUrl(): Boolean =
-            this?.item?.channel?.iconUrl.isNullOrEmpty()
+            this?.item?.channel?.iconUrl?.isNotEmpty() == true
     }
 
     override suspend fun fetchVideoList(
@@ -199,12 +195,14 @@ class YouTubeRepository @Inject constructor(
             video
         } else {
             val remoteVideo = remoteSource.fetchVideoList(needed).getOrThrow()
-            val updatableVideos = remoteVideo.filter { cache[it.item.id].hasIconUrl() }
+            val updatableVideos = remoteVideo.filter { !cache[it.item.id].hasIconUrl() }
             if (updatableVideos.isEmpty()) {
                 remoteVideo
             } else {
                 val channelIds = updatableVideos.map { it.item.channel.id }.toSet()
-                val channels = fetchChannelList(channelIds).getOrThrow()
+                val channels = fetchChannelList(channelIds)
+                    .onSuccess { localSource.addChannelList(it) }
+                    .getOrThrow()
                     .associateBy { it.id }
                 val updated = updatableVideos.map { u ->
                     val channel = channels.getValue(u.item.channel.id)

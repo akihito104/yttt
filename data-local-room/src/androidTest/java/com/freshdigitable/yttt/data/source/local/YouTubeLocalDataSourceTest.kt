@@ -495,7 +495,7 @@ class YouTubeLocalDataSourceTest {
             val uploadedPlaylistId = removedSummary.uploadedPlaylistId!!
             val items = dao.findPlaylistItemByPlaylistId(uploadedPlaylistId).shouldHaveSize(3)
             val videoId = dao.findVideoIdsByChannelId(setOf(removedSummary.channelId))
-            dataSource.addLiveChannelLogs(
+            dataSource.addChannelLogs(
                 listOf(
                     object : YouTubeChannelLog {
                         override val id: YouTubeChannelLog.Id get() = YouTubeChannelLog.Id("log1")
