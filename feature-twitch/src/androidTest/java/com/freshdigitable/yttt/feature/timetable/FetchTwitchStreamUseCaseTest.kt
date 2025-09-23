@@ -74,6 +74,9 @@ class FetchTwitchStreamUseCaseTest {
         @Inject
         internal lateinit var localSource: TwitchDataSource.Local
 
+        @Inject
+        internal lateinit var extendedSource: TwitchDataSource.Extended
+
         @Before
         fun setup() {
             FakeTwitchHelixClient.clear()
@@ -91,8 +94,8 @@ class FetchTwitchStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -110,8 +113,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeFailure<TwitchException>()
             localSource.fetchMe().shouldBeSuccess { it shouldBe null }
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -132,8 +135,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeSuccess()
             localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -153,8 +156,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeFailure<TwitchException>()
             localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -182,8 +185,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeSuccess()
             localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
-            localSource.onAir.test { awaitItem() shouldHaveSize 1 }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem() shouldHaveSize 1 }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -216,8 +219,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeSuccess()
             localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem() shouldHaveSize 1 }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem() shouldHaveSize 1 }
         }
 
         @Test
@@ -238,7 +241,7 @@ class FetchTwitchStreamUseCaseTest {
                         schedule(
                             streamSchedule = listOf(streamSchedule("1", category("1"))),
                             broadcaster = broadcaster(userDetail),
-                        ).toUpdatable()
+                        ).toUpdatable(),
                     )
                 }
                 categoryResponse = { throw TwitchException(400, "Bad request.") }
@@ -251,8 +254,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeSuccess()
             localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem() shouldHaveSize 1 }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem() shouldHaveSize 1 }
         }
 
         @Test
@@ -277,8 +280,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeFailure()
             localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -306,8 +309,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeFailure<TwitchException>()
             localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -332,8 +335,8 @@ class FetchTwitchStreamUseCaseTest {
             // verify
             actual.shouldBeFailure()
             localSource.fetchMe().shouldBeSuccess { it.shouldNotBeNull() }
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
     }
 
@@ -354,6 +357,8 @@ class FetchTwitchStreamUseCaseTest {
         @Inject
         internal lateinit var localSource: TwitchDataSource.Local
 
+        @Inject
+        internal lateinit var extendedSource: TwitchDataSource.Extended
         private val current = Instant.parse("2025-04-29T00:00:00Z")
         private val category = category("1")
         private val streamUser = userDetail("10")
@@ -364,7 +369,7 @@ class FetchTwitchStreamUseCaseTest {
         @Before
         fun setup(): Unit = runBlocking {
             hilt.inject()
-            localSource.deleteAllTables()
+            extendedSource.deleteAllTables()
 
             val followings = listOf(streamUser, scheduleUser).map { broadcaster(it) }
             FakeTwitchHelixClient.apply {
@@ -374,7 +379,7 @@ class FetchTwitchStreamUseCaseTest {
                     streamResponse = {
                         NetworkResponse.create(
                             listOf(stream("1", category("2"), streamUser))
-                                .toUpdatable(fetchedAt = current)
+                                .toUpdatable(fetchedAt = current),
                         )
                     }
                     categoryResponse =
@@ -383,12 +388,12 @@ class FetchTwitchStreamUseCaseTest {
                     scheduleResponse = {
                         NetworkResponse.create(
                             schedule(listOf(streamSchedule), broadcaster(scheduleUser))
-                                .toUpdatable(current)
+                                .toUpdatable(current),
                         )
                     }
                     userResponse = {
                         NetworkResponse.create(
-                            listOf(streamUser, scheduleUser).toUpdatable(current)
+                            listOf(streamUser, scheduleUser).toUpdatable(current),
                         )
                     }
                 }
@@ -424,8 +429,8 @@ class FetchTwitchStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.onAir.test { awaitItem() shouldHaveSize 1 }
-            localSource.upcoming.test {
+            extendedSource.onAir.test { awaitItem() shouldHaveSize 1 }
+            extendedSource.upcoming.test {
                 val item = awaitItem()
                 item shouldHaveSize 1
                 item.first().schedule.category?.id shouldBe category.id
@@ -453,8 +458,8 @@ class FetchTwitchStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.onAir.test { awaitItem().shouldBeEmpty() }
-            localSource.upcoming.test { awaitItem() shouldHaveSize 1 }
+            extendedSource.onAir.test { awaitItem().shouldBeEmpty() }
+            extendedSource.upcoming.test { awaitItem() shouldHaveSize 1 }
         }
 
         @Test
@@ -472,8 +477,8 @@ class FetchTwitchStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.onAir.test { awaitItem() shouldHaveSize 1 }
-            localSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            extendedSource.onAir.test { awaitItem() shouldHaveSize 1 }
+            extendedSource.upcoming.test { awaitItem().shouldBeEmpty() }
         }
     }
 }
@@ -557,7 +562,7 @@ private fun schedule(
 @Module
 @TestInstallIn(
     components = [SingletonComponent::class],
-    replaces = [TwitchHelixClientModule::class]
+    replaces = [TwitchHelixClientModule::class],
 )
 interface FakeTwitchHelixClient {
     companion object {

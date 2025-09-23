@@ -85,6 +85,9 @@ class FetchYouTubeStreamUseCaseTest {
         lateinit var localSource: YouTubeDataSource.Local
 
         @Inject
+        lateinit var extendedSource: YouTubeDataSource.Extended
+
+        @Inject
         internal lateinit var sut: FetchYouTubeStreamUseCase
         private val current = Instant.parse("2025-04-20T00:00:00Z")
 
@@ -110,7 +113,7 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem().shouldBeEmpty()
             }
         }
@@ -137,7 +140,7 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem().shouldBeEmpty()
             }
         }
@@ -155,10 +158,10 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem().shouldBeEmpty()
             }
-            localSource.subscriptionsFetchedAt shouldBe Instant.EPOCH
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.EPOCH
         }
 
         @Test
@@ -172,10 +175,10 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem() shouldHaveSize 20
             }
-            localSource.fetchUpdatableVideoIds(current + Duration.ofHours(3)) shouldHaveSize 20
+            extendedSource.fetchUpdatableVideoIds(current + Duration.ofHours(3)) shouldHaveSize 20
         }
 
         @Test
@@ -191,10 +194,10 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem().shouldBeEmpty()
             }
-            localSource.subscriptionsFetchedAt shouldBe current
+            extendedSource.subscriptionsFetchedAt shouldBe current
         }
 
         @Test
@@ -270,10 +273,10 @@ class FetchYouTubeStreamUseCaseTest {
                 advanceUntilIdle()
                 // verify
                 actual.shouldBeSuccess()
-                localSource.videos.test {
+                extendedSource.videos.test {
                     awaitItem() shouldHaveSize 200
                 }
-                localSource.subscriptionsFetchedAt shouldBe current
+                extendedSource.subscriptionsFetchedAt shouldBe current
             }
 
         @Test
@@ -311,6 +314,9 @@ class FetchYouTubeStreamUseCaseTest {
         lateinit var localSource: YouTubeDataSource.Local
 
         @Inject
+        lateinit var extendedSource: YouTubeDataSource.Extended
+
+        @Inject
         internal lateinit var sut: FetchYouTubeStreamUseCase
         private val current = Instant.parse("2025-04-20T00:00:00Z")
         private lateinit var fakeClient: FakeYouTubeClientImpl
@@ -344,10 +350,10 @@ class FetchYouTubeStreamUseCaseTest {
                 advanceUntilIdle()
                 // verify
                 actual.shouldBeSuccess()
-                localSource.videos.test {
+                extendedSource.videos.test {
                     awaitItem() shouldHaveSize 200
                 }
-                localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+                extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             }
 
         @Test
@@ -363,10 +369,10 @@ class FetchYouTubeStreamUseCaseTest {
             // verify
             actual.shouldBeSuccess()
             localSource.fetchSubscriptionIds() shouldHaveSize 9
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem() shouldHaveSize 18
             }
-            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
 
         @Test
@@ -385,13 +391,13 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem().asClue { a ->
                     a shouldHaveSize 30
                     a.shouldForAll { it.isNowOnAir() }
                 }
             }
-            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
 
         @Test
@@ -415,10 +421,10 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem() shouldHaveSize 28
             }
-            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
     }
 
@@ -434,6 +440,9 @@ class FetchYouTubeStreamUseCaseTest {
         lateinit var localSource: YouTubeDataSource.Local
 
         @Inject
+        lateinit var extendedSource: YouTubeDataSource.Extended
+
+        @Inject
         internal lateinit var sut: FetchYouTubeStreamUseCase
         private val current = Instant.parse("2025-04-20T00:00:00Z")
         private lateinit var fakeClient: FakeYouTubeClientImpl
@@ -446,7 +455,7 @@ class FetchYouTubeStreamUseCaseTest {
                 fakeClient = FakeYouTubeClientModule.setup(150, 2, current)
                 hiltRule.inject()
                 sut.invoke()
-                localSource.findSubscriptionQuery(0).shouldNotBeNull()
+                extendedSource.findSubscriptionQuery(0).shouldNotBeNull()
                     .eTag.shouldNotBeNull()
             },
         )
@@ -469,10 +478,10 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem() shouldHaveSize (150 * 3)
             }
-            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
             networkRes[1].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -493,10 +502,10 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem() shouldHaveSize (149 * 3)
             }
-            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
             networkRes[1].shouldBeSuccess()
@@ -517,10 +526,10 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem() shouldHaveSize (149 * 3)
             }
-            localSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
             networkRes[1].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -549,10 +558,10 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            localSource.videos.test {
+            extendedSource.videos.test {
                 awaitItem().size.shouldBeGreaterThan(300)
             }
-            localSource.subscriptionsFetchedAt shouldBe current
+            extendedSource.subscriptionsFetchedAt shouldBe current
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
             networkRes[1].shouldBeFailureOfYouTubeException(statusCode = 304)

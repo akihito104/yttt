@@ -40,13 +40,11 @@ internal class YouTubeLocalDataSource @Inject constructor(
     private val videoDataSource: YouTubeVideoLocalDataSource,
     private val subscriptionDataSource: YouTubeSubscriptionLocalDataSource,
     private val playlistDataSource: YouTubePlaylistLocalDataSource,
-    private val extendedDataSource: YouTubeExtendedDataSource,
 ) : YouTubeDataSource.Local,
     YouTubeChannelDataSource.Local by channelDataSource,
     YouTubeVideoDataSource.Local by videoDataSource,
     YouTubeSubscriptionDataSource.Local by subscriptionDataSource,
     YouTubePlaylistDataSource.Local by playlistDataSource,
-    YouTubeDataSource.Extended by extendedDataSource,
     ImageDataSource by videoDataSource {
     override suspend fun fetchLiveChannelLogs(
         channelId: YouTubeChannel.Id,

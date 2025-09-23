@@ -1,16 +1,16 @@
 package com.freshdigitable.yttt.feature.video
 
-import com.freshdigitable.yttt.data.TwitchLiveRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.source.TwitchStreamDataSource
 import com.freshdigitable.yttt.feature.create
 import javax.inject.Inject
 
 internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
-    private val repository: TwitchLiveRepository,
+    private val dataSource: TwitchStreamDataSource.Extended,
 ) : FindLiveVideoUseCase {
     override suspend operator fun invoke(id: LiveVideo.Id): Result<LiveVideo<*>?> {
         val twitchVideoId = when (id.type) {
@@ -18,7 +18,7 @@ internal class FindLiveVideoFromTwitchUseCase @Inject constructor(
             TwitchChannelSchedule.Stream.Id::class -> id.mapTo<TwitchChannelSchedule.Stream.Id>()
             else -> throw AssertionError("unsupported type: ${id.type}")
         }
-        val d = repository.fetchStreamDetail(twitchVideoId)
+        val d = dataSource.fetchStreamDetail(twitchVideoId)
         return Result.success(d?.let { LiveVideo.create(it) })
     }
 }

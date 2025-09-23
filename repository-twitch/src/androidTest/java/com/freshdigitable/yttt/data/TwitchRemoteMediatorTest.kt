@@ -72,6 +72,9 @@ class TwitchRemoteMediatorTest {
     lateinit var localSource: TwitchDataSource.Local
 
     @Inject
+    lateinit var extendedSource: TwitchDataSource.Extended
+
+    @Inject
     internal lateinit var pagerFactory: TwitchSubscriptionPagerFactory
 
     private val broadcaster = broadcaster(100)
@@ -85,7 +88,7 @@ class TwitchRemoteMediatorTest {
     val testScope = TestCoroutineScopeRule(
         setup = {
             hiltRule.inject()
-            localSource.deleteAllTables()
+            extendedSource.deleteAllTables()
 
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = { current ->
@@ -106,7 +109,7 @@ class TwitchRemoteMediatorTest {
                 override val updatableThumbnails: Set<String> get() = emptySet()
                 override val deletedThumbnails: Set<String> get() = emptySet()
             }
-            localSource.replaceFollowedStreams(streams.toUpdatable())
+            extendedSource.replaceFollowedStreams(streams.toUpdatable())
             localSource.replaceAllFollowings(followings)
         },
     )

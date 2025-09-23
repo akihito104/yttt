@@ -16,7 +16,6 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.Updatable.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.TwitchDataSource
-import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,8 +23,9 @@ import javax.inject.Singleton
 class TwitchRepository @Inject constructor(
     private val remoteDataSource: TwitchDataSource.Remote,
     private val localDataSource: TwitchDataSource.Local,
+    private val extendedDataSource: TwitchDataSource.Extended,
     private val dateTimeProvider: DateTimeProvider,
-) : TwitchDataSource, ImageDataSource by localDataSource {
+) : TwitchDataSource, TwitchDataSource.Extended by extendedDataSource, ImageDataSource by localDataSource {
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<Updatable<TwitchUserDetail>>> {
         if (ids == null) {
             val me = fetchMe()
@@ -83,14 +83,6 @@ class TwitchRepository @Inject constructor(
         }
     }
 
-    override suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>) {
-        localDataSource.replaceFollowedStreams(followedStreams)
-    }
-
-    override suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>) {
-        localDataSource.removeStreamScheduleById(id)
-    }
-
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int,
@@ -123,16 +115,4 @@ class TwitchRepository @Inject constructor(
         itemCount: Int,
     ): Result<List<Updatable<TwitchVideoDetail>>> =
         remoteDataSource.fetchVideosByUserId(id, itemCount)
-
-    override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>) {
-        localDataSource.cleanUpByUserId(ids)
-    }
-
-    suspend fun deleteAllTables() {
-        localDataSource.deleteAllTables()
-    }
 }
-
-@Singleton
-class TwitchLiveRepository @Inject constructor(localSource: TwitchLiveDataSource.Local) :
-    TwitchLiveDataSource by localSource

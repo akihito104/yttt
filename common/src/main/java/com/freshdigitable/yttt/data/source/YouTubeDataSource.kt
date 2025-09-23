@@ -43,7 +43,6 @@ interface YouTubeDataSource :
         YouTubePlaylistDataSource.Local,
         YouTubeChannelDataSource.Local,
         YouTubeSubscriptionDataSource.Local,
-        Extended,
         ImageDataSource {
         suspend fun addChannelSection(channelSection: Collection<YouTubeChannelSection>)
         suspend fun addChannelLogs(channelLogs: Collection<YouTubeChannelLog>)

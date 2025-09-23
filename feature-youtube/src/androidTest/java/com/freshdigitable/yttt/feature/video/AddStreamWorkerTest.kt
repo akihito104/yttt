@@ -101,12 +101,15 @@ class AddStreamWorkerTest {
             .firstOrNull { it?.state?.isFinished == true }
         // verify
         actual?.state shouldBe WorkInfo.State.SUCCEEDED
-        val actualVideo = localSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
+        val actualVideo = extendedSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
         actualVideo.item.isFreeChat!!.shouldBeFalse()
     }
 
     @Inject
     lateinit var localSource: YouTubeDataSource.Local
+
+    @Inject
+    lateinit var extendedSource: YouTubeDataSource.Extended
 
     @Test
     fun validUrlForFreeChat_stateIsSucceeded() = testScope.runTest {
@@ -131,7 +134,7 @@ class AddStreamWorkerTest {
             .firstOrNull { it?.state?.isFinished == true }
         // verify
         actual?.state shouldBe WorkInfo.State.SUCCEEDED
-        val actualVideo = localSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
+        val actualVideo = extendedSource.fetchVideoList(setOf(video.id)).getOrThrow().first()
         actualVideo.item.isFreeChat!!.shouldBeTrue()
     }
 

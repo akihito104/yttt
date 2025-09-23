@@ -14,7 +14,8 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDaoImpl
 
-internal class YouTubeDatabaseTestRule : DataSourceTestRule<YouTubeDao, YouTubeLocalDataSource>() {
+internal class YouTubeDatabaseTestRule :
+    DataSourceTestRule<YouTubeDao, YouTubeLocalDataSource, YouTubeExtendedDataSource>() {
     override fun createDao(database: AppDatabase): YouTubeDao = YouTubeDao(
         database,
         videoDao = YouTubeVideoDaoImpl(database),
@@ -23,7 +24,9 @@ internal class YouTubeDatabaseTestRule : DataSourceTestRule<YouTubeDao, YouTubeL
         subscriptionDao = YouTubeSubscriptionDaoImpl(database),
     )
 
-    override fun createLocalSource(ioScope: IoScope): YouTubeLocalDataSource {
+    override fun createTestScope(
+        ioScope: IoScope,
+    ): DatabaseTestScope<YouTubeDao, YouTubeLocalDataSource, YouTubeExtendedDataSource> {
         val videoDataSource = YouTubeVideoLocalDataSource(
             database = database,
             dao = dao,
@@ -39,17 +42,20 @@ internal class YouTubeDatabaseTestRule : DataSourceTestRule<YouTubeDao, YouTubeL
             dao = dao,
             ioScope = ioScope,
         )
-        return YouTubeLocalDataSource(
+        return DatabaseTestScope(
             dao = dao,
-            channelDataSource = YouTubeChannelLocalDataSource(
-                database = database,
+            localSource = YouTubeLocalDataSource(
                 dao = dao,
-                ioScope = ioScope,
+                channelDataSource = YouTubeChannelLocalDataSource(
+                    database = database,
+                    dao = dao,
+                    ioScope = ioScope,
+                ),
+                videoDataSource = videoDataSource,
+                subscriptionDataSource = subscriptionDataSource,
+                playlistDataSource = playlistDataSource,
             ),
-            videoDataSource = videoDataSource,
-            subscriptionDataSource = subscriptionDataSource,
-            playlistDataSource = playlistDataSource,
-            extendedDataSource = YouTubeExtendedDataSource(
+            extendedSource = YouTubeExtendedDataSource(
                 database = database,
                 dao = dao,
                 videoDataSource = videoDataSource,

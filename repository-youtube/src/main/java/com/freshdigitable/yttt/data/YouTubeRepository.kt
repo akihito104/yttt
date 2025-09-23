@@ -35,13 +35,14 @@ import javax.inject.Singleton
 class YouTubeRepository @Inject constructor(
     private val remoteSource: YouTubeDataSource.Remote,
     private val localSource: YouTubeDataSource.Local,
+    private val extendedSource: YouTubeDataSource.Extended,
     private val dateTimeProvider: DateTimeProvider,
-) : YouTubeDataSource, YouTubeDataSource.Extended by localSource, ImageDataSource by localSource {
+) : YouTubeDataSource, YouTubeDataSource.Extended by extendedSource, ImageDataSource by localSource {
     override suspend fun fetchPagedSubscription(
         query: YouTubeSubscriptionQuery,
     ): Result<NetworkResponse<List<YouTubeSubscription>>> =
         remoteSource.fetchPagedSubscription(query).onSuccess {
-            localSource.addPagedSubscription(it.item)
+            addPagedSubscription(it.item)
             if (it.nextPageToken == null) {
                 val fetchedAt = it.cacheControl.fetchedAt!!
                 when (query.order) {
@@ -103,7 +104,7 @@ class YouTubeRepository @Inject constructor(
                         if (uploadedAtAnotherChannel.isNotEmpty()) {
                             fetchChannelList(uploadedAtAnotherChannel.toSet())
                         }
-                        localSource.updatePlaylistWithItems(u.item, u.cacheControl)
+                        updatePlaylistWithItems(u.item, u.cacheControl)
                     }.getOrThrow()
             }
         }
@@ -115,10 +116,10 @@ class YouTubeRepository @Inject constructor(
     ): Result<Updatable<YouTubePlaylistWithItems>?> {
         val c = localSource.fetchPlaylistWithItems(id, maxResult).getOrNull()?.item
         return remoteSource.fetchPlaylistWithItems(id, maxResult, c)
-            .onSuccess { localSource.updatePlaylistWithItems(it.item, it.cacheControl) }
+            .onSuccess { updatePlaylistWithItems(it.item, it.cacheControl) }
             .recoverFromNotModified { cacheControl ->
                 checkNotNull(c).toUpdatable(cacheControl).also {
-                    localSource.updatePlaylistWithItemsCacheControl(it.item, it.cacheControl)
+                    updatePlaylistWithItemsCacheControl(it.item, it.cacheControl)
                 }
             }
             .map { it }
@@ -185,7 +186,7 @@ class YouTubeRepository @Inject constructor(
 
     override suspend fun fetchVideoList(
         ids: Set<YouTubeVideo.Id>,
-    ): Result<List<Updatable<YouTubeVideoExtended>>> = localSource.fetchVideoList(ids).mapCatching { video ->
+    ): Result<List<Updatable<YouTubeVideoExtended>>> = extendedSource.fetchVideoList(ids).mapCatching { video ->
         val cache = video.associateBy { it.item.id }
         val notCached = ids - cache.keys
         val current = dateTimeProvider.now()

@@ -36,9 +36,9 @@ class TwitchLiveLocalDataSourceTest {
 
         @Before
         fun setup() = rule.runWithLocalSource {
-            dataSource.setMe(me.toUpdatable(CacheControl.zero()))
-            dataSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
-            dataSource.addUsers(listOf(broadcaster.toUpdatable(CacheControl.zero())))
+            localSource.setMe(me.toUpdatable(CacheControl.zero()))
+            localSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
+            localSource.addUsers(listOf(broadcaster.toUpdatable(CacheControl.zero())))
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
             val updatable = schedule.toUpdatable<TwitchChannelSchedule?>(CacheControl.zero())
             dao.replaceChannelScheduleEntities(broadcaster.id, updatable)
@@ -49,7 +49,7 @@ class TwitchLiveLocalDataSourceTest {
         @Test
         fun cleanUpByUserId_cannotRemoveFollowingBroadcaster() = rule.runWithLocalSource {
             // exercise
-            dataSource.cleanUpByUserId(listOf(broadcaster.id))
+            extendedSource.cleanUpByUserId(listOf(broadcaster.id))
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             entity.shouldNotBeNull()
@@ -60,9 +60,9 @@ class TwitchLiveLocalDataSourceTest {
         @Test
         fun cleanUpByUserId_removedAfterUnfollowing() = rule.runWithLocalSource {
             // setup
-            dataSource.replaceAllFollowings(followings(me.id, emptyList()))
+            localSource.replaceAllFollowings(followings(me.id, emptyList()))
             // exercise
-            dataSource.cleanUpByUserId(listOf(broadcaster.id))
+            extendedSource.cleanUpByUserId(listOf(broadcaster.id))
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             entity.shouldBeNull()
@@ -80,10 +80,10 @@ class TwitchLiveLocalDataSourceTest {
         fun setup() = rule.runWithLocalSource {
             mapOf(
                 me to listOf(broadcaster(broadcaster)),
-                me2 to listOf(broadcaster(broadcaster), broadcaster(me))
+                me2 to listOf(broadcaster(broadcaster), broadcaster(me)),
             ).forEach { (me, broadcasters) ->
-                dataSource.setMe(me.toUpdatable(CacheControl.zero()))
-                dataSource.replaceAllFollowings(followings(me.id, broadcasters))
+                localSource.setMe(me.toUpdatable(CacheControl.zero()))
+                localSource.replaceAllFollowings(followings(me.id, broadcasters))
             }
             val schedule = channelSchedule(listOf(streamSchedule), broadcaster)
             val updatable = schedule.toUpdatable<TwitchChannelSchedule?>(CacheControl.zero())
@@ -96,7 +96,7 @@ class TwitchLiveLocalDataSourceTest {
         @Test
         fun cleanUpByUserId_cannotRemoveFollowingBroadcaster() = rule.runWithLocalSource {
             // exercise
-            dataSource.cleanUpByUserId(listOf(broadcaster.id))
+            extendedSource.cleanUpByUserId(listOf(broadcaster.id))
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             entity.shouldNotBeNull()
@@ -107,9 +107,9 @@ class TwitchLiveLocalDataSourceTest {
         @Test
         fun cleanUpByUserId_cannotRemoveScheduleOfFollowedBroadcaster() = rule.runWithLocalSource {
             // setup
-            dataSource.replaceAllFollowings(followings(me.id, emptyList()))
+            localSource.replaceAllFollowings(followings(me.id, emptyList()))
             // exercise
-            dataSource.cleanUpByUserId(listOf(broadcaster.id))
+            extendedSource.cleanUpByUserId(listOf(broadcaster.id))
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             entity.shouldNotBeNull()
@@ -121,10 +121,10 @@ class TwitchLiveLocalDataSourceTest {
         fun cleanUpByUserId_removedSchedule() = rule.runWithLocalSource {
             // setup
             listOf(me, me2).forEach {
-                dataSource.replaceAllFollowings(followings(it.id, emptyList()))
+                localSource.replaceAllFollowings(followings(it.id, emptyList()))
             }
             // exercise
-            dataSource.cleanUpByUserId(listOf(broadcaster.id, me2.id))
+            extendedSource.cleanUpByUserId(listOf(broadcaster.id, me2.id))
             // verify
             val entity = dao.findStreamScheduleEntity(streamSchedule.id)
             entity.shouldBeNull()
