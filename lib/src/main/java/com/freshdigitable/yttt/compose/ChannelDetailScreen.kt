@@ -1,8 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +19,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,10 +40,6 @@ import com.freshdigitable.yttt.feature.channel.ChannelDetailPageScope
 import com.freshdigitable.yttt.feature.channel.ChannelDetailPageTab
 import com.freshdigitable.yttt.feature.channel.ChannelViewModel
 import com.freshdigitable.yttt.logD
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.android.components.ActivityComponent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 
@@ -222,32 +214,6 @@ private fun VideoListItem(
             fontSize = 14.sp,
         )
     }
-}
-
-@EntryPoint
-@InstallIn(ActivityComponent::class)
-internal interface ChannelDetailEntryPoint {
-    val factory: IdBaseClassMap<ChannelDetailPageComposableFactory>
-}
-
-private lateinit var factoryEntryPoint: ChannelDetailEntryPoint
-
-@Composable
-private fun requireChannelDetailPageComposableFactory(): IdBaseClassMap<ChannelDetailPageComposableFactory> {
-    if (!::factoryEntryPoint.isInitialized) {
-        factoryEntryPoint =
-            EntryPointAccessors.fromActivity<ChannelDetailEntryPoint>(LocalContext.current.getActivity())
-    }
-    return factoryEntryPoint.factory
-}
-
-private fun Context.getActivity(): Activity {
-    var context: Context = this
-    while (context is ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    error("activity is not found.")
 }
 
 @PreviewLightDarkMode
