@@ -11,7 +11,6 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -21,19 +20,18 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun <T : TabData<T>> HorizontalPagerWithTabScreen(
-    viewModel: HorizontalPagerTabViewModel<T>,
+    tabProvider: HorizontalPagerTabDataProvider<T>,
     tabModifier: Modifier = Modifier,
     edgePadding: Dp = TabRowDefaults.ScrollableTabRowEdgeStartPadding,
     page: @Composable PagerScope.(T) -> Unit,
 ) {
     AppLogger.logD("HorizontalPager(VM)") { "start:" }
-    val tab = viewModel.tabData.collectAsState(initial = viewModel.initialTab)
     HorizontalPagerWithTabScreen(
-        tabCount = tab.value.size,
-        tab = { tab.value[it].title() },
+        tabCount = tabProvider().size,
+        tab = { tabProvider()[it].title() },
         tabModifier = tabModifier,
         edgePadding = edgePadding,
-        page = { page(tab.value[it]) },
+        page = { page(tabProvider()[it]) },
     )
 }
 
@@ -64,7 +62,7 @@ fun HorizontalPagerWithTabScreen(
                             pagerState.animateScrollToPage(index)
                         }
                     },
-                    text = { Text(text = tab(index)) }
+                    text = { Text(text = tab(index)) },
                 )
             }
         }
@@ -74,3 +72,5 @@ fun HorizontalPagerWithTabScreen(
         )
     }
 }
+
+typealias HorizontalPagerTabDataProvider<T> = () -> List<T>

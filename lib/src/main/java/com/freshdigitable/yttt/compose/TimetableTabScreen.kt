@@ -35,8 +35,6 @@ import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
 import com.freshdigitable.yttt.feature.timetable.textRes
 import com.freshdigitable.yttt.logD
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,8 +74,9 @@ internal fun TimetableTabScreen(
             viewModel = viewModel,
         )
     }
+    val tab = viewModel.tabData.collectAsState()
     HorizontalPagerWithTabScreen(
-        viewModel = viewModel,
+        tabProvider = { tab.value },
         tabModifier = tabModifier,
     ) { tab ->
         TimetableScreen(
@@ -202,10 +201,7 @@ private fun TimetableTabScreenPreview() {
     )
     AppTheme {
         HorizontalPagerWithTabScreen(
-            viewModel = object : HorizontalPagerTabViewModel<TimetableTabData> {
-                override val tabData: Flow<List<TimetableTabData>> get() = flowOf(tabs)
-                override val initialTab: List<TimetableTabData> get() = tabs
-            },
+            tabProvider = { tabs },
         ) { Text("page: ${it.page.name}") }
     }
 }

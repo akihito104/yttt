@@ -5,7 +5,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.freshdigitable.yttt.AppPerformance
-import com.freshdigitable.yttt.compose.HorizontalPagerTabViewModel
 import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TimetableTabData
@@ -40,8 +39,7 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     timetablePageDelegate: TimetablePageDelegate,
     @Assisted private val sender: SnackbarMessageBus.Sender,
 ) : ViewModel(),
-    TimetablePageDelegate by timetablePageDelegate,
-    HorizontalPagerTabViewModel<TimetableTabData> {
+    TimetablePageDelegate by timetablePageDelegate {
     @AssistedFactory
     interface Factory {
         fun create(sender: SnackbarMessageBus.Sender): TimetableTabViewModel
@@ -95,8 +93,8 @@ internal class TimetableTabViewModel @AssistedInject constructor(
         }
     }
 
-    override val tabData: Flow<List<TimetableTabData>> get() = tabs
-    override val initialTab: List<TimetableTabData> = TimetableTabData.initialValues()
+    val tabData: StateFlow<List<TimetableTabData>> =
+        tabs.stateIn(viewModelScope, SharingStarted.Lazily, TimetableTabData.initialValues())
 
     companion object {
         @Suppress("unused")
