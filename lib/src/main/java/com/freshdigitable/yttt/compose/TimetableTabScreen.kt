@@ -43,6 +43,7 @@ internal fun TimetableTabScreen(
     viewModel: TimetableTabViewModel,
     onListItemClick: (LiveVideo.Id) -> Unit,
     topAppBarState: TopAppBarStateHolder,
+    modifier: Modifier = Modifier,
     tabModifier: Modifier = Modifier,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
@@ -77,6 +78,7 @@ internal fun TimetableTabScreen(
     val tab = viewModel.tabData.collectAsState()
     HorizontalPagerWithTabScreen(
         tabProvider = { tab.value },
+        modifier = modifier,
         tabModifier = tabModifier,
     ) { tab ->
         TimetableScreen(
