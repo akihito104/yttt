@@ -6,6 +6,11 @@ naming:
 style:
   MagicNumber:
     ignorePropertyDeclaration: true
+    ignoreAnnotated:
+      - "Preview"
+      - "PreviewLightMode"
+      - "PreviewDarkMode"
+      - "PreviewLightDarkMode"
   UnusedPrivateMember:
     ignoreAnnotated:
       - "Preview"
