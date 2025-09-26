@@ -27,6 +27,7 @@ class TwitchRepository @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
 ) : TwitchDataSource, TwitchDataSource.Extended by extendedDataSource, ImageDataSource by localDataSource {
     override suspend fun findUsersById(ids: Set<TwitchUser.Id>?): Result<List<Updatable<TwitchUserDetail>>> {
+
         if (ids == null) {
             val me = fetchMe()
             return me.map { listOfNotNull(it) }
