@@ -7,7 +7,7 @@ ksp = "2.2.20-2.0.3" # https://github.com/google/ksp/releases
 kotlinxCoroutinesCore = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
 kotlinxSerializationJson = "1.9.0"
 licensee = "1.13.0"
-oss-license-plugin = "0.10.8"
+oss-license-plugin = "0.10.9"
 oss-license-lib = "17.3.0"
 
 androidxComposeBom = "2025.09.00"
