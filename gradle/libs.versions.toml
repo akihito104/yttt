@@ -44,6 +44,7 @@ retrofit = "3.0.0"
 kermit = "2.0.8"
 leakcanaryAndroid = "2.14"
 detekt = "1.23.8"
+detekt-compose-rules = "0.4.27"
 
 junit = "4.13.2"
 kotest = "6.0.3"
@@ -115,6 +116,8 @@ okhttp = { module = "com.squareup.okhttp3:okhttp" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor" }
 oss-lisence-lib = { module = "com.google.android.gms:play-services-oss-licenses", version.ref = "oss-license-lib" }
 desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLib" }
+detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-formatting", version.ref = "detekt" }
+detekt-compose-rules = { group = "io.nlopez.compose.rules", name = "detekt", version.ref = "detekt-compose-rules" }
 
 ## for build-logic
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "androidGradlePlugin" }
@@ -143,3 +146,4 @@ yttt-android-library = { id = "yttt.android.library" }
 yttt-android-library-compose = { id = "yttt.android.library.compose" }
 yttt-hilt = { id = "yttt.hilt" }
 yttt-kotest = { id = "yttt.kotest" }
+yttt-detekt = { id = "yttt.detekt" }

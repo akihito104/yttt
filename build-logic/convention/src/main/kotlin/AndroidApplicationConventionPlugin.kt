@@ -15,7 +15,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         with(pluginManager) {
             applyAndroidApplication()
             applyKotlinAndroid()
-            apply("yttt.detekt")
         }
 
         extensions.configure<ApplicationExtension> {
