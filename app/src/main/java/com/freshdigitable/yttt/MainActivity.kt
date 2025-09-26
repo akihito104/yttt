@@ -15,7 +15,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         logD { "onCreate($this): ${intent.data}" }
         setContent {
-
             RootScreen(launcherOption = intent.toLauncherOption())
         }
     }
