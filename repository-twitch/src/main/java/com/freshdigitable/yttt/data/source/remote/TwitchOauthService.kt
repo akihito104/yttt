@@ -10,7 +10,8 @@ internal interface TwitchOauthService {
     companion object {
         internal const val BASE_URL = "https://id.twitch.tv/"
     }
-    /// https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
+
+    // https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/
     @GET("oauth2/authorize?response_type=token")
     fun authorizeImplicitly(
         @Query("client_id") clientId: String,

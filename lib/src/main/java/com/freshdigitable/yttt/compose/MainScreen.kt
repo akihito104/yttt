@@ -4,6 +4,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Badge
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -37,7 +38,7 @@ import com.freshdigitable.yttt.compose.navigation.NavParam.Companion.route
 import com.freshdigitable.yttt.compose.navigation.NavRoute
 import com.freshdigitable.yttt.compose.navigation.ScreenStateHolder
 import com.freshdigitable.yttt.compose.navigation.composableWith
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.di.LivePlatformMap
 import com.freshdigitable.yttt.lib.R
@@ -85,13 +86,13 @@ fun MainScreen(
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun MainScreen(
-    navController: NavHostController = rememberNavController(),
     navigation: Set<NavRoute>,
     startDestination: String,
     showMenuBadge: () -> Boolean,
     drawerItems: () -> List<DrawerMenuListItem>,
     snackbarMessage: Flow<SnackbarAction>,
     snackbarMessageSender: SnackbarMessageBus.Sender,
+    navController: NavHostController = rememberNavController(),
     onDrawerMenuClick: (DrawerMenuItem) -> Unit,
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -114,7 +115,7 @@ private fun MainScreen(
         drawerContent = {
             NavigationDrawerImpl(
                 items = drawerItems,
-                onClicked = {
+                onClick = {
                     onDrawerMenuClick(it)
                     coroutineScope.launch {
                         drawerState.close()
@@ -123,40 +124,62 @@ private fun MainScreen(
             )
         },
     ) {
-        val flow = remember(navController.currentBackStackEntryFlow, startDestination) {
-            navController.currentBackStackEntryFlow
-                .map { it.destination.route == startDestination }
-        }
-        val backStack = flow.collectAsState(initial = true)
-        val topAppBarStateHolder = remember {
-            val navIconState = NavigationIconStateImpl(
-                isRoot = { backStack.value },
-                isBadgeShown = showMenuBadge,
-                onMenuIconClicked = drawerState::open,
-                onUpClicked = navController::navigateUp,
-            )
-            TopAppBarStateHolder(navIconState)
-        }
-        Scaffold(
-            topBar = { AppTopAppBar(stateHolder = topAppBarStateHolder) },
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        ) { padding ->
-            SharedTransitionLayout {
-                NavHost(
-                    modifier = Modifier.padding(padding),
-                    navController = navController,
-                    startDestination = startDestination,
-                ) {
-                    composableWith(
-                        screenStateHolder = ScreenStateHolder(
-                            navController,
-                            topAppBarStateHolder,
-                            this@SharedTransitionLayout,
-                            snackbarBus = snackbarMessageSender,
-                        ),
-                        navRoutes = navigation
-                    )
-                }
+        MainScreenContent(
+            navController,
+            startDestination,
+            showMenuBadge,
+            drawerState,
+            snackbarHostState,
+            snackbarMessageSender,
+            navigation,
+        )
+    }
+}
+
+@Composable
+@OptIn(ExperimentalSharedTransitionApi::class)
+private fun MainScreenContent(
+    navController: NavHostController,
+    startDestination: String,
+    showMenuBadge: () -> Boolean,
+    drawerState: DrawerState,
+    snackbarHostState: SnackbarHostState,
+    snackbarMessageSender: SnackbarMessageBus.Sender,
+    navigation: Set<NavRoute>,
+) {
+    val flow = remember(navController.currentBackStackEntryFlow, startDestination) {
+        navController.currentBackStackEntryFlow
+            .map { it.destination.route == startDestination }
+    }
+    val backStack = flow.collectAsState(initial = true)
+    val topAppBarStateHolder = remember {
+        val navIconState = NavigationIconStateImpl(
+            isRoot = { backStack.value },
+            isBadgeShown = showMenuBadge,
+            onMenuIconClicked = drawerState::open,
+            onUpClicked = navController::navigateUp,
+        )
+        TopAppBarStateHolder(navIconState)
+    }
+    Scaffold(
+        topBar = { AppTopAppBar(stateHolder = topAppBarStateHolder) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+    ) { padding ->
+        SharedTransitionLayout {
+            NavHost(
+                modifier = Modifier.padding(padding),
+                navController = navController,
+                startDestination = startDestination,
+            ) {
+                composableWith(
+                    screenStateHolder = ScreenStateHolder(
+                        navController,
+                        topAppBarStateHolder,
+                        this@SharedTransitionLayout,
+                        snackbarBus = snackbarMessageSender,
+                    ),
+                    navRoutes = navigation,
+                )
             }
         }
     }
@@ -173,7 +196,7 @@ private class NavigationIconStateImpl(
 @Composable
 private fun NavigationDrawerImpl(
     items: () -> Collection<DrawerMenuListItem>,
-    onClicked: (DrawerMenuItem) -> Unit,
+    onClick: (DrawerMenuItem) -> Unit,
 ) {
     ModalDrawerSheet {
         items().forEach {
@@ -181,7 +204,7 @@ private fun NavigationDrawerImpl(
                 label = { Text(it.item.text()) },
                 badge = { if (it.showBadge) Badge(containerColor = Color.Red) },
                 selected = false,
-                onClick = { onClicked(it.item) },
+                onClick = { onClick(it.item) },
             )
         }
     }
@@ -204,18 +227,21 @@ internal enum class DrawerMenuItem(
     ),
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun NavDrawerPreview() {
     AppTheme {
-        NavigationDrawerImpl(items = {
-            listOf(
-                DrawerMenuItem.SUBSCRIPTION.toListItem(),
-                DrawerMenuItem.AUTH_STATUS.toListItem(true),
-                DrawerMenuItem.APP_SETTING.toListItem(),
-                DrawerMenuItem.OSS_LICENSE.toListItem(),
-            )
-        }, onClicked = {})
+        NavigationDrawerImpl(
+            items = {
+                listOf(
+                    DrawerMenuItem.SUBSCRIPTION.toListItem(),
+                    DrawerMenuItem.AUTH_STATUS.toListItem(true),
+                    DrawerMenuItem.APP_SETTING.toListItem(),
+                    DrawerMenuItem.OSS_LICENSE.toListItem(),
+                )
+            },
+            onClick = {},
+        )
     }
 }
 
@@ -241,7 +267,7 @@ class MainViewModel @AssistedInject constructor(
             isTokenInvalid.map { DrawerMenuItem.AUTH_STATUS.toListItem(it == true) },
             flowOf(DrawerMenuItem.APP_SETTING.toListItem()),
             flowOf(DrawerMenuItem.OSS_LICENSE.toListItem()),
-        )
+        ),
     ) {
         it.toList()
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -259,7 +285,7 @@ class MainViewModel @AssistedInject constructor(
                     actionLabel = "account setting",
                     withDismissAction = false,
                     duration = SnackbarDuration.Long,
-                )
+                ),
             ) {
                 it.navigate(MainNavRoute.Auth.route)
             }

@@ -1,0 +1,30 @@
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - "Composable"
+
+style:
+  MagicNumber:
+    ignorePropertyDeclaration: true
+    ignoreAnnotated:
+      - "Preview"
+      - "PreviewLightMode"
+      - "PreviewDarkMode"
+      - "PreviewLightDarkMode"
+  UnusedPrivateMember:
+    ignoreAnnotated:
+      - "Preview"
+      - "PreviewLightMode"
+      - "PreviewDarkMode"
+      - "PreviewLightDarkMode"
+
+complexity:
+  TooManyFunctions:
+    ignoreAnnotatedFunctions:
+      - "Preview"
+  LongParameterList:
+    ignoreAnnotated: [ "Entity", "Composable" ]
+    ignoreAnnotatedParameter:
+      - "ColumnInfo"
+      - "Query"
+      - "SerializedName"

@@ -10,7 +10,10 @@ import androidx.room.Upsert
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchStream
+import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
@@ -84,9 +87,9 @@ internal data class TwitchStreamDbView(
     internal interface Dao {
         companion object {
             private const val SQL_STREAM =
-                "SELECT s.*, u.created_at AS created_at, u.description AS description, u.display_name AS display_name, " +
-                    "u.login_name AS login_name, u.profile_image_url AS profile_image_url, " +
-                    "c.name AS game_name FROM twitch_stream AS s " +
+                "SELECT s.*, u.created_at AS created_at, u.description AS description," +
+                    " u.display_name AS display_name, u.login_name AS login_name," +
+                    " u.profile_image_url AS profile_image_url, c.name AS game_name FROM twitch_stream AS s " +
                     "INNER JOIN twitch_user_detail_view AS u ON u.user_id = s.user_id " +
                     "INNER JOIN twitch_category AS c ON c.id = s.game_id"
         }
@@ -138,15 +141,43 @@ internal interface TwitchStreamDaoProviders {
     val twitchStreamViewDao: TwitchStreamDbView.Dao
 }
 
-internal interface TwitchStreamDao : TwitchStreamTable.Dao, TwitchStreamExpireTable.Dao,
-    TwitchStreamDbView.Dao
+internal interface TwitchStreamDao :
+    TwitchStreamTable.Dao,
+    TwitchStreamExpireTable.Dao,
+    TwitchStreamDbView.Dao {
+    suspend fun setStreamExpireEntity(streams: Updatable<out TwitchStreams>)
+    suspend fun addStreamEntities(streams: Collection<TwitchStream>)
+}
 
 internal class TwitchStreamDaoImpl @Inject constructor(
-    private val db: TwitchStreamDaoProviders,
-) : TwitchStreamDao, TwitchStreamTable.Dao by db.twitchStreamDao,
+    private val db: AppDatabase,
+) : TwitchStreamDao,
+    TwitchStreamTable.Dao by db.twitchStreamDao,
     TwitchStreamExpireTable.Dao by db.twitchStreamExpireDao,
     TwitchStreamDbView.Dao by db.twitchStreamViewDao {
+    override suspend fun setStreamExpireEntity(streams: Updatable<out TwitchStreams>) {
+        setStreamExpire(TwitchStreamExpireTable(streams.item.followerId, streams.cacheControl.toDb()))
+    }
+
+    override suspend fun addStreamEntities(streams: Collection<TwitchStream>) {
+        addStreams(streams.map { it.toTable() })
+    }
+
     override suspend fun deleteTable() {
         listOf(db.twitchStreamDao, db.twitchStreamExpireDao).forEach { it.deleteTable() }
     }
 }
+
+private fun TwitchStream.toTable(): TwitchStreamTable = TwitchStreamTable(
+    userId = user.id,
+    title = title,
+    id = id,
+    gameId = gameId,
+    isMature = isMature,
+    language = language,
+    startedAt = startedAt,
+    tags = tags,
+    thumbnailUrlBase = thumbnailUrlBase,
+    type = type,
+    viewCount = viewCount,
+)

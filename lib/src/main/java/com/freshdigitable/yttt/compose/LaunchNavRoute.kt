@@ -72,7 +72,7 @@ private fun InitialAccountSettingScreen(
         topBar = { TopAppBar(title = { Text(text = stringResource(R.string.title_account_setting)) }) }
     ) {
         Column(Modifier.padding(it)) {
-            AuthScreen(onSetupCompleted = onComplete)
+            AuthScreen(onSetupComplete = onComplete)
         }
     }
 }

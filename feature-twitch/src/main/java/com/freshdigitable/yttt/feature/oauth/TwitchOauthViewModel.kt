@@ -82,14 +82,13 @@ class TwitchOauthParser @Inject constructor(
             return false
         }
         val token = TwitchOauthToken.create(url)
-        if (state.value != token.state) {
-            return true // needs to inform user?
-        }
-        coroutineScope.launch {
-            accountRepository.putTwitchToken(checkNotNull(token.accessToken))
-            accountRepository.clearTwitchTokenInvalidated()
-            accountRepository.clearTwitchOauthState()
-            accountRepository.putTwitchOauthStatus(TwitchOauthStatus.SUCCEEDED)
+        if (state.value == token.state) {
+            coroutineScope.launch {
+                accountRepository.putTwitchToken(checkNotNull(token.accessToken))
+                accountRepository.clearTwitchTokenInvalidated()
+                accountRepository.clearTwitchOauthState()
+                accountRepository.putTwitchOauthStatus(TwitchOauthStatus.SUCCEEDED)
+            }
         }
         return true
     }

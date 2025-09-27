@@ -28,26 +28,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.freshdigitable.yttt.AppLogger
-import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
 import com.freshdigitable.yttt.feature.timetable.textRes
 import com.freshdigitable.yttt.logD
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TimetableTabScreen(
     viewModel: TimetableTabViewModel,
-    onListItemClicked: (LiveVideo.Id) -> Unit,
+    onListItemClick: (LiveVideo.Id) -> Unit,
+    topAppBarState: TopAppBarStateHolder,
+    modifier: Modifier = Modifier,
     tabModifier: Modifier = Modifier,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
-    topAppBarState: TopAppBarStateHolder,
 ) {
     AppLogger.logD("TimetableTab") { "start:" }
     LaunchedEffect(Unit) {
@@ -72,13 +71,15 @@ internal fun TimetableTabScreen(
             page = it,
             thumbnailModifier = thumbnailModifier,
             titleModifier = titleModifier,
-            onListItemClicked = onListItemClicked,
+            onListItemClick = onListItemClick,
             viewModel = viewModel,
         )
     }
+    val tab = viewModel.tabData.collectAsState()
     HorizontalPagerWithTabScreen(
+        tabProvider = { tab.value },
+        modifier = modifier,
         tabModifier = tabModifier,
-        viewModel = viewModel,
     ) { tab ->
         TimetableScreen(
             lazyListState = checkNotNull(listState[tab.page]),
@@ -92,7 +93,7 @@ internal fun TimetableTabScreen(
     ListItemMenuSheet(
         menuItemsProvider = { menuItems.value },
         sheetState = sheetState,
-        onMenuItemClicked = { viewModel.onMenuItemClicked(it) },
+        onMenuItemClick = { viewModel.onMenuItemClicked(it) },
         onDismissRequest = viewModel::onMenuClosed,
     )
 }
@@ -100,10 +101,10 @@ internal fun TimetableTabScreen(
 @Composable
 private fun timetableContent(
     page: TimetablePage,
+    onListItemClick: (LiveVideo.Id) -> Unit,
+    viewModel: TimetableTabViewModel,
     thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
-    onListItemClicked: (LiveVideo.Id) -> Unit,
-    viewModel: TimetableTabViewModel,
 ): LazyListScope.() -> Unit {
     when (page.type) {
         TimetablePage.Type.SIMPLE -> {
@@ -113,7 +114,7 @@ private fun timetableContent(
                     { item.value },
                     thumbnailModifier = thumbnailModifier,
                     titleModifier = titleModifier,
-                    onListItemClicked,
+                    onListItemClick,
                     viewModel::onMenuClicked,
                 )
             }
@@ -126,7 +127,7 @@ private fun timetableContent(
                     { item.value },
                     thumbnailModifier = thumbnailModifier,
                     titleModifier = titleModifier,
-                    onListItemClicked,
+                    onListItemClick,
                     viewModel::onMenuClicked,
                 )
             }
@@ -138,8 +139,8 @@ private fun timetableContent(
 @Composable
 fun ListItemMenuSheet(
     menuItemsProvider: () -> Collection<TimetableMenuItem>,
+    onMenuItemClick: (TimetableMenuItem) -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(),
-    onMenuItemClicked: (TimetableMenuItem) -> Unit,
     onDismissRequest: () -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -150,7 +151,7 @@ fun ListItemMenuSheet(
             onDismissRequest = onDismissRequest,
         ) {
             MenuContent(menuItems = menuItems) {
-                onMenuItemClicked(it)
+                onMenuItemClick(it)
                 coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
                     if (!sheetState.isVisible) {
                         onDismissRequest()
@@ -164,11 +165,11 @@ fun ListItemMenuSheet(
 @Composable
 private fun ColumnScope.MenuContent(
     menuItems: Collection<TimetableMenuItem> = TimetableMenuItem.entries,
-    onMenuClicked: (TimetableMenuItem) -> Unit,
+    onMenuClick: (TimetableMenuItem) -> Unit,
 ) {
     menuItems.forEach { i ->
         ListItem(
-            modifier = Modifier.clickable(onClick = { onMenuClicked(i) }),
+            modifier = Modifier.clickable(onClick = { onMenuClick(i) }),
             headlineContent = { Text(i.text) },
         )
     }
@@ -178,7 +179,7 @@ private fun ColumnScope.MenuContent(
 @Immutable
 internal class TimetableTabData(
     internal val page: TimetablePage,
-    private val count: Int
+    private val count: Int,
 ) : TabData<TimetableTabData> {
     @Composable
     @ReadOnlyComposable
@@ -192,25 +193,22 @@ internal class TimetableTabData(
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun TimetableTabScreenPreview() {
     val tabs = listOf(
-        TimetableTabData(TimetablePage.OnAir, 10),
-        TimetableTabData(TimetablePage.Upcoming, 3),
-        TimetableTabData(TimetablePage.FreeChat, 7),
+        TimetableTabData(TimetablePage.OnAir, count = 10),
+        TimetableTabData(TimetablePage.Upcoming, count = 3),
+        TimetableTabData(TimetablePage.FreeChat, count = 7),
     )
     AppTheme {
         HorizontalPagerWithTabScreen(
-            viewModel = object : HorizontalPagerTabViewModel<TimetableTabData> {
-                override val tabData: Flow<List<TimetableTabData>> get() = flowOf(tabs)
-                override val initialTab: List<TimetableTabData> get() = tabs
-            },
+            tabProvider = { tabs },
         ) { Text("page: ${it.page.name}") }
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun ModalSheetPreview() {
     AppTheme {
@@ -221,13 +219,13 @@ private fun ModalSheetPreview() {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun ListItemMenuSheetPreview() {
     AppTheme {
         ListItemMenuSheet(
             menuItemsProvider = { TimetableMenuItem.entries },
-            onMenuItemClicked = {},
+            onMenuItemClick = {},
         ) {}
     }
 }

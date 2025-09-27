@@ -25,14 +25,16 @@ import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.NetworkResponse.Companion.map
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotFoundError
+import com.freshdigitable.yttt.data.source.remote.YouTubeClientWrapper.Companion.fetch
+import com.freshdigitable.yttt.data.source.remote.YouTubeClientWrapper.Companion.fetchAllItems
+import com.freshdigitable.yttt.data.source.remote.YouTubeClientWrapper.Companion.fetchList
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import java.time.Instant
 
 internal class YouTubeRemoteDataSource(
-    private val youtube: YouTubeClient,
-    private val ioScope: IoScope,
-) : YouTubeDataSource.Remote {
+    client: YouTubeClientWrapper,
+) : YouTubeDataSource.Remote, YouTubeClientWrapper by client {
     override suspend fun fetchPagedSubscription(
         query: YouTubeSubscriptionQuery,
     ): Result<NetworkResponse<List<YouTubeSubscription>>> = ioScope.asResult {
@@ -61,11 +63,15 @@ internal class YouTubeRemoteDataSource(
     override suspend fun fetchChannelList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannel>> =
         fetchList(ids) { fetchChannelList(it) }.map { r -> r.map { it.item } }
 
-    override suspend fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): Result<List<Updatable<YouTubeChannelDetail>>> =
-        fetchList(ids) { fetchChannelDetailList(it) }
+    override suspend fun fetchChannelDetailList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<Updatable<YouTubeChannelDetail>>> = fetchList(ids) { fetchChannelDetailList(it) }
 
-    override suspend fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): Result<List<YouTubeChannelRelatedPlaylist>> =
-        fetchList(ids) { fetchChannelRelatedPlaylistList(it) }.map { r -> r.map { it.item } }
+    override suspend fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): Result<List<YouTubeChannelRelatedPlaylist>> = fetchList(ids) {
+        fetchChannelRelatedPlaylistList(it)
+    }.map { r -> r.map { it.item } }
 
     override suspend fun fetchChannelSection(id: YouTubeChannel.Id): Result<List<YouTubeChannelSection>> =
         fetch { fetchChannelSection(id) }.map { it.item }
@@ -112,38 +118,51 @@ internal class YouTubeRemoteDataSource(
                 items = Updatable.create(emptyList(), cacheControl),
             )
     }
+}
 
-    private suspend inline fun <E> fetchAllItems(
-        crossinline request: YouTubeClient.(String?) -> NetworkResponse<List<E>>,
-    ): Result<List<E>> = ioScope.asResult {
-        buildList {
-            var token: String? = null
-            do {
-                val response = youtube.request(token)
-                addAll(response.item)
-                token = response.nextPageToken
-            } while (token != null)
+internal interface YouTubeClientWrapper {
+    val youtube: YouTubeClient
+    val ioScope: IoScope
+
+    companion object {
+        fun create(youtube: YouTubeClient, ioScope: IoScope): YouTubeClientWrapper = object : YouTubeClientWrapper {
+            override val youtube: YouTubeClient = youtube
+            override val ioScope: IoScope = ioScope
         }
-    }
 
-    private suspend inline fun <I : IdBase, E> fetchList(
-        ids: Set<I>,
-        crossinline request: YouTubeClient.(Set<I>) -> NetworkResponse<List<E>>,
-    ): Result<List<Updatable<E>>> = ioScope.asResult {
-        if (ids.isEmpty()) {
-            emptyList()
-        } else if (ids.size <= YouTubeDataSource.MAX_BATCH_SIZE) {
-            youtube.request(ids).flattenToList()
-        } else {
-            ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE)
-                .map { async { youtube.request(it.toSet()).flattenToList() } }
-                .awaitAll()
-                .flatten()
+        suspend inline fun <E> YouTubeClientWrapper.fetchAllItems(
+            crossinline request: YouTubeClient.(String?) -> NetworkResponse<List<E>>,
+        ): Result<List<E>> = ioScope.asResult {
+            buildList {
+                var token: String? = null
+                do {
+                    val response = youtube.request(token)
+                    addAll(response.item)
+                    token = response.nextPageToken
+                } while (token != null)
+            }
         }
-    }
 
-    private suspend inline fun <T> fetch(crossinline request: YouTubeClient.() -> Updatable<T>): Result<Updatable<T>> =
-        ioScope.asResult { youtube.request() }
+        suspend inline fun <I : IdBase, E> YouTubeClientWrapper.fetchList(
+            ids: Set<I>,
+            crossinline request: YouTubeClient.(Set<I>) -> NetworkResponse<List<E>>,
+        ): Result<List<Updatable<E>>> = ioScope.asResult {
+            if (ids.isEmpty()) {
+                emptyList()
+            } else if (ids.size <= YouTubeDataSource.MAX_BATCH_SIZE) {
+                youtube.request(ids).flattenToList()
+            } else {
+                ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE)
+                    .map { async { youtube.request(it.toSet()).flattenToList() } }
+                    .awaitAll()
+                    .flatten()
+            }
+        }
+
+        suspend inline fun <T> YouTubeClientWrapper.fetch(
+            crossinline request: YouTubeClient.() -> Updatable<T>,
+        ): Result<Updatable<T>> = ioScope.asResult { youtube.request() }
+    }
 }
 
 private class YouTubePlaylistNotFound(

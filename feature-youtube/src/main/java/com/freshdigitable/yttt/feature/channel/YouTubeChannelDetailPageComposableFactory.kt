@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.ImageLoadableView
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
@@ -29,55 +29,66 @@ import com.freshdigitable.yttt.data.model.toLocalFormattedText
 
 internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageComposableFactory {
     override fun create(tab: ChannelDetailPageTab<*>): ChannelDetailPageComposable {
-        when (tab as YouTubeChannelDetailTab) {
-            YouTubeChannelDetailTab.About -> return {
-                val desc = pagerContent.annotatedDetail.collectAsState(AnnotatableString.empty())
-                annotatedText { desc.value }()
+        return when (tab as YouTubeChannelDetailTab) {
+            YouTubeChannelDetailTab.About -> {
+                {
+                    val desc =
+                        pagerContent.annotatedDetail.collectAsState(AnnotatableString.empty())
+                    annotatedText { desc.value }()
+                }
             }
 
-            YouTubeChannelDetailTab.Actions -> return {
-                val logs = (pagerContent as YouTubeChannelDetailPagerContent)
-                    .activities.collectAsState(initial = emptyList())
-                list(
-                    itemProvider = { logs.value },
-                    idProvider = { it.id },
-                    content = { videoItem(it.thumbnailUrl, it.text)() },
-                )()
+            YouTubeChannelDetailTab.Actions -> {
+                {
+                    val logs = (pagerContent as YouTubeChannelDetailPagerContent)
+                        .activities.collectAsState(initial = emptyList())
+                    list(
+                        itemProvider = { logs.value },
+                        idProvider = { it.id },
+                        content = { videoItem(it.thumbnailUrl, it.text)() },
+                    )()
+                }
             }
 
-            YouTubeChannelDetailTab.Sections -> return {
-                val sectionState = (pagerContent as YouTubeChannelDetailPagerContent)
-                    .sections.collectAsState(emptyList())
-                list(
-                    itemProvider = { sectionState.value },
-                    idProvider = { it.section.id },
-                    content = { cs -> ChannelSectionContent(cs) },
-                )()
+            YouTubeChannelDetailTab.Sections -> {
+                {
+                    val sectionState = (pagerContent as YouTubeChannelDetailPagerContent)
+                        .sections.collectAsState(emptyList())
+                    list(
+                        itemProvider = { sectionState.value },
+                        idProvider = { it.section.id },
+                        content = { cs -> ChannelSectionContent(cs) },
+                    )()
+                }
             }
 
-            YouTubeChannelDetailTab.Uploaded -> return {
-                val itemsState = (pagerContent as YouTubeChannelDetailPagerContent)
-                    .uploadedVideo.collectAsState(emptyList())
-                list(
-                    itemProvider = { itemsState.value },
-                    idProvider = { it.id },
-                    content = { videoItem(it.thumbnailUrl, it.title)() },
-                )()
+            YouTubeChannelDetailTab.Uploaded -> {
+                {
+                    val itemsState = (pagerContent as YouTubeChannelDetailPagerContent)
+                        .uploadedVideo.collectAsState(emptyList())
+                    list(
+                        itemProvider = { itemsState.value },
+                        idProvider = { it.id },
+                        content = { videoItem(it.thumbnailUrl, it.title)() },
+                    )()
+                }
             }
 
-            YouTubeChannelDetailTab.Debug -> return {
-                val text = (pagerContent as YouTubeChannelDetailPagerContent).debug
-                    .collectAsState(initial = emptyMap())
-                list(
-                    itemProvider = { text.value.entries.toList() },
-                    idProvider = { it.key },
-                ) { Text(text = it.value) }()
+            YouTubeChannelDetailTab.Debug -> {
+                {
+                    val text = (pagerContent as YouTubeChannelDetailPagerContent).debug
+                        .collectAsState(initial = emptyMap())
+                    list(
+                        itemProvider = { text.value.entries.toList() },
+                        idProvider = { it.key },
+                    ) { Text(text = it.value) }()
+                }
             }
         }
     }
 
     private val YouTubeChannelLog.text: String
-        get() = "[${type}]$title (${dateTime.toLocalFormattedText(dateTimeSecondFormatter())})"
+        get() = "[$type]$title (${dateTime.toLocalFormattedText(dateTimeSecondFormatter())})"
 }
 
 @Composable
@@ -87,21 +98,21 @@ private fun ChannelSectionContent(content: ChannelSectionItem) {
             is SinglePlaylist -> return@remember {
                 SinglePlaylistContent(
                     item = content.item[it],
-                    modifier = Modifier.fillParentMaxWidth(0.4f),
+                    modifier = Modifier.fillParentMaxWidth(fraction = 0.4f),
                 )
             }
 
             is MultipleChannel -> return@remember {
                 MultiChannelContent(
                     item = content.item[it],
-                    modifier = Modifier.fillParentMaxWidth(0.3f),
+                    modifier = Modifier.fillParentMaxWidth(fraction = 0.3f),
                 )
             }
 
             is MultiPlaylist -> return@remember {
                 MultiPlaylistContent(
                     item = content.item[it],
-                    modifier = Modifier.fillParentMaxWidth(0.4f),
+                    modifier = Modifier.fillParentMaxWidth(fraction = 0.4f),
                 )
             }
 
@@ -166,21 +177,21 @@ private fun MultiChannelContent(item: YouTubeChannel, modifier: Modifier = Modif
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun ChannelListItemPreview() {
     AppTheme {
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(5) {
+            items(count = 5) {
                 MultiChannelContent(
                     item = YouTubeChannelEntity(
                         id = YouTubeChannel.Id("channel_$it"),
                         title = "example_$it channel",
                         iconUrl = "",
                     ),
-                    modifier = Modifier.fillParentMaxWidth(0.3f),
+                    modifier = Modifier.fillParentMaxWidth(fraction = 0.3f),
                 )
             }
         }

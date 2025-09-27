@@ -2,6 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 import kotlinx.serialization.Serializable
 import java.math.BigInteger
+import java.time.Duration
 import java.time.Instant
 import kotlin.reflect.KClass
 
@@ -40,7 +41,9 @@ interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
         override val type: KClass<out IdBase>,
     ) : LiveId
 
-    companion object
+    companion object {
+        val UPCOMING_DEADLINE: Duration = Duration.ofHours(6)
+    }
 
     interface OnAir : LiveVideo<OnAir> {
         override val actualStartDateTime: Instant

@@ -15,8 +15,8 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.freshdigitable.yttt.LauncherOption
-import com.freshdigitable.yttt.startLauncherActivity
 import com.freshdigitable.yttt.logD
+import com.freshdigitable.yttt.startLauncherActivity
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Job

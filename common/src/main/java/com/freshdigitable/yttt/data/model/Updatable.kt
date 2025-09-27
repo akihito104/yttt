@@ -49,8 +49,7 @@ interface CacheControl {
 
         fun CacheControl.isUpdatable(current: Instant): Boolean {
             val f = fetchedAt ?: return true
-            val a = maxAge ?: return true
-            return f + a <= current
+            return if (maxAge != null) f + maxAge <= current else true
         }
 
         fun CacheControl.isFresh(current: Instant): Boolean = !isUpdatable(current)

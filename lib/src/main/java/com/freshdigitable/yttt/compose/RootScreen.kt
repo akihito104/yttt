@@ -13,7 +13,7 @@ import com.freshdigitable.yttt.compose.navigation.composableWith
 @Composable
 fun RootScreen(modifier: Modifier = Modifier, launcherOption: LauncherOption? = null) {
     val startDestination = when (launcherOption) {
-//        LauncherOption.NO_SPLASH -> LaunchNavRoute.Main // TODO: implement to skip splash screen
+        LauncherOption.NO_SPLASH -> LaunchNavRoute.Main
         LauncherOption.ON_FINISH_OAUTH -> LaunchNavRoute.Auth
         else -> LaunchNavRoute.Splash
     }

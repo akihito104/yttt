@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.YouTube
@@ -38,18 +38,20 @@ import com.freshdigitable.yttt.feature.oauth.AccountSettingViewModel
 @Composable
 fun AuthScreen(
     viewModel: AccountSettingViewModel = hiltViewModel(),
-    onSetupCompleted: (() -> Unit)? = null,
+    onSetupComplete: (() -> Unit)? = null,
 ) {
     val completeButtonEnabled = viewModel.completeButtonEnabled.collectAsState(true)
     AuthScreen(
         listItems = viewModel.getPlatformList(),
         completeButtonEnabled = { completeButtonEnabled.value },
-        onSetupCompleted = if (onSetupCompleted != null) {
+        onSetupComplete = if (onSetupComplete != null) {
             {
                 viewModel.onInitialSetupCompleted()
-                onSetupCompleted.invoke()
+                onSetupComplete.invoke()
             }
-        } else null,
+        } else {
+            null
+        },
     )
 }
 
@@ -57,7 +59,7 @@ fun AuthScreen(
 private fun AuthScreen(
     listItems: Collection<AccountSettingListItem>,
     completeButtonEnabled: () -> Boolean,
-    onSetupCompleted: (() -> Unit)? = null,
+    onSetupComplete: (() -> Unit)? = null,
 ) {
     Column(
         verticalArrangement = Arrangement.Center,
@@ -67,10 +69,10 @@ private fun AuthScreen(
         listItems.forEach { item ->
             item.ListBodyContent { AuthListItem(it, item.platform) }
         }
-        if (onSetupCompleted != null) {
+        if (onSetupComplete != null) {
             Button(
                 enabled = completeButtonEnabled(),
-                onClick = onSetupCompleted,
+                onClick = onSetupComplete,
             ) {
                 Text("complete setup")
             }
@@ -88,7 +90,7 @@ private fun AuthListItem(
             Box(
                 Modifier
                     .background(Color(platform.color))
-                    .size(24.dp)
+                    .size(24.dp),
             )
         },
         headlineContent = { Text(body.title) },
@@ -126,7 +128,7 @@ private fun AuthListItem(
                 if (isShowDialog) {
                     DisconnectConfirmingDialog(
                         platform = platform,
-                        onConfirmClicked = {
+                        onConfirmClick = {
                             body.onUnlink()
                             isShowDialog = false
                         },
@@ -141,7 +143,7 @@ private fun AuthListItem(
 @Composable
 fun DisconnectConfirmingDialog(
     platform: LivePlatform,
-    onConfirmClicked: () -> Unit,
+    onConfirmClick: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -160,7 +162,7 @@ fun DisconnectConfirmingDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onConfirmClicked) {
+            Button(onClick = onConfirmClick) {
                 Text(text = "unlink")
             }
         },
@@ -168,9 +170,9 @@ fun DisconnectConfirmingDialog(
     )
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
-fun AuthListItemPreview() {
+private fun AuthListItemPreview() {
     AppTheme {
         Column {
             AuthListItem(
@@ -197,25 +199,25 @@ fun AuthListItemPreview() {
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun DisconnectConfirmingDialogPreview() {
     AppTheme {
         DisconnectConfirmingDialog(
             platform = YouTube,
-            onConfirmClicked = {},
+            onConfirmClick = {},
         ) {}
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun AuthScreenPreview() {
     AppTheme {
         AuthScreen(
             listItems = emptyList(),
             completeButtonEnabled = { true },
-            onSetupCompleted = {},
+            onSetupComplete = {},
         )
     }
 }

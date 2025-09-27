@@ -51,7 +51,7 @@ internal class TwitchRemoteDataSource @Inject constructor(
             var cursor: String? = null
             var count = 0
             do {
-                val itemsPerPage = (maxCount - count).coerceAtMost(25)
+                val itemsPerPage = (maxCount - count).coerceAtMost(CHANNEL_STREAM_SCHEDULE_PAGE_SIZE)
                 val res = helix.getChannelStreamSchedule(
                     id = id,
                     itemsPerPage = itemsPerPage,
@@ -104,5 +104,9 @@ internal class TwitchRemoteDataSource @Inject constructor(
                 cursor = body.nextPageToken
             } while (cursor != null && (maxCount == null || maxCount < size))
         }.toUpdatable(cacheControl ?: CacheControl.EMPTY)
+    }
+
+    companion object {
+        private const val CHANNEL_STREAM_SCHEDULE_PAGE_SIZE = 25
     }
 }

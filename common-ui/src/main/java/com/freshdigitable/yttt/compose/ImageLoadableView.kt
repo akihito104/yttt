@@ -46,17 +46,22 @@ private fun requireImageLoadableViewDelegate(): ImageLoadableView.Delegate {
 }
 
 object ImageLoadableView {
+    const val THUMBNAIL_ASPECT_RATIO = 16f / 9
+    private const val CHANNEL_ART_ASPECT_RATIO = 32f / 9f
+    private val CHANNEL_ART_SAFE_AREA = Size(1235f, 338f)
+    private const val CHANNEL_ART_WIDTH = 2048f
+
     @Composable
     fun Thumbnail(
-        modifier: Modifier = Modifier,
         url: String,
+        modifier: Modifier = Modifier,
         contentDescription: String? = "",
         contentScale: ContentScale = ContentScale.FillWidth,
         altImage: ImageVector = Icons.Default.PlayArrow,
     ) {
         val m = Modifier
             .then(modifier)
-            .aspectRatio(16f / 9f)
+            .aspectRatio(THUMBNAIL_ASPECT_RATIO)
         if (url.isEmpty()) {
             VectorThumbnail(
                 altImage = altImage,
@@ -75,9 +80,9 @@ object ImageLoadableView {
 
     @Composable
     private fun VectorThumbnail(
+        altImage: ImageVector,
         modifier: Modifier = Modifier,
         contentDescription: String? = "",
-        altImage: ImageVector,
     ) {
         Image(
             painter = rememberVectorPainter(image = altImage),
@@ -88,10 +93,10 @@ object ImageLoadableView {
 
     @Composable
     private fun DelegateThumbnail(
-        modifier: Modifier = Modifier,
         url: String,
         contentDescription: String?,
         contentScale: ContentScale,
+        modifier: Modifier = Modifier,
         delegate: Delegate = requireImageLoadableViewDelegate(),
     ) {
         delegate.Thumbnail(modifier, url, contentDescription, contentScale)
@@ -99,10 +104,10 @@ object ImageLoadableView {
 
     @Composable
     fun UserIcon(
-        modifier: Modifier = Modifier,
         url: String,
-        contentDescription: String? = "",
         size: Dp,
+        modifier: Modifier = Modifier,
+        contentDescription: String? = "",
         altImage: ImageVector = Icons.Default.AccountCircle,
     ) {
         if (url.isEmpty()) {
@@ -127,9 +132,9 @@ object ImageLoadableView {
 
     @Composable
     private fun VectorUserIcon(
-        modifier: Modifier = Modifier,
         altImage: ImageVector,
         contentDescription: String?,
+        modifier: Modifier = Modifier,
     ) {
         Icon(
             painter = rememberVectorPainter(altImage),
@@ -140,9 +145,9 @@ object ImageLoadableView {
 
     @Composable
     private fun DelegateUserIcon(
-        modifier: Modifier = Modifier,
         url: String,
         contentDescription: String?,
+        modifier: Modifier = Modifier,
         delegate: Delegate = requireImageLoadableViewDelegate(),
     ) {
         delegate.UserIcon(
@@ -155,24 +160,25 @@ object ImageLoadableView {
     @Composable
     fun ChannelArt(
         url: String,
+        modifier: Modifier = Modifier,
         contentDescription: String? = "",
         delegate: Delegate = requireImageLoadableViewDelegate(),
     ) {
         delegate.ChannelArt(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(32f / 9f),
+                .aspectRatio(CHANNEL_ART_ASPECT_RATIO)
+                .then(modifier),
             url = url,
             contentDescription = contentDescription,
         )
     }
 
-    private val CHANNEL_ART_SAFE_AREA = Size(1235f, 338f)
     fun channelArtCustomCrop(
         input: Bitmap,
         bitmapProvider: ((Size) -> Bitmap)? = null,
     ): Bitmap {
-        val scale = input.width / 2048f
+        val scale = input.width / CHANNEL_ART_WIDTH
         val scaledSize = CHANNEL_ART_SAFE_AREA * scale
         val matrix = Matrix().apply {
             val dx = (scaledSize.width - input.width) / 2f

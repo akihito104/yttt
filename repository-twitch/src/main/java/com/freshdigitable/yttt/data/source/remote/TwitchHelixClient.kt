@@ -116,7 +116,9 @@ private class Impl(
     companion object {
         private val MAX_AGE_DEFAULT = Duration.ofMinutes(5)
 
-        private inline fun <T : HasItem<E>, E> TwitchHelixService.fetch(query: TwitchHelixService.() -> Call<T>): NetworkResponse<E> {
+        private inline fun <T : HasItem<E>, E> TwitchHelixService.fetch(
+            query: TwitchHelixService.() -> Call<T>,
+        ): NetworkResponse<E> {
             val response = query().execute()
             val fetchedAt = response.headers().getDate("date")?.toInstant()
             val cacheControl = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)

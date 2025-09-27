@@ -29,8 +29,8 @@ class TwitchPagingSourceImplTest {
 
     @Before
     fun setup() = rule.runWithLocalSource {
-        dataSource.setMe(me.toUpdatable(CacheControl.zero()))
-        dataSource.replaceAllFollowings(followings)
+        localSource.setMe(me.toUpdatable(CacheControl.zero()))
+        localSource.replaceAllFollowings(followings)
         sut = TwitchPagingSourceImpl(rule.database)
     }
 

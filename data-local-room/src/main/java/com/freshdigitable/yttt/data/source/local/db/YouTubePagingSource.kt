@@ -23,7 +23,7 @@ import javax.inject.Singleton
 
 data class YouTubeLiveSubscription(
     @ColumnInfo(name = "id")
-    private val _id: YouTubeSubscription.Id,
+    private val idValue: YouTubeSubscription.Id,
     @ColumnInfo(name = "subscription_since")
     override val subscribeSince: Instant,
     @ColumnInfo(name = "order")
@@ -35,7 +35,7 @@ data class YouTubeLiveSubscription(
     @ColumnInfo(name = "channel_icon")
     private val iconUrl: String,
 ) : LiveSubscription {
-    override val id: LiveSubscription.Id get() = _id.mapTo()
+    override val id: LiveSubscription.Id get() = idValue.mapTo()
     override val channel: LiveChannel
         get() = LiveChannelEntity(
             id = channelId.mapTo(),

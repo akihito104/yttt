@@ -1,8 +1,5 @@
 package com.freshdigitable.yttt.compose
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,12 +19,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.AppLogger
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
@@ -44,38 +40,8 @@ import com.freshdigitable.yttt.feature.channel.ChannelDetailPageScope
 import com.freshdigitable.yttt.feature.channel.ChannelDetailPageTab
 import com.freshdigitable.yttt.feature.channel.ChannelViewModel
 import com.freshdigitable.yttt.logD
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.android.EntryPointAccessors
-import dagger.hilt.android.components.ActivityComponent
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-
-@EntryPoint
-@InstallIn(ActivityComponent::class)
-internal interface ChannelDetailEntryPoint {
-    val factory: IdBaseClassMap<ChannelDetailPageComposableFactory>
-}
-
-private lateinit var factoryEntryPoint: ChannelDetailEntryPoint
-
-@Composable
-private fun requireChannelDetailPageComposableFactory(): IdBaseClassMap<ChannelDetailPageComposableFactory> {
-    if (!::factoryEntryPoint.isInitialized) {
-        factoryEntryPoint =
-            EntryPointAccessors.fromActivity<ChannelDetailEntryPoint>(LocalContext.current.getActivity())
-    }
-    return factoryEntryPoint.factory
-}
-
-private fun Context.getActivity(): Activity {
-    var context: Context = this
-    while (context is ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    error("activity is not found.")
-}
 
 @Composable
 fun ChannelDetailScreen(
@@ -101,8 +67,8 @@ fun ChannelDetailScreen(
 @Composable
 private fun ChannelDetailScreen(
     channelDetail: () -> LiveChannelDetailBody?,
-    pages: Map<ChannelDetailPageTab<*>, ChannelDetailPageComposable> = emptyMap(),
     pageScope: ChannelDetailPageScope,
+    pages: Map<ChannelDetailPageTab<*>, ChannelDetailPageComposable> = emptyMap(),
 ) {
     Column(Modifier.fillMaxSize()) {
         ChannelDetailHeader(channelDetail)
@@ -176,7 +142,7 @@ private fun ChannelDetailPageScope.Companion.create(
     override fun <T> list(
         itemProvider: () -> List<T>,
         idProvider: (T) -> IdBase,
-        content: @Composable (T) -> Unit
+        content: @Composable (T) -> Unit,
     ): @Composable () -> Unit = {
         PlainListPage(listProvider = itemProvider, idProvider = idProvider, content = content)
     }
@@ -195,7 +161,7 @@ private fun AnnotatedTextPage(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(8.dp)
+            .padding(8.dp),
     ) {
         AnnotatableText(
             fontSize = 14.sp,
@@ -232,7 +198,7 @@ private fun VideoListItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth(fraction = 0.5f)
-                .aspectRatio(16f / 9f)
+                .aspectRatio(ImageLoadableView.THUMBNAIL_ASPECT_RATIO)
                 .align(Alignment.Top),
         ) {
             ImageLoadableView.Thumbnail(
@@ -250,13 +216,14 @@ private fun VideoListItem(
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun ChannelScreenPreview() {
     val channelDetail = object : LiveChannelDetailBody {
         override val id: LiveChannel.Id get() = LiveChannel.Id("a", LiveChannel.Id::class)
         override val title: String = "channel title"
-        override val statsText: String get() = "@custom_url・Subscribers:52.4k・Videos:132・Views:38,498,283・Published:2021/04/13"
+        override val statsText: String
+            get() = "@custom_url・Subscribers:52.4k・Videos:132・Views:38,498,283・Published:2021/04/13"
         override val bannerUrl: String? get() = null
         override val iconUrl: String get() = ""
         override val platform: LivePlatform
@@ -291,7 +258,7 @@ private fun ChannelScreenPreview() {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun LazyColumnPreview() {
     AppTheme {

@@ -94,6 +94,8 @@ class YouTubeRepositoryTest {
 
     @Inject
     lateinit var localSource: YouTubeDataSource.Local
+    @Inject
+    lateinit var extendedSource: YouTubeDataSource.Extended
 
     @Test
     fun fetchVideoList_itemFromCacheHasIconUrl() = testScope.runTest {
@@ -103,12 +105,16 @@ class YouTubeRepositoryTest {
         val video = video(1, channelDetail)
         hiltRule.inject()
         localSource.addChannelDetailList(
-            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))),
         )
-        sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
-            override val channel: YouTubeChannel get() = channelDetail
-            override val isFreeChat: Boolean get() = false
-        }.toUpdatable(Instant.ofEpochMilli(200), Duration.ofMillis(800))))
+        sut.addVideo(
+            listOf(
+                object : YouTubeVideoExtended, YouTubeVideo by video {
+                    override val channel: YouTubeChannel get() = channelDetail
+                    override val isFreeChat: Boolean get() = false
+                }.toUpdatable(Instant.ofEpochMilli(200), Duration.ofMillis(800)),
+            ),
+        )
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
@@ -132,7 +138,7 @@ class YouTubeRepositoryTest {
         )
         hiltRule.inject()
         localSource.addChannelDetailList(
-            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))),
         )
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
         // exercise
@@ -182,12 +188,16 @@ class YouTubeRepositoryTest {
         )
         hiltRule.inject()
         localSource.addChannelDetailList(
-            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))),
         )
-        sut.addVideo(listOf(object : YouTubeVideoExtended, YouTubeVideo by video {
-            override val channel: YouTubeChannel get() = channelDetail
-            override val isFreeChat: Boolean get() = false
-        }.toUpdatable(Instant.ofEpochMilli(200), Duration.ofMillis(800))))
+        sut.addVideo(
+            listOf(
+                object : YouTubeVideoExtended, YouTubeVideo by video {
+                    override val channel: YouTubeChannel get() = channelDetail
+                    override val isFreeChat: Boolean get() = false
+                }.toUpdatable(Instant.ofEpochMilli(200), Duration.ofMillis(800)),
+            ),
+        )
         // exercise
         val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
         // verify
@@ -213,7 +223,7 @@ class YouTubeRepositoryTest {
                     listOf(FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), ids))
                         .toUpdatable()
                 }
-            }
+            },
         )
         hiltRule.inject()
         // exercise
@@ -233,7 +243,7 @@ class YouTubeRepositoryTest {
             playlistItems = recorder.wrap(expected = 1) { ids ->
                 val cacheControl = CacheControl.fromRemote(current)
                 throw YouTubeException.notFound(cacheControl = cacheControl)
-            }
+            },
         )
         hiltRule.inject()
         // exercise
@@ -256,14 +266,14 @@ class YouTubeRepositoryTest {
                     val cacheControl = CacheControl.fromRemote(current)
                     throw YouTubeException.notModified(cacheControl = cacheControl)
                 }
-            }
+            },
         )
         hiltRule.inject()
         val playlistId = YouTubePlaylist.Id("0")
         val channel = FakeYouTubeClient.channelDetail(1)
         localSource.addChannelDetailList(listOf(channel.toUpdatable()))
         val item = FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), playlistId)
-        localSource.updatePlaylistWithItems(
+        extendedSource.updatePlaylistWithItems(
             object : YouTubePlaylistWithItems {
                 override val playlist: YouTubePlaylist get() = FakeYouTubeClient.playlist(playlistId)
                 override val items: List<YouTubePlaylistItem> get() = listOf(item)

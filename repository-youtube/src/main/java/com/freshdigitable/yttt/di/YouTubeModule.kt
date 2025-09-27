@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.HttpRequestInitializerImpl
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient
+import com.freshdigitable.yttt.data.source.remote.YouTubeClientWrapper
 import com.freshdigitable.yttt.data.source.remote.YouTubeRemoteDataSource
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
 import com.google.api.client.http.HttpRequestInitializer
@@ -83,7 +84,7 @@ interface YouTubeRemoteDataSourceModule {
         fun provideRemoteDataSource(
             client: YouTubeClient,
             ioScope: IoScope,
-        ): YouTubeDataSource.Remote = YouTubeRemoteDataSource(client, ioScope)
+        ): YouTubeDataSource.Remote = YouTubeRemoteDataSource(YouTubeClientWrapper.create(client, ioScope))
     }
 }
 

@@ -16,8 +16,10 @@ internal class YouTubeDao @Inject constructor(
     private val playlistDao: YouTubePlaylistDaoImpl,
     private val subscriptionDao: YouTubeSubscriptionDaoImpl,
     private val channelDao: YouTubeChannelDaoImpl,
-) : YouTubeVideoDao by videoDao, YouTubePlaylistDao by playlistDao,
-    YouTubeSubscriptionDao by subscriptionDao, YouTubeChannelDao by channelDao {
+) : YouTubeVideoDao by videoDao,
+    YouTubePlaylistDao by playlistDao,
+    YouTubeSubscriptionDao by subscriptionDao,
+    YouTubeChannelDao by channelDao {
     suspend fun addSubscriptionList(
         subscriptions: Collection<YouTubeSubscription>,
     ) = db.withTransaction {
@@ -52,5 +54,9 @@ internal class YouTubeDao @Inject constructor(
     }
 }
 
-internal interface YouTubeDaoProviders : YouTubeChannelDaoProviders, YouTubeVideoDaoProviders,
-    YouTubePlaylistDaoProviders, YouTubeSubscriptionDaoProviders, YouTubePageSourceDaoProviders
+internal interface YouTubeDaoProviders :
+    YouTubeChannelDaoProviders,
+    YouTubeVideoDaoProviders,
+    YouTubePlaylistDaoProviders,
+    YouTubeSubscriptionDaoProviders,
+    YouTubePageSourceDaoProviders

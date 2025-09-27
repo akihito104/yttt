@@ -27,7 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.lib.R
 import kotlinx.coroutines.launch
 
@@ -47,12 +47,12 @@ internal fun AppTopAppBar(
                 NavigationIcon(
                     isRootProvider = it.isRoot,
                     showMenuBadge = it.isBadgeShown,
-                    onMenuIconClicked = {
+                    onMenuIconClick = {
                         coroutineScope.launch {
                             it.onMenuIconClicked()
                         }
                     },
-                    onUpClicked = it.onUpClicked,
+                    onUpClick = it.onUpClicked,
                 )
             }
         } ?: {},
@@ -111,16 +111,16 @@ internal fun RowScope.TopAppBarActionMenu(
 private fun NavigationIcon(
     isRootProvider: () -> Boolean,
     showMenuBadge: () -> Boolean,
-    onMenuIconClicked: () -> Unit,
-    onUpClicked: () -> Unit,
+    onMenuIconClick: () -> Unit,
+    onUpClick: () -> Unit,
 ) {
     if (isRootProvider()) {
-        HamburgerMenuIcon(showMenuBadge, onMenuIconClicked)
+        HamburgerMenuIcon(showMenuBadge, onMenuIconClick)
     } else {
         Icon(
             Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "",
-            modifier = Modifier.clickable(onClick = onUpClicked),
+            modifier = Modifier.clickable(onClick = onUpClick),
         )
     }
 }
@@ -128,19 +128,19 @@ private fun NavigationIcon(
 @Composable
 private fun HamburgerMenuIcon(
     showMenuBadge: () -> Boolean,
-    onMenuIconClicked: () -> Unit,
+    onMenuIconClick: () -> Unit,
 ) {
     BadgedBox(
         badge = {
             if (showMenuBadge()) {
                 Badge(containerColor = Color.Red)
             }
-        }
+        },
     ) {
         Icon(
             Icons.Filled.Menu,
             contentDescription = "",
-            modifier = Modifier.clickable(onClick = onMenuIconClicked),
+            modifier = Modifier.clickable(onClick = onMenuIconClick),
         )
     }
 }
@@ -168,7 +168,6 @@ class TopAppBarStateHolder(
     fun updateMenuItems(menuItems: List<TopAppBarMenuItem>) {
         this.menuItems = menuItems
     }
-
 }
 
 sealed interface TopAppBarMenuItem {
@@ -204,7 +203,7 @@ private class OnAppBar(
     override suspend fun consumeMenuItem() = consume()
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun AppTopAppBarPreview() {
     AppTheme {
@@ -216,7 +215,7 @@ private fun AppTopAppBarPreview() {
                     override val isBadgeShown: () -> Boolean = { false }
                     override val onMenuIconClicked: suspend () -> Unit = {}
                     override val onUpClicked: () -> Unit = {}
-                }
+                },
             ).apply {
                 update(
                     title = title,
@@ -233,7 +232,7 @@ private fun AppTopAppBarPreview() {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun HamburgerMenuIconPreview() {
     AppTheme {
@@ -244,7 +243,7 @@ private fun HamburgerMenuIconPreview() {
                     override val isBadgeShown: () -> Boolean = { true }
                     override val onMenuIconClicked: suspend () -> Unit = {}
                     override val onUpClicked: () -> Unit = {}
-                }
+                },
             ).apply {
                 update(title = "Title")
             },

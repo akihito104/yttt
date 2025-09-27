@@ -7,7 +7,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_FREE_CHAT
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_NOT_UPDATABLE
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.MAX_AGE_ON_AIR
-import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.UPCOMING_DEADLINE
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isFreeChatTitle
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isPostponedLive
@@ -39,7 +38,6 @@ interface YouTubeVideo {
     enum class BroadcastType { LIVE, UPCOMING, NONE, }
 
     companion object {
-        internal val UPCOMING_DEADLINE: Duration = Duration.ofHours(6)
         val YouTubeVideo.url: String get() = "https://youtube.com/watch?v=${id.value}"
         val YouTubeVideo.isArchived: Boolean
             get() = !isLiveStream() || actualEndDateTime != null
@@ -58,8 +56,7 @@ interface YouTubeVideo {
 
         fun YouTubeVideo.isPostponedLive(current: Instant): Boolean {
             val s = scheduledStartDateTime ?: return false
-            return isUpcoming() && s <= current
-                && Duration.between(s, current) > MAX_AGE_LIMIT_SOON
+            return isUpcoming() && s <= current && Duration.between(s, current) > MAX_AGE_LIMIT_SOON
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -120,7 +117,7 @@ interface YouTubeVideoExtended : YouTubeVideo {
         fun YouTubeVideoExtended.isUpcomingWithinPublicationDeadline(current: Instant): Boolean {
             check(isUpcoming())
             check(isFreeChat != true)
-            return current <= (checkNotNull(scheduledStartDateTime) + UPCOMING_DEADLINE)
+            return current <= (checkNotNull(scheduledStartDateTime) + LiveVideo.UPCOMING_DEADLINE)
         }
     }
 }
@@ -128,17 +125,19 @@ interface YouTubeVideoExtended : YouTubeVideo {
 private class YouTubeVideoExtendedImpl(
     private val old: Updatable<YouTubeVideoExtended>?,
     private val video: Updatable<YouTubeVideo>,
-    private val _isFreeChat: Boolean?,
+    private val isNewFreeChat: Boolean?,
 ) : YouTubeVideoExtended, YouTubeVideo by video.item {
     override val channel: YouTubeChannel
         get() = old?.item?.channel?.update(video.item.channel) ?: video.item.channel.toChannel()
     override val isFreeChat: Boolean
-        get() = isFreeChat(old?.item, video.item, _isFreeChat)
+        get() = isFreeChat(old?.item, video.item, isNewFreeChat)
     override val isThumbnailUpdatable: Boolean
         get() {
             val o = old ?: return false
             return when {
-                isFreeChat -> o.isUpdatable(checkNotNull(video.cacheControl.fetchedAt)) // at same time of updating this entity
+                isFreeChat -> // at same time of updating this entity
+                    o.isUpdatable(checkNotNull(video.cacheControl.fetchedAt))
+
                 isLiveStream() -> (o.item.title != title || (o.item.isUpcoming() && isNowOnAir()))
                 else -> false
             }
@@ -149,7 +148,7 @@ private class YouTubeVideoExtendedImpl(
             YouTubeVideoExtendedImpl(
                 old = this.old,
                 video = this.video,
-                _isFreeChat = true,
+                isNewFreeChat = true,
             )
 
         fun isFreeChat(

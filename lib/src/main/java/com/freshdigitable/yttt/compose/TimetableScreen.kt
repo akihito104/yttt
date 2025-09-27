@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.liveVideo
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.timelineItem
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
-import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
+import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.feature.timetable.TimelineItem
 import com.freshdigitable.yttt.logD
@@ -25,15 +25,17 @@ import com.freshdigitable.yttt.logD
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableScreen(
-    lazyListState: LazyListState = rememberLazyListState(),
     refreshingProvider: () -> Boolean,
     onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+    lazyListState: LazyListState = rememberLazyListState(),
     listContent: LazyListScope.() -> Unit,
 ) {
     AppLogger.logD("Timetable") { "start:" }
     PullToRefreshBox(
         isRefreshing = refreshingProvider(),
         onRefresh = onRefresh,
+        modifier = modifier,
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -53,13 +55,14 @@ fun LazyListScope.simpleContent(
 ) {
     itemsIndexed(
         items = itemsProvider(),
-        key = { _, item -> item.id.value }) { _, item ->
+        key = { _, item -> item.id.value },
+    ) { _, item ->
         LiveVideoListItemView(
             video = item,
             thumbnailModifier = thumbnailModifier(item.id),
             titleModifier = titleModifier(item.id),
             onItemClick = { onListItemClicked(item.id) },
-            onMenuClicked = { onMenuClicked(item.id) },
+            onMenuClick = { onMenuClicked(item.id) },
         )
     }
 }
@@ -78,19 +81,20 @@ fun LazyListScope.groupedContent(
         }
         itemsIndexed(
             items = items,
-            key = { _, item -> item.id.value }) { _, item ->
+            key = { _, item -> item.id.value },
+        ) { _, item ->
             LiveVideoListItemView(
                 video = item,
                 thumbnailModifier = thumbnailModifier(item.id),
                 titleModifier = titleModifier(item.id),
                 onItemClick = { onListItemClicked(item.id) },
-                onMenuClicked = { onMenuClicked(item.id) },
+                onMenuClick = { onMenuClicked(item.id) },
             )
         }
     }
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun SimpleTimetableScreenPreview() {
     AppTheme {
@@ -106,7 +110,7 @@ private fun SimpleTimetableScreenPreview() {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun GroupedTimetableScreenPreview() {
     val items = mapOf("2023/06/29(木)" to listOf(timelineItem(liveVideo())))

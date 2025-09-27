@@ -10,56 +10,62 @@ import java.math.BigInteger
 import java.time.Instant
 import java.time.ZoneId
 
-class LiveChannelDetailYouTubeTest : ShouldSpec({
-    context("SubscriberCountIsNotHidden") {
-        val detailMock: YouTubeChannelDetail = mockk {
-            every { customUrl } returns "@channel"
-            every { isSubscriberHidden } returns false
-            every { publishedAt } returns Instant.parse("2021-02-23T00:00:00.000+09:00")
-        }
+class LiveChannelDetailYouTubeTest : ShouldSpec(
+    {
+        context("SubscriberCountIsNotHidden") {
+            val detailMock: YouTubeChannelDetail = mockk {
+                every { customUrl } returns "@channel"
+                every { isSubscriberHidden } returns false
+                every { publishedAt } returns Instant.parse("2021-02-23T00:00:00.000+09:00")
+            }
 
-        withData(
-            nameFn = { "subscriber: ${it.subscriberCount.first}, video: ${it.videoCount.first}, views: ${it.viewsCount.first}" },
-            SubscriberCountIsNotHiddenParams.params()
-        ) { param ->
-            val sut = LiveChannelDetailYouTube(
-                detail = detailMock.apply {
-                    every { subscriberCount } returns BigInteger.valueOf(param.subscriberCount.first)
-                    every { videoCount } returns BigInteger.valueOf(param.videoCount.first)
-                    every { viewsCount } returns BigInteger.valueOf(param.viewsCount.first)
+            withData(
+                nameFn = {
+                    "subscriber: ${it.subscriberCount.first}, video: ${it.videoCount.first}, " +
+                        "views: ${it.viewsCount.first}"
                 },
-                zoneId = ZoneId.of("Asia/Tokyo"),
-            )
-            val actual = sut.statsText
-            actual shouldBe "@channel・" +
-                "Followers:${param.subscriberCount.second}・Videos:${param.videoCount.second}・Views:${param.viewsCount.second}" +
-                "・Published:2021/02/23"
+                SubscriberCountIsNotHiddenParams.params(),
+            ) { param ->
+                val sut = LiveChannelDetailYouTube(
+                    detail = detailMock.apply {
+                        every { subscriberCount } returns BigInteger.valueOf(param.subscriberCount.first)
+                        every { videoCount } returns BigInteger.valueOf(param.videoCount.first)
+                        every { viewsCount } returns BigInteger.valueOf(param.viewsCount.first)
+                    },
+                    zoneId = ZoneId.of("Asia/Tokyo"),
+                )
+                val actual = sut.statsText
+                actual shouldBe "@channel・" +
+                    "Followers:${param.subscriberCount.second}・Videos:${param.videoCount.second}・" +
+                    "Views:${param.viewsCount.second}・Published:2021/02/23"
+            }
         }
-    }
 
-    context("SubscriberCountIsHidden") {
-        val detailMock: YouTubeChannelDetail = mockk {
-            every { customUrl } returns "@channel"
-            every { isSubscriberHidden } returns true
-            every { publishedAt } returns Instant.parse("2021-02-23T00:00:00.000+09:00")
-        }
+        context("SubscriberCountIsHidden") {
+            val detailMock: YouTubeChannelDetail = mockk {
+                every { customUrl } returns "@channel"
+                every { isSubscriberHidden } returns true
+                every { publishedAt } returns Instant.parse("2021-02-23T00:00:00.000+09:00")
+            }
 
-        withData(
-            nameFn = { "video: ${it.videoCount.first}, views: ${it.viewsCount.first}" },
-            SubscriberCountIsHiddenParams.params()
-        ) { param ->
-            val sut = LiveChannelDetailYouTube(
-                detail = detailMock.apply {
-                    every { videoCount } returns BigInteger.valueOf(param.videoCount.first)
-                    every { viewsCount } returns BigInteger.valueOf(param.viewsCount.first)
-                },
-                zoneId = ZoneId.of("Asia/Tokyo"),
-            )
-            val actual = sut.statsText
-            actual shouldBe "@channel・Videos:${param.videoCount.second}・Views:${param.viewsCount.second}・Published:2021/02/23"
+            withData(
+                nameFn = { "video: ${it.videoCount.first}, views: ${it.viewsCount.first}" },
+                SubscriberCountIsHiddenParams.params(),
+            ) { param ->
+                val sut = LiveChannelDetailYouTube(
+                    detail = detailMock.apply {
+                        every { videoCount } returns BigInteger.valueOf(param.videoCount.first)
+                        every { viewsCount } returns BigInteger.valueOf(param.viewsCount.first)
+                    },
+                    zoneId = ZoneId.of("Asia/Tokyo"),
+                )
+                val actual = sut.statsText
+                actual shouldBe "@channel・Videos:${param.videoCount.second}・Views:${param.viewsCount.second}・" +
+                    "Published:2021/02/23"
+            }
         }
-    }
-})
+    },
+)
 
 internal object SubscriberCountIsNotHiddenParams {
     fun params(): List<Param> = listOf(

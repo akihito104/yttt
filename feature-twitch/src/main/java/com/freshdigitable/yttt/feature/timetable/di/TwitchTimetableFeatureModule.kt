@@ -29,21 +29,28 @@ internal interface TwitchTimetableFeatureModule {
     @Binds
     @IntoMap
     @IdBaseClassKey(TwitchStream.Id::class)
-    fun bindTimetableContextMenuDelegateForTwitch(delegate: TimetableContextMenuDelegateForTwitch): TimetableContextMenuSelector
+    fun bindTimetableContextMenuDelegateForTwitch(
+        delegate: TimetableContextMenuDelegateForTwitch,
+    ): TimetableContextMenuSelector
 
     @Binds
     @IntoMap
     @IdBaseClassKey(TwitchChannelSchedule.Stream.Id::class)
-    fun bindTimetableContextMenuDelegateForTwitchChannelSchedule(delegate: TimetableContextMenuDelegateForTwitch): TimetableContextMenuSelector
+    fun bindTimetableContextMenuDelegateForTwitchChannelSchedule(
+        delegate: TimetableContextMenuDelegateForTwitch,
+    ): TimetableContextMenuSelector
 
     @Binds
     @IntoSet
     @TimetableTabQualifier(TimetablePage.OnAir)
-    fun bindFetchTwitchOnAirItemSourceUseCase(useCase: FetchTwitchOnAirItemSourceUseCase): FetchTimetableItemSourceUseCase
-
+    fun bindFetchTwitchOnAirItemSourceUseCase(
+        useCase: FetchTwitchOnAirItemSourceUseCase,
+    ): FetchTimetableItemSourceUseCase
 
     @Binds
     @IntoSet
     @TimetableTabQualifier(TimetablePage.Upcoming)
-    fun bindFetchTwitchUpcomingItemSourceUseCase(useCase: FetchTwitchUpcomingItemSourceUseCase): FetchTimetableItemSourceUseCase
+    fun bindFetchTwitchUpcomingItemSourceUseCase(
+        useCase: FetchTwitchUpcomingItemSourceUseCase,
+    ): FetchTimetableItemSourceUseCase
 }

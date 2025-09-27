@@ -14,55 +14,75 @@ import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.model.Updatable
 import kotlinx.coroutines.flow.Flow
 
-interface TwitchDataSource {
+interface TwitchDataSource : TwitchUserDataSource, TwitchStreamDataSource, TwitchScheduleDataSource {
+    suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>>
+    suspend fun fetchVideosByUserId(id: TwitchUser.Id, itemCount: Int = 20): Result<List<Updatable<TwitchVideoDetail>>>
+
+    interface Local :
+        TwitchDataSource,
+        TwitchUserDataSource.Local,
+        TwitchStreamDataSource.Local,
+        TwitchScheduleDataSource.Local,
+        ImageDataSource {
+        suspend fun upsertCategory(category: Collection<TwitchCategory>)
+    }
+
+    interface Extended :
+        TwitchUserDataSource.Extended,
+        TwitchStreamDataSource.Extended,
+        TwitchScheduleDataSource.Extended {
+        suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>)
+        suspend fun deleteAllTables()
+    }
+
+    interface Remote :
+        TwitchDataSource,
+        TwitchUserDataSource.Remote,
+        TwitchStreamDataSource.Remote,
+        TwitchScheduleDataSource.Remote
+}
+
+interface TwitchUserDataSource {
     suspend fun findUsersById(ids: Set<TwitchUser.Id>? = null): Result<List<Updatable<TwitchUserDetail>>>
     suspend fun fetchMe(): Result<Updatable<TwitchUserDetail>?>
     suspend fun fetchAllFollowings(userId: TwitchUser.Id): Result<Updatable<TwitchFollowings>>
+    interface Local : TwitchUserDataSource {
+        suspend fun addUsers(users: Collection<Updatable<TwitchUserDetail>>)
+        suspend fun setMe(me: Updatable<TwitchUserDetail>)
+        suspend fun replaceAllFollowings(followings: Updatable<TwitchFollowings>)
+    }
+
+    interface Extended
+
+    interface Remote : TwitchUserDataSource
+}
+
+interface TwitchStreamDataSource {
     suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): Result<Updatable<TwitchStreams>?>
-    suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>)
-    suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>)
+    interface Local : TwitchStreamDataSource
+    interface Extended {
+        val onAir: Flow<List<TwitchLiveStream>>
+        suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>)
+        suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>?
+    }
+
+    interface Remote : TwitchStreamDataSource
+}
+
+interface TwitchScheduleDataSource {
     suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int = 10,
     ): Result<Updatable<TwitchChannelSchedule?>>
 
-    suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>>
-
-    suspend fun fetchVideosByUserId(
-        id: TwitchUser.Id,
-        itemCount: Int = 20,
-    ): Result<List<Updatable<TwitchVideoDetail>>>
-
-    suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>)
-
-    interface Local : TwitchDataSource, TwitchLiveDataSource.Local, ImageDataSource {
-        suspend fun addUsers(users: Collection<Updatable<TwitchUserDetail>>)
-        suspend fun setMe(me: Updatable<TwitchUserDetail>)
-        suspend fun replaceAllFollowings(followings: Updatable<TwitchFollowings>)
-        suspend fun setFollowedStreamSchedule(
-            userId: TwitchUser.Id,
-            schedule: Updatable<TwitchChannelSchedule?>,
-        )
-
-        suspend fun deleteAllTables()
-        suspend fun upsertCategory(category: Collection<TwitchCategory>)
+    interface Local : TwitchScheduleDataSource {
+        suspend fun setFollowedStreamSchedule(userId: TwitchUser.Id, schedule: Updatable<TwitchChannelSchedule?>)
     }
 
-    interface Remote : TwitchDataSource {
-        override suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>) =
-            throw NotImplementedError()
-
-        override suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>) =
-            throw NotImplementedError()
-
-        override suspend fun cleanUpByUserId(ids: Collection<TwitchUser.Id>): Unit =
-            throw NotImplementedError()
+    interface Extended {
+        val upcoming: Flow<List<TwitchLiveSchedule>>
+        suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>)
     }
-}
 
-interface TwitchLiveDataSource {
-    val onAir: Flow<List<TwitchLiveStream>>
-    val upcoming: Flow<List<TwitchLiveSchedule>>
-    suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>?
-    interface Local : TwitchLiveDataSource
+    interface Remote : TwitchScheduleDataSource
 }

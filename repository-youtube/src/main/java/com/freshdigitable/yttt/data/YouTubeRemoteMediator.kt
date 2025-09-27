@@ -13,7 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
-import com.freshdigitable.yttt.data.source.YouTubeLiveDataSource
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
 import java.time.Duration
@@ -27,10 +27,10 @@ internal class YouTubeRemoteMediator @Inject constructor(
 ) : RemoteMediator<Int, LiveSubscription>() {
     companion object {
         private val MAX_AGE_SUBSCRIPTION = Duration.ofHours(2)
-        private val YouTubeLiveDataSource.subscriptionsOrderedCacheControl: CacheControl
+        private val YouTubeDataSource.Extended.subscriptionsOrderedCacheControl: CacheControl
             get() = CacheControl.create(
                 subscriptionsRelevanceOrderedFetchedAt,
-                MAX_AGE_SUBSCRIPTION
+                MAX_AGE_SUBSCRIPTION,
             )
     }
 

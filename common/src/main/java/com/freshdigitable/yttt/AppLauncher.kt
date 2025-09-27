@@ -36,7 +36,6 @@ fun Activity.startLauncherActivity(option: LauncherOption, intent: Intent.() -> 
     startActivity(intent)
 }
 
-
 enum class LauncherOption {
     ON_FINISH_OAUTH, NO_SPLASH,
     ;
@@ -47,10 +46,9 @@ enum class LauncherOption {
             putExtra(EXTRA_LAUNCHER_OPTION, option.name)
         }
 
-        val Intent.launcherOption: LauncherOption?
-            get() {
-                val name = getStringExtra(EXTRA_LAUNCHER_OPTION) ?: return null
-                return LauncherOption.valueOf(name)
-            }
+        fun Intent.toLauncherOption(): LauncherOption? {
+            val name = getStringExtra(EXTRA_LAUNCHER_OPTION) ?: return null
+            return LauncherOption.valueOf(name)
+        }
     }
 }

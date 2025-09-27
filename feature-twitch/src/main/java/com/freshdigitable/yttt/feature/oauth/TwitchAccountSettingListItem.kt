@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.freshdigitable.yttt.compose.AppTheme
-import com.freshdigitable.yttt.compose.preview.LightModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.source.TwitchOauthStatus
@@ -40,7 +40,7 @@ internal object TwitchAccountSettingListItem : AccountSettingListItem {
                 buttonText = { if (hasValidToken.value) "linked" else "auth" },
                 onClick = viewModel::onLogin,
                 onUnlink = viewModel::onClearAccount,
-            )
+            ),
         )
     }
 }
@@ -62,7 +62,7 @@ private fun TwitchAuthRedirectionDialog(
     )
 }
 
-@LightModePreview
+@PreviewLightMode
 @Composable
 private fun TwitchDialogPreview() {
     AppTheme {

@@ -7,7 +7,7 @@ ksp = "2.2.20-2.0.3" # https://github.com/google/ksp/releases
 kotlinxCoroutinesCore = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
 kotlinxSerializationJson = "1.9.0"
 licensee = "1.13.0"
-oss-license-plugin = "0.10.8"
+oss-license-plugin = "0.10.9"
 oss-license-lib = "17.3.0"
 
 androidxComposeBom = "2025.09.00"
@@ -43,6 +43,8 @@ okhttp = "5.1.0"
 retrofit = "3.0.0"
 kermit = "2.0.8"
 leakcanaryAndroid = "2.14"
+detekt = "1.23.8"
+detekt-compose-rules = "0.4.27"
 
 junit = "4.13.2"
 kotest = "6.0.3"
@@ -114,6 +116,8 @@ okhttp = { module = "com.squareup.okhttp3:okhttp" }
 okhttp-logging-interceptor = { module = "com.squareup.okhttp3:logging-interceptor" }
 oss-lisence-lib = { module = "com.google.android.gms:play-services-oss-licenses", version.ref = "oss-license-lib" }
 desugarJdkLibs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLib" }
+detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-formatting", version.ref = "detekt" }
+detekt-compose-rules = { group = "io.nlopez.compose.rules", name = "detekt", version.ref = "detekt-compose-rules" }
 
 ## for build-logic
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "androidGradlePlugin" }
@@ -121,6 +125,7 @@ android-tools-common = { group = "com.android.tools", name = "common", version.r
 compose-gradlePlugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
 kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
+detekt-gradlePlugin = { group = "io.gitlab.arturbosch.detekt", name = "detekt-gradle-plugin", version.ref = "detekt" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
@@ -133,6 +138,7 @@ android-room = { id = "androidx.room", version.ref = "room-ktx" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 licensee = { id = "app.cash.licensee", version.ref = "licensee" }
 oss-license-plugin = { id = "com.google.android.gms.oss-licenses-plugin", version.ref = "oss-license-plugin" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 ## for build-logic
 yttt-android-application = { id = "yttt.android.application" }
 yttt-android-application-compose = { id = "yttt.android.application.compose" }
@@ -140,3 +146,4 @@ yttt-android-library = { id = "yttt.android.library" }
 yttt-android-library-compose = { id = "yttt.android.library.compose" }
 yttt-hilt = { id = "yttt.hilt" }
 yttt-kotest = { id = "yttt.kotest" }
+yttt-detekt = { id = "yttt.detekt" }

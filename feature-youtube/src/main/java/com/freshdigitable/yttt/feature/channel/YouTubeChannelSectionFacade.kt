@@ -40,7 +40,9 @@ internal class YouTubeChannelSectionFacade @Inject constructor(
         }
     }
 
-    private fun watchPlaylistItem(task: FetchTaskItems): Flow<Map<YouTubePlaylist.Id, Result<List<YouTubePlaylistItemDetail>>>> {
+    private fun watchPlaylistItem(
+        task: FetchTaskItems,
+    ): Flow<Map<YouTubePlaylist.Id, Result<List<YouTubePlaylistItemDetail>>>> {
         val item = task.playlistItem
         if (item.isEmpty()) {
             return emptyFlow()

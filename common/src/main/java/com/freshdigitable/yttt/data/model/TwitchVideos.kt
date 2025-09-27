@@ -107,24 +107,7 @@ interface TwitchStreams {
 
         private val MAX_AGE_STREAM = Duration.ofMinutes(10)
 
-        private fun TwitchStreams.update(new: TwitchStreams): TwitchStreams {
-            require(this.followerId == new.followerId)
-            val map = this.streams.associateBy { it.id }
-            return object : Updated, TwitchStreams by new {
-                override val updatableThumbnails: Set<String>
-                    get() {
-                        return new.streams.filter { n ->
-                            val o = map[n.id] ?: return@filter true
-                            n.mayUpdateThumbnail(o)
-                        }.map { it.getThumbnailUrl() }.toSet()
-                    }
-                override val deletedThumbnails: Set<String>
-                    get() {
-                        val deleted = map.keys - new.streams.map { it.id }.toSet()
-                        return deleted.mapNotNull { map[it]?.getThumbnailUrl() }.toSet()
-                    }
-            }
-        }
+        private fun TwitchStreams.update(new: TwitchStreams) = UpdatedImpl(this, new)
 
         fun Updatable<TwitchStreams>.update(new: Updatable<TwitchStreams>): Updatable<TwitchStreams> {
             this.checkUpdatableBy(new)
@@ -144,5 +127,29 @@ interface TwitchStreams {
     interface Updated : TwitchStreams {
         val updatableThumbnails: Set<String>
         val deletedThumbnails: Set<String>
+    }
+
+    private class UpdatedImpl(
+        oldItem: TwitchStreams,
+        private val newItem: TwitchStreams,
+    ) : Updated, TwitchStreams by newItem {
+        init {
+            require(this.followerId == newItem.followerId)
+        }
+
+        private val map = oldItem.streams.associateBy { it.id }
+
+        override val updatableThumbnails: Set<String>
+            get() {
+                return newItem.streams.filter { n ->
+                    val o = map[n.id] ?: return@filter true
+                    n.mayUpdateThumbnail(o)
+                }.map { it.getThumbnailUrl() }.toSet()
+            }
+        override val deletedThumbnails: Set<String>
+            get() {
+                val deleted = map.keys - newItem.streams.map { it.id }.toSet()
+                return deleted.mapNotNull { map[it]?.getThumbnailUrl() }.toSet()
+            }
     }
 }

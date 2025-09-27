@@ -11,8 +11,10 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.paging.LoadState
@@ -22,7 +24,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.freshdigitable.yttt.AppLogger
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveSubscription
@@ -37,8 +39,8 @@ import java.time.Instant
 
 @Composable
 fun SubscriptionListScreen(
+    onListItemClick: (LiveChannel.Id) -> Unit,
     viewModel: SubscriptionListViewModel = hiltViewModel(),
-    onListItemClicked: (LiveChannel.Id) -> Unit,
     onError: suspend (Throwable) -> Unit,
 ) {
     AppLogger.logD("SubscriptionList") { "start:" }
@@ -58,8 +60,8 @@ fun SubscriptionListScreen(
         SubscriptionListContent(
             itemProvider = { items[index] },
             listState = listState[index],
-            onListItemClicked = { onListItemClicked(it) },
-            onError = onError
+            onListItemClick = { onListItemClick(it) },
+            onError = onError,
         )
     }
 }
@@ -68,11 +70,12 @@ fun SubscriptionListScreen(
 private fun SubscriptionListContent(
     itemProvider: () -> LazyPagingItems<LiveSubscription>,
     listState: LazyListState = rememberLazyListState(),
-    onListItemClicked: (LiveChannel.Id) -> Unit = {},
+    onListItemClick: (LiveChannel.Id) -> Unit = {},
     onError: suspend (Throwable) -> Unit = {},
 ) {
     AppLogger.logD("SubscriptionListContent") { "start:" }
     val item = itemProvider()
+    val currentOnError by rememberUpdatedState(onError)
     val coroutineScope = rememberCoroutineScope()
     LaunchedEffect(item) {
         if (item.loadState.hasError) {
@@ -80,7 +83,7 @@ private fun SubscriptionListContent(
                 .firstNotNullOfOrNull { it as LoadState.Error }?.error
             if (error != null) {
                 coroutineScope.launch {
-                    onError(error)
+                    currentOnError(error)
                 }
             }
         }
@@ -98,7 +101,7 @@ private fun SubscriptionListContent(
             ) { i ->
                 val channel = remember { item[i]?.channel }
                 LiveChannelListItemView(
-                    modifier = channel?.let { Modifier.clickable { onListItemClicked(it.id) } }
+                    modifier = channel?.let { Modifier.clickable { onListItemClick(it.id) } }
                         ?: Modifier,
                     iconUrl = channel?.iconUrl ?: "",
                     title = channel?.title ?: "",
@@ -114,7 +117,7 @@ private fun SubscriptionListContent(
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun SubscriptionListContentPreview() {
     val items = MutableStateFlow(

@@ -50,7 +50,7 @@ internal interface TwitchHelixService {
         @Query("after") cursor: String? = null,
     ): Call<FollowingStreamsResponse>
 
-    /// https://dev.twitch.tv/docs/api/reference/#get-channel-stream-schedule
+    // https://dev.twitch.tv/docs/api/reference/#get-channel-stream-schedule
     // 403 Forbidden: Only partners and affiliates may add non-recurring broadcast segments.
     // 404 Not Found: The broadcaster has not created a streaming schedule.
     @GET("helix/schedule")
@@ -70,7 +70,8 @@ internal interface TwitchHelixService {
 
     // https://dev.twitch.tv/docs/api/reference/#get-videos
     // 404 Not Found: The ID in the game_id query parameter was not found.
-    //                The ID in the id query parameter was not found. Returned only if all the IDs were not found; otherwise, the ID is ignored.
+    //                The ID in the id query parameter was not found. Returned only if all the IDs were not found;
+    //                otherwise, the ID is ignored.
     @GET("helix/videos")
     fun getVideoByUserId(
         @Query("user_id") userId: TwitchUser.Id,

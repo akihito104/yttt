@@ -35,13 +35,13 @@ internal interface ImageLoadableCoilViewProvider {
         @Singleton
         fun provideDiskCache(context: Application): DiskCache = DiskCache.Builder()
             .directory(File(context.cacheDir, "coil_cache").toOkioPath())
-            .maxSizePercent(0.02)
+            .maxSizePercent(percent = 0.02)
             .build()
 
         @Provides
         @Singleton
         fun provideMemoryCache(context: Application): MemoryCache = MemoryCache.Builder()
-            .maxSizePercent(context, 0.25)
+            .maxSizePercent(context, percent = 0.25)
             .build()
 
         @OptIn(ExperimentalCoilApi::class)
@@ -55,16 +55,18 @@ internal interface ImageLoadableCoilViewProvider {
         ): ImageLoaderViewSetup = {
             SingletonImageLoader.setSafe { context ->
                 ImageLoader.Builder(context)
-                    .memoryCacheMaxSizePercentWhileInBackground(0.5)
+                    .memoryCacheMaxSizePercentWhileInBackground(percent = 0.5)
                     .memoryCache { memoryCache }
                     .diskCache { diskCache }
-                    .eventListener(object : EventListener() {
-                        override fun onSuccess(request: ImageRequest, result: SuccessResult) {
-                            val diskCacheKey = result.diskCacheKey ?: return
-                            val memoryCacheKey = result.memoryCacheKey ?: return
-                            dataStore.putMemoryCacheKey(diskCacheKey, memoryCacheKey)
-                        }
-                    })
+                    .eventListener(
+                        object : EventListener() {
+                            override fun onSuccess(request: ImageRequest, result: SuccessResult) {
+                                val diskCacheKey = result.diskCacheKey ?: return
+                                val memoryCacheKey = result.memoryCacheKey ?: return
+                                dataStore.putMemoryCacheKey(diskCacheKey, memoryCacheKey)
+                            }
+                        },
+                    )
                     .components {
                         add(OkHttpNetworkFetcherFactory(callFactory = { okHttpClient }))
                     }

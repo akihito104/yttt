@@ -54,7 +54,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         if (!accountRepository.hasAccount()) {
             return Result.success(Unit)
         }
-        trace("loadList_yt") {
+        return trace("loadList_yt") {
             trace = this
             liveRepository.cleanUp()
             fetchAsync(
@@ -94,11 +94,8 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 } else {
                     Result.success { liveRepository.cleanUp() }
                 }
-            }.onFailure { return Result.failure(it) }
-
-            trace = null
+            }.also { trace = null }
         }
-        return Result.success(Unit)
     }
 
     private suspend fun updateCurrentVideos(videoUpdateTaskChannel: SendChannel<List<YouTubeVideo.Id>>) {
@@ -149,7 +146,9 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         }.join()
         .onFailure { logE(throwable = it) { "fetchUploadedPlaylists: " } }
         .map {
-            { liveRepository.syncSubscriptionList(it.ids.toSet(), it.queries) }
+            {
+                liveRepository.syncSubscriptionList(it.ids.toSet(), it.queries)
+            }
         }
 
     private suspend fun updateSummary(
@@ -181,14 +180,20 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
 
     private suspend inline fun fetchAsync(
         crossinline updateCurrentVideoItemsTask: suspend (SendChannel<List<YouTubeVideo.Id>>) -> Unit,
-        crossinline updateFromPlaylistTask: suspend (CoroutineScope, SendChannel<List<YouTubeVideo.Id>>) -> Result<DeferredTask>,
-        crossinline fetchVideoItemsTask: suspend (CoroutineScope, ReceiveChannel<List<YouTubeVideo.Id>>) -> Result<DeferredTask>,
+        crossinline updateFromPlaylistTask: suspend (
+            CoroutineScope,
+            SendChannel<List<YouTubeVideo.Id>>,
+        ) -> Result<DeferredTask>,
+        crossinline fetchVideoItemsTask: suspend (
+            CoroutineScope,
+            ReceiveChannel<List<YouTubeVideo.Id>>,
+        ) -> Result<DeferredTask>,
     ): Result<Unit> = coroutineScope {
         val videoUpdateTaskChannel = Channel<List<YouTubeVideo.Id>>(Channel.BUFFERED)
         val fetchVideo = async { fetchVideoItemsTask(this, videoUpdateTaskChannel) }
         val tasks = listOf(
             async { Result.success(updateCurrentVideoItemsTask(videoUpdateTaskChannel)) },
-            async { updateFromPlaylistTask(this, videoUpdateTaskChannel) }
+            async { updateFromPlaylistTask(this, videoUpdateTaskChannel) },
         ).awaitAll()
         videoUpdateTaskChannel.close()
         val fetchVideoRes = fetchVideo.await()
@@ -288,13 +293,13 @@ internal fun YouTubeRepository.fetchAllSubscription(
                     item = findSubscriptionSummaries(it.item.map { i -> i.id }),
                     offset = o,
                     query = findSubscriptionQuery(o),
-                    _token = it.nextPageToken,
+                    token = it.nextPageToken,
                     fetchedAt = it.cacheControl.fetchedAt,
                     saveEtag = YouTubeSubscriptionQuery.forAlphabetical(
                         summary.offset,
                         summary.nextPageToken,
                         it.eTag,
-                    )
+                    ),
                 )
             }.recoverFromNotModified {
                 val o = summary.offset + MAX_BATCH_SIZE
@@ -321,11 +326,11 @@ internal class YouTubeSubscriptionSummaries(
     override val offset: Int = 0,
     val item: List<YouTubeSubscriptionSummary> = emptyList(),
     private val query: YouTubeSubscriptionQuery? = null,
-    private val _token: String? = null,
+    private val token: String? = null,
     val fetchedAt: Instant? = null,
     val saveEtag: YouTubeSubscriptionQuery? = null,
 ) : YouTubeSubscriptionQuery {
-    override val nextPageToken: String? get() = _token ?: query?.nextPageToken
+    override val nextPageToken: String? get() = token ?: query?.nextPageToken
     override val eTag: String? get() = query?.eTag
     val hasNextToken: Boolean get() = (nextPageToken ?: query?.nextPageToken) != null
 }

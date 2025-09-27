@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
@@ -27,10 +27,10 @@ import java.math.BigInteger
 @Composable
 fun VideoDetailScreen(
     viewModel: VideoDetailViewModel,
+    topAppBarStateHolder: TopAppBarStateHolder,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    topAppBarStateHolder: TopAppBarStateHolder,
-    onChannelClicked: (LiveChannel.Id) -> Unit,
+    onChannelClick: (LiveChannel.Id) -> Unit,
 ) {
     val menuItems = viewModel.contextMenuItems.collectAsState(initial = emptyList())
     topAppBarStateHolder.updateMenuItems(menuItems.value)
@@ -39,7 +39,7 @@ fun VideoDetailScreen(
         videoProvider = { item.value },
         thumbnailModifier = thumbnailModifier,
         titleModifier = titleModifier,
-        onChannelClicked = onChannelClicked,
+        onChannelClick = onChannelClick,
     )
 }
 
@@ -48,7 +48,7 @@ private fun VideoDetailScreen(
     videoProvider: () -> LiveVideoDetailItem?,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    onChannelClicked: (LiveChannel.Id) -> Unit = {},
+    onChannelClick: (LiveChannel.Id) -> Unit = {},
 ) {
     val dialog = remember { LinkAnnotationDialogState() }
     Column(
@@ -87,7 +87,7 @@ private fun VideoDetailScreen(
                 iconUrl = video.channel.iconUrl,
                 title = video.channel.title,
                 platformColor = Color(video.channel.platform.color),
-                onClick = { onChannelClicked(video.channel.id) },
+                onClick = { onChannelClick(video.channel.id) },
             )
             AnnotatableText(
                 annotatableString = video.annotatableDescription,
@@ -99,20 +99,22 @@ private fun VideoDetailScreen(
     LinkAnnotationDialog(state = dialog)
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
-fun VideoDetailComposePreview() {
+private fun VideoDetailComposePreview() {
     val detail = LiveVideoPreviewParamProvider.liveVideo(
         description = "description\nhttps://example.com",
         viewerCount = BigInteger.valueOf(100),
     )
     AppTheme {
-        VideoDetailScreen(videoProvider = {
-            LiveVideoDetailItem(
-                video = detail,
-                annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
-                annotatableTitle = AnnotatableString.empty()
-            )
-        })
+        VideoDetailScreen(
+            videoProvider = {
+                LiveVideoDetailItem(
+                    video = detail,
+                    annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
+                    annotatableTitle = AnnotatableString.empty(),
+                )
+            },
+        )
     }
 }

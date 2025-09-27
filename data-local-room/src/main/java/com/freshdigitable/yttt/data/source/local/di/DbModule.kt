@@ -3,10 +3,15 @@ package com.freshdigitable.yttt.data.source.local.di
 import android.content.Context
 import androidx.room.Room
 import com.freshdigitable.yttt.data.source.TwitchDataSource
-import com.freshdigitable.yttt.data.source.TwitchLiveDataSource
+import com.freshdigitable.yttt.data.source.TwitchScheduleDataSource
+import com.freshdigitable.yttt.data.source.TwitchStreamDataSource
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
+import com.freshdigitable.yttt.data.source.local.TwitchExtendedDataSource
 import com.freshdigitable.yttt.data.source.local.TwitchLocalDataSource
+import com.freshdigitable.yttt.data.source.local.TwitchScheduleLocalDataSource
+import com.freshdigitable.yttt.data.source.local.TwitchStreamLocalDataSource
+import com.freshdigitable.yttt.data.source.local.YouTubeExtendedDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoProviders
@@ -56,10 +61,19 @@ internal interface LocalModule {
     fun bindYouTubeDataSourceLocal(dataSource: YouTubeLocalDataSource): YouTubeDataSource.Local
 
     @Binds
+    fun bindYouTubeExtendedDataSourceLocal(dataSource: YouTubeExtendedDataSource): YouTubeDataSource.Extended
+
+    @Binds
     fun bindTwitchDataSourceLocal(dataSource: TwitchLocalDataSource): TwitchDataSource.Local
 
     @Binds
-    fun bindTwitchLiveDataSourceLocal(dataSource: TwitchLocalDataSource): TwitchLiveDataSource.Local
+    fun bindTwitchExtendedDataSource(dataSource: TwitchExtendedDataSource): TwitchDataSource.Extended
+
+    @Binds
+    fun bindTwitchStreamLocalDataSource(dataSource: TwitchStreamLocalDataSource): TwitchStreamDataSource.Extended
+
+    @Binds
+    fun bindTwitchScheduleLocalDataSource(dataSource: TwitchScheduleLocalDataSource): TwitchScheduleDataSource.Extended
 }
 
 @Module

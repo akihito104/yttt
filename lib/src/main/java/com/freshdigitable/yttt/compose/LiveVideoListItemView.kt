@@ -26,7 +26,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.freshdigitable.yttt.compose.preview.LightDarkModePreview
+import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -46,13 +46,13 @@ import java.time.temporal.ChronoUnit
 @Composable
 fun LiveVideoListItemView(
     video: TimelineItem,
+    onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    onItemClick: () -> Unit,
-    onMenuClicked: (() -> Unit)? = null,
+    onMenuClick: (() -> Unit)? = null,
 ) {
-    if (onMenuClicked == null) {
+    if (onMenuClick == null) {
         LiveVideoListItemView(
             video = video,
             modifier = modifier,
@@ -61,10 +61,9 @@ fun LiveVideoListItemView(
             onItemClick = onItemClick,
         )
     } else {
-        Box(modifier = Modifier) {
+        Box(modifier = modifier) {
             LiveVideoListItemView(
                 video = video,
-                modifier = modifier,
                 thumbnailModifier = thumbnailModifier,
                 titleModifier = titleModifier,
                 onItemClick = onItemClick,
@@ -74,7 +73,7 @@ fun LiveVideoListItemView(
                 modifier = Modifier
                     .size(20.dp)
                     .align(alignment = TopEnd)
-                    .clickable(onClick = onMenuClicked),
+                    .clickable(onClick = onMenuClick),
                 contentDescription = "",
             )
         }
@@ -84,10 +83,10 @@ fun LiveVideoListItemView(
 @Composable
 private fun LiveVideoListItemView(
     video: TimelineItem,
+    onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    onItemClick: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -98,7 +97,7 @@ private fun LiveVideoListItemView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .wrapContentHeight()
+                .wrapContentHeight(),
         ) {
             ThumbnailView(video.thumbnail, modifier = thumbnailModifier)
             Column(
@@ -119,7 +118,7 @@ private fun LiveVideoListItemView(
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .wrapContentHeight()
+                        .wrapContentHeight(),
                 )
             }
         }
@@ -130,7 +129,7 @@ private fun LiveVideoListItemView(
                 .then(titleModifier)
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
-                .padding(top = 4.dp)
+                .padding(top = 4.dp),
         )
     }
 }
@@ -151,8 +150,14 @@ private fun RowScope.ThumbnailView(
 }
 
 @Composable
-fun LiveVideoHeaderView(label: String) {
-    Surface(color = MaterialTheme.colorScheme.primaryContainer) {
+fun LiveVideoHeaderView(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier,
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -166,7 +171,7 @@ fun LiveVideoHeaderView(label: String) {
     }
 }
 
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
 private fun LiveVideoListItemViewPreview(
     @PreviewParameter(LiveVideoPreviewParamProvider::class) video: TimelineItem,
@@ -176,14 +181,13 @@ private fun LiveVideoListItemViewPreview(
     }
 }
 
-
-@LightDarkModePreview
+@PreviewLightDarkMode
 @Composable
-fun LiveVideoHeaderViewPreview() {
+private fun LiveVideoHeaderViewPreview() {
     AppTheme {
         LiveVideoHeaderView(
             label = LocalDateTime.now(ZoneId.systemDefault())
-                .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter)
+                .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter),
         )
     }
 }
