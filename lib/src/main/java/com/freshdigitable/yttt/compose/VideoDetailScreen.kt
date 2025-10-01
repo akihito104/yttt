@@ -28,15 +28,17 @@ import java.math.BigInteger
 fun VideoDetailScreen(
     viewModel: VideoDetailViewModel,
     topAppBarStateHolder: TopAppBarStateHolder,
+    onChannelClick: (LiveChannel.Id) -> Unit,
+    modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
-    onChannelClick: (LiveChannel.Id) -> Unit,
 ) {
     val menuItems = viewModel.contextMenuItems.collectAsState(initial = emptyList())
     topAppBarStateHolder.updateMenuItems(menuItems.value)
     val item = viewModel.detail.collectAsState(null)
     VideoDetailScreen(
         videoProvider = { item.value },
+        modifier = modifier,
         thumbnailModifier = thumbnailModifier,
         titleModifier = titleModifier,
         onChannelClick = onChannelClick,
@@ -46,13 +48,14 @@ fun VideoDetailScreen(
 @Composable
 private fun VideoDetailScreen(
     videoProvider: () -> LiveVideoDetailItem?,
+    modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
     onChannelClick: (LiveChannel.Id) -> Unit = {},
 ) {
     val dialog = remember { LinkAnnotationDialogState() }
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .wrapContentHeight()
             .verticalScroll(rememberScrollState()),
@@ -102,7 +105,7 @@ private fun VideoDetailScreen(
 @PreviewLightDarkMode
 @Composable
 private fun VideoDetailComposePreview() {
-    val detail = LiveVideoPreviewParamProvider.liveVideo(
+    val detail = LiveVideoPreviewParamProvider.upcomingVideo(
         description = "description\nhttps://example.com",
         viewerCount = BigInteger.valueOf(100),
     )

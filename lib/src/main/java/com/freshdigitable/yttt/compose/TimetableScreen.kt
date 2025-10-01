@@ -14,8 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.freshdigitable.yttt.AppLogger
-import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.liveVideo
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.timelineItem
+import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.upcomingVideo
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -103,7 +103,7 @@ private fun SimpleTimetableScreenPreview() {
             onRefresh = {},
         ) {
             simpleContent(
-                itemsProvider = { listOf(timelineItem(liveVideo())) },
+                itemsProvider = { listOf(timelineItem(upcomingVideo())) },
                 onListItemClicked = {},
             ) {}
         }
@@ -113,7 +113,7 @@ private fun SimpleTimetableScreenPreview() {
 @PreviewLightDarkMode
 @Composable
 private fun GroupedTimetableScreenPreview() {
-    val items = mapOf("2023/06/29(木)" to listOf(timelineItem(liveVideo())))
+    val items = mapOf("2023/06/29(木)" to listOf(timelineItem(upcomingVideo())))
     AppTheme {
         TimetableScreen(
             refreshingProvider = { false },
