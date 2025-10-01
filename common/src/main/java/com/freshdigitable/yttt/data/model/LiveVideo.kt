@@ -74,10 +74,13 @@ interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
 
     interface FreeChat : LiveVideo<FreeChat> {
         override val scheduledStartDateTime: Instant
+        val isPinned: Boolean
         override fun compareTo(other: FreeChat): Int = comparator.compare(this, other)
 
         companion object {
             private val comparator: Comparator<FreeChat> = Comparator { p0, p1 ->
+                val pinned = p1.isPinned.compareTo(p0.isPinned)
+                if (pinned != 0) return@Comparator pinned
                 val channelId = p0.channel.id.value.compareTo(p1.channel.id.value)
                 if (channelId != 0) return@Comparator channelId
                 val date = p0.scheduledStartDateTime.compareTo(p1.scheduledStartDateTime)

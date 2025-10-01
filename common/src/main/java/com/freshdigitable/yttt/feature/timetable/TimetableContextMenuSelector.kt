@@ -11,4 +11,6 @@ enum class TimetableMenuItem(val text: String) {
     ADD_FREE_CHAT("check as free chat"),
     REMOVE_FREE_CHAT("uncheck as free chat"),
     LAUNCH_LIVE("watch live"),
+    PIN_TO_TOP("pin to top"),
+    UNPIN("unpin"),
 }

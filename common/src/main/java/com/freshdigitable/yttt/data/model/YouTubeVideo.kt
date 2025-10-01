@@ -104,6 +104,7 @@ interface YouTubeVideoExtended : YouTubeVideo {
     override val channel: YouTubeChannel
     val isFreeChat: Boolean?
     val isThumbnailUpdatable: Boolean get() = false
+    val isPinned: Boolean? get() = null
 
     companion object {
         fun YouTubeVideoExtended.asFreeChat(): YouTubeVideoExtended = when (this) {

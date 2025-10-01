@@ -81,7 +81,7 @@ class YouTubeLocalDataSourceTest {
             val found = dao.findVideosById(video.map { it.item.id })
             found.containsVideoIdInAnyOrderElementsOf(video)
             dao.watchAllUnfinishedVideos().test {
-                awaitItem().containsVideoIdInAnyOrder(*unfinished.map { it.item }.toTypedArray(),)
+                awaitItem().containsVideoIdInAnyOrder(*unfinished.map { it.item }.toTypedArray())
             }
             dao.findAllArchivedVideos()
                 .shouldContainExactlyInAnyOrder(inactive.map { it.item.id })
@@ -658,12 +658,13 @@ internal data class YouTubeVideoEntity(
 
         fun freeChat(
             id: String = "free_chat",
+            title: String = "free chat",
             scheduledStartDateTime: Instant = Instant.EPOCH + Duration.ofDays(30),
             fetchedAt: Instant = Instant.EPOCH,
             channel: YouTubeChannel = channelTable(),
         ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
-            title = "free chat",
+            title = title,
             channel = channel,
             scheduledStartDateTime = scheduledStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,

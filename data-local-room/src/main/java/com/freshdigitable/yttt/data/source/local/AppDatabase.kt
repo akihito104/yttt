@@ -42,6 +42,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelRelatedPlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDaoProviders
+import com.freshdigitable.yttt.data.source.local.db.YouTubePinnedVideoTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemAdditionTable
@@ -72,6 +73,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         YouTubeVideoTable::class,
         YouTubeVideoDetailTable::class,
         FreeChatTable::class,
+        YouTubePinnedVideoTable::class,
         YouTubeVideoExpireTable::class,
         YouTubePlaylistTable::class,
         YouTubePlaylistExpireTable::class,
@@ -94,7 +96,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     views = [
         TwitchUserDetailDbView::class,
     ],
-    version = 26,
+    version = 27,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -120,6 +122,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 21, to = 22, spec = AppDatabase.MigrateSeparatePlaylistItem::class),
         AutoMigration(from = 22, to = 23, spec = AppDatabase.MigrateSubscriptionOrder::class),
         AutoMigration(from = 24, to = 25),
+        AutoMigration(from = 26, to = 27),
     ],
 )
 @TypeConverters(

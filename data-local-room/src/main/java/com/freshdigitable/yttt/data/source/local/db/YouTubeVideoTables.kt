@@ -126,54 +126,45 @@ internal class YouTubeVideoDetailTable(
 }
 
 internal data class YouTubeVideoDb(
-    @Embedded
-    private val video: YouTubeVideoDetailTable,
-    @Embedded("c_")
-    override val channel: YouTubeChannelTable,
-    @ColumnInfo("is_free_chat")
-    override val isFreeChat: Boolean?,
-    @ColumnInfo("broadcast_content")
-    override val liveBroadcastContent: YouTubeVideo.BroadcastType,
+    @Embedded private val video: YouTubeVideoDetailTable,
+    @Embedded("c_") override val channel: YouTubeChannelTable,
+    @ColumnInfo("is_free_chat") override val isFreeChat: Boolean?,
+    @ColumnInfo("broadcast_content") override val liveBroadcastContent: YouTubeVideo.BroadcastType,
+    @ColumnInfo("is_pinned") override val isPinned: Boolean?,
 ) : YouTubeVideoExtended {
-    override val id: YouTubeVideo.Id
-        get() = video.videoId
-    override val title: String
-        get() = video.title
-    override val thumbnailUrl: String
-        get() = video.thumbnailUrl
-    override val scheduledStartDateTime: Instant?
-        get() = video.scheduledStartDateTime
-    override val scheduledEndDateTime: Instant?
-        get() = video.scheduledEndDateTime
-    override val actualStartDateTime: Instant?
-        get() = video.actualStartDateTime
-    override val actualEndDateTime: Instant?
-        get() = video.actualEndDateTime
-    override val description: String
-        get() = video.description
-    override val viewerCount: BigInteger?
-        get() = video.viewerCount
+    override val id: YouTubeVideo.Id get() = video.videoId
+    override val title: String get() = video.title
+    override val thumbnailUrl: String get() = video.thumbnailUrl
+    override val scheduledStartDateTime: Instant? get() = video.scheduledStartDateTime
+    override val scheduledEndDateTime: Instant? get() = video.scheduledEndDateTime
+    override val actualStartDateTime: Instant? get() = video.actualStartDateTime
+    override val actualEndDateTime: Instant? get() = video.actualEndDateTime
+    override val description: String get() = video.description
+    override val viewerCount: BigInteger? get() = video.viewerCount
 
     @androidx.room.Dao
     internal interface Dao {
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
-                " e.fetched_at AS fetched_at, e.max_age AS max_age, video.broadcast_content AS broadcast_content " +
-                "FROM video_detail AS v " +
+                " e.fetched_at AS fetched_at, e.max_age AS max_age, video.broadcast_content AS broadcast_content," +
+                " p.video_id IS NOT NULL AS is_pinned FROM video_detail AS v " +
                 "INNER JOIN video ON video.id = v.video_id " +
                 "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.video_id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
+                "LEFT OUTER JOIN yt_pinned AS p ON v.video_id = p.video_id " +
                 "WHERE broadcast_content IS NOT NULL AND v.video_id IN (:ids)",
         )
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<UpdatableYouTubeVideoDb>
 
         @Query(
             "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
-                " video.broadcast_content AS broadcast_content FROM video_detail AS v " +
+                " video.broadcast_content AS broadcast_content, p.video_id IS NOT NULL AS is_pinned " +
+                "FROM video_detail AS v " +
                 "INNER JOIN video ON video.id = v.video_id " +
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
+                "LEFT OUTER JOIN yt_pinned AS p ON v.video_id = p.video_id " +
                 "WHERE broadcast_content IS NOT NULL AND broadcast_content IS NOT 'none'",
         )
         fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
@@ -220,6 +211,37 @@ internal class FreeChatTable(
 }
 
 @Entity(
+    tableName = "yt_pinned",
+    foreignKeys = [
+        ForeignKey(
+            entity = YouTubeVideoTable::class,
+            parentColumns = ["id"],
+            childColumns = ["video_id"],
+        ),
+    ],
+)
+internal class YouTubePinnedVideoTable(
+    @PrimaryKey(autoGenerate = false)
+    @ColumnInfo("video_id")
+    val videoId: YouTubeVideo.Id,
+) {
+    @androidx.room.Dao
+    internal interface Dao : TableDeletable {
+        @Upsert
+        suspend fun addPinnedVideo(pinned: YouTubePinnedVideoTable)
+        suspend fun addPinnedVideo(id: YouTubeVideo.Id) {
+            addPinnedVideo(YouTubePinnedVideoTable(id))
+        }
+
+        @Query("DELETE FROM yt_pinned WHERE video_id = :id")
+        suspend fun removePinnedVideo(id: YouTubeVideo.Id)
+
+        @Query("DELETE FROM yt_pinned")
+        override suspend fun deleteTable()
+    }
+}
+
+@Entity(
     tableName = "video_expire",
     foreignKeys = [
         ForeignKey(
@@ -259,6 +281,7 @@ internal interface YouTubeVideoDaoProviders {
     val youtubeVideoDbDao: YouTubeVideoDb.Dao
     val youTubeVideoExpireDao: YouTubeVideoExpireTable.Dao
     val youTubeFreeChatDao: FreeChatTable.Dao
+    val youTubePinnedVideoDao: YouTubePinnedVideoTable.Dao
 }
 
 internal interface YouTubeVideoDao :
@@ -266,7 +289,8 @@ internal interface YouTubeVideoDao :
     YouTubeVideoDb.Dao,
     YouTubeVideoExpireTable.Dao,
     YouTubeVideoDetailTable.Dao,
-    FreeChatTable.Dao {
+    FreeChatTable.Dao,
+    YouTubePinnedVideoTable.Dao {
     suspend fun addVideoEntities(videos: Collection<Updatable<YouTubeVideoExtended>>)
     suspend fun insertOrIgnoreVideoEntities(videos: Collection<YouTubeVideo.Id>)
     suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
@@ -285,7 +309,8 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
     YouTubeVideoDb.Dao by db.youtubeVideoDbDao,
     YouTubeVideoExpireTable.Dao by db.youTubeVideoExpireDao,
     YouTubeVideoDetailTable.Dao by db.youTubeVideoDetailDao,
-    FreeChatTable.Dao by db.youTubeFreeChatDao {
+    FreeChatTable.Dao by db.youTubeFreeChatDao,
+    YouTubePinnedVideoTable.Dao by db.youTubePinnedVideoDao {
     override suspend fun addVideoEntities(
         videos: Collection<Updatable<YouTubeVideoExtended>>,
     ) = db.withTransaction {
@@ -341,6 +366,7 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
             db.youTubeVideoDetailDao,
             db.youTubeVideoExpireDao,
             db.youTubeFreeChatDao,
+            db.youTubePinnedVideoDao,
         ).forEach { it.deleteTable() }
     }
 

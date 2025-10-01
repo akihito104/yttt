@@ -54,6 +54,7 @@ data class TimelineItem(
 
             else -> null
         }
+    val isPinned: Boolean? get() = (video as? LiveVideo.FreeChat)?.isPinned
 
     companion object {
         private val REGEX_LOCAL_DATETIME_TEXT = """^(.*)\s(\d{1,2}):(.*)$""".toRegex()
@@ -72,7 +73,7 @@ internal data class GroupKey(
             extraHourOfDay: Duration,
             zoneId: ZoneId = ZoneId.systemDefault(),
         ): GroupKey = GroupKey(
-            (scheduledStartDateTime - extraHourOfDay).toLocalDateTime(zoneId).toLocalDate()
+            (scheduledStartDateTime - extraHourOfDay).toLocalDateTime(zoneId).toLocalDate(),
         )
     }
 }
