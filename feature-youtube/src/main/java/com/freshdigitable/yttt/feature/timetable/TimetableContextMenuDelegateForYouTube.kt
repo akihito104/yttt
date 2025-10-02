@@ -10,9 +10,15 @@ internal class TimetableContextMenuDelegateForYouTube @Inject constructor(
     private val repository: YouTubeRepository,
     private val launchApp: LaunchAppWithUrlUseCase,
 ) : TimetableContextMenuSelector {
-    override fun findMenuItems(video: LiveVideo<*>): List<TimetableMenuItem> {
-        return listOfNotNull(
-            if (video is LiveVideo.FreeChat) TimetableMenuItem.REMOVE_FREE_CHAT else TimetableMenuItem.ADD_FREE_CHAT,
+    override fun findMenuItems(video: LiveVideo<*>): List<TimetableMenuItem> = when (video) {
+        is LiveVideo.FreeChat -> listOf(
+            TimetableMenuItem.REMOVE_FREE_CHAT,
+            if (video.isPinned) TimetableMenuItem.UNPIN else TimetableMenuItem.PIN_TO_TOP,
+            TimetableMenuItem.LAUNCH_LIVE,
+        )
+
+        else -> listOf(
+            TimetableMenuItem.ADD_FREE_CHAT,
             TimetableMenuItem.LAUNCH_LIVE,
         )
     }
@@ -20,17 +26,11 @@ internal class TimetableContextMenuDelegateForYouTube @Inject constructor(
     override suspend fun consumeMenuItem(video: LiveVideo<*>, item: TimetableMenuItem) {
         val id = video.id
         when (item) {
-            TimetableMenuItem.ADD_FREE_CHAT -> {
-                repository.addFreeChatItems(setOf(id.mapTo()))
-            }
-
-            TimetableMenuItem.REMOVE_FREE_CHAT -> {
-                repository.removeFreeChatItems(setOf(id.mapTo()))
-            }
-
-            TimetableMenuItem.LAUNCH_LIVE -> {
-                launchApp(video.url)
-            }
+            TimetableMenuItem.ADD_FREE_CHAT -> repository.addFreeChatItems(setOf(id.mapTo()))
+            TimetableMenuItem.REMOVE_FREE_CHAT -> repository.removeFreeChatItems(setOf(id.mapTo()))
+            TimetableMenuItem.LAUNCH_LIVE -> launchApp(video.url)
+            TimetableMenuItem.PIN_TO_TOP -> repository.addPinnedVideo(id.mapTo())
+            TimetableMenuItem.UNPIN -> repository.removePinnedVideo(id.mapTo())
         }
     }
 }

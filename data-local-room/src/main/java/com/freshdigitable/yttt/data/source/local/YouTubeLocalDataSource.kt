@@ -159,6 +159,14 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
         dao.addFreeChatItemEntities(ids, false, YouTubeVideo.MAX_AGE_DEFAULT)
     }
 
+    override suspend fun addPinnedVideo(id: YouTubeVideo.Id) {
+        dao.addPinnedVideo(id)
+    }
+
+    override suspend fun removePinnedVideo(id: YouTubeVideo.Id) {
+        dao.removePinnedVideo(id)
+    }
+
     override suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>) =
         ioScope.asResult { dao.addVideoEntities(video) }.getOrThrow()
 

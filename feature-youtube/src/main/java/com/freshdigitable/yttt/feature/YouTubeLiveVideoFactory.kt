@@ -49,6 +49,8 @@ internal data class YouTubeFreeChatLiveVideo(
         checkNotNull(video.scheduledStartDateTime)
     }
 
+    override val isPinned: Boolean get() = video.isPinned == true
+
     override val scheduledStartDateTime: Instant
         get() = checkNotNull(video.scheduledStartDateTime)
 }

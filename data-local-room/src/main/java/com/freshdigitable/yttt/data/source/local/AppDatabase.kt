@@ -42,6 +42,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelLogTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelRelatedPlaylistTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDaoProviders
+import com.freshdigitable.yttt.data.source.local.db.YouTubePinnedVideoTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistItemAdditionTable
@@ -72,6 +73,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         YouTubeVideoTable::class,
         YouTubeVideoDetailTable::class,
         FreeChatTable::class,
+        YouTubePinnedVideoTable::class,
         YouTubeVideoExpireTable::class,
         YouTubePlaylistTable::class,
         YouTubePlaylistExpireTable::class,
@@ -94,7 +96,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     views = [
         TwitchUserDetailDbView::class,
     ],
-    version = 26,
+    version = 27,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -108,11 +110,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 10, to = 11),
         AutoMigration(from = 11, to = 12),
         AutoMigration(from = 12, to = 13),
-        AutoMigration(
-            from = 14,
-            to = 15,
-            spec = AppDatabase.MigrateRemoveTwitchUserDetailViewsCount::class,
-        ),
+        AutoMigration(from = 14, to = 15, spec = AppDatabase.MigrateRemoveTwitchUserDetailViewsCount::class),
         AutoMigration(from = 16, to = 17, spec = AppDatabase.MigrateRenameExpiredAt::class),
         AutoMigration(from = 17, to = 18),
         AutoMigration(from = 19, to = 20),
@@ -120,6 +118,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
         AutoMigration(from = 21, to = 22, spec = AppDatabase.MigrateSeparatePlaylistItem::class),
         AutoMigration(from = 22, to = 23, spec = AppDatabase.MigrateSubscriptionOrder::class),
         AutoMigration(from = 24, to = 25),
+        AutoMigration(from = 26, to = 27),
     ],
 )
 @TypeConverters(
@@ -143,39 +142,16 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
     @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
     internal class MigrateRemoveVideoVisible : AutoMigrationSpec
 
-    @DeleteColumn.Entries(
-        DeleteColumn(
-            tableName = "twitch_user_detail",
-            columnName = "views_count",
-        ),
-    )
+    @DeleteColumn.Entries(DeleteColumn(tableName = "twitch_user_detail", columnName = "views_count"))
     internal class MigrateRemoveTwitchUserDetailViewsCount : AutoMigrationSpec
 
     @DeleteColumn.Entries(
-        DeleteColumn(
-            tableName = "channel_addition_expire",
-            columnName = "expired_at",
-        ),
-        DeleteColumn(
-            tableName = "video_expire",
-            columnName = "expired_at",
-        ),
-        DeleteColumn(
-            tableName = "twitch_user_detail_expire",
-            columnName = "expired_at",
-        ),
-        DeleteColumn(
-            tableName = "twitch_channel_schedule_expire",
-            columnName = "expired_at",
-        ),
-        DeleteColumn(
-            tableName = "twitch_stream_expire",
-            columnName = "expired_at",
-        ),
-        DeleteColumn(
-            tableName = "twitch_broadcaster_expire",
-            columnName = "expire_at",
-        ),
+        DeleteColumn(tableName = "channel_addition_expire", columnName = "expired_at"),
+        DeleteColumn(tableName = "video_expire", columnName = "expired_at"),
+        DeleteColumn(tableName = "twitch_user_detail_expire", columnName = "expired_at"),
+        DeleteColumn(tableName = "twitch_channel_schedule_expire", columnName = "expired_at"),
+        DeleteColumn(tableName = "twitch_stream_expire", columnName = "expired_at"),
+        DeleteColumn(tableName = "twitch_broadcaster_expire", columnName = "expire_at"),
     )
     internal class MigrateRenameExpiredAt : AutoMigrationSpec
 
@@ -188,9 +164,7 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
     )
     internal class MigrateSeparatePlaylistItem : AutoMigrationSpec
 
-    @DeleteColumn.Entries(
-        DeleteColumn(tableName = "subscription", columnName = "subs_order"),
-    )
+    @DeleteColumn.Entries(DeleteColumn(tableName = "subscription", columnName = "subs_order"))
     internal class MigrateSubscriptionOrder : AutoMigrationSpec
     companion object {
         private const val DATABASE_NAME = "ytttdb"

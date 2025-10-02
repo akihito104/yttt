@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment.Companion.TopEnd
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
@@ -32,10 +33,12 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
+import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.feature.timetable.TimelineItem
+import com.freshdigitable.yttt.lib.R
 import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
@@ -122,15 +125,28 @@ private fun LiveVideoListItemView(
                 )
             }
         }
-        Text(
-            text = video.title,
-            fontSize = 18.sp,
+        Row(
             modifier = Modifier
-                .then(titleModifier)
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 4.dp)
                 .padding(top = 4.dp),
-        )
+        ) {
+            if (video.isPinned == true) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_push_pin_24),
+                    contentDescription = "pinned item",
+                    modifier = Modifier
+                        .padding(start = 4.dp, top = 4.dp)
+                        .size(16.dp),
+                )
+            }
+            Text(
+                text = video.title,
+                fontSize = 18.sp,
+                modifier = titleModifier
+                    .padding(start = 4.dp),
+            )
+        }
     }
 }
 
@@ -194,8 +210,14 @@ private fun LiveVideoHeaderViewPreview() {
 
 class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
     override val values: Sequence<TimelineItem> = sequenceOf(
-        timelineItem(video = liveVideo()),
-        timelineItem(liveVideo(channelTitle = "channel title - チャンネルタイトル")),
+        timelineItem(video = upcomingVideo()),
+        timelineItem(
+            freeChat(
+                title = "予定表兼フリーチャット - this is free chat space",
+                channelTitle = "channel title - チャンネルタイトル",
+                isPinned = true,
+            ),
+        ),
     )
 
     companion object {
@@ -204,39 +226,73 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
             extraHourOfDay = Duration.ZERO,
         )
 
-        fun liveVideo(
+        fun upcomingVideo(
             title: String = "video title",
             channelTitle: String = "channel title",
             description: String = "",
             viewerCount: BigInteger? = null,
-        ): LiveVideo<*> = LiveVideoEntity(
+        ): LiveVideo<*> = LiveVideoUpcomingEntity(
             title = title,
             scheduledStartDateTime = Instant.now(),
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
-                id = YouTubeVideo.Id("b").mapTo(),
+                id = YouTubeChannel.Id("b").mapTo(),
                 platform = YouTube,
             ),
             id = YouTubeVideo.Id("a").mapTo(),
-            thumbnailUrl = "",
-            url = "",
             description = description,
             viewerCount = viewerCount,
         )
-    }
-}
 
-private data class LiveVideoEntity(
-    override val id: LiveVideo.Id,
-    override val channel: LiveChannel,
-    override val title: String,
-    override val scheduledStartDateTime: Instant = Instant.EPOCH,
-    override val scheduledEndDateTime: Instant? = null,
-    override val actualStartDateTime: Instant? = null,
-    override val actualEndDateTime: Instant? = null,
-    override val thumbnailUrl: String,
-    override val url: String,
-    override val description: String,
-    override val viewerCount: BigInteger?,
-) : LiveVideo.Upcoming
+        fun freeChat(
+            title: String = "video title",
+            channelTitle: String = "channel title",
+            description: String = "",
+            viewerCount: BigInteger? = null,
+            isPinned: Boolean = false,
+        ): LiveVideo<*> = LiveVideoFreeChatEntity(
+            title = title,
+            scheduledStartDateTime = Instant.now(),
+            channel = LiveChannelEntity(
+                title = channelTitle,
+                iconUrl = "",
+                id = YouTubeChannel.Id("b").mapTo(),
+                platform = YouTube,
+            ),
+            id = YouTubeVideo.Id("a").mapTo(),
+            description = description,
+            viewerCount = viewerCount,
+            isPinned = isPinned,
+        )
+    }
+
+    private data class LiveVideoUpcomingEntity(
+        override val id: LiveVideo.Id,
+        override val channel: LiveChannel,
+        override val title: String,
+        override val scheduledStartDateTime: Instant = Instant.EPOCH,
+        override val scheduledEndDateTime: Instant? = null,
+        override val actualStartDateTime: Instant? = null,
+        override val actualEndDateTime: Instant? = null,
+        override val thumbnailUrl: String = "",
+        override val url: String = "",
+        override val description: String = "",
+        override val viewerCount: BigInteger? = null,
+    ) : LiveVideo.Upcoming
+
+    private data class LiveVideoFreeChatEntity(
+        override val id: LiveVideo.Id,
+        override val channel: LiveChannel,
+        override val title: String,
+        override val scheduledStartDateTime: Instant = Instant.EPOCH,
+        override val scheduledEndDateTime: Instant? = null,
+        override val actualStartDateTime: Instant? = null,
+        override val actualEndDateTime: Instant? = null,
+        override val thumbnailUrl: String = "",
+        override val url: String = "",
+        override val description: String = "",
+        override val viewerCount: BigInteger? = null,
+        override val isPinned: Boolean,
+    ) : LiveVideo.FreeChat
+}

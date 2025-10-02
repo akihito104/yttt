@@ -95,6 +95,8 @@ interface YouTubeVideoDataSource {
 
         suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
         suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
+        suspend fun addPinnedVideo(id: YouTubeVideo.Id)
+        suspend fun removePinnedVideo(id: YouTubeVideo.Id)
     }
 
     interface Remote : YouTubeVideoDataSource {
