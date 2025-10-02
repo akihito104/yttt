@@ -59,6 +59,7 @@ fun LazyListScope.simpleContent(
     ) { _, item ->
         LiveVideoListItemView(
             video = item,
+            modifier = Modifier.animateItem(),
             thumbnailModifier = thumbnailModifier(item.id),
             titleModifier = titleModifier(item.id),
             onItemClick = { onListItemClicked(item.id) },
@@ -85,6 +86,7 @@ fun LazyListScope.groupedContent(
         ) { _, item ->
             LiveVideoListItemView(
                 video = item,
+                modifier = Modifier.animateItem(),
                 thumbnailModifier = thumbnailModifier(item.id),
                 titleModifier = titleModifier(item.id),
                 onItemClick = { onListItemClicked(item.id) },
