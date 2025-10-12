@@ -7,7 +7,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import io.kotest.assertions.asClue
-import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -38,12 +37,10 @@ class YouTubeVideoTablesTest {
 
         @Test
         fun watchAllUnfinished_returnEmpty() = dbRule.runWithDao { dao ->
-            // exercise
-            val actual = dao.watchAllUnfinishedVideos()
             // verify
-            actual.test {
-                awaitItem().shouldBeEmpty()
-            }
+            dbRule.liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            dbRule.liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            dbRule.liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
         }
     }
 
@@ -209,17 +206,15 @@ class YouTubeVideoTablesTest {
                     ),
                 ),
             )
-            // exercise
-            val actual = dao.watchAllUnfinishedVideos()
             // verify
-            actual.test {
-                val item = awaitItem()
-                item.asClue {
-                    it.forAll { i -> i.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
-                    it.map { i -> i.id }.shouldContainExactlyInAnyOrder(
-                        simple, freechat, hasNoExpire, live, upcoming,
-                    )
-                }
+            dbRule.liveDataSource.onAir.test {
+                awaitItem().map { it.id.value }.shouldContainExactlyInAnyOrder(live.value)
+            }
+            dbRule.liveDataSource.upcoming.test {
+                awaitItem().map { it.id.value }.shouldContainExactlyInAnyOrder(upcoming.value, simple.value)
+            }
+            dbRule.liveDataSource.freeChat.test {
+                awaitItem().map { it.id.value }.shouldContainExactlyInAnyOrder(freechat.value)
             }
         }
     }

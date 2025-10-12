@@ -17,7 +17,6 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
@@ -156,18 +155,6 @@ internal data class YouTubeVideoDb(
                 "WHERE broadcast_content IS NOT NULL AND v.video_id IN (:ids)",
         )
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<UpdatableYouTubeVideoDb>
-
-        @Query(
-            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
-                " video.broadcast_content AS broadcast_content, p.video_id IS NOT NULL AS is_pinned " +
-                "FROM video_detail AS v " +
-                "INNER JOIN video ON video.id = v.video_id " +
-                "INNER JOIN channel AS c ON c.id = v.channel_id " +
-                "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
-                "LEFT OUTER JOIN yt_pinned AS p ON v.video_id = p.video_id " +
-                "WHERE broadcast_content IS NOT NULL AND broadcast_content IS NOT 'none'",
-        )
-        fun watchAllUnfinishedVideos(): Flow<List<YouTubeVideoDb>>
     }
 }
 

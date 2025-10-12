@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
+import com.freshdigitable.yttt.data.model.LiveTimelineItem
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
@@ -37,9 +38,9 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimelineItem
 import com.freshdigitable.yttt.lib.R
-import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
@@ -221,19 +222,17 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
     )
 
     companion object {
-        fun timelineItem(video: LiveVideo<*>): TimelineItem = TimelineItem(
+        fun timelineItem(video: LiveTimelineItem): TimelineItem = TimelineItem.Simple(
             video = video,
-            extraHourOfDay = Duration.ZERO,
+            timeAdjustment = TimeAdjustment(Duration.ZERO),
         )
 
         fun upcomingVideo(
             title: String = "video title",
             channelTitle: String = "channel title",
-            description: String = "",
-            viewerCount: BigInteger? = null,
-        ): LiveVideo<*> = LiveVideoUpcomingEntity(
+        ): LiveTimelineItem = LiveVideoUpcomingEntity(
             title = title,
-            scheduledStartDateTime = Instant.now(),
+            dateTime = Instant.now(),
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
@@ -241,19 +240,15 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
                 platform = YouTube,
             ),
             id = YouTubeVideo.Id("a").mapTo(),
-            description = description,
-            viewerCount = viewerCount,
         )
 
         fun freeChat(
             title: String = "video title",
             channelTitle: String = "channel title",
-            description: String = "",
-            viewerCount: BigInteger? = null,
             isPinned: Boolean = false,
-        ): LiveVideo<*> = LiveVideoFreeChatEntity(
+        ): LiveTimelineItem = LiveVideoUpcomingEntity(
             title = title,
-            scheduledStartDateTime = Instant.now(),
+            dateTime = Instant.now(),
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
@@ -261,8 +256,6 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
                 platform = YouTube,
             ),
             id = YouTubeVideo.Id("a").mapTo(),
-            description = description,
-            viewerCount = viewerCount,
             isPinned = isPinned,
         )
     }
@@ -271,28 +264,8 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
         override val id: LiveVideo.Id,
         override val channel: LiveChannel,
         override val title: String,
-        override val scheduledStartDateTime: Instant = Instant.EPOCH,
-        override val scheduledEndDateTime: Instant? = null,
-        override val actualStartDateTime: Instant? = null,
-        override val actualEndDateTime: Instant? = null,
+        override val dateTime: Instant = Instant.EPOCH,
         override val thumbnailUrl: String = "",
-        override val url: String = "",
-        override val description: String = "",
-        override val viewerCount: BigInteger? = null,
-    ) : LiveVideo.Upcoming
-
-    private data class LiveVideoFreeChatEntity(
-        override val id: LiveVideo.Id,
-        override val channel: LiveChannel,
-        override val title: String,
-        override val scheduledStartDateTime: Instant = Instant.EPOCH,
-        override val scheduledEndDateTime: Instant? = null,
-        override val actualStartDateTime: Instant? = null,
-        override val actualEndDateTime: Instant? = null,
-        override val thumbnailUrl: String = "",
-        override val url: String = "",
-        override val description: String = "",
-        override val viewerCount: BigInteger? = null,
-        override val isPinned: Boolean,
-    ) : LiveVideo.FreeChat
+        override val isPinned: Boolean? = null,
+    ) : LiveTimelineItem
 }

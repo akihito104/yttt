@@ -15,6 +15,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
+import com.freshdigitable.yttt.data.source.LiveDataSource
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
@@ -43,8 +44,6 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
 import dagger.multibindings.IntoMap
-import io.kotest.assertions.asClue
-import io.kotest.inspectors.shouldForAll
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.ints.shouldBeGreaterThan
@@ -82,10 +81,10 @@ class FetchYouTubeStreamUseCaseTest {
         val traceRule = AppTraceVerifier()
 
         @Inject
-        lateinit var localSource: YouTubeDataSource.Local
+        lateinit var extendedSource: YouTubeDataSource.Extended
 
         @Inject
-        lateinit var extendedSource: YouTubeDataSource.Extended
+        lateinit var liveDataSource: LiveDataSource
 
         @Inject
         internal lateinit var sut: FetchYouTubeStreamUseCase
@@ -113,9 +112,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            extendedSource.videos.test {
-                awaitItem().shouldBeEmpty()
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -140,9 +139,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            extendedSource.videos.test {
-                awaitItem().shouldBeEmpty()
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -158,9 +157,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            extendedSource.videos.test {
-                awaitItem().shouldBeEmpty()
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.EPOCH
         }
 
@@ -168,16 +167,20 @@ class FetchYouTubeStreamUseCaseTest {
         fun videoFromNewPlaylistItem_returns20Videos() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.setup(10, 2, current)
+            FakeYouTubeClientModule.setup(10, 2, current) { i, c ->
+                video(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
+            }
             hiltRule.inject()
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            extendedSource.videos.test {
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test {
                 awaitItem() shouldHaveSize 20
             }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.fetchUpdatableVideoIds(current + Duration.ofHours(3)) shouldHaveSize 20
         }
 
@@ -194,9 +197,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            extendedSource.videos.test {
-                awaitItem().shouldBeEmpty()
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe current
         }
 
@@ -247,10 +250,9 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             FakeYouTubeClientModule.setup(10, 2, current).apply {
-                val base = video!!
                 video = { id ->
                     if (id.any { it.value.contains("1") }) throw YouTubeException.internalServerError()
-                    else base.invoke(id)
+                    else videoDefault.invoke(id)
                 }
             }
             hiltRule.inject()
@@ -262,34 +264,36 @@ class FetchYouTubeStreamUseCaseTest {
         }
 
         @Test
-        fun videoFromNewPlaylistItem_fetch2PagesOfSubscription_returns200Videos() =
-            testScope.runTest {
-                // setup
-                FakeYouTubeAccountModule.account = "account"
-                FakeYouTubeClientModule.setup(100, 2, current)
-                hiltRule.inject()
-                // exercise
-                val actual = sut.invoke()
-                advanceUntilIdle()
-                // verify
-                actual.shouldBeSuccess()
-                extendedSource.videos.test {
-                    awaitItem() shouldHaveSize 200
-                }
-                extendedSource.subscriptionsFetchedAt shouldBe current
+        fun videoFromNewPlaylistItem_fetch2PagesOfSubscription_returns200Videos() = testScope.runTest {
+            // setup
+            FakeYouTubeAccountModule.account = "account"
+            FakeYouTubeClientModule.setup(100, 2, current) { i, c ->
+                video(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
+            hiltRule.inject()
+            // exercise
+            val actual = sut.invoke()
+            advanceUntilIdle()
+            // verify
+            actual.shouldBeSuccess()
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test {
+                awaitItem() shouldHaveSize 200
+            }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            extendedSource.subscriptionsFetchedAt shouldBe current
+        }
 
         @Test
         fun failedToGetChannelDetailsAt2ndPageOfSubscription_returnsFailure() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             FakeYouTubeClientModule.setup(100, 2, current).apply {
-                val channel = channel
                 var page = 0
                 this.channel = {
                     if (page == 0) {
                         page++
-                        channel!!.invoke(it)
+                        channelDefault(it)
                     } else throw YouTubeException.internalServerError()
                 }
             }
@@ -317,6 +321,9 @@ class FetchYouTubeStreamUseCaseTest {
         lateinit var extendedSource: YouTubeDataSource.Extended
 
         @Inject
+        lateinit var liveDataSource: LiveDataSource
+
+        @Inject
         internal lateinit var sut: FetchYouTubeStreamUseCase
         private val current = Instant.parse("2025-04-20T00:00:00Z")
         private lateinit var fakeClient: FakeYouTubeClientImpl
@@ -338,50 +345,12 @@ class FetchYouTubeStreamUseCaseTest {
         }
 
         @Test
-        fun videoFromNewPlaylistItem_has1Subscription_fetch2PagesOfSubscription_returns200Videos() =
-            testScope.runTest {
-                // setup
-                FakeDateTimeProviderModule.apply {
-                    onTimeAdvanced = { fakeClient.setup(100, 2, it, ::video) }
-                    instant = current + Duration.ofHours(3)
-                }
-                // exercise
-                val actual = sut.invoke()
-                advanceUntilIdle()
-                // verify
-                actual.shouldBeSuccess()
-                extendedSource.videos.test {
-                    awaitItem() shouldHaveSize 200
-                }
-                extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
-            }
-
-        @Test
-        fun subscriptionIsRemoved_returns18VideosAnd9Subscriptions() = testScope.runTest {
-            // setup
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = { fakeClient.setup(9, 2, it, ::video) }
-                instant = current + Duration.ofHours(3)
-            }
-            // exercise
-            val actual = sut.invoke()
-            advanceUntilIdle()
-            // verify
-            actual.shouldBeSuccess()
-            localSource.fetchSubscriptionIds() shouldHaveSize 9
-            extendedSource.videos.test {
-                awaitItem() shouldHaveSize 18
-            }
-            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
-        }
-
-        @Test
-        fun videoFromNewPlaylistItem_update10Subscription() = testScope.runTest {
+        fun videoFromNewPlaylistItem_has1Subscription_fetch2PagesOfSubscription_returns200Videos() = testScope.runTest {
             // setup
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.setup(10, 3, it) { i, c ->
-                        video(i, c, YouTubeVideo.BroadcastType.LIVE)
+                    fakeClient.setup(100, 2, it) { i, c ->
+                        video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
                     }
                 }
                 instant = current + Duration.ofHours(3)
@@ -391,12 +360,59 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            extendedSource.videos.test {
-                awaitItem().asClue { a ->
-                    a shouldHaveSize 30
-                    a.shouldForAll { it.isNowOnAir() }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(200) }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+        }
+
+        @Test
+        fun subscriptionIsRemoved_returns18VideosAnd9Subscriptions() = testScope.runTest {
+            // setup
+            FakeDateTimeProviderModule.apply {
+                onTimeAdvanced = {
+                    fakeClient.setup(9, 2, it) { i, c ->
+                        video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                    }
                 }
+                instant = current + Duration.ofHours(3)
             }
+            // exercise
+            val actual = sut.invoke()
+            advanceUntilIdle()
+            // verify
+            actual.shouldBeSuccess()
+            localSource.fetchSubscriptionIds() shouldHaveSize 9
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(18) }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
+        }
+
+        @Test
+        fun videoFromNewPlaylistItem_update10Subscription() = testScope.runTest {
+            // setup
+            FakeDateTimeProviderModule.apply {
+                onTimeAdvanced = {
+                    fakeClient.setup(10, 3, it) { i, c ->
+                        video(
+                            i,
+                            c,
+                            YouTubeVideo.BroadcastType.LIVE,
+                            actualStartDateTime = current - Duration.ofHours(2),
+                        )
+                    }
+                }
+                instant = current + Duration.ofHours(3)
+            }
+            // exercise
+            val actual = sut.invoke()
+            advanceUntilIdle()
+            // verify
+            actual.shouldBeSuccess()
+            liveDataSource.onAir.test { awaitItem().shouldHaveSize(30) }
+            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
 
@@ -405,7 +421,9 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.setup(10, 3, it, ::video)
+                    fakeClient.setup(10, 3, it) { i, c ->
+                        video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                    }
                     val base = fakeClient.playlistItem!!
                     fakeClient.playlistItem = { id ->
                         if (id.value.contains("1")) throw YouTubeException.notModified(
@@ -421,9 +439,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            extendedSource.videos.test {
-                awaitItem() shouldHaveSize 28
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(28) }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
     }
@@ -437,10 +455,10 @@ class FetchYouTubeStreamUseCaseTest {
         val traceRule = AppTraceVerifier()
 
         @Inject
-        lateinit var localSource: YouTubeDataSource.Local
+        lateinit var extendedSource: YouTubeDataSource.Extended
 
         @Inject
-        lateinit var extendedSource: YouTubeDataSource.Extended
+        lateinit var liveDataSource: LiveDataSource
 
         @Inject
         internal lateinit var sut: FetchYouTubeStreamUseCase
@@ -469,7 +487,11 @@ class FetchYouTubeStreamUseCaseTest {
         fun allPageIsNotModified() = testScope.runTest {
             // setup
             FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = { fakeClient.update(3, it, ::video) }
+                onTimeAdvanced = {
+                    fakeClient.update(3, it) { i, c ->
+                        video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                    }
+                }
                 instant = current + Duration.ofHours(3)
             }
             val networkRes = fakeClient.wrapSubscriptionAsResult()
@@ -478,9 +500,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            extendedSource.videos.test {
-                awaitItem() shouldHaveSize (150 * 3)
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(150 * 3) }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -493,7 +515,11 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 50 }
             FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = { fakeClient.update(3, it, ::video) }
+                onTimeAdvanced = {
+                    fakeClient.update(3, it) { i, c ->
+                        video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                    }
+                }
                 instant = current + Duration.ofHours(3)
             }
             val networkRes = fakeClient.wrapSubscriptionAsResult()
@@ -502,9 +528,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            extendedSource.videos.test {
-                awaitItem() shouldHaveSize (149 * 3)
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(149 * 3) }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -517,7 +543,11 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
             FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = { fakeClient.update(3, it, ::video) }
+                onTimeAdvanced = {
+                    fakeClient.update(3, it) { i, c ->
+                        video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                    }
+                }
                 instant = current + Duration.ofHours(3)
             }
             val networkRes = fakeClient.wrapSubscriptionAsResult()
@@ -526,9 +556,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            extendedSource.videos.test {
-                awaitItem() shouldHaveSize (149 * 3)
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(149 * 3) }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -541,7 +571,11 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
             FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = { fakeClient.update(3, it, ::video) }
+                onTimeAdvanced = {
+                    fakeClient.update(3, it) { i, c ->
+                        video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                    }
+                }
                 instant = current + Duration.ofHours(3)
             }
             val s = checkNotNull(fakeClient.subscription)
@@ -558,9 +592,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            extendedSource.videos.test {
-                awaitItem().size.shouldBeGreaterThan(300)
-            }
+            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            liveDataSource.upcoming.test { awaitItem().size.shouldBeGreaterThan(300) }
+            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe current
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -589,24 +623,27 @@ private fun FakeYouTubeClientModule.Companion.setup(
     subscriptionCount: Int,
     itemsPerPlaylist: Int,
     current: Instant,
+    videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo = ::video,
 ): FakeYouTubeClientImpl = FakeYouTubeClientImpl()
-    .apply { setup(subscriptionCount, itemsPerPlaylist, current, ::video) }
+    .apply { setup(subscriptionCount, itemsPerPlaylist, current, videoFactory) }
     .also { client = it }
 
 internal fun video(
     id: Int,
     channel: YouTubeChannel,
     liveBroadcastContent: YouTubeVideo.BroadcastType = YouTubeVideo.BroadcastType.UPCOMING,
+    scheduleStartDateTime: Instant = Instant.EPOCH,
+    actualStartDateTime: Instant = Instant.EPOCH,
 ): YouTubeVideo = object : YouTubeVideo {
     override val id: YouTubeVideo.Id = YouTubeVideo.Id("${channel.id.value}-video_$id")
     override val channel: YouTubeChannel = channel
     override val liveBroadcastContent: YouTubeVideo.BroadcastType = liveBroadcastContent
     override val title: String = ""
     override val thumbnailUrl: String = ""
-    override val scheduledStartDateTime: Instant? = Instant.EPOCH
+    override val scheduledStartDateTime: Instant? = scheduleStartDateTime
     override val scheduledEndDateTime: Instant? = null
     override val actualStartDateTime: Instant? =
-        if (liveBroadcastContent == YouTubeVideo.BroadcastType.LIVE) Instant.EPOCH else null
+        if (liveBroadcastContent == YouTubeVideo.BroadcastType.LIVE) actualStartDateTime else null
     override val actualEndDateTime: Instant? = null
     override val description: String = ""
     override val viewerCount: BigInteger? = BigInteger.ONE
@@ -628,7 +665,9 @@ private class FakeYouTubeClientImpl(
     var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItem>>)? = null,
     var video: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
 ) : FakeYouTubeClient() {
+    var current: Instant? = null
     var channelDetail: List<YouTubeChannelDetail> = emptyList()
+    var videos: List<YouTubeVideo> = emptyList()
 
     companion object {
         private val md = MessageDigest.getInstance("SHA-256")
@@ -639,6 +678,7 @@ private class FakeYouTubeClientImpl(
             videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo,
         ) {
             logD { "setup:$subscriptionCount,$itemsPerPlaylist,$current,$videoFactory" }
+            this.current = current
             channelDetail = (1..subscriptionCount).map { channelDetail(it) }
                 .sortedBy { it.title.lowercase() }
             update(itemsPerPlaylist, current, videoFactory)
@@ -649,10 +689,7 @@ private class FakeYouTubeClientImpl(
             current: Instant,
             videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo,
         ) {
-            channel = { id ->
-                val c = channelDetail.associateBy { it.id }
-                id.mapNotNull { c[it] }.toUpdatable(CacheControl.fromRemote(current))
-            }
+            this.current = current
             val chunked = channelDetail.chunked(50)
             val subRes = chunked.mapIndexed { i, c ->
                 val sub = c.map { subscription("s_${it.id.value}", it) }
@@ -675,11 +712,9 @@ private class FakeYouTubeClientImpl(
                     cacheControl = CacheControl.create(current, null),
                 )
             }
-            val videos = channelDetail.flatMap { c ->
+            videos = channelDetail.flatMap { c ->
                 (1..itemsPerPlaylist).map { videoFactory(it, c) }
             }
-            val v = videos.associateBy { it.id }
-            video = { id -> id.mapNotNull { v[it] }.toUpdatable(current) }
             val pi = channelDetail.associate { c ->
                 c.uploadedPlayList!! to videos.filter { it.channel.id == c.id }
                     .mapIndexed { i, v -> playlistItem(i, c, v.id) }
@@ -694,15 +729,29 @@ private class FakeYouTubeClientImpl(
         return subscription!!.invoke(query.nextPageToken, query.eTag)
     }
 
-    override fun fetchChannelRelatedPlaylistList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> {
+    val channelDefault: (Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelRelatedPlaylist>> = { id ->
+        val c = channelDetail.associateBy { it.id }
+        id.mapNotNull { c[it] }.toUpdatable(CacheControl.fromRemote(current!!))
+    }
+
+    override fun fetchChannelRelatedPlaylistList(
+        ids: Set<YouTubeChannel.Id>,
+    ): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> {
         logD { "fetchChannelRelatedPlaylistList: $ids" }
-        return NetworkResponse.create(channel!!.invoke(ids))
+        val channel = this.channel ?: channelDefault
+        return NetworkResponse.create(channel(ids))
+    }
+
+    val videoDefault: (Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>> = { id ->
+        val v = videos.associateBy { it.id }
+        id.mapNotNull { v[it] }.toUpdatable(current)
     }
 
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
         check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-        return NetworkResponse.create(video!!.invoke(ids))
+        val video = this.video ?: videoDefault
+        return NetworkResponse.create(video(ids))
     }
 
     override fun fetchPlaylistItems(

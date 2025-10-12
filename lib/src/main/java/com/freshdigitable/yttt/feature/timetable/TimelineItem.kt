@@ -1,8 +1,7 @@
 package com.freshdigitable.yttt.feature.timetable
 
 import androidx.compose.runtime.Immutable
-import com.freshdigitable.yttt.data.model.LiveChannel
-import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveTimelineItem
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.dateTimeFormatter
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
@@ -13,51 +12,37 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
 
-@Immutable
-data class TimelineItem(
-    private val video: LiveVideo<*>,
-    private val extraHourOfDay: Duration,
-    private val zoneId: ZoneId = ZoneId.systemDefault(),
-    private val locale: Locale = Locale.getDefault(),
-) {
-    val id: LiveVideo.Id
-        get() = video.id
-    val thumbnail: LiveVideoThumbnail
-        get() = video
-    val title: String
-        get() = video.title
-    val channel: LiveChannel
-        get() = video.channel
-    private val dateTimeToDisplay: Instant
-        get() = when (video) {
-            is LiveVideo.OnAir -> video.actualStartDateTime
-            is LiveVideo.Upcoming -> video.scheduledStartDateTime
-            is LiveVideo.FreeChat -> video.scheduledStartDateTime
-            else -> error("unsupported LiveVideo type: ${video.javaClass.name}")
-        }
-    val localDateTimeText: String
-        get() {
-            val localDateTime = (dateTimeToDisplay - extraHourOfDay).toLocalDateTime(zoneId)
-            val hour = localDateTime.hour + extraHourOfDay.toHours()
-            return localDateTime.format(dateTimeFormatter(locale))
+sealed class TimelineItem(
+    video: LiveTimelineItem,
+    timeAdjustment: TimeAdjustment,
+) : LiveTimelineItem by video {
+    val thumbnail: LiveVideoThumbnail get() = this
+    val localDateTimeText: String = video.dateTime.toAdjustedLocalDateTimeText(timeAdjustment)
+
+    @Immutable
+    data class Simple(val video: LiveTimelineItem, val timeAdjustment: TimeAdjustment) :
+        TimelineItem(video, timeAdjustment)
+
+    @Immutable
+    data class Grouped(val video: LiveTimelineItem, val timeAdjustment: TimeAdjustment) :
+        TimelineItem(video, timeAdjustment) {
+        internal val groupKey: GroupKey? = GroupKey.create(
+            video.dateTime,
+            timeAdjustment.extraHourOfDay,
+            timeAdjustment.zoneId,
+        )
+    }
+
+    companion object {
+        private val REGEX_LOCAL_DATETIME_TEXT = """^(.*)\s(\d{1,2}):(.*)$""".toRegex()
+        fun Instant.toAdjustedLocalDateTimeText(timeAdjustment: TimeAdjustment): String {
+            val localDateTime = (this - timeAdjustment.extraHourOfDay).toLocalDateTime(timeAdjustment.zoneId)
+            val hour = localDateTime.hour + timeAdjustment.extraHourOfDay.toHours()
+            return localDateTime.format(dateTimeFormatter(timeAdjustment.locale))
                 .replace(REGEX_LOCAL_DATETIME_TEXT) {
                     "${it.groupValues[1]} ${hour.toString().padStart(2, '0')}:${it.groupValues[3]}"
                 }
         }
-    internal val groupKey: GroupKey?
-        get() = when (video) {
-            is LiveVideo.Upcoming -> GroupKey.create(
-                video.scheduledStartDateTime,
-                extraHourOfDay,
-                zoneId,
-            )
-
-            else -> null
-        }
-    val isPinned: Boolean? get() = (video as? LiveVideo.FreeChat)?.isPinned
-
-    companion object {
-        private val REGEX_LOCAL_DATETIME_TEXT = """^(.*)\s(\d{1,2}):(.*)$""".toRegex()
     }
 }
 
@@ -77,3 +62,9 @@ internal data class GroupKey(
         )
     }
 }
+
+data class TimeAdjustment(
+    val extraHourOfDay: Duration,
+    val zoneId: ZoneId = ZoneId.systemDefault(),
+    val locale: Locale = Locale.getDefault(),
+)

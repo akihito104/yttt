@@ -2,6 +2,8 @@ package com.freshdigitable.yttt.feature.timetable
 
 import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.data.SettingRepository
+import com.freshdigitable.yttt.data.model.LiveTimelineItem
+import com.freshdigitable.yttt.data.source.LiveDataSource
 import com.freshdigitable.yttt.logI
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -21,10 +23,15 @@ internal interface TimetablePageDelegate {
 }
 
 internal class TimetablePageDelegateImpl @Inject constructor(
-    items: Map<TimetablePage, @JvmSuppressWildcards Set<FetchTimetableItemSourceUseCase>>,
+    liveDataSource: LiveDataSource,
     settingRepository: SettingRepository,
 ) : TimetablePageDelegate {
-    private val factory = items.mapValues { (k, v) -> Factory(k, v, settingRepository) }
+    private val factory = mapOf(
+        TimetablePage.OnAir to Factory(TimetablePage.OnAir, { liveDataSource.onAir }, settingRepository),
+        TimetablePage.Upcoming to Factory(TimetablePage.Upcoming, { liveDataSource.upcoming }, settingRepository),
+        TimetablePage.FreeChat to Factory(TimetablePage.FreeChat, { liveDataSource.freeChat }, settingRepository),
+    )
+
     override fun getSimpleItemList(page: TimetablePage): Flow<List<TimelineItem>> =
         checkNotNull(factory[page]).simpleItem
 
@@ -37,23 +44,25 @@ internal class TimetablePageDelegateImpl @Inject constructor(
 
     private class Factory(
         page: TimetablePage,
-        useCase: Set<FetchTimetableItemSourceUseCase>,
+        useCase: () -> Flow<List<LiveTimelineItem>>,
         settingRepository: SettingRepository,
     ) {
-        private val extraHourOfDay = settingRepository.changeDateTime.map {
-            Duration.ofHours(((it ?: 24) - 24).toLong())
+        private val timeAdjustment = settingRepository.changeDateTime.map {
+            TimeAdjustment(Duration.ofHours(((it ?: 24) - 24).toLong()))
         }
 
         @OptIn(FlowPreview::class)
-        private val videos = combine(useCase.map { it() }) { v -> v.flatMap { it } }
+        private val videos = combine(useCase()) { v -> v.flatMap { it } }
             .debounce(50.milliseconds)
-            .map { v -> v.sortedWith(compareBy { it }) }
             .onEach { logI { "${page.name}: size=${it.size}" } }
-        val simpleItem = combine(videos, extraHourOfDay) { v, e ->
-            v.map { TimelineItem(it, e) }
+        val simpleItem = combine(videos, timeAdjustment) { v, a ->
+            when (page.type) {
+                TimetablePage.Type.SIMPLE -> v.map { TimelineItem.Simple(it, a) }
+                TimetablePage.Type.GROUPED -> v.map { TimelineItem.Grouped(it, a) }
+            }
         }
         val groupedItem = simpleItem.map { v ->
-            v.filter { it.groupKey != null }
+            v.filterIsInstance<TimelineItem.Grouped>()
                 .groupBy { checkNotNull(it.groupKey) }
                 .mapKeys { (k, _) -> k.text }
         }

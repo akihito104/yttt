@@ -31,6 +31,7 @@ import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -49,9 +50,9 @@ class YouTubeLocalDataSourceTest {
     class Init : Base() {
         @Test
         fun videoFlowIsEmpty() = rule.runWithLocalSource {
-            extendedSource.videos.test {
-                awaitItem().shouldBeEmpty()
-            }
+            rule.liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
+            rule.liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
+            rule.liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
         }
 
         @Test
@@ -64,9 +65,9 @@ class YouTubeLocalDataSourceTest {
         fun addVideo_addedLiveAndUpcomingItems() = rule.runWithLocalSource {
             // setup
             val unfinished = listOf(
-                YouTubeVideoEntity.liveStreaming(),
-                YouTubeVideoEntity.upcomingStream(),
-                YouTubeVideoEntity.unscheduledUpcoming(),
+                YouTubeVideoEntity.liveStreaming(id = "live_streaming"),
+                YouTubeVideoEntity.upcomingStream(id = "upcoming"),
+                YouTubeVideoEntity.unscheduledUpcoming(id = "upcoming_unscheduled"),
             )
             val inactive = listOf(
                 YouTubeVideoEntity.uploadedVideo(),
@@ -80,8 +81,11 @@ class YouTubeLocalDataSourceTest {
             // verify
             val found = dao.findVideosById(video.map { it.item.id })
             found.containsVideoIdInAnyOrderElementsOf(video)
-            dao.watchAllUnfinishedVideos().test {
-                awaitItem().containsVideoIdInAnyOrder(*unfinished.map { it.item }.toTypedArray())
+            rule.liveDataSource.onAir.test {
+                awaitItem().map { it.id.value }.shouldContainInOrder("live_streaming")
+            }
+            rule.liveDataSource.upcoming.test {
+                awaitItem().map { it.id.value }.shouldContainInOrder("upcoming")
             }
             dao.findAllArchivedVideos()
                 .shouldContainExactlyInAnyOrder(inactive.map { it.item.id })
