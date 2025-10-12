@@ -5,9 +5,17 @@ import android.database.Cursor
 import androidx.room.Room
 import androidx.room.util.useCursor
 import androidx.test.core.app.ApplicationProvider
+import com.freshdigitable.yttt.data.model.DateTimeProvider
+import com.freshdigitable.yttt.data.model.Twitch
+import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
+import com.freshdigitable.yttt.data.source.LiveDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
+import com.freshdigitable.yttt.data.source.local.LiveLocalDataSource
+import com.freshdigitable.yttt.data.source.local.db.LiveDao
+import com.freshdigitable.yttt.data.source.local.db.LivePlatformConverter
+import com.freshdigitable.yttt.data.source.local.db.LiveTimelineItemDaoImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -15,6 +23,7 @@ import org.junit.rules.RuleChain
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
+import java.time.Instant
 
 internal class DatabaseTestRule : TestWatcher() {
     internal lateinit var database: AppDatabase
@@ -22,7 +31,9 @@ internal class DatabaseTestRule : TestWatcher() {
 
     override fun starting(description: Description?) {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+            .addTypeConverter(LivePlatformConverter(setOf(Twitch, YouTube)))
+            .build()
     }
 
     override fun finished(description: Description?) {
@@ -35,6 +46,15 @@ internal abstract class DataSourceTestRule<Dao, Local, Extended> : TestWatcher()
     internal val database: AppDatabase get() = databaseRule.database
     private var _dao: Dao? = null
     protected val dao: Dao get() = checkNotNull(_dao)
+    val liveDataSource: LiveDataSource by lazy {
+        LiveLocalDataSource(
+            LiveDao(LiveTimelineItemDaoImpl(database)),
+            object : DateTimeProvider {
+                override fun now(): Instant = Instant.EPOCH
+            },
+        )
+    }
+
     fun runWithDao(body: suspend CoroutineScope.(Dao) -> Unit) = runTest { body(dao) }
     fun runWithLocalSource(body: suspend DatabaseTestScope<Dao, Local, Extended>.() -> Unit) = runTest {
         val ioScope = IoScope(StandardTestDispatcher(testScheduler))
