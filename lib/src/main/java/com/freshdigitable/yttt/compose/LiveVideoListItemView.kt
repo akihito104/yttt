@@ -39,9 +39,8 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
-import com.freshdigitable.yttt.feature.timetable.TimelineItem
+import com.freshdigitable.yttt.feature.timetable.toAdjustedLocalDateTimeText
 import com.freshdigitable.yttt.lib.R
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -49,7 +48,8 @@ import java.time.temporal.ChronoUnit
 
 @Composable
 fun LiveVideoListItemView(
-    video: TimelineItem,
+    video: LiveTimelineItem,
+    timeAdjustment: TimeAdjustment,
     onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
@@ -59,6 +59,7 @@ fun LiveVideoListItemView(
     if (onMenuClick == null) {
         LiveVideoListItemView(
             video = video,
+            timeAdjustment = timeAdjustment,
             modifier = modifier,
             thumbnailModifier = thumbnailModifier,
             titleModifier = titleModifier,
@@ -68,6 +69,7 @@ fun LiveVideoListItemView(
         Box(modifier = modifier) {
             LiveVideoListItemView(
                 video = video,
+                timeAdjustment = timeAdjustment,
                 thumbnailModifier = thumbnailModifier,
                 titleModifier = titleModifier,
                 onItemClick = onItemClick,
@@ -86,7 +88,8 @@ fun LiveVideoListItemView(
 
 @Composable
 private fun LiveVideoListItemView(
-    video: TimelineItem,
+    video: LiveTimelineItem,
+    timeAdjustment: TimeAdjustment,
     onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
@@ -103,7 +106,7 @@ private fun LiveVideoListItemView(
                 .fillMaxWidth()
                 .wrapContentHeight(),
         ) {
-            ThumbnailView(video.thumbnail, modifier = thumbnailModifier)
+            ThumbnailView(video, modifier = thumbnailModifier)
             Column(
                 modifier = Modifier
                     .wrapContentHeight()
@@ -118,7 +121,7 @@ private fun LiveVideoListItemView(
                     lineHeight = (14 * 1.25).sp,
                 )
                 Text(
-                    text = video.localDateTimeText,
+                    text = video.dateTime.toAdjustedLocalDateTimeText(timeAdjustment),
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -191,10 +194,10 @@ fun LiveVideoHeaderView(
 @PreviewLightDarkMode
 @Composable
 private fun LiveVideoListItemViewPreview(
-    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: TimelineItem,
+    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveTimelineItem,
 ) {
     AppTheme {
-        LiveVideoListItemView(video, onItemClick = {}) {}
+        LiveVideoListItemView(video, TimeAdjustment.zero(), onItemClick = {}) {}
     }
 }
 
@@ -209,24 +212,17 @@ private fun LiveVideoHeaderViewPreview() {
     }
 }
 
-class LiveVideoPreviewParamProvider : PreviewParameterProvider<TimelineItem> {
-    override val values: Sequence<TimelineItem> = sequenceOf(
-        timelineItem(video = upcomingVideo()),
-        timelineItem(
-            freeChat(
-                title = "予定表兼フリーチャット - this is free chat space",
-                channelTitle = "channel title - チャンネルタイトル",
-                isPinned = true,
-            ),
+class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveTimelineItem> {
+    override val values: Sequence<LiveTimelineItem> = sequenceOf(
+        upcomingVideo(),
+        freeChat(
+            title = "予定表兼フリーチャット - this is free chat space",
+            channelTitle = "channel title - チャンネルタイトル",
+            isPinned = true,
         ),
     )
 
     companion object {
-        fun timelineItem(video: LiveTimelineItem): TimelineItem = TimelineItem.Simple(
-            video = video,
-            timeAdjustment = TimeAdjustment(Duration.ZERO),
-        )
-
         fun upcomingVideo(
             title: String = "video title",
             channelTitle: String = "channel title",
