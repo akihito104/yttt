@@ -46,11 +46,12 @@ internal abstract class DataSourceTestRule<Dao, Local, Extended> : TestWatcher()
     internal val database: AppDatabase get() = databaseRule.database
     private var _dao: Dao? = null
     protected val dao: Dao get() = checkNotNull(_dao)
+    var current: Instant = Instant.EPOCH
     val liveDataPagingSource: LiveDataPagingSource by lazy {
         LiveLocalPagingSource(
             LiveDao(LiveTimelineItemDaoImpl(database)),
             object : DateTimeProvider {
-                override fun now(): Instant = Instant.EPOCH
+                override fun now(): Instant = current
             },
         )
     }
