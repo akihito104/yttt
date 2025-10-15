@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.db
 
+import androidx.paging.PagingSource
 import androidx.room.ColumnInfo
 import androidx.room.ProvidedTypeConverter
 import androidx.room.Query
@@ -17,7 +18,6 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -65,7 +65,7 @@ internal data class LiveTimelineOnAirItem(
         }
 
         @Query("$SQL_YOUTUBE_ON_AIR UNION $SQL_TWITCH_ON_AIR ORDER BY date_time DESC, title ASC")
-        fun watchAllOnAir(): Flow<List<LiveTimelineOnAirItem>>
+        fun getAllOnAirPagingSource(): PagingSource<Int, LiveTimelineOnAirItem>
     }
 }
 
@@ -121,7 +121,7 @@ internal data class LiveTimelineUpcomingItem(
         }
 
         @Query("$SQL_YOUTUBE_UPCOMING UNION $SQL_TWITCH_UPCOMING ORDER BY date_time ASC, title ASC")
-        fun watchAllUpcoming(current: Instant): Flow<List<LiveTimelineUpcomingItem>>
+        fun getAllUpcomingPagingSource(current: Instant): PagingSource<Int, LiveTimelineUpcomingItem>
     }
 }
 
@@ -159,7 +159,7 @@ internal data class LiveTimelineFreeChatItem(
                 "WHERE is_free_chat IS 1 AND v.broadcast_content IS NOT 'live' " +
                 "ORDER BY is_pinned DESC, c_id ASC, date_time ASC, title ASC",
         )
-        fun watchAllFreeChat(): Flow<List<LiveTimelineFreeChatItem>>
+        fun getAllFreeChatPagingSource(): PagingSource<Int, LiveTimelineFreeChatItem>
     }
 }
 

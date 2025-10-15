@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.cachedIn
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.SnackbarMessageBus
@@ -95,6 +96,9 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     val timeAdjustment: StateFlow<TimeAdjustment> = settingRepository.changeDateTime
         .map { TimeAdjustment(Duration.ofHours(((it ?: 24) - 24).toLong())) }
         .stateIn(viewModelScope, SharingStarted.Lazily, TimeAdjustment.zero())
+    val pagers = TimetablePage.entries.associateWith { p ->
+        getLiveTimelineItemPager(p).cachedIn(viewModelScope)
+    }
 
     companion object {
         @Suppress("unused")

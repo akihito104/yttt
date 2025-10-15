@@ -1,9 +1,9 @@
 package com.freshdigitable.yttt.data.source.local.db
 
-import app.cash.turbine.test
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
+import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.assertions.asClue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
@@ -20,8 +20,8 @@ class LiveFreeChatDaoTest {
         // setup
         val sut = dbRule.database.liveTimelineFreeChatItemDao
         // exercise
-        sut.watchAllFreeChat().test {
-            awaitItem().shouldBeEmpty()
+        sut.getAllFreeChatPagingSource().testWithRefresh {
+            data.shouldBeEmpty()
         }
     }
 
@@ -60,8 +60,8 @@ class LiveFreeChatDaoTest {
         dao.addPinnedVideo(pinned.item.id)
         val sut = dbRule.database.liveTimelineFreeChatItemDao
         // exercise
-        sut.watchAllFreeChat().test {
-            awaitItem().asClue { actual ->
+        sut.getAllFreeChatPagingSource().testWithRefresh {
+            data.asClue { actual ->
                 actual.map { it.id.value }.shouldContainExactly(
                     "freechat-0-1",
                     "freechat-0-0",

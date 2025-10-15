@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data.source.local
 
-import app.cash.turbine.test
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
@@ -25,6 +24,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
+import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.assertions.asClue
 import io.kotest.assertions.assertSoftly
 import io.kotest.inspectors.forAll
@@ -48,13 +48,6 @@ import java.time.Instant
 @RunWith(Enclosed::class)
 class YouTubeLocalDataSourceTest {
     class Init : Base() {
-        @Test
-        fun videoFlowIsEmpty() = rule.runWithLocalSource {
-            rule.liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            rule.liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
-            rule.liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
-        }
-
         @Test
         fun videoIsEmpty() = rule.runWithLocalSource {
             extendedSource.fetchVideoList(emptySet()).getOrNull().shouldBeEmpty()
@@ -81,11 +74,11 @@ class YouTubeLocalDataSourceTest {
             // verify
             val found = dao.findVideosById(video.map { it.item.id })
             found.containsVideoIdInAnyOrderElementsOf(video)
-            rule.liveDataSource.onAir.test {
-                awaitItem().map { it.id.value }.shouldContainInOrder("live_streaming")
+            rule.liveDataPagingSource.onAir.testWithRefresh {
+                data.map { it.id.value }.shouldContainInOrder("live_streaming")
             }
-            rule.liveDataSource.upcoming.test {
-                awaitItem().map { it.id.value }.shouldContainInOrder("upcoming")
+            rule.liveDataPagingSource.upcoming.testWithRefresh {
+                data.map { it.id.value }.shouldContainInOrder("upcoming")
             }
             dao.findAllArchivedVideos()
                 .shouldContainExactlyInAnyOrder(inactive.map { it.item.id })

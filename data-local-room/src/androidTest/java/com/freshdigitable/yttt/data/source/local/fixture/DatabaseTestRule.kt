@@ -10,9 +10,9 @@ import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
-import com.freshdigitable.yttt.data.source.LiveDataSource
+import com.freshdigitable.yttt.data.source.LiveDataPagingSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import com.freshdigitable.yttt.data.source.local.LiveLocalDataSource
+import com.freshdigitable.yttt.data.source.local.LiveLocalPagingSource
 import com.freshdigitable.yttt.data.source.local.db.LiveDao
 import com.freshdigitable.yttt.data.source.local.db.LivePlatformConverter
 import com.freshdigitable.yttt.data.source.local.db.LiveTimelineItemDaoImpl
@@ -46,8 +46,8 @@ internal abstract class DataSourceTestRule<Dao, Local, Extended> : TestWatcher()
     internal val database: AppDatabase get() = databaseRule.database
     private var _dao: Dao? = null
     protected val dao: Dao get() = checkNotNull(_dao)
-    val liveDataSource: LiveDataSource by lazy {
-        LiveLocalDataSource(
+    val liveDataPagingSource: LiveDataPagingSource by lazy {
+        LiveLocalPagingSource(
             LiveDao(LiveTimelineItemDaoImpl(database)),
             object : DateTimeProvider {
                 override fun now(): Instant = Instant.EPOCH

@@ -26,6 +26,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -61,13 +62,13 @@ internal fun TimetableTabScreen(
     val listState = TimetablePage.entries.associateWith { rememberLazyListState() }
     val timeAdjustment = viewModel.timeAdjustment.collectAsState()
     val items = TimetablePage.entries.associate {
-        it.ordinal to (it to viewModel.getLiveTimelineItemList(it).collectAsState(initial = emptyList()))
+        it.ordinal to (it to checkNotNull(viewModel.pagers[it]).collectAsLazyPagingItems())
     }
     HorizontalPagerWithTabScreen(
         tabCount = TimetablePage.entries.size,
         tab = { index ->
             val (page, item) = checkNotNull(items[index])
-            TimetableTabData(page, item.value.size).title()
+            TimetableTabData(page, item.itemCount).title()
         },
         modifier = modifier,
         tabModifier = tabModifier,
@@ -75,7 +76,7 @@ internal fun TimetableTabScreen(
         val (page, item) = checkNotNull(items[index])
         TimetableScreen(
             page = page,
-            itemProvider = { item.value },
+            itemProvider = { item },
             timeAdjustmentProvider = { timeAdjustment.value },
             lazyListState = checkNotNull(listState[page]),
             refreshingProvider = { refreshing.value },

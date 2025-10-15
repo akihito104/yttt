@@ -1,8 +1,10 @@
 package com.freshdigitable.yttt.feature.timetable
 
-import app.cash.turbine.test
+import androidx.paging.PagingSource
+import androidx.paging.testing.TestPager
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.LiveTimelineItem
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTube
@@ -15,7 +17,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
-import com.freshdigitable.yttt.data.source.LiveDataSource
+import com.freshdigitable.yttt.data.source.LiveDataPagingSource
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
@@ -36,6 +38,8 @@ import com.freshdigitable.yttt.test.fromRemote
 import com.freshdigitable.yttt.test.internalServerError
 import com.freshdigitable.yttt.test.notFound
 import com.freshdigitable.yttt.test.notModified
+import com.freshdigitable.yttt.test.testWithRefresh
+import com.freshdigitable.yttt.test.toTestPager
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -70,24 +74,7 @@ import javax.inject.Singleton
 @RunWith(Enclosed::class)
 class FetchYouTubeStreamUseCaseTest {
     @HiltAndroidTest
-    class Init {
-        @get:Rule(order = 0)
-        val hiltRule = HiltAndroidRule(this)
-
-        @get:Rule(order = 1)
-        val testScope = TestCoroutineScopeRule()
-
-        @get:Rule(order = 2)
-        val traceRule = AppTraceVerifier()
-
-        @Inject
-        lateinit var extendedSource: YouTubeDataSource.Extended
-
-        @Inject
-        lateinit var liveDataSource: LiveDataSource
-
-        @Inject
-        internal lateinit var sut: FetchYouTubeStreamUseCase
+    class Init : Base() {
         private val current = Instant.parse("2025-04-20T00:00:00Z")
 
         @Before
@@ -112,9 +99,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
         }
 
         @Test
@@ -139,9 +126,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
         }
 
         @Test
@@ -157,9 +144,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.EPOCH
         }
 
@@ -176,11 +163,11 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test {
-                awaitItem() shouldHaveSize 20
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage {
+                getPages().flatten() shouldHaveSize 20
             }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.fetchUpdatableVideoIds(current + Duration.ofHours(3)) shouldHaveSize 20
         }
 
@@ -197,9 +184,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe current
         }
 
@@ -276,11 +263,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test {
-                awaitItem() shouldHaveSize 200
-            }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage { getPages().flatten() shouldHaveSize 200 }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe current
         }
 
@@ -307,29 +292,13 @@ class FetchYouTubeStreamUseCaseTest {
     }
 
     @HiltAndroidTest
-    class AfterInit {
-        @get:Rule(order = 0)
-        val hiltRule = HiltAndroidRule(this)
-
-        @get:Rule(order = 2)
-        val traceRule = AppTraceVerifier()
-
+    class AfterInit : Base() {
         @Inject
         lateinit var localSource: YouTubeDataSource.Local
-
-        @Inject
-        lateinit var extendedSource: YouTubeDataSource.Extended
-
-        @Inject
-        lateinit var liveDataSource: LiveDataSource
-
-        @Inject
-        internal lateinit var sut: FetchYouTubeStreamUseCase
         private val current = Instant.parse("2025-04-20T00:00:00Z")
         private lateinit var fakeClient: FakeYouTubeClientImpl
 
-        @get:Rule(order = 1)
-        val testScope = TestCoroutineScopeRule(
+        override val testScope = TestCoroutineScopeRule(
             setup = {
                 FakeYouTubeAccountModule.account = "account"
                 FakeDateTimeProviderModule.instant = current
@@ -360,9 +329,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(200) }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage { getPages().flatten() shouldHaveSize 200 }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
 
@@ -383,9 +352,9 @@ class FetchYouTubeStreamUseCaseTest {
             // verify
             actual.shouldBeSuccess()
             localSource.fetchSubscriptionIds() shouldHaveSize 9
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(18) }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage { getPages().flatten() shouldHaveSize 18 }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
 
@@ -410,9 +379,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldHaveSize(30) }
-            liveDataSource.upcoming.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testForAllPage { getPages().flatten() shouldHaveSize 30 }
+            livePagingSource.upcoming.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
 
@@ -439,34 +408,19 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(28) }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage { getPages().flatten() shouldHaveSize 28 }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
     }
 
     @HiltAndroidTest
-    class SubscriptionIsNotModified {
-        @get:Rule(order = 0)
-        val hiltRule = HiltAndroidRule(this)
-
-        @get:Rule(order = 2)
-        val traceRule = AppTraceVerifier()
-
-        @Inject
-        lateinit var extendedSource: YouTubeDataSource.Extended
-
-        @Inject
-        lateinit var liveDataSource: LiveDataSource
-
-        @Inject
-        internal lateinit var sut: FetchYouTubeStreamUseCase
+    class SubscriptionIsNotModified : Base() {
         private val current = Instant.parse("2025-04-20T00:00:00Z")
         private lateinit var fakeClient: FakeYouTubeClientImpl
 
-        @get:Rule(order = 1)
-        val testScope = TestCoroutineScopeRule(
+        override val testScope = TestCoroutineScopeRule(
             setup = {
                 FakeYouTubeAccountModule.account = "account"
                 FakeDateTimeProviderModule.instant = current
@@ -500,9 +454,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(150 * 3) }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage { getPages().flatten() shouldHaveSize (150 * 3) }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -528,9 +482,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(149 * 3) }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage { getPages().flatten() shouldHaveSize (149 * 3) }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -556,9 +510,9 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeSuccess()
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().shouldHaveSize(149 * 3) }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage { getPages().flatten() shouldHaveSize (149 * 3) }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
@@ -592,14 +546,46 @@ class FetchYouTubeStreamUseCaseTest {
             advanceUntilIdle()
             // verify
             actual.shouldBeFailureOfYouTubeException(statusCode = 500)
-            liveDataSource.onAir.test { awaitItem().shouldBeEmpty() }
-            liveDataSource.upcoming.test { awaitItem().size.shouldBeGreaterThan(300) }
-            liveDataSource.freeChat.test { awaitItem().shouldBeEmpty() }
+            livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            livePagingSource.upcoming.testForAllPage { getPages().flatten().size.shouldBeGreaterThan(300) }
+            livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe current
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
             networkRes[1].shouldBeFailureOfYouTubeException(statusCode = 304)
             networkRes[2].shouldBeFailureOfYouTubeException(statusCode = 500)
+        }
+    }
+
+    abstract class Base() {
+        @get:Rule(order = 0)
+        val hiltRule = HiltAndroidRule(this)
+
+        @get:Rule(order = 1)
+        open val testScope = TestCoroutineScopeRule()
+
+        @get:Rule(order = 2)
+        val traceRule = AppTraceVerifier()
+
+        @Inject
+        lateinit var extendedSource: YouTubeDataSource.Extended
+
+        @Inject
+        lateinit var livePagingSource: LiveDataPagingSource
+
+        @Inject
+        internal lateinit var sut: FetchYouTubeStreamUseCase
+
+        suspend fun PagingSource<Int, out LiveTimelineItem>.testForAllPage(
+            verify: suspend TestPager<Int, out LiveTimelineItem>.() -> Unit,
+        ) {
+            val testPager = toTestPager().apply {
+                var res: @JvmSuppressWildcards PagingSource.LoadResult<Int, out LiveTimelineItem>? = refresh()
+                while ((res as? PagingSource.LoadResult.Page)?.nextKey != null) {
+                    res = append()
+                }
+            }
+            testPager.verify()
         }
     }
 }

@@ -3,13 +3,13 @@ package com.freshdigitable.yttt.data.source.local.di
 import android.content.Context
 import androidx.room.Room
 import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.source.LiveDataSource
+import com.freshdigitable.yttt.data.source.LiveDataPagingSource
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchScheduleDataSource
 import com.freshdigitable.yttt.data.source.TwitchStreamDataSource
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import com.freshdigitable.yttt.data.source.local.LiveLocalDataSource
+import com.freshdigitable.yttt.data.source.local.LiveLocalPagingSource
 import com.freshdigitable.yttt.data.source.local.TwitchExtendedDataSource
 import com.freshdigitable.yttt.data.source.local.TwitchLocalDataSource
 import com.freshdigitable.yttt.data.source.local.TwitchScheduleLocalDataSource
@@ -87,7 +87,7 @@ internal interface LocalModule {
     fun bindTwitchScheduleLocalDataSource(dataSource: TwitchScheduleLocalDataSource): TwitchScheduleDataSource.Extended
 
     @Binds
-    fun bindLiveDataSource(dataSource: LiveLocalDataSource): LiveDataSource
+    fun bindLivePagingSource(dataSource: LiveLocalPagingSource): LiveDataPagingSource
 }
 
 @Module
