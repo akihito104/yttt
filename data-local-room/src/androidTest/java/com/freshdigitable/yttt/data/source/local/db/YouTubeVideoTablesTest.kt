@@ -1,13 +1,12 @@
 package com.freshdigitable.yttt.data.source.local.db
 
-import app.cash.turbine.test
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
+import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.assertions.asClue
-import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -38,12 +37,10 @@ class YouTubeVideoTablesTest {
 
         @Test
         fun watchAllUnfinished_returnEmpty() = dbRule.runWithDao { dao ->
-            // exercise
-            val actual = dao.watchAllUnfinishedVideos()
             // verify
-            actual.test {
-                awaitItem().shouldBeEmpty()
-            }
+            dbRule.liveDataPagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
+            dbRule.liveDataPagingSource.upcoming.testWithRefresh { data.shouldBeEmpty() }
+            dbRule.liveDataPagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
         }
     }
 
@@ -209,17 +206,15 @@ class YouTubeVideoTablesTest {
                     ),
                 ),
             )
-            // exercise
-            val actual = dao.watchAllUnfinishedVideos()
             // verify
-            actual.test {
-                val item = awaitItem()
-                item.asClue {
-                    it.forAll { i -> i.liveBroadcastContent != YouTubeVideo.BroadcastType.NONE }
-                    it.map { i -> i.id }.shouldContainExactlyInAnyOrder(
-                        simple, freechat, hasNoExpire, live, upcoming,
-                    )
-                }
+            dbRule.liveDataPagingSource.onAir.testWithRefresh {
+                data.map { it.id.value }.shouldContainExactlyInAnyOrder(live.value)
+            }
+            dbRule.liveDataPagingSource.upcoming.testWithRefresh {
+                data.map { it.id.value }.shouldContainExactlyInAnyOrder(upcoming.value, simple.value)
+            }
+            dbRule.liveDataPagingSource.freeChat.testWithRefresh {
+                data.map { it.id.value }.shouldContainExactlyInAnyOrder(freechat.value)
             }
         }
     }

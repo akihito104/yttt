@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.data.source.local
 
-import app.cash.turbine.test
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
@@ -25,12 +24,14 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
+import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.assertions.asClue
 import io.kotest.assertions.assertSoftly
 import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -48,13 +49,6 @@ import java.time.Instant
 class YouTubeLocalDataSourceTest {
     class Init : Base() {
         @Test
-        fun videoFlowIsEmpty() = rule.runWithLocalSource {
-            extendedSource.videos.test {
-                awaitItem().shouldBeEmpty()
-            }
-        }
-
-        @Test
         fun videoIsEmpty() = rule.runWithLocalSource {
             extendedSource.fetchVideoList(emptySet()).getOrNull().shouldBeEmpty()
             extendedSource.fetchVideoList(setOf(YouTubeVideo.Id("test"))).getOrNull().shouldBeEmpty()
@@ -64,9 +58,9 @@ class YouTubeLocalDataSourceTest {
         fun addVideo_addedLiveAndUpcomingItems() = rule.runWithLocalSource {
             // setup
             val unfinished = listOf(
-                YouTubeVideoEntity.liveStreaming(),
-                YouTubeVideoEntity.upcomingStream(),
-                YouTubeVideoEntity.unscheduledUpcoming(),
+                YouTubeVideoEntity.liveStreaming(id = "live_streaming"),
+                YouTubeVideoEntity.upcomingStream(id = "upcoming"),
+                YouTubeVideoEntity.unscheduledUpcoming(id = "upcoming_unscheduled"),
             )
             val inactive = listOf(
                 YouTubeVideoEntity.uploadedVideo(),
@@ -80,8 +74,11 @@ class YouTubeLocalDataSourceTest {
             // verify
             val found = dao.findVideosById(video.map { it.item.id })
             found.containsVideoIdInAnyOrderElementsOf(video)
-            dao.watchAllUnfinishedVideos().test {
-                awaitItem().containsVideoIdInAnyOrder(*unfinished.map { it.item }.toTypedArray())
+            rule.liveDataPagingSource.onAir.testWithRefresh {
+                data.map { it.id.value }.shouldContainInOrder("live_streaming")
+            }
+            rule.liveDataPagingSource.upcoming.testWithRefresh {
+                data.map { it.id.value }.shouldContainInOrder("upcoming")
             }
             dao.findAllArchivedVideos()
                 .shouldContainExactlyInAnyOrder(inactive.map { it.item.id })

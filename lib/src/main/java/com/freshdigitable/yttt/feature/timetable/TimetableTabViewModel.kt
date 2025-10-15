@@ -4,10 +4,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.cachedIn
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.SnackbarMessageBus
-import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -77,24 +77,28 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     val menuItems: StateFlow<List<TimetableMenuItem>> = contextMenuDelegate.menuItems
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun onMenuClicked(id: LiveVideo.Id) {
+    fun onMenuClick(id: LiveVideo.Id) {
         viewModelScope.launch {
             contextMenuDelegate.setupMenu(id)
         }
     }
 
-    fun onMenuClosed() {
+    fun onMenuClose() {
         contextMenuDelegate.tearDownMenu()
     }
 
-    fun onMenuItemClicked(item: TimetableMenuItem) {
+    fun onMenuItemClick(item: TimetableMenuItem) {
         viewModelScope.launch {
             contextMenuDelegate.consumeMenuItem(item)
         }
     }
 
-    val tabData: StateFlow<List<TimetableTabData>> =
-        tabs.stateIn(viewModelScope, SharingStarted.Lazily, TimetableTabData.initialValues())
+    val timeAdjustment: StateFlow<TimeAdjustment> = settingRepository.changeDateTime
+        .map { TimeAdjustment(Duration.ofHours(((it ?: 24) - 24).toLong())) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, TimeAdjustment.zero())
+    val pagers = TimetablePage.entries.associateWith { p ->
+        getLiveTimelineItemPager(p).cachedIn(viewModelScope)
+    }
 
     companion object {
         @Suppress("unused")

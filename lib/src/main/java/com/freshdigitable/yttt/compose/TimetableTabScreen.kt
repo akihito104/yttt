@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -27,6 +26,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.paging.compose.collectAsLazyPagingItems
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -55,37 +55,36 @@ internal fun TimetableTabScreen(
         }
     }
     val refreshing = viewModel.isLoading.observeAsState(false)
-    topAppBarState.updateMenuItems(
-        listOf(
-            TopAppBarMenuItem.onAppBar(
-                text = "reload",
-                icon = Icons.Default.Refresh,
-                enabled = { !refreshing.value },
-                consume = viewModel::loadList,
-            ),
-        ),
+    topAppBarState.setup(
+        enabled = { !refreshing.value },
+        consume = viewModel::loadList,
     )
     val listState = TimetablePage.entries.associateWith { rememberLazyListState() }
-    val timetableContent = TimetablePage.entries.associateWith {
-        timetableContent(
-            page = it,
-            thumbnailModifier = thumbnailModifier,
-            titleModifier = titleModifier,
-            onListItemClick = onListItemClick,
-            viewModel = viewModel,
-        )
+    val timeAdjustment = viewModel.timeAdjustment.collectAsState()
+    val items = TimetablePage.entries.associate {
+        it.ordinal to (it to checkNotNull(viewModel.pagers[it]).collectAsLazyPagingItems())
     }
-    val tab = viewModel.tabData.collectAsState()
     HorizontalPagerWithTabScreen(
-        tabProvider = { tab.value },
+        tabCount = TimetablePage.entries.size,
+        tab = { index ->
+            val (page, item) = checkNotNull(items[index])
+            TimetableTabData(page, item.itemCount).title()
+        },
         modifier = modifier,
         tabModifier = tabModifier,
-    ) { tab ->
+    ) { index ->
+        val (page, item) = checkNotNull(items[index])
         TimetableScreen(
-            lazyListState = checkNotNull(listState[tab.page]),
+            page = page,
+            itemProvider = { item },
+            timeAdjustmentProvider = { timeAdjustment.value },
+            lazyListState = checkNotNull(listState[page]),
             refreshingProvider = { refreshing.value },
+            titleModifier = titleModifier,
+            thumbnailModifier = thumbnailModifier,
             onRefresh = viewModel::loadList,
-            listContent = checkNotNull(timetableContent[tab.page]),
+            onListItemClick = onListItemClick,
+            onMenuClick = viewModel::onMenuClick,
         )
     }
     val menuItems = viewModel.menuItems.collectAsState(emptyList())
@@ -93,51 +92,30 @@ internal fun TimetableTabScreen(
     ListItemMenuSheet(
         menuItemsProvider = { menuItems.value },
         sheetState = sheetState,
-        onMenuItemClick = { viewModel.onMenuItemClicked(it) },
-        onDismissRequest = viewModel::onMenuClosed,
+        onMenuItemClick = { viewModel.onMenuItemClick(it) },
+        onDismissRequest = viewModel::onMenuClose,
     )
 }
 
-@Composable
-private fun timetableContent(
-    page: TimetablePage,
-    onListItemClick: (LiveVideo.Id) -> Unit,
-    viewModel: TimetableTabViewModel,
-    thumbnailModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
-    titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
-): LazyListScope.() -> Unit {
-    when (page.type) {
-        TimetablePage.Type.SIMPLE -> {
-            val item = viewModel.getSimpleItemList(page).collectAsState(initial = emptyList())
-            return {
-                simpleContent(
-                    { item.value },
-                    thumbnailModifier = thumbnailModifier,
-                    titleModifier = titleModifier,
-                    onListItemClick,
-                    viewModel::onMenuClicked,
-                )
-            }
-        }
-
-        TimetablePage.Type.GROUPED -> {
-            val item = viewModel.getGroupedItemList(page).collectAsState(initial = emptyMap())
-            return {
-                groupedContent(
-                    { item.value },
-                    thumbnailModifier = thumbnailModifier,
-                    titleModifier = titleModifier,
-                    onListItemClick,
-                    viewModel::onMenuClicked,
-                )
-            }
-        }
-    }
+private fun TopAppBarStateHolder.setup(
+    enabled: () -> Boolean,
+    consume: suspend () -> Unit,
+) {
+    updateMenuItems(
+        listOf(
+            TopAppBarMenuItem.onAppBar(
+                text = "reload",
+                icon = Icons.Default.Refresh,
+                enabled = enabled,
+                consume = consume,
+            ),
+        ),
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListItemMenuSheet(
+private fun ListItemMenuSheet(
     menuItemsProvider: () -> Collection<TimetableMenuItem>,
     onMenuItemClick: (TimetableMenuItem) -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(),
@@ -185,12 +163,6 @@ internal class TimetableTabData(
     @ReadOnlyComposable
     override fun title(): String = stringResource(id = page.textRes, count)
     override fun compareTo(other: TimetableTabData): Int = page.ordinal - other.page.ordinal
-
-    companion object {
-        fun initialValues(): List<TimetableTabData> {
-            return TimetablePage.entries.map { TimetableTabData(it, 0) }
-        }
-    }
 }
 
 @PreviewLightMode

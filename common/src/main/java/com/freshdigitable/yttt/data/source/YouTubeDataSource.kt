@@ -16,7 +16,6 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
 interface YouTubeDataSource :
@@ -86,7 +85,6 @@ interface YouTubeChannelDataSource {
 interface YouTubeVideoDataSource {
     interface Local : YouTubeVideoDataSource
     interface Extended {
-        val videos: Flow<List<YouTubeVideoExtended>>
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>>
         suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
         suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>)

@@ -16,6 +16,14 @@ interface LiveVideoThumbnail {
     override fun hashCode(): Int
 }
 
+interface LiveTimelineItem : LiveVideoThumbnail {
+    val channel: LiveChannel
+    val dateTime: Instant
+    val isPinned: Boolean?
+    override fun equals(other: Any?): Boolean
+    override fun hashCode(): Int
+}
+
 interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
     val channel: LiveChannel
     val scheduledStartDateTime: Instant?
