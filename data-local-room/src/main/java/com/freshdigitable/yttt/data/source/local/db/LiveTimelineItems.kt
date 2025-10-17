@@ -46,6 +46,8 @@ internal data class LiveTimelineOnAirItem(
     @androidx.room.Dao
     internal interface Dao {
         companion object {
+            private const val TWITCH_IMG_WIDTH = "'{width}', '640'"
+            private const val TWITCH_IMG_HEIGHT = "'{height}', '360'"
             private const val SQL_YOUTUBE_ON_AIR =
                 "SELECT yd.video_id AS id_value, yd.title AS title, yc.id AS c_id, yc.icon AS c_icon," +
                     " yc.title AS c_title, yd.thumbnail AS thumbnail," +
@@ -53,11 +55,11 @@ internal data class LiveTimelineOnAirItem(
                     "FROM video_detail AS yd " +
                     "INNER JOIN video AS yv ON yv.id = yd.video_id " +
                     "INNER JOIN channel AS yc ON yc.id = yd.channel_id " +
-                    "WHERE yv.broadcast_content IS 'live'"
+                    "WHERE yv.broadcast_content = 'live'"
             private const val SQL_TWITCH_ON_AIR =
                 "SELECT ts.id AS id_value, ts.title AS title, tu.user_id AS c_id, tu.profile_image_url AS c_icon," +
                     " tu.display_name AS c_title," +
-                    " REPLACE(REPLACE(ts.thumbnail_url_base, '{width}', '640'), '{height}', '360') AS thumbnail," +
+                    " REPLACE(REPLACE(ts.thumbnail_url_base, $TWITCH_IMG_WIDTH), $TWITCH_IMG_HEIGHT) AS thumbnail," +
                     " ts.started_at AS date_time, 'Twitch' AS platform " +
                     "FROM twitch_stream AS ts " +
                     "INNER JOIN twitch_user_detail_view AS tu ON tu.user_id = ts.user_id " +
@@ -93,6 +95,10 @@ internal data class LiveTimelineUpcomingItem(
     @androidx.room.Dao
     internal interface Dao {
         companion object {
+            private const val PUBLICATION_DEADLINE = "6 hours"
+            private const val TWITCH_PUBLICATION_TERM = "7 days"
+            private const val TWITCH_IMG_WIDTH = "'{width}', '240'"
+            private const val TWITCH_IMG_HEIGHT = "'{height}', '360'"
             private const val SQL_YOUTUBE_UPCOMING =
                 "SELECT d.video_id AS id_value, d.title AS title, c.id AS c_id, c.icon AS c_icon," +
                     " c.title AS c_title, d.thumbnail AS thumbnail," +
@@ -101,23 +107,23 @@ internal data class LiveTimelineUpcomingItem(
                     "INNER JOIN video AS v ON v.id = d.video_id " +
                     "INNER JOIN channel AS c ON c.id = d.channel_id " +
                     "LEFT OUTER JOIN free_chat AS f ON d.video_id = f.video_id " +
-                    "WHERE v.broadcast_content IS 'upcoming' AND f.is_free_chat IS 0" +
+                    "WHERE v.broadcast_content = 'upcoming' AND f.is_free_chat = 0" +
                     " AND d.schedule_start_datetime IS NOT NULL" +
-                    " AND DATETIME(:current/1000, 'unixepoch') < " +
-                    "  DATETIME(d.schedule_start_datetime/1000, 'unixepoch', '+6 hours')"
+                    " AND DATETIME(:current/1000, 'unixepoch') <= " + // adjust to BETWEEN ... AND condition
+                    "  DATETIME(d.schedule_start_datetime/1000, 'unixepoch', '+$PUBLICATION_DEADLINE')"
             private const val SQL_TWITCH_UPCOMING =
                 "SELECT ts.id AS id_value, ts.title AS title, ts.user_id AS c_id, tu.profile_image_url AS c_icon," +
                     " tu.display_name AS c_title," +
-                    " CASE WHEN tc.art_url_base IS '' THEN ''" +
-                    "  WHEN tc.art_url_base IS NULL THEN ''" +
-                    "  ELSE REPLACE(REPLACE(tc.art_url_base, '{width}', '240'), '{height}', '360') END AS thumbnail," +
+                    " CASE WHEN tc.art_url_base = '' OR tc.art_url_base IS NULL THEN ''" +
+                    "  ELSE REPLACE(REPLACE(tc.art_url_base, $TWITCH_IMG_WIDTH), $TWITCH_IMG_HEIGHT) " +
+                    " END AS thumbnail," +
                     " ts.start_time AS date_time, 'Twitch' AS platform, 0 AS is_landscape " +
                     "FROM twitch_channel_schedule_stream AS ts " +
                     "LEFT OUTER JOIN twitch_category AS tc ON ts.category_id = tc.id " +
                     "INNER JOIN twitch_user_detail_view AS tu ON ts.user_id = tu.user_id " +
                     "WHERE DATETIME(ts.start_time/1000, 'unixepoch')" +
-                    " BETWEEN DATETIME(:current/1000, 'unixepoch', '-6 hours') " +
-                    " AND DATETIME(:current/1000, 'unixepoch', '+7 days')"
+                    " BETWEEN DATETIME(:current/1000, 'unixepoch', '-$PUBLICATION_DEADLINE') " +
+                    " AND DATETIME(:current/1000, 'unixepoch', '+$TWITCH_PUBLICATION_TERM')"
         }
 
         @Query("$SQL_YOUTUBE_UPCOMING UNION $SQL_TWITCH_UPCOMING ORDER BY date_time ASC, title ASC")
@@ -156,7 +162,7 @@ internal data class LiveTimelineFreeChatItem(
                 "INNER JOIN channel AS c ON c.id = d.channel_id " +
                 "LEFT OUTER JOIN yt_pinned AS p ON p.video_id = d.video_id " +
                 "LEFT OUTER JOIN free_chat AS f ON d.video_id = f.video_id " +
-                "WHERE is_free_chat IS 1 AND v.broadcast_content IS NOT 'live' " +
+                "WHERE is_free_chat = 1 AND v.broadcast_content != 'live' " +
                 "ORDER BY is_pinned DESC, c_id ASC, date_time ASC, title ASC",
         )
         fun getAllFreeChatPagingSource(): PagingSource<Int, LiveTimelineFreeChatItem>

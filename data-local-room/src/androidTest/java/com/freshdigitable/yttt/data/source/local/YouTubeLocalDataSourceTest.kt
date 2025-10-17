@@ -24,14 +24,12 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
-import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.assertions.asClue
 import io.kotest.assertions.assertSoftly
 import io.kotest.inspectors.forAll
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -49,40 +47,9 @@ import java.time.Instant
 class YouTubeLocalDataSourceTest {
     class Init : Base() {
         @Test
-        fun videoIsEmpty() = rule.runWithLocalSource {
+        fun videoIsEmpty() = rule.runWithScope {
             extendedSource.fetchVideoList(emptySet()).getOrNull().shouldBeEmpty()
             extendedSource.fetchVideoList(setOf(YouTubeVideo.Id("test"))).getOrNull().shouldBeEmpty()
-        }
-
-        @Test
-        fun addVideo_addedLiveAndUpcomingItems() = rule.runWithLocalSource {
-            // setup
-            val unfinished = listOf(
-                YouTubeVideoEntity.liveStreaming(id = "live_streaming"),
-                YouTubeVideoEntity.upcomingStream(id = "upcoming"),
-                YouTubeVideoEntity.unscheduledUpcoming(id = "upcoming_unscheduled"),
-            )
-            val inactive = listOf(
-                YouTubeVideoEntity.uploadedVideo(),
-                YouTubeVideoEntity.archivedStream(),
-            )
-            val video = unfinished + inactive
-            val channels = video.map { it.item.channel }.distinctBy { it.id }
-            dao.addChannelEntities(channels)
-            // exercise
-            extendedSource.addVideo(video)
-            // verify
-            val found = dao.findVideosById(video.map { it.item.id })
-            found.containsVideoIdInAnyOrderElementsOf(video)
-            rule.liveDataPagingSource.onAir.testWithRefresh {
-                data.map { it.id.value }.shouldContainInOrder("live_streaming")
-            }
-            rule.liveDataPagingSource.upcoming.testWithRefresh {
-                data.map { it.id.value }.shouldContainInOrder("upcoming")
-            }
-            dao.findAllArchivedVideos()
-                .shouldContainExactlyInAnyOrder(inactive.map { it.item.id })
-            dao.findUnusedVideoIds().shouldContainExactlyInAnyOrder(inactive.map { it.item.id })
         }
     }
 
@@ -104,14 +71,14 @@ class YouTubeLocalDataSourceTest {
         private val video = listOf(live, upcomingSoon, upcoming, unscheduled, freeChat) + archived
 
         @Before
-        fun setup() = rule.runWithLocalSource {
+        fun setup() = rule.runWithScope {
             val channels = video.map { it.item.channel }.distinctBy { it.id }
             dao.addChannelEntities(channels)
             extendedSource.addVideo(video)
         }
 
         @Test
-        fun returnsAllItems() = rule.runWithLocalSource {
+        fun returnsAllItems() = rule.runWithScope {
             // exercise
             val actual = extendedSource.fetchVideoList(video.map { it.item.id }.toSet()).getOrThrow()
             // verify
@@ -119,7 +86,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun withUnknownKey_returnsEmpty() = rule.runWithLocalSource {
+        fun withUnknownKey_returnsEmpty() = rule.runWithScope {
             // exercise
             val actual = extendedSource.fetchVideoList(setOf(YouTubeVideo.Id("unknown_entity"))).getOrNull()
             // verify
@@ -127,7 +94,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun withFreeChat_returns1Item() = rule.runWithLocalSource {
+        fun withFreeChat_returns1Item() = rule.runWithScope {
             // exercise
             val actual = extendedSource.fetchVideoList(setOf(freeChat.item.id)).getOrNull()
                 ?: throw AssertionError()
@@ -137,26 +104,9 @@ class YouTubeLocalDataSourceTest {
         }
     }
 
-    private companion object {
-        private fun List<Updatable<YouTubeVideoExtended>>.containsVideoIdInAnyOrderElementsOf(
-            expected: Collection<Updatable<YouTubeVideoExtended>>,
-        ) {
-            containsVideoIdInAnyOrder(*expected.toTypedArray())
-        }
-
-        private fun List<Updatable<YouTubeVideoExtended>>.containsVideoIdInAnyOrder(vararg expected: Updatable<YouTubeVideoExtended>) {
-            this.map { it.item }.containsVideoIdInAnyOrder(*expected.map { it.item }.toTypedArray())
-        }
-
-        private fun List<YouTubeVideoExtended>.containsVideoIdInAnyOrder(vararg expected: YouTubeVideoExtended) {
-            this.size shouldBe expected.size
-            this.map { it.id }.shouldContainExactlyInAnyOrder(expected.map { it.id })
-        }
-    }
-
     class UpdatePlaylistWithItems : Base() {
         @Test
-        fun addedWithEmptyItems_returnsEmpty() = rule.runWithLocalSource {
+        fun addedWithEmptyItems_returnsEmpty() = rule.runWithScope {
             // setup
             val id = YouTubePlaylist.Id("test")
             val updatable = YouTubePlaylistWithItem.newPlaylist(
@@ -189,7 +139,7 @@ class YouTubeLocalDataSourceTest {
         )
 
         @Test
-        fun addedWithItems_returnsItems() = rule.runWithLocalSource {
+        fun addedWithItems_returnsItems() = rule.runWithScope {
             // setup
             dao.addChannelEntities(channels)
             // exercise
@@ -200,7 +150,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun videoIsAlreadyAdded_videoIsNotUpdated() = rule.runWithLocalSource {
+        fun videoIsAlreadyAdded_videoIsNotUpdated() = rule.runWithScope {
             // setup
             dao.addChannelEntities(channels)
             val video = YouTubeVideoEntity.upcomingStream(videoId.value, channel = channel)
@@ -218,7 +168,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun itemWasReplaced_returnsItems() = rule.runWithLocalSource {
+        fun itemWasReplaced_returnsItems() = rule.runWithScope {
             // setup
             dao.addChannelEntities(channels)
             extendedSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
@@ -262,12 +212,12 @@ class YouTubeLocalDataSourceTest {
         }.toMap()
 
         @Before
-        fun setup() = rule.runWithLocalSource {
+        fun setup() = rule.runWithScope {
             items.values.forEach { extendedSource.updatePlaylistWithItems(it.item, it.cacheControl) }
         }
 
         @Test
-        fun simple_returns1Item() = rule.runWithLocalSource {
+        fun simple_returns1Item() = rule.runWithScope {
             // exercise
             val actual = localSource.fetchPlaylistWithItems(simple, 10).getOrNull()
             // verify
@@ -275,7 +225,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun simple_addSameItem_returns1Item() = rule.runWithLocalSource {
+        fun simple_addSameItem_returns1Item() = rule.runWithScope {
             // setup
             val updatable = localSource.fetchPlaylistWithItems(simple, 10).map {
                 it?.item?.update(items[simple]!!.item.items.toUpdatable(fetchedAt = Instant.EPOCH))
@@ -288,7 +238,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun simple_addNewItems_returns2Items() = rule.runWithLocalSource {
+        fun simple_addNewItems_returns2Items() = rule.runWithScope {
             // setup
             val newItems = listOf(
                 FakeYouTubeClient.playlistItemDetail(
@@ -309,7 +259,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun private_returnsEmpty() = rule.runWithLocalSource {
+        fun private_returnsEmpty() = rule.runWithScope {
             // exercise
             val actual = localSource.fetchPlaylistWithItems(privatePlaylist, 10).getOrNull()
             // verify
@@ -317,7 +267,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun empty_returnsEmpty() = rule.runWithLocalSource {
+        fun empty_returnsEmpty() = rule.runWithScope {
             // exercise
             val actual = localSource.fetchPlaylistWithItems(empty, 10).getOrNull()
             // verify
@@ -337,7 +287,7 @@ class YouTubeLocalDataSourceTest {
         private val videos = videosInPlaylist + listOf(unusedArchive, freeChat, endlessLive)
 
         @Before
-        fun setup() = rule.runWithLocalSource {
+        fun setup() = rule.runWithScope {
             val playlistId = YouTubePlaylist.Id("playlist")
             val items = videosInPlaylist.map {
                 FakeYouTubeClient.playlistItemDetail(
@@ -371,7 +321,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun remainsUnfinishedVideos() = rule.runWithLocalSource {
+        fun remainsUnfinishedVideos() = rule.runWithScope {
             // exercise
             extendedSource.cleanUp()
             // verify
@@ -382,7 +332,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun liveIsUpdatedAsArchived_remainsUpcomingAndFreeChat() = rule.runWithLocalSource {
+        fun liveIsUpdatedAsArchived_remainsUpcomingAndFreeChat() = rule.runWithScope {
             // setup
             val duration = Duration.ofHours(1)
             val finishedLive = live.item.liveFinished(duration)
@@ -408,7 +358,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Before
-        fun setup() = rule.runWithLocalSource {
+        fun setup() = rule.runWithScope {
             extendedSource.addPagedSubscription(subscriptions)
 
             val relatedPlaylists = allDomainChannels.map { ch ->
@@ -447,7 +397,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun init() = rule.runWithLocalSource {
+        fun init() = rule.runWithScope {
             val subs = dao.fetchAllSubscriptionIds()
             val summaries = dao.findSubscriptionSummaries(subs)
             assertSoftly {
@@ -469,7 +419,7 @@ class YouTubeLocalDataSourceTest {
         private val removed = (subscriptions.map { it.id } - newSubs)
 
         @Test
-        fun cleanUpByRemainingSubscriptionIds() = rule.runWithLocalSource {
+        fun cleanUpByRemainingSubscriptionIds() = rule.runWithScope {
             // setup
             val removedSummary = dao.findSubscriptionSummaries(removed).first()
             val uploadedPlaylistId = removedSummary.uploadedPlaylistId!!
@@ -485,7 +435,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun hasLogs() = rule.runWithLocalSource {
+        fun hasLogs() = rule.runWithScope {
             // setup
             val removedSummary = dao.findSubscriptionSummaries(removed).first()
             val uploadedPlaylistId = removedSummary.uploadedPlaylistId!!
@@ -517,7 +467,7 @@ class YouTubeLocalDataSourceTest {
         }
 
         @Test
-        fun hasVideoNotAsPlaylistItem() = rule.runWithLocalSource {
+        fun hasVideoNotAsPlaylistItem() = rule.runWithScope {
             // setup
             val removedSummary = dao.findSubscriptionSummaries(removed).first()
             val uploadedPlaylistId = removedSummary.uploadedPlaylistId!!
@@ -557,6 +507,21 @@ class YouTubeLocalDataSourceTest {
         @get:Rule
         internal val rule = YouTubeDatabaseTestRule()
     }
+}
+
+fun List<Updatable<YouTubeVideoExtended>>.containsVideoIdInAnyOrderElementsOf(
+    expected: Collection<Updatable<YouTubeVideoExtended>>,
+) {
+    containsVideoIdInAnyOrder(*expected.toTypedArray())
+}
+
+private fun List<Updatable<YouTubeVideoExtended>>.containsVideoIdInAnyOrder(vararg expected: Updatable<YouTubeVideoExtended>) {
+    this.map { it.item }.containsVideoIdInAnyOrder(*expected.map { it.item }.toTypedArray())
+}
+
+private fun List<YouTubeVideoExtended>.containsVideoIdInAnyOrder(vararg expected: YouTubeVideoExtended) {
+    this.size shouldBe expected.size
+    this.map { it.id }.shouldContainExactlyInAnyOrder(expected.map { it.id })
 }
 
 internal data class YouTubeVideoEntity(
@@ -604,12 +569,14 @@ internal data class YouTubeVideoEntity(
 
         fun liveStreaming(
             id: String = "live_streaming",
+            title: String = "title",
             channel: YouTubeChannel = channelTable(),
             scheduledStartDateTime: Instant = Instant.ofEpochSecond(1000),
             actualStartDateTime: Instant = scheduledStartDateTime,
             fetchedAt: Instant = Instant.EPOCH,
         ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
+            title = title,
             channel = channel,
             scheduledStartDateTime = scheduledStartDateTime,
             actualStartDateTime = actualStartDateTime,
@@ -633,6 +600,7 @@ internal data class YouTubeVideoEntity(
 
         fun upcomingStream(
             id: String = "upcoming_stream",
+            title: String = "",
             scheduledStartDateTime: Instant = Instant.ofEpochSecond(5000),
             fetchedAt: Instant = Instant.EPOCH,
             channel: YouTubeChannel = channelTable(),
@@ -641,14 +609,17 @@ internal data class YouTubeVideoEntity(
             channel = channel,
             scheduledStartDateTime = scheduledStartDateTime,
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
+            title = title,
         ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(fetchedAt))
             .extend(old = null, isFreeChat = false)
 
         fun unscheduledUpcoming(
             id: String = "unscheduled_upcoming",
+            channel: YouTubeChannel = channelTable(),
             fetchedAt: Instant = Instant.EPOCH,
         ): Updatable<YouTubeVideoExtended> = YouTubeVideoEntity(
             id = YouTubeVideo.Id(id),
+            channel = channel,
             liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
         ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(fetchedAt))
             .extend(old = null, isFreeChat = false)

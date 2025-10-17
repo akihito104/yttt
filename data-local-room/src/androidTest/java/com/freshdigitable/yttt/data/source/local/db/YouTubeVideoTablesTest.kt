@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity
+import com.freshdigitable.yttt.data.source.local.fixture.LiveDataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.assertions.asClue
@@ -28,19 +29,11 @@ class YouTubeVideoTablesTest {
         internal val dbRule = YouTubeDatabaseTestRule()
 
         @Test
-        fun findApis_returnEmpty() = dbRule.runWithDao { dao ->
+        fun findApis_returnEmpty() = dbRule.runWithScope {
             dao.findAllArchivedVideos().shouldBeEmpty()
             dao.findUnusedVideoIds().shouldBeEmpty()
             dao.findVideosById(listOf(YouTubeVideo.Id("test"))).shouldBeEmpty()
             dao.findFreeChatItems(listOf(YouTubeVideo.Id("test"))).shouldBeEmpty()
-        }
-
-        @Test
-        fun watchAllUnfinished_returnEmpty() = dbRule.runWithDao { dao ->
-            // verify
-            dbRule.liveDataPagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
-            dbRule.liveDataPagingSource.upcoming.testWithRefresh { data.shouldBeEmpty() }
-            dbRule.liveDataPagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
         }
     }
 
@@ -53,7 +46,7 @@ class YouTubeVideoTablesTest {
         private val hasNoType = YouTubeVideo.Id("test_no_type")
 
         @Before
-        fun setup() = dbRule.runWithDao { dao ->
+        fun setup() = dbRule.runWithScope {
             val channel = YouTubeChannelTable(id = YouTubeChannel.Id("channel"))
             val videos = listOf(
                 YouTubeVideoEntity.upcomingStream(id = simple.value, channel = channel),
@@ -79,7 +72,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun findVideosById_notYetExpired_found1Item() = dbRule.runWithDao { dao ->
+        fun findVideosById_notYetExpired_found1Item() = dbRule.runWithScope {
             // setup
             val target = simple
             // exercise
@@ -91,7 +84,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun findVideosById_hasExpired_itemNotFound() = dbRule.runWithDao { dao ->
+        fun findVideosById_hasExpired_itemNotFound() = dbRule.runWithScope {
             // setup
             val target = simple
             // exercise
@@ -102,7 +95,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun findVideosById_freechat_found1Item() = dbRule.runWithDao { dao ->
+        fun findVideosById_freechat_found1Item() = dbRule.runWithScope {
             // setup
             val target = freechat
             // exercise
@@ -117,7 +110,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun findVideosById_hasNoExpireEntity_found1Item() = dbRule.runWithDao { dao ->
+        fun findVideosById_hasNoExpireEntity_found1Item() = dbRule.runWithScope {
             // setup
             val target = hasNoExpire
             // exercise
@@ -134,7 +127,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun findVideosById_hasNoTypeEntity_isNotFound() = dbRule.runWithDao { dao ->
+        fun findVideosById_hasNoTypeEntity_isNotFound() = dbRule.runWithScope {
             // setup
             val target = hasNoType
             // exercise
@@ -144,7 +137,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun fetchUpdatableVideoIds_found2Items() = dbRule.runWithDao { dao ->
+        fun fetchUpdatableVideoIds_found2Items() = dbRule.runWithScope {
             // exercise
             val actual = dao.fetchUpdatableVideoIds(Instant.EPOCH)
             // verify
@@ -152,7 +145,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun removeVideoEntities() = dbRule.runWithDao { dao ->
+        fun removeVideoEntities() = dbRule.runWithScope {
             // setup
             val videoIds = listOf(simple, freechat, hasNoExpire, hasNoType)
             // exercise
@@ -162,7 +155,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun updateAsArchivedVideoEntities() = dbRule.runWithDao { dao ->
+        fun updateAsArchivedVideoEntities() = dbRule.runWithScope {
             // setup
             val videoIds = listOf(simple, freechat, hasNoExpire, hasNoType)
             // exercise
@@ -173,7 +166,7 @@ class YouTubeVideoTablesTest {
         }
 
         @Test
-        fun watchAllUnfinishedVideos() = dbRule.runWithDao { dao ->
+        fun watchAllUnfinishedVideos() = dbRule.runWithScope {
             // setup
             val channelId = YouTubeChannel.Id("channel_")
             val channel = YouTubeChannelTable(channelId)
@@ -207,13 +200,14 @@ class YouTubeVideoTablesTest {
                 ),
             )
             // verify
-            dbRule.liveDataPagingSource.onAir.testWithRefresh {
+            val liveSource = LiveDataSourceTestRule.LiveDataSourceScope(ioScope, database, this)
+            liveSource.pagingSource.onAir.testWithRefresh {
                 data.map { it.id.value }.shouldContainExactlyInAnyOrder(live.value)
             }
-            dbRule.liveDataPagingSource.upcoming.testWithRefresh {
+            liveSource.pagingSource.upcoming.testWithRefresh {
                 data.map { it.id.value }.shouldContainExactlyInAnyOrder(upcoming.value, simple.value)
             }
-            dbRule.liveDataPagingSource.freeChat.testWithRefresh {
+            liveSource.pagingSource.freeChat.testWithRefresh {
                 data.map { it.id.value }.shouldContainExactlyInAnyOrder(freechat.value)
             }
         }

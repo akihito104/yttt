@@ -12,18 +12,16 @@ import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDaoImpl
 
-internal class TwitchDataSourceTestRule :
-    DataSourceTestRule<TwitchDao, TwitchLocalDataSource, TwitchExtendedDataSource>() {
-    override fun createDao(database: AppDatabase): TwitchDao = TwitchDao(
-        database,
-        TwitchUserDaoImpl(database),
-        TwitchScheduleDaoImpl(database),
-        TwitchStreamDaoImpl(database),
-    )
+internal class TwitchDataSourceTestRule : DataSourceTestRule<TwitchDataSourceTestRule.TwitchDataSourceScope>() {
+    override fun createTestScope(ioScope: IoScope): TwitchDataSourceScope = TwitchDataSourceScope(ioScope, database)
 
-    override fun createTestScope(
-        ioScope: IoScope,
-    ): DatabaseTestScope<TwitchDao, TwitchLocalDataSource, TwitchExtendedDataSource> {
+    class TwitchDataSourceScope(ioScope: IoScope, database: AppDatabase) : DataSourceScope {
+        val dao = TwitchDao(
+            database,
+            TwitchUserDaoImpl(database),
+            TwitchScheduleDaoImpl(database),
+            TwitchStreamDaoImpl(database),
+        )
         val userDataSource = TwitchUserLocalDataSource(
             dao = dao,
             ioScope = ioScope,
@@ -37,21 +35,18 @@ internal class TwitchDataSourceTestRule :
             dao = dao,
             ioScope = ioScope,
         )
-        return DatabaseTestScope(
+        val localSource = TwitchLocalDataSource(
             dao = dao,
-            localSource = TwitchLocalDataSource(
-                dao = dao,
-                ioScope = ioScope,
-                userDataSource = userDataSource,
-                streamDataSource = streamDataSource,
-                scheduleDataSource = scheduleDataSource,
-            ),
-            extendedSource = TwitchExtendedDataSource(
-                dao = dao,
-                userDataSource = userDataSource,
-                streamDataSource = streamDataSource,
-                scheduleDataSource = scheduleDataSource,
-            ),
+            ioScope = ioScope,
+            userDataSource = userDataSource,
+            streamDataSource = streamDataSource,
+            scheduleDataSource = scheduleDataSource,
+        )
+        val extendedSource = TwitchExtendedDataSource(
+            dao = dao,
+            userDataSource = userDataSource,
+            streamDataSource = streamDataSource,
+            scheduleDataSource = scheduleDataSource,
         )
     }
 }
