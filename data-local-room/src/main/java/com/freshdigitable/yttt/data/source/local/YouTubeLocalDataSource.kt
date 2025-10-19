@@ -28,7 +28,6 @@ import com.freshdigitable.yttt.data.source.YouTubePlaylistDataSource
 import com.freshdigitable.yttt.data.source.YouTubeSubscriptionDataSource
 import com.freshdigitable.yttt.data.source.YouTubeVideoDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -142,8 +141,6 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
     imageDataSource: ImageDataSource,
     private val ioScope: IoScope,
 ) : YouTubeVideoDataSource.Local, YouTubeVideoDataSource.Extended, ImageDataSource by imageDataSource {
-    override val videos: Flow<List<YouTubeVideoExtended>> = dao.watchAllUnfinishedVideos()
-
     override suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>> =
         if (ids.isEmpty()) {
             Result.success(emptyList())

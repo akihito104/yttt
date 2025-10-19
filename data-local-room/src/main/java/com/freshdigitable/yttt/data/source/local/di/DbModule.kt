@@ -2,17 +2,21 @@ package com.freshdigitable.yttt.data.source.local.di
 
 import android.content.Context
 import androidx.room.Room
+import com.freshdigitable.yttt.data.model.LivePlatform
+import com.freshdigitable.yttt.data.source.LiveDataPagingSource
 import com.freshdigitable.yttt.data.source.TwitchDataSource
 import com.freshdigitable.yttt.data.source.TwitchScheduleDataSource
 import com.freshdigitable.yttt.data.source.TwitchStreamDataSource
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
+import com.freshdigitable.yttt.data.source.local.LiveLocalPagingSource
 import com.freshdigitable.yttt.data.source.local.TwitchExtendedDataSource
 import com.freshdigitable.yttt.data.source.local.TwitchLocalDataSource
 import com.freshdigitable.yttt.data.source.local.TwitchScheduleLocalDataSource
 import com.freshdigitable.yttt.data.source.local.TwitchStreamLocalDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeExtendedDataSource
 import com.freshdigitable.yttt.data.source.local.YouTubeLocalDataSource
+import com.freshdigitable.yttt.data.source.local.db.LivePlatformConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchScheduleDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.TwitchStreamDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.TwitchUserDaoProviders
@@ -20,6 +24,7 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionDaoProviders
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDaoProviders
+import com.freshdigitable.yttt.di.ClassMap
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -37,8 +42,12 @@ internal object DbModule {
     internal fun provideDatabase(
         @ApplicationContext context: Context,
         flag: DbFlagModule.Flag? = null,
-    ): AppDatabase =
-        if (flag == null) AppDatabase.create(context) else AppDatabase.createInMemory(context)
+        platforms: ClassMap<LivePlatform, LivePlatform>,
+    ): AppDatabase = if (flag == null) {
+        AppDatabase.create(context, platforms = platforms.values)
+    } else {
+        AppDatabase.createInMemory(context, platforms.values)
+    }
 }
 
 @VisibleForTesting
@@ -51,8 +60,10 @@ object DbFlagModule {
     internal val provideFlag: Flag? get() = null
 }
 
-private fun AppDatabase.Companion.createInMemory(context: Context) =
-    Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+private fun AppDatabase.Companion.createInMemory(context: Context, platforms: Collection<LivePlatform>) =
+    Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+        .addTypeConverter(LivePlatformConverter(platforms))
+        .build()
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -74,6 +85,9 @@ internal interface LocalModule {
 
     @Binds
     fun bindTwitchScheduleLocalDataSource(dataSource: TwitchScheduleLocalDataSource): TwitchScheduleDataSource.Extended
+
+    @Binds
+    fun bindLivePagingSource(dataSource: LiveLocalPagingSource): LiveDataPagingSource
 }
 
 @Module

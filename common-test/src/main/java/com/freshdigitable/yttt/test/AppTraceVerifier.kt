@@ -34,7 +34,7 @@ class AppTraceVerifier : TestWatcher() {
     }
 
     var isTraceable: Boolean = true
-    override fun finished(description: Description?) {
+    override fun succeeded(description: Description?) {
         if (isTraceable) {
             started.shouldBeTrue()
             stopped.shouldBeTrue()

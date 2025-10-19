@@ -11,11 +11,14 @@ import androidx.room.TypeConverters
 import androidx.room.migration.AutoMigrationSpec
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.source.local.db.BigIntegerConverter
 import com.freshdigitable.yttt.data.source.local.db.CsvConverter
 import com.freshdigitable.yttt.data.source.local.db.DurationConverter
 import com.freshdigitable.yttt.data.source.local.db.FreeChatTable
 import com.freshdigitable.yttt.data.source.local.db.InstantConverter
+import com.freshdigitable.yttt.data.source.local.db.LiveDaoProviders
+import com.freshdigitable.yttt.data.source.local.db.LivePlatformConverter
 import com.freshdigitable.yttt.data.source.local.db.TwitchAuthorizedUserTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterExpireTable
 import com.freshdigitable.yttt.data.source.local.db.TwitchBroadcasterTable
@@ -137,8 +140,9 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
     TwitchStreamIdConverter::class,
     TwitchCategoryIdConverter::class,
     CsvConverter::class,
+    LivePlatformConverter::class,
 )
-internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProviders {
+internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTubeDaoProviders, LiveDaoProviders {
     @DeleteColumn.Entries(DeleteColumn(tableName = "video", columnName = "visible"))
     internal class MigrateRemoveVideoVisible : AutoMigrationSpec
 
@@ -168,16 +172,20 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
     internal class MigrateSubscriptionOrder : AutoMigrationSpec
     companion object {
         private const val DATABASE_NAME = "ytttdb"
-        internal fun create(context: Context, name: String = DATABASE_NAME): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, name)
-                .addMigrations(
-                    MIGRATION_13_14,
-                    MIGRATION_15_16,
-                    MIGRATION_18_19,
-                    MIGRATION_23_24,
-                    MIGRATION_25_26,
-                )
-                .build()
+        internal fun create(
+            context: Context,
+            name: String = DATABASE_NAME,
+            platforms: Collection<LivePlatform>,
+        ): AppDatabase = Room.databaseBuilder(context, AppDatabase::class.java, name)
+            .addMigrations(
+                MIGRATION_13_14,
+                MIGRATION_15_16,
+                MIGRATION_18_19,
+                MIGRATION_23_24,
+                MIGRATION_25_26,
+            )
+            .addTypeConverter(LivePlatformConverter(platforms))
+            .build()
     }
 }
 

@@ -1,14 +1,14 @@
 package com.freshdigitable.yttt.data.source.local.fixture
 
 import android.content.Context
-import android.database.Cursor
 import androidx.room.Room
-import androidx.room.util.useCursor
 import androidx.test.core.app.ApplicationProvider
+import com.freshdigitable.yttt.data.model.Twitch
+import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import kotlinx.coroutines.CoroutineScope
+import com.freshdigitable.yttt.data.source.local.db.LivePlatformConverter
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.rules.RuleChain
@@ -22,7 +22,9 @@ internal class DatabaseTestRule : TestWatcher() {
 
     override fun starting(description: Description?) {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
+        database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+            .addTypeConverter(LivePlatformConverter(setOf(Twitch, YouTube)))
+            .build()
     }
 
     override fun finished(description: Description?) {
@@ -30,40 +32,22 @@ internal class DatabaseTestRule : TestWatcher() {
     }
 }
 
-internal abstract class DataSourceTestRule<Dao, Local, Extended> : TestWatcher() {
+internal abstract class DataSourceTestRule<T : DataSourceTestRule.DataSourceScope> : TestWatcher() {
     private val databaseRule = DatabaseTestRule()
     internal val database: AppDatabase get() = databaseRule.database
-    private var _dao: Dao? = null
-    protected val dao: Dao get() = checkNotNull(_dao)
-    fun runWithDao(body: suspend CoroutineScope.(Dao) -> Unit) = runTest { body(dao) }
-    fun runWithLocalSource(body: suspend DatabaseTestScope<Dao, Local, Extended>.() -> Unit) = runTest {
+    fun runWithScope(body: suspend T.() -> Unit) = runTest {
         val ioScope = IoScope(StandardTestDispatcher(testScheduler))
         val scope = createTestScope(ioScope)
         scope.body()
     }
 
-    abstract fun createDao(database: AppDatabase): Dao
-    abstract fun createTestScope(ioScope: IoScope): DatabaseTestScope<Dao, Local, Extended>
-
-    override fun starting(description: Description?) {
-        _dao = createDao(database)
-    }
-
-    override fun finished(description: Description?) {
-        _dao = null
-    }
+    abstract fun createTestScope(ioScope: IoScope): T
 
     override fun apply(base: Statement?, description: Description?): Statement =
         RuleChain.outerRule(databaseRule)
             .apply(super.apply(base, description), description)
 
-    fun <E> query(stmt: String, res: (Cursor) -> E): E = database.query(stmt, null).useCursor(res)
-
-    internal class DatabaseTestScope<Dao, Local, Extended>(
-        val dao: Dao,
-        val localSource: Local,
-        val extendedSource: Extended,
-    )
+    internal interface DataSourceScope
 }
 
 internal object NopImageDataSource : ImageDataSource {

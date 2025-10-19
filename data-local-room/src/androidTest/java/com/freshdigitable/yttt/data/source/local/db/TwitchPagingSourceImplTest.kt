@@ -28,7 +28,7 @@ class TwitchPagingSourceImplTest {
     internal lateinit var sut: TwitchPagingSourceImpl
 
     @Before
-    fun setup() = rule.runWithLocalSource {
+    fun setup() = rule.runWithScope {
         localSource.setMe(me.toUpdatable(CacheControl.zero()))
         localSource.replaceAllFollowings(followings)
         sut = TwitchPagingSourceImpl(rule.database)

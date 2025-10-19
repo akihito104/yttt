@@ -14,54 +14,49 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubePlaylistDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.YouTubeSubscriptionDaoImpl
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDaoImpl
 
-internal class YouTubeDatabaseTestRule :
-    DataSourceTestRule<YouTubeDao, YouTubeLocalDataSource, YouTubeExtendedDataSource>() {
-    override fun createDao(database: AppDatabase): YouTubeDao = YouTubeDao(
-        database,
-        videoDao = YouTubeVideoDaoImpl(database),
-        channelDao = YouTubeChannelDaoImpl(database),
-        playlistDao = YouTubePlaylistDaoImpl(database),
-        subscriptionDao = YouTubeSubscriptionDaoImpl(database),
-    )
+internal class YouTubeDatabaseTestRule : DataSourceTestRule<YouTubeDatabaseTestRule.YouTubeDataSourceScope>() {
+    override fun createTestScope(ioScope: IoScope): YouTubeDataSourceScope = YouTubeDataSourceScope(ioScope, database)
 
-    override fun createTestScope(
-        ioScope: IoScope,
-    ): DatabaseTestScope<YouTubeDao, YouTubeLocalDataSource, YouTubeExtendedDataSource> {
-        val videoDataSource = YouTubeVideoLocalDataSource(
+    class YouTubeDataSourceScope(val ioScope: IoScope, val database: AppDatabase) : DataSourceScope {
+        val dao = YouTubeDao(
+            database,
+            videoDao = YouTubeVideoDaoImpl(database),
+            channelDao = YouTubeChannelDaoImpl(database),
+            playlistDao = YouTubePlaylistDaoImpl(database),
+            subscriptionDao = YouTubeSubscriptionDaoImpl(database),
+        )
+        private val videoDataSource = YouTubeVideoLocalDataSource(
             database = database,
             dao = dao,
             imageDataSource = NopImageDataSource,
             ioScope = ioScope,
         )
-        val subscriptionDataSource = YouTubeSubscriptionLocalDataSource(
+        private val subscriptionDataSource = YouTubeSubscriptionLocalDataSource(
             database = database,
             dao = dao,
             ioScope = ioScope,
         )
-        val playlistDataSource = YouTubePlaylistLocalDataSource(
+        private val playlistDataSource = YouTubePlaylistLocalDataSource(
             dao = dao,
             ioScope = ioScope,
         )
-        return DatabaseTestScope(
+        val localSource = YouTubeLocalDataSource(
             dao = dao,
-            localSource = YouTubeLocalDataSource(
-                dao = dao,
-                channelDataSource = YouTubeChannelLocalDataSource(
-                    database = database,
-                    dao = dao,
-                    ioScope = ioScope,
-                ),
-                videoDataSource = videoDataSource,
-                subscriptionDataSource = subscriptionDataSource,
-                playlistDataSource = playlistDataSource,
-            ),
-            extendedSource = YouTubeExtendedDataSource(
+            channelDataSource = YouTubeChannelLocalDataSource(
                 database = database,
                 dao = dao,
-                videoDataSource = videoDataSource,
-                subscriptionDataSource = subscriptionDataSource,
-                playlistDataSource = playlistDataSource,
+                ioScope = ioScope,
             ),
+            videoDataSource = videoDataSource,
+            subscriptionDataSource = subscriptionDataSource,
+            playlistDataSource = playlistDataSource,
+        )
+        val extendedSource = YouTubeExtendedDataSource(
+            database = database,
+            dao = dao,
+            videoDataSource = videoDataSource,
+            subscriptionDataSource = subscriptionDataSource,
+            playlistDataSource = playlistDataSource,
         )
     }
 }

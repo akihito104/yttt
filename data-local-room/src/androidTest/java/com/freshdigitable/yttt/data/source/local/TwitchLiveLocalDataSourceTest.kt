@@ -35,7 +35,7 @@ class TwitchLiveLocalDataSourceTest {
         internal val rule = TwitchDataSourceTestRule()
 
         @Before
-        fun setup() = rule.runWithLocalSource {
+        fun setup() = rule.runWithScope {
             localSource.setMe(me.toUpdatable(CacheControl.zero()))
             localSource.replaceAllFollowings(followings(me.id, listOf(broadcaster(broadcaster))))
             localSource.addUsers(listOf(broadcaster.toUpdatable(CacheControl.zero())))
@@ -47,7 +47,7 @@ class TwitchLiveLocalDataSourceTest {
         }
 
         @Test
-        fun cleanUpByUserId_cannotRemoveFollowingBroadcaster() = rule.runWithLocalSource {
+        fun cleanUpByUserId_cannotRemoveFollowingBroadcaster() = rule.runWithScope {
             // exercise
             extendedSource.cleanUpByUserId(listOf(broadcaster.id))
             // verify
@@ -58,7 +58,7 @@ class TwitchLiveLocalDataSourceTest {
         }
 
         @Test
-        fun cleanUpByUserId_removedAfterUnfollowing() = rule.runWithLocalSource {
+        fun cleanUpByUserId_removedAfterUnfollowing() = rule.runWithScope {
             // setup
             localSource.replaceAllFollowings(followings(me.id, emptyList()))
             // exercise
@@ -77,7 +77,7 @@ class TwitchLiveLocalDataSourceTest {
         private val me2 = userDetail(id = "user_me2")
 
         @Before
-        fun setup() = rule.runWithLocalSource {
+        fun setup() = rule.runWithScope {
             mapOf(
                 me to listOf(broadcaster(broadcaster)),
                 me2 to listOf(broadcaster(broadcaster), broadcaster(me)),
@@ -94,7 +94,7 @@ class TwitchLiveLocalDataSourceTest {
         }
 
         @Test
-        fun cleanUpByUserId_cannotRemoveFollowingBroadcaster() = rule.runWithLocalSource {
+        fun cleanUpByUserId_cannotRemoveFollowingBroadcaster() = rule.runWithScope {
             // exercise
             extendedSource.cleanUpByUserId(listOf(broadcaster.id))
             // verify
@@ -105,7 +105,7 @@ class TwitchLiveLocalDataSourceTest {
         }
 
         @Test
-        fun cleanUpByUserId_cannotRemoveScheduleOfFollowedBroadcaster() = rule.runWithLocalSource {
+        fun cleanUpByUserId_cannotRemoveScheduleOfFollowedBroadcaster() = rule.runWithScope {
             // setup
             localSource.replaceAllFollowings(followings(me.id, emptyList()))
             // exercise
@@ -118,7 +118,7 @@ class TwitchLiveLocalDataSourceTest {
         }
 
         @Test
-        fun cleanUpByUserId_removedSchedule() = rule.runWithLocalSource {
+        fun cleanUpByUserId_removedSchedule() = rule.runWithScope {
             // setup
             listOf(me, me2).forEach {
                 localSource.replaceAllFollowings(followings(it.id, emptyList()))
@@ -147,7 +147,7 @@ internal fun userDetail(
     override val createdAt: Instant get() = Instant.EPOCH
 }
 
-private fun channelSchedule(
+internal fun channelSchedule(
     segments: List<TwitchChannelSchedule.Stream>,
     broadcaster: TwitchUser,
     vacation: TwitchChannelSchedule.Vacation? = null,
@@ -157,17 +157,19 @@ private fun channelSchedule(
     override val vacation: TwitchChannelSchedule.Vacation? get() = vacation
 }
 
-private fun streamSchedule(
+internal fun streamSchedule(
     id: String,
     startTime: Instant = Instant.EPOCH,
     duration: Duration = Duration.ofHours(3),
+    category: TwitchCategory? = null,
+    title: String = "title",
 ): TwitchChannelSchedule.Stream = object : TwitchChannelSchedule.Stream {
     override val id: TwitchChannelSchedule.Stream.Id get() = TwitchChannelSchedule.Stream.Id(id)
     override val startTime: Instant get() = startTime
     override val endTime: Instant? get() = startTime + duration
-    override val title: String get() = "title"
+    override val title: String get() = title
     override val canceledUntil: String? get() = null
-    override val category: TwitchCategory? get() = null
+    override val category: TwitchCategory? get() = category
     override val isRecurring: Boolean get() = true
 }
 
@@ -178,7 +180,7 @@ internal fun followings(
 ): Updatable<TwitchFollowings> =
     TwitchFollowings.create(followerId, followings, CacheControl.create(fetchedAt, Duration.ZERO))
 
-private fun broadcaster(
+internal fun broadcaster(
     user: TwitchUser,
     followedAt: Instant = Instant.EPOCH,
 ): TwitchBroadcaster = object : TwitchBroadcaster, TwitchUser by user {

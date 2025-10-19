@@ -4,10 +4,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.cachedIn
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.SnackbarMessageBus
-import com.freshdigitable.yttt.compose.TimetableTabData
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -25,10 +25,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
+import java.time.Instant
 
 @HiltViewModel(assistedFactory = TimetableTabViewModel.Factory::class)
 internal class TimetableTabViewModel @AssistedInject constructor(
@@ -36,10 +38,9 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
     contextMenuDelegateFactory: TimetableContextMenuDelegate.Factory,
     private val dateTimeProvider: DateTimeProvider,
-    timetablePageDelegate: TimetablePageDelegate,
+    private val timetablePageDelegate: TimetablePageDelegate,
     @Assisted private val sender: SnackbarMessageBus.Sender,
-) : ViewModel(),
-    TimetablePageDelegate by timetablePageDelegate {
+) : ViewModel() {
     @AssistedFactory
     interface Factory {
         fun create(sender: SnackbarMessageBus.Sender): TimetableTabViewModel
@@ -53,10 +54,12 @@ internal class TimetableTabViewModel @AssistedInject constructor(
             return (lastUpdateDatetime + Duration.ofMinutes(30)) <= dateTimeProvider.now()
         }
     private val contextMenuDelegate = contextMenuDelegateFactory.create(sender)
+    private val current: MutableStateFlow<Instant> = MutableStateFlow(dateTimeProvider.now())
     fun loadList() {
         viewModelScope.launch {
             if (_isLoading.value == false) {
                 _isLoading.postValue(true)
+                current.value = dateTimeProvider.now()
                 AppPerformance.trace("loadList") {
                     val tasks = fetchStreamTasks.map { async { it() } }.awaitAll()
                     if (tasks.isNotEmpty() && tasks.all { it.isSuccess }) {
@@ -77,24 +80,29 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     val menuItems: StateFlow<List<TimetableMenuItem>> = contextMenuDelegate.menuItems
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun onMenuClicked(id: LiveVideo.Id) {
+    fun onMenuClick(id: LiveVideo.Id) {
         viewModelScope.launch {
             contextMenuDelegate.setupMenu(id)
         }
     }
 
-    fun onMenuClosed() {
+    fun onMenuClose() {
         contextMenuDelegate.tearDownMenu()
     }
 
-    fun onMenuItemClicked(item: TimetableMenuItem) {
+    fun onMenuItemClick(item: TimetableMenuItem) {
         viewModelScope.launch {
             contextMenuDelegate.consumeMenuItem(item)
         }
     }
 
-    val tabData: StateFlow<List<TimetableTabData>> =
-        tabs.stateIn(viewModelScope, SharingStarted.Lazily, TimetableTabData.initialValues())
+    val timeAdjustment: StateFlow<TimeAdjustment> = settingRepository.changeDateTime
+        .map { TimeAdjustment(Duration.ofHours(((it ?: 24) - 24).toLong())) }
+        .stateIn(viewModelScope, SharingStarted.Lazily, TimeAdjustment.zero())
+    val pagers = TimetablePage.entries.associateWith { p ->
+        current.flatMapLatest { timetablePageDelegate.getLiveTimelineItemPager(p)(it) }
+            .cachedIn(viewModelScope)
+    }
 
     companion object {
         @Suppress("unused")

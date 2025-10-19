@@ -54,4 +54,5 @@ dependencies {
     androidTestImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.paging.testing)
 }
