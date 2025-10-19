@@ -204,7 +204,7 @@ class YouTubeVideoTablesTest {
             liveSource.pagingSource.onAir.testWithRefresh {
                 data.map { it.id.value }.shouldContainExactlyInAnyOrder(live.value)
             }
-            liveSource.pagingSource.upcoming.testWithRefresh {
+            liveSource.pagingSource.upcoming(Instant.EPOCH).testWithRefresh {
                 data.map { it.id.value }.shouldContainExactlyInAnyOrder(upcoming.value, simple.value)
             }
             liveSource.pagingSource.freeChat.testWithRefresh {

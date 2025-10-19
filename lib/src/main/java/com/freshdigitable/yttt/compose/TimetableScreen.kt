@@ -46,7 +46,7 @@ fun TimetableScreen(
     titleModifier: @Composable (LiveVideo.Id) -> Modifier = { Modifier },
     lazyListState: LazyListState = rememberLazyListState(),
 ) {
-    AppLogger.logD("Timetable") { "start:" }
+    AppLogger.logD("Timetable") { "start: $page" }
     PullToRefreshBox(
         isRefreshing = refreshingProvider(),
         onRefresh = onRefresh,
@@ -110,7 +110,7 @@ private fun LazyListScope.simpleContent(
     val items = itemsProvider()
     items(
         count = items.itemCount,
-        key = items.itemKey { "${it.id.type.simpleName}_${it.id.value}" },
+        key = items.itemKey { it.itemKey },
     ) { i ->
         val item = items[i] ?: return@items
         content(item, timeAdjustmentProvider())
@@ -123,6 +123,7 @@ private fun LazyListScope.groupedContent(
     timeAdjustmentProvider: () -> TimeAdjustment,
     content: @Composable LazyItemScope.(LiveTimelineItem, TimeAdjustment) -> Unit,
 ) {
+    AppLogger.logD("groupedContent:") { "start:" }
     val pagedItems = itemsProvider()
     val timeAdjustment = timeAdjustmentProvider()
     val grouped = buildMap {
@@ -143,13 +144,15 @@ private fun LazyListScope.groupedContent(
         }
         items(
             items = indices,
-            key = { i -> pagedItems.itemKey { "${it.id.type.simpleName}_${it.id.value}" }(i) },
+            key = { i -> pagedItems.itemKey { it.itemKey }(i) },
         ) { index ->
             val item = pagedItems[index] ?: return@items
             content(item, timeAdjustment)
         }
     }
 }
+
+private val LiveTimelineItem.itemKey: String get() = "${id.type.qualifiedName}_${id.value}"
 
 @PreviewLightMode
 @Composable

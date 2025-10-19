@@ -63,7 +63,6 @@ class LiveTimelineUpcomingItemDaoTest {
 
         @Test
         fun init() = rule.runWithScope {
-            this.current = now
             dao.getAllUpcomingPagingSource(now).testWithRefresh {
                 data.shouldBeEmpty()
             }
@@ -72,7 +71,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun anyUpcomingItemsAreNotIncluded() = rule.runWithScope {
             // setup
-            current = now
             youtube.apply {
                 val videos = listOf(
                     YouTubeVideoEntity.Companion.liveStreaming(channel = channels[0]),
@@ -103,7 +101,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun itemHasScheduledStartDateTimeOutOfPublicationTermIsNotIncluded() = rule.runWithScope {
             // setup
-            current = now
             youtube.apply {
                 val videos = listOf(
                     YouTubeVideoEntity.Companion.upcomingStream(
@@ -131,7 +128,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun imageUrlIsReplacedWithSize() = rule.runWithScope {
             // setup
-            current = now
             twitch.apply {
                 val segments = listOf(
                     streamSchedule(
@@ -155,7 +151,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun scheduleCategoryIsNullThenImageUrlIsEmpty() = rule.runWithScope {
             // setup
-            current = now
             twitch.apply {
                 val segments = listOf(
                     streamSchedule(
@@ -196,7 +191,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun youtube_sortByDatetimeAscendancy() = rule.runWithScope {
             // setup
-            current = now
             youtube.apply {
                 val videos = listOf(
                     YouTubeVideoEntity.Companion.upcomingStream(
@@ -222,7 +216,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun youtube_sortByTitleAscendancy() = rule.runWithScope {
             // setup
-            current = now
             youtube.apply {
                 val scheduledStartDateTime = now + Duration.ofHours(2)
                 val videos = listOf(
@@ -251,7 +244,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun twitch_sortByDatetimeAscendancy() = rule.runWithScope {
             // setup
-            current = now
             twitch.apply {
                 val segments = listOf(
                     streamSchedule(id = "stream-0", startTime = now + Duration.ofDays(2)),
@@ -270,7 +262,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun twitch_sortByTitleAscendancy() = rule.runWithScope {
             // setup
-            current = now
             twitch.apply {
                 val startTime = now + Duration.ofDays(2)
                 val segments = mapOf(
@@ -292,7 +283,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun sortByDatetimeAscendancy() = rule.runWithScope {
             // setup
-            current = now
             youtube.apply {
                 val videos = listOf(
                     YouTubeVideoEntity.Companion.upcomingStream(
@@ -320,7 +310,6 @@ class LiveTimelineUpcomingItemDaoTest {
         @Test
         fun sortByTitleAscendancy() = rule.runWithScope {
             // setup
-            current = now
             val startTime = now + Duration.ofDays(3)
             youtube.apply {
                 val videos = listOf(

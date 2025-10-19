@@ -7,16 +7,18 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldContainInOrder
 import org.junit.Rule
 import org.junit.Test
+import java.time.Instant
 
 class LiveLocalPagingSourceTest {
     @get:Rule
     internal val rule = LiveDataSourceTestRule()
+    private val current = Instant.EPOCH
 
     @Test
     fun watchAllUnfinished_returnEmpty() = rule.runWithScope {
         // verify
         pagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
-        pagingSource.upcoming.testWithRefresh { data.shouldBeEmpty() }
+        pagingSource.upcoming(current).testWithRefresh { data.shouldBeEmpty() }
         pagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
     }
 
@@ -43,7 +45,7 @@ class LiveLocalPagingSourceTest {
         pagingSource.onAir.testWithRefresh {
             data.map { it.id.value }.shouldContainInOrder("live_streaming")
         }
-        pagingSource.upcoming.testWithRefresh {
+        pagingSource.upcoming(current).testWithRefresh {
             data.map { it.id.value }.shouldContainInOrder("upcoming")
         }
         youtube.dao.findAllArchivedVideos()
