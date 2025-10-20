@@ -5,7 +5,6 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.mapTo
 import java.math.BigInteger
@@ -72,8 +71,6 @@ internal abstract class YouTubeLiveVideo<T : LiveVideo<T>>(
         get() = video.actualStartDateTime
     override val actualEndDateTime: Instant?
         get() = video.scheduledEndDateTime
-    override val url: String
-        get() = video.url
     override val description: String
         get() = video.description
     override val viewerCount: BigInteger?

@@ -53,11 +53,11 @@ class VideoDetailViewModel @AssistedInject constructor(
     }
 
     private val menuSelector = menuSelectorMap.getValue(videoId.type.java)
-    val contextMenuItems: Flow<List<TopAppBarMenuItem>> = detail.filterNotNull().map { d ->
-        val items = menuSelector.findMenuItems(d.video)
-        items.map {
+    val contextMenuItems: Flow<List<TopAppBarMenuItem>> = flowOf(videoId).filterNotNull().map { id ->
+        val items = menuSelector.setupMenuItems(id)
+        items.menuItems.map {
             TopAppBarMenuItem.inOthers(it.text) {
-                menuSelector.consumeMenuItem(d.video, it)
+                items.consumeMenuItem(it)
             }
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())

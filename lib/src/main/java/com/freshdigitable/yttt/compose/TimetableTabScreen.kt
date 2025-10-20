@@ -30,6 +30,7 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.feature.timetable.ContextMenuSelector
 import com.freshdigitable.yttt.feature.timetable.TimetableMenuItem
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.TimetableTabViewModel
@@ -87,12 +88,11 @@ internal fun TimetableTabScreen(
             onMenuClick = viewModel::onMenuClick,
         )
     }
-    val menuItems = viewModel.menuItems.collectAsState(emptyList())
+    val menuSelector = viewModel.menuSelector.collectAsState()
     val sheetState = rememberModalBottomSheetState()
     ListItemMenuSheet(
-        menuItemsProvider = { menuItems.value },
+        menuSelectorProvider = { menuSelector.value },
         sheetState = sheetState,
-        onMenuItemClick = { viewModel.onMenuItemClick(it) },
         onDismissRequest = viewModel::onMenuClose,
     )
 }
@@ -116,21 +116,22 @@ private fun TopAppBarStateHolder.setup(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ListItemMenuSheet(
-    menuItemsProvider: () -> Collection<TimetableMenuItem>,
-    onMenuItemClick: (TimetableMenuItem) -> Unit,
+    menuSelectorProvider: () -> ContextMenuSelector<TimetableMenuItem>,
     sheetState: SheetState = rememberModalBottomSheetState(),
     onDismissRequest: () -> Unit,
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val menuItems = menuItemsProvider()
-    if (menuItems.isNotEmpty()) {
+    val menuSelector = menuSelectorProvider()
+    if (menuSelector.menuItems.isNotEmpty()) {
         ModalBottomSheet(
             sheetState = sheetState,
             onDismissRequest = onDismissRequest,
         ) {
-            MenuContent(menuItems = menuItems) {
-                onMenuItemClick(it)
-                coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
+            MenuContent(menuItems = menuSelector.menuItems) {
+                coroutineScope.launch {
+                    menuSelector.consumeMenuItem(it)
+                    sheetState.hide()
+                }.invokeOnCompletion {
                     if (!sheetState.isVisible) {
                         onDismissRequest()
                     }
@@ -196,8 +197,12 @@ private fun ModalSheetPreview() {
 private fun ListItemMenuSheetPreview() {
     AppTheme {
         ListItemMenuSheet(
-            menuItemsProvider = { TimetableMenuItem.entries },
-            onMenuItemClick = {},
+            menuSelectorProvider = {
+                object : ContextMenuSelector<TimetableMenuItem> {
+                    override val menuItems: List<TimetableMenuItem> = TimetableMenuItem.entries
+                    override suspend fun consumeMenuItem(item: TimetableMenuItem) = Unit
+                }
+            },
         ) {}
     }
 }

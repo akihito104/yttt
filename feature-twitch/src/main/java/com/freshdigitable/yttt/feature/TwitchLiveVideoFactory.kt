@@ -26,7 +26,6 @@ internal data class TwitchOnAirLiveVideo(
     override val scheduledStartDateTime: Instant? get() = null
     override val scheduledEndDateTime: Instant? get() = null
     override val actualEndDateTime: Instant? get() = null
-    override val url: String get() = stream.url
     override val id: LiveVideo.Id get() = stream.id.mapTo()
     override val title: String get() = stream.title
     override val thumbnailUrl: String get() = stream.getThumbnailUrl(width = 640, height = 360)
@@ -43,7 +42,6 @@ internal data class TwitchUpcomingLiveVideo(
     override val scheduledEndDateTime: Instant? get() = schedule.schedule.endTime
     override val actualStartDateTime: Instant? get() = null
     override val actualEndDateTime: Instant? get() = null
-    override val url: String get() = schedule.url
     override val title: String get() = schedule.title
     override val thumbnailUrl: String get() = schedule.getThumbnailUrl(width = 240, height = 360)
     override val isLandscape: Boolean get() = false

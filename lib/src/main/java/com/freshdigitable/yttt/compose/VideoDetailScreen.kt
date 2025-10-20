@@ -145,7 +145,6 @@ private data class DetailItem(
     override val scheduledEndDateTime: Instant? = null,
     override val actualStartDateTime: Instant? = null,
     override val actualEndDateTime: Instant? = null,
-    override val url: String = "",
     override val description: String,
     override val viewerCount: BigInteger?,
 ) : LiveVideo.Upcoming

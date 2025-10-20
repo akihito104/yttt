@@ -30,7 +30,6 @@ interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
     val scheduledEndDateTime: Instant?
     val actualStartDateTime: Instant?
     val actualEndDateTime: Instant?
-    val url: String
     val description: String
     val viewerCount: BigInteger?
 
