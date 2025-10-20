@@ -2,10 +2,8 @@ package com.freshdigitable.yttt.feature.video.di
 
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.di.IdBaseClassKey
-import com.freshdigitable.yttt.feature.video.AnnotatableStringFactory
-import com.freshdigitable.yttt.feature.video.FindLiveVideoFromYouTubeUseCase
-import com.freshdigitable.yttt.feature.video.FindLiveVideoUseCase
-import com.freshdigitable.yttt.feature.video.YouTubeAnnotatableStringFactory
+import com.freshdigitable.yttt.feature.video.FindLiveVideoDetailFromYouTubeUseCase
+import com.freshdigitable.yttt.feature.video.FindLiveVideoDetailUseCase
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -18,10 +16,5 @@ internal interface YouTubeVideoModule {
     @Binds
     @IntoMap
     @IdBaseClassKey(YouTubeVideo.Id::class)
-    fun bindFindLiveVideoFromYouTubeUseCase(useCase: FindLiveVideoFromYouTubeUseCase): FindLiveVideoUseCase
-
-    @Binds
-    @IntoMap
-    @IdBaseClassKey(YouTubeVideo.Id::class)
-    fun bindYouTubeAnnotatableStringFactory(useCase: YouTubeAnnotatableStringFactory): AnnotatableStringFactory
+    fun bindFindLiveVideoFromYouTubeUseCase(useCase: FindLiveVideoDetailFromYouTubeUseCase): FindLiveVideoDetailUseCase
 }

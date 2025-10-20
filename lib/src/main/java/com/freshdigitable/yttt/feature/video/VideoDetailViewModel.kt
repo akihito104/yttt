@@ -8,7 +8,10 @@ import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TopAppBarMenuItem
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
+import com.freshdigitable.yttt.data.SettingRepository
+import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.di.IdBaseClassMap
+import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuSelector
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -23,10 +26,10 @@ import kotlinx.coroutines.flow.stateIn
 
 @HiltViewModel(assistedFactory = VideoDetailViewModel.Factory::class)
 class VideoDetailViewModel @AssistedInject constructor(
-    findLiveVideoTable: IdBaseClassMap<FindLiveVideoUseCase>,
-    annotatedStringFactory: IdBaseClassMap<AnnotatableStringFactory>,
+    findLiveVideoTable: IdBaseClassMap<FindLiveVideoDetailUseCase>,
     menuSelectorMap: IdBaseClassMap<TimetableContextMenuSelector>,
     savedStateHandle: SavedStateHandle,
+    settingRepository: SettingRepository,
     @Assisted sender: SnackbarMessageBus.Sender,
 ) : ViewModel() {
     @AssistedFactory
@@ -36,20 +39,13 @@ class VideoDetailViewModel @AssistedInject constructor(
 
     private val videoId = savedStateHandle.toLiveVideoRoute
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
-    private val annotatedString = checkNotNull(annotatedStringFactory[videoId.type.java])
-    internal val detail: Flow<LiveVideoDetailItem?> = flowOf(videoId).map { id ->
+    val timeAdjustment = settingRepository.timeAdjustment
+        .stateIn(viewModelScope, SharingStarted.Lazily, TimeAdjustment.zero())
+    internal val detail: Flow<LiveVideoDetail?> = flowOf(videoId).map { id ->
         findLiveVideo(id)
             .onFailureWithSnackbarMessage(sender)
             .onSuccess { if (it == null) sender.send(SnackbarMessage("Video not found")) }
-            .map { v ->
-                v?.let {
-                    LiveVideoDetailItem(
-                        video = it,
-                        annotatableDescription = annotatedString(it.description),
-                        annotatableTitle = annotatedString(it.title),
-                    )
-                }
-            }.getOrNull()
+            .getOrNull()
     }
 
     private val menuSelector = menuSelectorMap.getValue(videoId.type.java)

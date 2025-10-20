@@ -86,8 +86,7 @@ internal class TimetableTabViewModel @AssistedInject constructor(
         contextMenuDelegate.tearDownMenu()
     }
 
-    val timeAdjustment: StateFlow<TimeAdjustment> = settingRepository.changeDateTime
-        .map { TimeAdjustment(Duration.ofHours(((it ?: 24) - 24).toLong())) }
+    val timeAdjustment: StateFlow<TimeAdjustment> = settingRepository.timeAdjustment
         .stateIn(viewModelScope, SharingStarted.Lazily, TimeAdjustment.zero())
     val pagers = TimetablePage.entries.associateWith { p ->
         current.flatMapLatest { timetablePageDelegate.getLiveTimelineItemPager(p)(it) }

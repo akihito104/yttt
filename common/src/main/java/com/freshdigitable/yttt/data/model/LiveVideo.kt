@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
+import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import kotlinx.serialization.Serializable
 import java.math.BigInteger
 import java.time.Duration
@@ -24,24 +25,19 @@ interface LiveTimelineItem : LiveVideoThumbnail {
     override fun hashCode(): Int
 }
 
-interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
+interface LiveVideoDetail {
+    val id: LiveVideo.Id
     val channel: LiveChannel
-    val scheduledStartDateTime: Instant?
-    val scheduledEndDateTime: Instant?
-    val actualStartDateTime: Instant?
-    val actualEndDateTime: Instant?
-    val description: String
+    val thumbnailUrl: String
+    val isLandscape: Boolean get() = true
+    val title: AnnotatableString
+    val description: AnnotatableString
+    val dateTime: Instant?
     val viewerCount: BigInteger?
+    val contentType: TimetablePage
+}
 
-    override fun compareTo(other: T): Int {
-        val type = this.id.type.java.simpleName.compareTo(other.id.type.java.simpleName)
-        if (type != 0) return type
-        return this.id.value.compareTo(other.id.value)
-    }
-
-    override fun equals(other: Any?): Boolean
-    override fun hashCode(): Int
-
+interface LiveVideo {
     @Serializable(with = LiveVideoIdSerializer::class)
     data class Id(
         override val value: String,
@@ -50,50 +46,5 @@ interface LiveVideo<T : LiveVideo<T>> : LiveVideoThumbnail, Comparable<T> {
 
     companion object {
         val UPCOMING_DEADLINE: Duration = Duration.ofHours(6)
-    }
-
-    interface OnAir : LiveVideo<OnAir> {
-        override val actualStartDateTime: Instant
-        override fun compareTo(other: OnAir): Int = comparator.compare(this, other)
-
-        companion object {
-            private val comparator: Comparator<OnAir> = Comparator { p0, p1 ->
-                // desc. order for actualStartDateTime
-                val date = p1.actualStartDateTime.compareTo(p0.actualStartDateTime)
-                if (date != 0) return@Comparator date
-                p0.title.compareTo(p1.title)
-            }
-        }
-    }
-
-    interface Upcoming : LiveVideo<Upcoming> {
-        override val scheduledStartDateTime: Instant
-        override fun compareTo(other: Upcoming): Int = comparator.compare(this, other)
-
-        companion object {
-            private val comparator: Comparator<Upcoming> = Comparator { p0, p1 ->
-                val date = p0.scheduledStartDateTime.compareTo(p1.scheduledStartDateTime)
-                if (date != 0) return@Comparator date
-                p0.title.compareTo(p1.title)
-            }
-        }
-    }
-
-    interface FreeChat : LiveVideo<FreeChat> {
-        override val scheduledStartDateTime: Instant
-        val isPinned: Boolean
-        override fun compareTo(other: FreeChat): Int = comparator.compare(this, other)
-
-        companion object {
-            private val comparator: Comparator<FreeChat> = Comparator { p0, p1 ->
-                val pinned = p1.isPinned.compareTo(p0.isPinned)
-                if (pinned != 0) return@Comparator pinned
-                val channelId = p0.channel.id.value.compareTo(p1.channel.id.value)
-                if (channelId != 0) return@Comparator channelId
-                val date = p0.scheduledStartDateTime.compareTo(p1.scheduledStartDateTime)
-                if (date != 0) return@Comparator date
-                p0.title.compareTo(p1.title)
-            }
-        }
     }
 }

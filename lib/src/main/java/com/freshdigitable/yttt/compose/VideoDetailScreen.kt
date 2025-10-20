@@ -22,10 +22,15 @@ import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
+import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.feature.video.LiveVideoDetailItem
+import com.freshdigitable.yttt.data.model.dateTimeFormatter
+import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
+import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
+import com.freshdigitable.yttt.feature.timetable.TimetablePage
+import com.freshdigitable.yttt.feature.timetable.toAdjustedLocalDateTimeText
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
 import java.time.Instant
@@ -42,8 +47,10 @@ fun VideoDetailScreen(
     val menuItems = viewModel.contextMenuItems.collectAsState(initial = emptyList())
     topAppBarStateHolder.updateMenuItems(menuItems.value)
     val item = viewModel.detail.collectAsState(null)
+    val timeAdjustment = viewModel.timeAdjustment.collectAsState()
     VideoDetailScreen(
         videoProvider = { item.value },
+        timeAdjustmentProvider = { timeAdjustment.value },
         modifier = modifier,
         thumbnailModifier = thumbnailModifier,
         titleModifier = titleModifier,
@@ -53,7 +60,8 @@ fun VideoDetailScreen(
 
 @Composable
 private fun VideoDetailScreen(
-    videoProvider: () -> LiveVideoDetailItem?,
+    videoProvider: () -> LiveVideoDetail?,
+    timeAdjustmentProvider: () -> TimeAdjustment,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
@@ -68,8 +76,8 @@ private fun VideoDetailScreen(
     ) {
         val video = videoProvider() ?: return
         ImageLoadableView.Thumbnail(
-            url = video.thumbnail.thumbnailUrl,
-            contentScale = if (video.thumbnail.isLandscape) ContentScale.FillWidth else ContentScale.FillHeight,
+            url = video.thumbnailUrl,
+            contentScale = if (video.isLandscape) ContentScale.FillWidth else ContentScale.FillHeight,
             modifier = Modifier
                 .then(thumbnailModifier)
                 .fillMaxWidth()
@@ -80,12 +88,13 @@ private fun VideoDetailScreen(
             modifier = Modifier.padding(8.dp),
         ) {
             AnnotatableText(
-                annotatableString = video.annotatableTitle,
+                annotatableString = video.title,
                 fontSize = 18.sp,
                 modifier = titleModifier,
                 dialog = dialog,
             )
-            val statsText = video.statsText
+            val timeAdjustment = timeAdjustmentProvider()
+            val statsText = video.statsText(timeAdjustment)
             if (statsText.isNotEmpty()) {
                 Text(
                     text = statsText,
@@ -99,7 +108,7 @@ private fun VideoDetailScreen(
                 onClick = { onChannelClick(video.channel.id) },
             )
             AnnotatableText(
-                annotatableString = video.annotatableDescription,
+                annotatableString = video.description,
                 fontSize = 14.sp,
                 dialog = dialog,
             )
@@ -108,43 +117,52 @@ private fun VideoDetailScreen(
     LinkAnnotationDialog(state = dialog)
 }
 
+fun LiveVideoDetail.statsText(timeAdjustment: TimeAdjustment): String {
+    val time = when (contentType) {
+        TimetablePage.OnAir ->
+            "Started:${checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, ::dateTimeSecondFormatter)}"
+
+        TimetablePage.Upcoming ->
+            "Starting:${checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, ::dateTimeFormatter)}"
+
+        else -> null
+    }
+    val count = if (viewerCount != null) "Viewers:$viewerCount" else null
+    return listOfNotNull(time, count).joinToString("・")
+}
+
 @PreviewLightDarkMode
 @Composable
 private fun VideoDetailComposePreview() {
     val detail = DetailItem(
         id = LiveVideo.Id("id", YouTubeVideo.Id::class),
-        title = "title",
+        title = AnnotatableString.create("title") { emptyList() },
         channel = LiveChannelEntity(
             id = LiveChannel.Id("channel", YouTubeChannel.Id::class),
             title = "channel",
             iconUrl = "iconUrl",
             platform = YouTube,
         ),
-        description = "description\nhttps://example.com",
+        description = AnnotatableString.create("description\nhttps://example.com") { emptyList() },
         viewerCount = BigInteger.valueOf(100),
+        contentType = TimetablePage.Upcoming,
+        dateTime = Instant.now(),
     )
     AppTheme {
         VideoDetailScreen(
-            videoProvider = {
-                LiveVideoDetailItem(
-                    video = detail,
-                    annotatableDescription = AnnotatableString.create(detail.description) { emptyList() },
-                    annotatableTitle = AnnotatableString.empty(),
-                )
-            },
+            videoProvider = { detail },
+            timeAdjustmentProvider = { TimeAdjustment.zero() },
         )
     }
 }
 
 private data class DetailItem(
     override val id: LiveVideo.Id,
-    override val title: String,
+    override val title: AnnotatableString,
     override val thumbnailUrl: String = "",
     override val channel: LiveChannel,
-    override val scheduledStartDateTime: Instant = Instant.EPOCH,
-    override val scheduledEndDateTime: Instant? = null,
-    override val actualStartDateTime: Instant? = null,
-    override val actualEndDateTime: Instant? = null,
-    override val description: String,
+    override val description: AnnotatableString,
     override val viewerCount: BigInteger?,
-) : LiveVideo.Upcoming
+    override val dateTime: Instant?,
+    override val contentType: TimetablePage,
+) : LiveVideoDetail
