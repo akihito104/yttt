@@ -5,7 +5,7 @@ import androidx.paging.testing.TestPager
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.LiveTimelineItem
+import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTube
@@ -582,11 +582,11 @@ class FetchYouTubeStreamUseCaseTest {
 
         @Inject
         lateinit var dateTimeProvider: DateTimeProvider
-        suspend fun PagingSource<Int, out LiveTimelineItem>.testForAllPage(
-            verify: suspend TestPager<Int, out LiveTimelineItem>.() -> Unit,
+        suspend fun PagingSource<Int, out LiveVideo>.testForAllPage(
+            verify: suspend TestPager<Int, out LiveVideo>.() -> Unit,
         ) {
             val testPager = toTestPager().apply {
-                var res: @JvmSuppressWildcards PagingSource.LoadResult<Int, out LiveTimelineItem>? = refresh()
+                var res: @JvmSuppressWildcards PagingSource.LoadResult<Int, out LiveVideo>? = refresh()
                 while ((res as? PagingSource.LoadResult.Page)?.nextKey != null) {
                     res = append()
                 }

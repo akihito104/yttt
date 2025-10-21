@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.feature.video
 
+import com.freshdigitable.yttt.data.model.AnnotatableString
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -7,7 +8,6 @@ import io.kotest.matchers.shouldBe
 
 class YouTubeAnnotatableStringFactoryTest : ShouldSpec(
     {
-        val sut = YouTubeAnnotatableStringFactory()
         withData(
             mapOf(
                 "url" to Param(
@@ -60,7 +60,7 @@ class YouTubeAnnotatableStringFactoryTest : ShouldSpec(
             ),
         ) { (description, expected) ->
             // exercise
-            val actual = sut.invoke(description)
+            val actual = AnnotatableString.createForYouTube(description)
             // verify
             actual.shouldNotBeNull()
             actual.annotationRangeItems.size shouldBe expected.size

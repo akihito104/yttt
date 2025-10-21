@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.BuildConfig
 import com.freshdigitable.yttt.data.TwitchRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.DATE
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LivePlatform
@@ -14,9 +15,9 @@ import com.freshdigitable.yttt.data.model.TwitchId
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
-import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
+import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.feature.video.createForTwitch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -107,7 +108,7 @@ internal data class LiveChannelDetailTwitch(
     companion object {
         private fun TwitchUserDetail.statsText(zoneId: ZoneId): String = listOf(
             loginName,
-            "Published:${createdAt.toLocalFormattedText(dateFormatter, zoneId)}",
+            "Published:${createdAt.toLocalFormattedText(formatter = DATE.toPattern(), zoneId = zoneId)}",
         ).joinToString(LiveChannelDetailBody.STATS_SEPARATOR)
     }
 }

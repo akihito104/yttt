@@ -29,7 +29,7 @@ import org.junit.runner.RunWith
 import java.time.Instant
 
 @RunWith(Enclosed::class)
-class LiveTimelineOnAirItemDaoTest {
+class LiveVideoOnAirItemDaoTest {
     private companion object {
         private val channels = listOf(
             YouTubeChannelTable(YouTubeChannel.Id("channel-0")),

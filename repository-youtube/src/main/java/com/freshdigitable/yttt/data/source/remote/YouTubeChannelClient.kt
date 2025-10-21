@@ -57,13 +57,13 @@ private class YouTubeChannelRemote(
 
     companion object {
         val factory: ResponseFactory<ChannelListResponse, List<YouTubeChannel>> = { res, cc ->
-            NetworkResponse.Companion.create(
+            NetworkResponse.create(
                 item = res.items.map { YouTubeChannelRemote(it) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,
             )
         }
-        val part = listOf(YouTubeClient.Companion.PART_SNIPPET)
+        val part = listOf(YouTubeClient.PART_SNIPPET)
     }
 }
 
@@ -76,13 +76,13 @@ private class YouTubeChannelRelatedPlaylistRemote(
 
     companion object {
         val factory: ResponseFactory<ChannelListResponse, List<YouTubeChannelRelatedPlaylist>> = { res, cc ->
-            NetworkResponse.Companion.create(
+            NetworkResponse.create(
                 item = res.items.map { YouTubeChannelRelatedPlaylistRemote(it) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,
             )
         }
-        val part = listOf(YouTubeClient.Companion.PART_CONTENT_DETAILS)
+        val part = listOf(YouTubeClient.PART_CONTENT_DETAILS)
     }
 }
 
@@ -109,15 +109,15 @@ private data class YouTubeChannelDetailImpl(
 
     companion object {
         val factory: ResponseFactory<ChannelListResponse, List<YouTubeChannelDetail>> = { res, cc ->
-            NetworkResponse.Companion.create(
+            NetworkResponse.create(
                 item = res.items.map { YouTubeChannelDetailImpl(it) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,
             )
         }
         val part = listOf(
-            YouTubeClient.Companion.PART_SNIPPET,
-            YouTubeClient.Companion.PART_CONTENT_DETAILS,
+            YouTubeClient.PART_SNIPPET,
+            YouTubeClient.PART_CONTENT_DETAILS,
             "brandingSettings",
             "statistics",
         )

@@ -8,12 +8,10 @@ import androidx.paging.cachedIn
 import com.freshdigitable.yttt.AppPerformance
 import com.freshdigitable.yttt.compose.SnackbarMessage
 import com.freshdigitable.yttt.compose.SnackbarMessageBus
-import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.di.IdBaseClassMap
-import com.freshdigitable.yttt.feature.video.FindLiveVideoUseCase
 import com.freshdigitable.yttt.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -31,12 +29,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
+import javax.inject.Inject
 
 @HiltViewModel(assistedFactory = TimetableTabViewModel.Factory::class)
 internal class TimetableTabViewModel @AssistedInject constructor(
     private val settingRepository: SettingRepository,
     private val fetchStreamTasks: Set<@JvmSuppressWildcards FetchStreamUseCase>,
-    contextMenuDelegateFactory: TimetableContextMenuDelegate.Factory,
+    private val contextMenuDelegate: TimetableContextMenuDelegate,
     private val dateTimeProvider: DateTimeProvider,
     private val timetablePageDelegate: TimetablePageDelegate,
     @Assisted private val sender: SnackbarMessageBus.Sender,
@@ -53,7 +52,6 @@ internal class TimetableTabViewModel @AssistedInject constructor(
             val lastUpdateDatetime = settingRepository.lastUpdateDatetime ?: return true
             return (lastUpdateDatetime + Duration.ofMinutes(30)) <= dateTimeProvider.now()
         }
-    private val contextMenuDelegate = contextMenuDelegateFactory.create(sender)
     private val current: MutableStateFlow<Instant> = MutableStateFlow(dateTimeProvider.now())
     fun loadList() {
         viewModelScope.launch {
@@ -77,30 +75,21 @@ internal class TimetableTabViewModel @AssistedInject constructor(
         }
     }
 
-    val menuItems: StateFlow<List<TimetableMenuItem>> = contextMenuDelegate.menuItems
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+    val menuSelector: StateFlow<ContextMenuSelector<TimetableMenuItem>> = contextMenuDelegate.menuSelector
+        .stateIn(viewModelScope, SharingStarted.Lazily, TimetableContextMenuSelector.EMPTY)
 
     fun onMenuClick(id: LiveVideo.Id) {
-        viewModelScope.launch {
-            contextMenuDelegate.setupMenu(id)
-        }
+        contextMenuDelegate.setupMenu(id)
     }
 
     fun onMenuClose() {
         contextMenuDelegate.tearDownMenu()
     }
 
-    fun onMenuItemClick(item: TimetableMenuItem) {
-        viewModelScope.launch {
-            contextMenuDelegate.consumeMenuItem(item)
-        }
-    }
-
-    val timeAdjustment: StateFlow<TimeAdjustment> = settingRepository.changeDateTime
-        .map { TimeAdjustment(Duration.ofHours(((it ?: 24) - 24).toLong())) }
+    val timeAdjustment: StateFlow<TimeAdjustment> = settingRepository.timeAdjustment
         .stateIn(viewModelScope, SharingStarted.Lazily, TimeAdjustment.zero())
     val pagers = TimetablePage.entries.associateWith { p ->
-        current.flatMapLatest { timetablePageDelegate.getLiveTimelineItemPager(p)(it) }
+        current.flatMapLatest { timetablePageDelegate.getLiveVideoPager(p)(it) }
             .cachedIn(viewModelScope)
     }
 
@@ -110,39 +99,25 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     }
 }
 
-class TimetableContextMenuDelegate @AssistedInject constructor(
-    private val findLiveVideoMap: IdBaseClassMap<FindLiveVideoUseCase>,
+class TimetableContextMenuDelegate @Inject constructor(
     private val menuSelectorMap: IdBaseClassMap<TimetableContextMenuSelector>,
-    @Assisted private val sender: SnackbarMessageBus.Sender,
 ) {
-    @AssistedFactory
-    interface Factory {
-        fun create(sender: SnackbarMessageBus.Sender): TimetableContextMenuDelegate
-    }
-
-    private val _selectedLiveVideo = MutableStateFlow<LiveVideo<*>?>(null)
-    private val selected: LiveVideo<*> get() = checkNotNull(_selectedLiveVideo.value)
-    private val menuSelector get() = checkNotNull(menuSelectorMap[selected.id.type.java])
-    val menuItems: Flow<List<TimetableMenuItem>> = _selectedLiveVideo.map {
+    private val _selectedLiveVideoId = MutableStateFlow<LiveVideo.Id?>(null)
+    private val selected: LiveVideo.Id get() = checkNotNull(_selectedLiveVideoId.value)
+    private val menuSelectorFactory get() = checkNotNull(menuSelectorMap[selected.type.java])
+    val menuSelector: Flow<ContextMenuSelector<TimetableMenuItem>> = _selectedLiveVideoId.map {
         if (it == null) {
-            emptyList()
+            TimetableContextMenuSelector.EMPTY
         } else {
-            menuSelector.findMenuItems(it)
+            menuSelectorFactory.setupMenuItems(it)
         }
     }
 
-    suspend fun setupMenu(id: LiveVideo.Id) {
-        checkNotNull(findLiveVideoMap[id.type.java]).invoke(id)
-            .onFailureWithSnackbarMessage(sender)
-            .onSuccess { _selectedLiveVideo.value = it }
-    }
-
-    suspend fun consumeMenuItem(item: TimetableMenuItem) {
-        val video = checkNotNull(_selectedLiveVideo.value)
-        menuSelector.consumeMenuItem(video, item)
+    fun setupMenu(id: LiveVideo.Id) {
+        _selectedLiveVideoId.value = id
     }
 
     fun tearDownMenu() {
-        _selectedLiveVideo.value = null
+        _selectedLiveVideoId.value = null
     }
 }

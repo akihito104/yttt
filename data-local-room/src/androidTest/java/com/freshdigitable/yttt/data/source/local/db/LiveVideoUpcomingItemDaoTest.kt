@@ -29,7 +29,7 @@ import java.time.Duration
 import java.time.Instant
 
 @RunWith(Enclosed::class)
-class LiveTimelineUpcomingItemDaoTest {
+class LiveVideoUpcomingItemDaoTest {
     private companion object {
         private val channels = listOf(
             YouTubeChannelTable(YouTubeChannel.Id("channel-0")),
@@ -42,7 +42,7 @@ class LiveTimelineUpcomingItemDaoTest {
         )
         private val broadcasters = users.map { broadcaster(it) }
         private val now = Instant.parse("2020-01-01T00:00:00Z")
-        private val cacheControl = CacheControl.Companion.fromRemote(now)
+        private val cacheControl = CacheControl.fromRemote(now)
     }
 
     class Init {
@@ -73,21 +73,21 @@ class LiveTimelineUpcomingItemDaoTest {
             // setup
             youtube.apply {
                 val videos = listOf(
-                    YouTubeVideoEntity.Companion.liveStreaming(channel = channels[0]),
-                    YouTubeVideoEntity.Companion.archivedStream(channel = channels[0]),
-                    YouTubeVideoEntity.Companion.uploadedVideo(channel = channels[0]),
-                    YouTubeVideoEntity.Companion.freeChat(channel = channels[0]),
-                    YouTubeVideoEntity.Companion.unscheduledUpcoming(channel = channels[0]), // should have startScheduleDateTime
+                    YouTubeVideoEntity.liveStreaming(channel = channels[0]),
+                    YouTubeVideoEntity.archivedStream(channel = channels[0]),
+                    YouTubeVideoEntity.uploadedVideo(channel = channels[0]),
+                    YouTubeVideoEntity.freeChat(channel = channels[0]),
+                    YouTubeVideoEntity.unscheduledUpcoming(channel = channels[0]), // should have startScheduleDateTime
                 )
                 dao.addVideoEntities(videos)
             }
             twitch.apply {
-                val stream = TwitchStreams.Companion.create(
+                val stream = TwitchStreams.create(
                     followerId = me.id,
                     streams = listOf(
                         stream(id = "stream_id-0-0", userDetail = users[0], startedAt = now - Duration.ofHours(2)),
                     ),
-                    cacheControl = CacheControl.Companion.fromRemote(now),
+                    cacheControl = CacheControl.fromRemote(now),
                 )
                 dao.replaceAllStreams(stream)
             }
@@ -103,7 +103,7 @@ class LiveTimelineUpcomingItemDaoTest {
             // setup
             youtube.apply {
                 val videos = listOf(
-                    YouTubeVideoEntity.Companion.upcomingStream(
+                    YouTubeVideoEntity.upcomingStream(
                         channel = channels[0],
                         scheduledStartDateTime = now - (Duration.ofHours(6) + Duration.ofSeconds(1)),
                     ),
@@ -193,12 +193,12 @@ class LiveTimelineUpcomingItemDaoTest {
             // setup
             youtube.apply {
                 val videos = listOf(
-                    YouTubeVideoEntity.Companion.upcomingStream(
+                    YouTubeVideoEntity.upcomingStream(
                         id = "video-1-0",
                         channel = channels[1],
                         scheduledStartDateTime = now,
                     ),
-                    YouTubeVideoEntity.Companion.upcomingStream(
+                    YouTubeVideoEntity.upcomingStream(
                         id = "video-0-0",
                         channel = channels[0],
                         scheduledStartDateTime = now - Duration.ofHours(6),
@@ -219,13 +219,13 @@ class LiveTimelineUpcomingItemDaoTest {
             youtube.apply {
                 val scheduledStartDateTime = now + Duration.ofHours(2)
                 val videos = listOf(
-                    YouTubeVideoEntity.Companion.upcomingStream(
+                    YouTubeVideoEntity.upcomingStream(
                         id = "video-1-0",
                         channel = channels[1],
                         scheduledStartDateTime = scheduledStartDateTime,
                         title = "title0",
                     ),
-                    YouTubeVideoEntity.Companion.upcomingStream(
+                    YouTubeVideoEntity.upcomingStream(
                         id = "video-0-0",
                         channel = channels[0],
                         scheduledStartDateTime = scheduledStartDateTime,
@@ -285,7 +285,7 @@ class LiveTimelineUpcomingItemDaoTest {
             // setup
             youtube.apply {
                 val videos = listOf(
-                    YouTubeVideoEntity.Companion.upcomingStream(
+                    YouTubeVideoEntity.upcomingStream(
                         id = "video-1-0",
                         channel = channels[1],
                         scheduledStartDateTime = now,
@@ -313,7 +313,7 @@ class LiveTimelineUpcomingItemDaoTest {
             val startTime = now + Duration.ofDays(3)
             youtube.apply {
                 val videos = listOf(
-                    YouTubeVideoEntity.Companion.upcomingStream(
+                    YouTubeVideoEntity.upcomingStream(
                         id = "video-1-0",
                         channel = channels[1],
                         scheduledStartDateTime = startTime,

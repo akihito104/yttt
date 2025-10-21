@@ -11,7 +11,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 
-class LiveTimelineFreeChatItemDaoTest {
+class LiveVideoFreeChatItemDaoTest {
     companion object {
         private val channels = listOf(
             YouTubeChannelTable(YouTubeChannel.Id("channel-0")),

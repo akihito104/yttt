@@ -3,8 +3,25 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.data.model.LiveVideo
 
 interface TimetableContextMenuSelector {
-    fun findMenuItems(video: LiveVideo<*>): List<TimetableMenuItem>
-    suspend fun consumeMenuItem(video: LiveVideo<*>, item: TimetableMenuItem)
+    suspend fun setupMenuItems(videoId: LiveVideo.Id): ContextMenuSelector<TimetableMenuItem>
+
+    companion object {
+        val EMPTY: ContextMenuSelector<TimetableMenuItem> = ContextMenuSelector.empty()
+    }
+}
+
+interface ContextMenuSelector<T> {
+    val menuItems: List<T>
+    suspend fun consumeMenuItem(item: T)
+
+    companion object {
+        fun <T> empty(): ContextMenuSelector<T> = Empty()
+    }
+
+    private class Empty<T> : ContextMenuSelector<T> {
+        override val menuItems: List<T> = emptyList()
+        override suspend fun consumeMenuItem(item: T) = Unit
+    }
 }
 
 enum class TimetableMenuItem(val text: String) {

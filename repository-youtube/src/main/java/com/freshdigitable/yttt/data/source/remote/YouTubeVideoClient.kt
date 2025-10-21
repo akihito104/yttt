@@ -21,7 +21,7 @@ internal class YouTubeVideoClientImpl(private val youtube: YouTube) : YouTubeVid
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
         youtube.fetch(YouTubeVideoRemote.factory) {
             videos()
-                .list(listOf(YouTubeClient.Companion.PART_SNIPPET, YouTubeClient.Companion.PART_LIVE_STREAMING_DETAILS))
+                .list(listOf(YouTubeClient.PART_SNIPPET, YouTubeClient.PART_LIVE_STREAMING_DETAILS))
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
@@ -56,7 +56,7 @@ internal class YouTubeVideoRemote(
 
     companion object {
         val factory: ResponseFactory<VideoListResponse, List<YouTubeVideo>> = { res, cc ->
-            NetworkResponse.Companion.create(
+            NetworkResponse.create(
                 item = res.items.map { YouTubeVideoRemote(it) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,

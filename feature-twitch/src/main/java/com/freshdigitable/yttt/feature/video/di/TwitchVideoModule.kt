@@ -3,10 +3,8 @@ package com.freshdigitable.yttt.feature.video.di
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.di.IdBaseClassKey
-import com.freshdigitable.yttt.feature.video.AnnotatableStringFactory
-import com.freshdigitable.yttt.feature.video.FindLiveVideoFromTwitchUseCase
-import com.freshdigitable.yttt.feature.video.FindLiveVideoUseCase
-import com.freshdigitable.yttt.feature.video.TwitchAnnotatableStringFactory
+import com.freshdigitable.yttt.feature.video.FindLiveVideoDetailFromTwitchUseCase
+import com.freshdigitable.yttt.feature.video.FindLiveVideoDetailUseCase
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -20,24 +18,12 @@ internal interface TwitchVideoModule {
     @Binds
     @IntoMap
     @IdBaseClassKey(TwitchStream.Id::class)
-    fun bindFindLiveVideoFromTwitchUseCase(useCase: FindLiveVideoFromTwitchUseCase): FindLiveVideoUseCase
+    fun bindFindLiveVideoFromTwitchUseCase(useCase: FindLiveVideoDetailFromTwitchUseCase): FindLiveVideoDetailUseCase
 
     @Binds
     @IntoMap
     @IdBaseClassKey(TwitchChannelSchedule.Stream.Id::class)
     fun bindFindLiveVideoFromTwitchUseCaseForStreamScheduleId(
-        useCase: FindLiveVideoFromTwitchUseCase,
-    ): FindLiveVideoUseCase
-
-    @Binds
-    @IntoMap
-    @IdBaseClassKey(TwitchStream.Id::class)
-    fun bindTwitchAnnotatableStringFactory(useCase: TwitchAnnotatableStringFactory): AnnotatableStringFactory
-
-    @Binds
-    @IntoMap
-    @IdBaseClassKey(TwitchChannelSchedule.Stream.Id::class)
-    fun bindTwitchAnnotatableStringFactoryForStreamScheduleId(
-        useCase: TwitchAnnotatableStringFactory,
-    ): AnnotatableStringFactory
+        useCase: FindLiveVideoDetailFromTwitchUseCase,
+    ): FindLiveVideoDetailUseCase
 }

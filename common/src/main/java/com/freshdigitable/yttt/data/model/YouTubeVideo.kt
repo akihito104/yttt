@@ -114,12 +114,6 @@ interface YouTubeVideoExtended : YouTubeVideo {
                 override val isFreeChat: Boolean = true
             }
         }
-
-        fun YouTubeVideoExtended.isUpcomingWithinPublicationDeadline(current: Instant): Boolean {
-            check(isUpcoming())
-            check(isFreeChat != true)
-            return current <= (checkNotNull(scheduledStartDateTime) + LiveVideo.UPCOMING_DEADLINE)
-        }
     }
 }
 

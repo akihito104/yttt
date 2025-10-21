@@ -2,9 +2,7 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.extend
-import com.freshdigitable.yttt.data.model.YouTubeVideoExtended.Companion.isUpcomingWithinPublicationDeadline
 import com.freshdigitable.yttt.test.fromRemote
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
@@ -264,78 +262,6 @@ class YouTubeVideoExtendedTest : ShouldSpec(
                 val actual = current.extend(oldEx)
                 // verify
                 actual shouldBeSameInstanceAs current
-            }
-        }
-
-        context("IsUpcomingWithinPublicationDeadline") {
-            val scheduledStartDateTime = Instant.parse("2025-01-23T02:00:00.000+09:00")
-            val video = YouTubeVideoImpl(
-                id = YouTubeVideo.Id("video"),
-                title = "title",
-                scheduledStartDateTime = scheduledStartDateTime,
-                liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-            ).extended(false)
-
-            should("returnsTrue") {
-                // setup
-                val current = scheduledStartDateTime + LiveVideo.UPCOMING_DEADLINE
-                // exercise
-                val actual = video.isUpcomingWithinPublicationDeadline(current)
-                // verify
-                actual shouldBe true
-            }
-
-            should("returnsFalse") {
-                // setup
-                val current = scheduledStartDateTime + LiveVideo.UPCOMING_DEADLINE.plusMillis(1)
-                // exercise
-                val actual = video.isUpcomingWithinPublicationDeadline(current)
-                // verify
-                actual shouldBe false
-            }
-
-            should("scheduledStartDateTimeIsNull_throwsIllegalStateException") {
-                // setup
-                val videoNoSchedule = YouTubeVideoImpl(
-                    id = YouTubeVideo.Id("video"),
-                    title = "title",
-                    liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-                ).extended(false)
-                val current = scheduledStartDateTime + LiveVideo.UPCOMING_DEADLINE
-                // exercise
-                shouldThrow<IllegalStateException> {
-                    videoNoSchedule.isUpcomingWithinPublicationDeadline(current)
-                }
-            }
-
-            should("live_throwsIllegalStateException") {
-                // setup
-                val liveVideo = YouTubeVideoImpl(
-                    id = YouTubeVideo.Id("video"),
-                    title = "title",
-                    scheduledStartDateTime = scheduledStartDateTime,
-                    liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE,
-                ).extended(false)
-                val current = scheduledStartDateTime + LiveVideo.UPCOMING_DEADLINE
-                // exercise
-                shouldThrow<IllegalStateException> {
-                    liveVideo.isUpcomingWithinPublicationDeadline(current)
-                }
-            }
-
-            should("freeChat_throwsIllegalStateException") {
-                // setup
-                val freeChatVideo = YouTubeVideoImpl(
-                    id = YouTubeVideo.Id("video"),
-                    title = "title",
-                    scheduledStartDateTime = scheduledStartDateTime,
-                    liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
-                ).extended(true)
-                val current = scheduledStartDateTime + LiveVideo.UPCOMING_DEADLINE
-                // exercise
-                shouldThrow<IllegalStateException> {
-                    freeChatVideo.isUpcomingWithinPublicationDeadline(current)
-                }
             }
         }
     },
