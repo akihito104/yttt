@@ -34,7 +34,7 @@ internal class YouTubePlaylistClientImpl(private val youtube: YouTube) : YouTube
     override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
         youtube.fetch(YouTubePlaylistRemote.factory) {
             playlists()
-                .list(listOf(YouTubeClient.Companion.PART_SNIPPET, YouTubeClient.Companion.PART_CONTENT_DETAILS))
+                .list(listOf(YouTubeClient.PART_SNIPPET, YouTubeClient.PART_CONTENT_DETAILS))
                 .setId(ids.map { it.value })
                 .setMaxResults(ids.size.toLong())
         }
@@ -86,7 +86,7 @@ private class YouTubePlaylistRemote(
 
     companion object {
         val factory: ResponseFactory<PlaylistListResponse, List<YouTubePlaylist>> = { res, cc ->
-            NetworkResponse.Companion.create(
+            NetworkResponse.create(
                 item = res.items.map { YouTubePlaylistRemote(it) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,
@@ -106,12 +106,12 @@ private class PlaylistItemRemote(
     companion object {
         val factory: (YouTubePlaylist.Id) -> ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItem>> =
             { responseFactory(it) }
-        val part = listOf(YouTubeClient.Companion.PART_CONTENT_DETAILS)
+        val part = listOf(YouTubeClient.PART_CONTENT_DETAILS)
 
         private fun responseFactory(
             id: YouTubePlaylist.Id,
         ): ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItem>> = { res, cc ->
-            NetworkResponse.Companion.create(
+            NetworkResponse.create(
                 item = res.items.map { PlaylistItemRemote(item = it, playlistId = id) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,
@@ -142,12 +142,12 @@ private class PlaylistItemDetailRemote(
 
     companion object {
         val factory: ResponseFactory<PlaylistItemListResponse, List<YouTubePlaylistItemDetail>> = { res, cc ->
-            NetworkResponse.Companion.create(
+            NetworkResponse.create(
                 item = res.items.map { PlaylistItemDetailRemote(it) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,
             )
         }
-        val part = listOf(YouTubeClient.Companion.PART_SNIPPET)
+        val part = listOf(YouTubeClient.PART_SNIPPET)
     }
 }

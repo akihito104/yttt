@@ -21,7 +21,7 @@ internal class YouTubeSubscriptionClientImpl(private val youtube: YouTube) : You
     override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> =
         youtube.fetch(YouTubeSubscriptionRemote.factory) {
             subscriptions()
-                .list(listOf(YouTubeClient.Companion.PART_SNIPPET))
+                .list(listOf(YouTubeClient.PART_SNIPPET))
                 .setMine(true)
                 .setMaxResults(query.pageSize.toLong())
                 .setPageToken(query.nextPageToken)
@@ -44,7 +44,7 @@ private class YouTubeSubscriptionRemote(
 
     companion object {
         val factory: ResponseFactory<SubscriptionListResponse, List<YouTubeSubscription>> = { res, cc ->
-            NetworkResponse.Companion.create(
+            NetworkResponse.create(
                 item = res.items.map { YouTubeSubscriptionRemote(it) },
                 cacheControl = cc,
                 nextPageToken = res.nextPageToken,
