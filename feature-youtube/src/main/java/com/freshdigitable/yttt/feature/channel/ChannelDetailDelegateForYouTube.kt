@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.DATE
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
@@ -19,9 +20,9 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
-import com.freshdigitable.yttt.data.model.dateFormatter
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
+import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.feature.timetable.youtube.BuildConfig
 import com.freshdigitable.yttt.feature.video.createForYouTube
 import com.freshdigitable.yttt.logE
@@ -174,7 +175,7 @@ internal data class LiveChannelDetailYouTube(
                 subscriberCount,
                 "Videos:${videoCount.toStringWithComma}",
                 "Views:${viewsCount.toStringWithComma}",
-                "Published:${publishedAt.toLocalFormattedText(dateFormatter, zoneId = zoneId)}",
+                "Published:${publishedAt.toLocalFormattedText(formatter = DATE.toPattern(), zoneId = zoneId)}",
             ).joinToString(STATS_SEPARATOR)
         }
 

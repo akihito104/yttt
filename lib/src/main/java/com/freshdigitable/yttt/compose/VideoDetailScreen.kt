@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.DATE_WEEKDAY_MINUTES
+import com.freshdigitable.yttt.data.model.DATE_WEEKDAY_SECONDS
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
@@ -26,8 +28,6 @@ import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.dateTimeFormatter
-import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.timetable.toAdjustedLocalDateTimeText
@@ -120,10 +120,10 @@ private fun VideoDetailScreen(
 fun LiveVideoDetail.statsText(timeAdjustment: TimeAdjustment): String {
     val time = when (contentType) {
         TimetablePage.OnAir ->
-            "Started:${checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, ::dateTimeSecondFormatter)}"
+            "Started:${checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, DATE_WEEKDAY_SECONDS)}"
 
         TimetablePage.Upcoming ->
-            "Starting:${checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, ::dateTimeFormatter)}"
+            "Starting:${checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, DATE_WEEKDAY_MINUTES)}"
 
         else -> null
     }

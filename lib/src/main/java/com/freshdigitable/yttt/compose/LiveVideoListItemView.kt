@@ -28,6 +28,7 @@ import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
+import com.freshdigitable.yttt.data.model.DATE_WEEKDAY
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -35,8 +36,8 @@ import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.dateWeekdayFormatter
 import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.toAdjustedLocalDateTimeText
 import com.freshdigitable.yttt.lib.R
@@ -206,7 +207,7 @@ private fun LiveVideoHeaderViewPreview() {
     AppTheme {
         LiveVideoHeaderView(
             label = LocalDateTime.now(ZoneId.systemDefault())
-                .truncatedTo(ChronoUnit.DAYS).format(dateWeekdayFormatter),
+                .truncatedTo(ChronoUnit.DAYS).format(DATE_WEEKDAY.toPattern()),
         )
     }
 }

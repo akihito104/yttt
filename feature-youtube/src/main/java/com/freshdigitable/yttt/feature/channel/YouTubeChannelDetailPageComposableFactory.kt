@@ -19,13 +19,14 @@ import com.freshdigitable.yttt.compose.AppTheme
 import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.DATE_WEEKDAY_SECONDS
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelEntity
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
-import com.freshdigitable.yttt.data.model.dateTimeSecondFormatter
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
+import com.freshdigitable.yttt.data.model.toPattern
 
 internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageComposableFactory {
     override fun create(tab: ChannelDetailPageTab<*>): ChannelDetailPageComposable {
@@ -88,7 +89,7 @@ internal object YouTubeChannelDetailPageComposableFactory : ChannelDetailPageCom
     }
 
     private val YouTubeChannelLog.text: String
-        get() = "[$type]$title (${dateTime.toLocalFormattedText(dateTimeSecondFormatter())})"
+        get() = "[$type]$title (${dateTime.toLocalFormattedText(DATE_WEEKDAY_SECONDS.toPattern())})"
 }
 
 @Composable
