@@ -23,7 +23,6 @@ import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.f
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.upcomingVideo
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.compose.preview.PreviewLightMode
-import com.freshdigitable.yttt.data.model.LiveTimelineItem
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.feature.timetable.GroupKey
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
@@ -35,7 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Composable
 fun TimetableScreen(
     page: TimetablePage,
-    itemProvider: () -> LazyPagingItems<LiveTimelineItem>,
+    itemProvider: () -> LazyPagingItems<LiveVideo>,
     timeAdjustmentProvider: () -> TimeAdjustment,
     refreshingProvider: () -> Boolean,
     onRefresh: () -> Unit,
@@ -77,9 +76,9 @@ fun TimetableScreen(
 
 private fun timetableContent(
     page: TimetablePage,
-    itemProvider: () -> LazyPagingItems<LiveTimelineItem>,
+    itemProvider: () -> LazyPagingItems<LiveVideo>,
     timeAdjustmentProvider: () -> TimeAdjustment,
-    content: @Composable LazyItemScope.(LiveTimelineItem, TimeAdjustment) -> Unit,
+    content: @Composable LazyItemScope.(LiveVideo, TimeAdjustment) -> Unit,
 ): LazyListScope.() -> Unit = when (page.type) {
     TimetablePage.Type.SIMPLE -> {
         {
@@ -103,9 +102,9 @@ private fun timetableContent(
 }
 
 private fun LazyListScope.simpleContent(
-    itemsProvider: () -> LazyPagingItems<LiveTimelineItem>,
+    itemsProvider: () -> LazyPagingItems<LiveVideo>,
     timeAdjustmentProvider: () -> TimeAdjustment,
-    content: @Composable LazyItemScope.(LiveTimelineItem, TimeAdjustment) -> Unit,
+    content: @Composable LazyItemScope.(LiveVideo, TimeAdjustment) -> Unit,
 ) {
     val items = itemsProvider()
     items(
@@ -119,9 +118,9 @@ private fun LazyListScope.simpleContent(
 
 @OptIn(ExperimentalFoundationApi::class)
 private fun LazyListScope.groupedContent(
-    itemsProvider: () -> LazyPagingItems<LiveTimelineItem>,
+    itemsProvider: () -> LazyPagingItems<LiveVideo>,
     timeAdjustmentProvider: () -> TimeAdjustment,
-    content: @Composable LazyItemScope.(LiveTimelineItem, TimeAdjustment) -> Unit,
+    content: @Composable LazyItemScope.(LiveVideo, TimeAdjustment) -> Unit,
 ) {
     AppLogger.logD("groupedContent:") { "start:" }
     val pagedItems = itemsProvider()
@@ -152,7 +151,7 @@ private fun LazyListScope.groupedContent(
     }
 }
 
-private val LiveTimelineItem.itemKey: String get() = "${id.type.qualifiedName}_${id.value}"
+private val LiveVideo.itemKey: String get() = "${id.type.qualifiedName}_${id.value}"
 
 @PreviewLightMode
 @Composable

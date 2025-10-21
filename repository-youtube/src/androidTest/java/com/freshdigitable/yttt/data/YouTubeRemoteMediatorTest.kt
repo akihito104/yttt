@@ -155,7 +155,7 @@ class YouTubeRemoteMediatorTest {
     }
 
     @Test
-    fun loadFromPager_fetchAfterUpdatingTimelineTask_inRelevanceOrder() = testScope.runTest {
+    fun loadFromPager_fetchAfterUpdatingTimetableTask_inRelevanceOrder() = testScope.runTest {
         // setup
         FakeAccountRepositoryModule.account = "account"
         client.channelDetails = (0..<20).map { FakeYouTubeClient.channelDetail(it) }
@@ -167,7 +167,7 @@ class YouTubeRemoteMediatorTest {
                 override val nextPageToken: String? get() = null
                 override val eTag: String? get() = null
                 override val order: YouTubeSubscriptionQuery.Order get() = YouTubeSubscriptionQuery.Order.ALPHABETICAL
-            }
+            },
         ).onSuccess {
             repository.syncSubscriptionList(it.item.map { i -> i.id }.toSet(), emptyList())
             repository.subscriptionsFetchedAt = it.cacheControl.fetchedAt!!

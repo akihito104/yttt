@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
-import com.freshdigitable.yttt.data.model.LiveTimelineItem
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
@@ -48,7 +47,7 @@ import java.time.temporal.ChronoUnit
 
 @Composable
 fun LiveVideoListItemView(
-    video: LiveTimelineItem,
+    video: LiveVideo,
     timeAdjustment: TimeAdjustment,
     onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -88,7 +87,7 @@ fun LiveVideoListItemView(
 
 @Composable
 private fun LiveVideoListItemView(
-    video: LiveTimelineItem,
+    video: LiveVideo,
     timeAdjustment: TimeAdjustment,
     onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -194,7 +193,7 @@ fun LiveVideoHeaderView(
 @PreviewLightDarkMode
 @Composable
 private fun LiveVideoListItemViewPreview(
-    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveTimelineItem,
+    @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveVideo,
 ) {
     AppTheme {
         LiveVideoListItemView(video, TimeAdjustment.zero(), onItemClick = {}) {}
@@ -212,8 +211,8 @@ private fun LiveVideoHeaderViewPreview() {
     }
 }
 
-class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveTimelineItem> {
-    override val values: Sequence<LiveTimelineItem> = sequenceOf(
+class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
+    override val values: Sequence<LiveVideo> = sequenceOf(
         upcomingVideo(),
         freeChat(
             title = "予定表兼フリーチャット - this is free chat space",
@@ -226,7 +225,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveTimelineItem>
         fun upcomingVideo(
             title: String = "video title",
             channelTitle: String = "channel title",
-        ): LiveTimelineItem = LiveVideoUpcomingEntity(
+        ): LiveVideo = LiveVideoUpcomingEntity(
             title = title,
             dateTime = Instant.now(),
             channel = LiveChannelEntity(
@@ -242,7 +241,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveTimelineItem>
             title: String = "video title",
             channelTitle: String = "channel title",
             isPinned: Boolean = false,
-        ): LiveTimelineItem = LiveVideoUpcomingEntity(
+        ): LiveVideo = LiveVideoUpcomingEntity(
             title = title,
             dateTime = Instant.now(),
             channel = LiveChannelEntity(
@@ -263,5 +262,5 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveTimelineItem>
         override val dateTime: Instant = Instant.EPOCH,
         override val thumbnailUrl: String = "",
         override val isPinned: Boolean? = null,
-    ) : LiveTimelineItem
+    ) : LiveVideo
 }

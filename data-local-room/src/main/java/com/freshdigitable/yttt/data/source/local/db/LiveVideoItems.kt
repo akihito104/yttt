@@ -8,7 +8,6 @@ import com.freshdigitable.yttt.data.model.IdBase
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LivePlatform
-import com.freshdigitable.yttt.data.model.LiveTimelineItem
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -23,7 +22,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.reflect.KClass
 
-internal data class LiveTimelineOnAirItem(
+internal data class LiveVideoOnAirItem(
     @ColumnInfo("id_value") private val idValue: String,
     @ColumnInfo("platform") private val platform: LivePlatform,
     @ColumnInfo("title") override val title: String,
@@ -32,7 +31,7 @@ internal data class LiveTimelineOnAirItem(
     @ColumnInfo("c_icon") private val channelIconUrl: String,
     @ColumnInfo("date_time") override val dateTime: Instant,
     @ColumnInfo("thumbnail") override val thumbnailUrl: String,
-) : LiveTimelineItem {
+) : LiveVideo {
     override val id: LiveVideo.Id get() = LiveVideo.Id(idValue, platform.onAirVideoIdType)
     override val channel: LiveChannel
         get() = LiveChannelEntity(
@@ -67,11 +66,11 @@ internal data class LiveTimelineOnAirItem(
         }
 
         @Query("$SQL_YOUTUBE_ON_AIR UNION $SQL_TWITCH_ON_AIR ORDER BY date_time DESC, title ASC")
-        fun getAllOnAirPagingSource(): PagingSource<Int, LiveTimelineOnAirItem>
+        fun getAllOnAirPagingSource(): PagingSource<Int, LiveVideoOnAirItem>
     }
 }
 
-internal data class LiveTimelineUpcomingItem(
+internal data class LiveVideoUpcomingItem(
     @ColumnInfo("id_value") private val idValue: String,
     @ColumnInfo("platform") private val platform: LivePlatform,
     @ColumnInfo("title") override val title: String,
@@ -81,7 +80,7 @@ internal data class LiveTimelineUpcomingItem(
     @ColumnInfo("date_time") override val dateTime: Instant,
     @ColumnInfo("thumbnail") override val thumbnailUrl: String,
     @ColumnInfo("is_landscape", defaultValue = "1") override val isLandscape: Boolean = true,
-) : LiveTimelineItem {
+) : LiveVideo {
     override val id: LiveVideo.Id get() = LiveVideo.Id(idValue, platform.upcomingVideoIdType)
     override val channel: LiveChannel
         get() = LiveChannelEntity(
@@ -95,7 +94,7 @@ internal data class LiveTimelineUpcomingItem(
     @androidx.room.Dao
     internal interface Dao {
         companion object {
-            private const val PUBLICATION_DEADLINE = "6 hours"
+            private const val PUBLICATION_DEADLINE = "${LiveVideo.UPCOMING_DEADLINE_HOURS} hours"
             private const val TWITCH_PUBLICATION_TERM = "7 days"
             private const val TWITCH_IMG_WIDTH = "'{width}', '240'"
             private const val TWITCH_IMG_HEIGHT = "'{height}', '360'"
@@ -127,11 +126,11 @@ internal data class LiveTimelineUpcomingItem(
         }
 
         @Query("$SQL_YOUTUBE_UPCOMING UNION $SQL_TWITCH_UPCOMING ORDER BY date_time ASC, title ASC")
-        fun getAllUpcomingPagingSource(current: Instant): PagingSource<Int, LiveTimelineUpcomingItem>
+        fun getAllUpcomingPagingSource(current: Instant): PagingSource<Int, LiveVideoUpcomingItem>
     }
 }
 
-internal data class LiveTimelineFreeChatItem(
+internal data class LiveVideoFreeChatItem(
     @ColumnInfo("id_value") private val idValue: String,
     @ColumnInfo("platform") private val platform: LivePlatform,
     @ColumnInfo("title") override val title: String,
@@ -141,7 +140,7 @@ internal data class LiveTimelineFreeChatItem(
     @ColumnInfo("date_time") override val dateTime: Instant,
     @ColumnInfo("thumbnail") override val thumbnailUrl: String,
     @ColumnInfo("is_pinned") override val isPinned: Boolean? = null,
-) : LiveTimelineItem {
+) : LiveVideo {
     override val id: LiveVideo.Id get() = LiveVideo.Id(idValue, platform.freeChatVideoIdType)
     override val channel: LiveChannel
         get() = LiveChannelEntity(
@@ -165,35 +164,35 @@ internal data class LiveTimelineFreeChatItem(
                 "WHERE is_free_chat = 1 AND v.broadcast_content != 'live' " +
                 "ORDER BY is_pinned DESC, c_id ASC, date_time ASC, title ASC",
         )
-        fun getAllFreeChatPagingSource(): PagingSource<Int, LiveTimelineFreeChatItem>
+        fun getAllFreeChatPagingSource(): PagingSource<Int, LiveVideoFreeChatItem>
     }
 }
 
-internal interface LiveTimelineItemDaoProviders {
-    val liveTimelineOnAirItemDao: LiveTimelineOnAirItem.Dao
-    val liveTimelineUpcomingItemDao: LiveTimelineUpcomingItem.Dao
-    val liveTimelineFreeChatItemDao: LiveTimelineFreeChatItem.Dao
+internal interface LiveVideoItemDaoProviders {
+    val liveVideoOnAirItemDao: LiveVideoOnAirItem.Dao
+    val liveVideoUpcomingItemDao: LiveVideoUpcomingItem.Dao
+    val liveVideoFreeChatItemDao: LiveVideoFreeChatItem.Dao
 }
 
-internal interface LiveTimelineItemDao :
-    LiveTimelineOnAirItem.Dao,
-    LiveTimelineUpcomingItem.Dao,
-    LiveTimelineFreeChatItem.Dao
+internal interface LiveVideoItemDao :
+    LiveVideoOnAirItem.Dao,
+    LiveVideoUpcomingItem.Dao,
+    LiveVideoFreeChatItem.Dao
 
 @Singleton
-internal class LiveTimelineItemDaoImpl @Inject constructor(
+internal class LiveVideoItemDaoImpl @Inject constructor(
     private val db: AppDatabase,
-) : LiveTimelineItemDao,
-    LiveTimelineOnAirItem.Dao by db.liveTimelineOnAirItemDao,
-    LiveTimelineUpcomingItem.Dao by db.liveTimelineUpcomingItemDao,
-    LiveTimelineFreeChatItem.Dao by db.liveTimelineFreeChatItemDao
+) : LiveVideoItemDao,
+    LiveVideoOnAirItem.Dao by db.liveVideoOnAirItemDao,
+    LiveVideoUpcomingItem.Dao by db.liveVideoUpcomingItemDao,
+    LiveVideoFreeChatItem.Dao by db.liveVideoFreeChatItemDao
 
-internal interface LiveDaoProviders : LiveTimelineItemDaoProviders
+internal interface LiveDaoProviders : LiveVideoItemDaoProviders
 
 @Singleton
 internal class LiveDao @Inject constructor(
-    private val liveTimelineItemDao: LiveTimelineItemDaoImpl,
-) : LiveTimelineItemDao by liveTimelineItemDao
+    private val liveVideoItemDao: LiveVideoItemDaoImpl,
+) : LiveVideoItemDao by liveVideoItemDao
 
 @ProvidedTypeConverter
 internal class LivePlatformConverter(

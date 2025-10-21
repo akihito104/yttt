@@ -89,7 +89,7 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     val timeAdjustment: StateFlow<TimeAdjustment> = settingRepository.timeAdjustment
         .stateIn(viewModelScope, SharingStarted.Lazily, TimeAdjustment.zero())
     val pagers = TimetablePage.entries.associateWith { p ->
-        current.flatMapLatest { timetablePageDelegate.getLiveTimelineItemPager(p)(it) }
+        current.flatMapLatest { timetablePageDelegate.getLiveVideoPager(p)(it) }
             .cachedIn(viewModelScope)
     }
 

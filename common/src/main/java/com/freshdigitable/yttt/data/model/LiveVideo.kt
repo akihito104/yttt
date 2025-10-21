@@ -17,12 +17,23 @@ interface LiveVideoThumbnail {
     override fun hashCode(): Int
 }
 
-interface LiveTimelineItem : LiveVideoThumbnail {
+interface LiveVideo : LiveVideoThumbnail {
     val channel: LiveChannel
     val dateTime: Instant
     val isPinned: Boolean?
     override fun equals(other: Any?): Boolean
     override fun hashCode(): Int
+
+    @Serializable(with = LiveVideoIdSerializer::class)
+    data class Id(
+        override val value: String,
+        override val type: KClass<out IdBase>,
+    ) : LiveId
+
+    companion object {
+        const val UPCOMING_DEADLINE_HOURS: Long = 6
+        val UPCOMING_DEADLINE: Duration = Duration.ofHours(UPCOMING_DEADLINE_HOURS)
+    }
 }
 
 interface LiveVideoDetail {
@@ -35,16 +46,4 @@ interface LiveVideoDetail {
     val dateTime: Instant?
     val viewerCount: BigInteger?
     val contentType: TimetablePage
-}
-
-interface LiveVideo {
-    @Serializable(with = LiveVideoIdSerializer::class)
-    data class Id(
-        override val value: String,
-        override val type: KClass<out IdBase>,
-    ) : LiveId
-
-    companion object {
-        val UPCOMING_DEADLINE: Duration = Duration.ofHours(6)
-    }
 }

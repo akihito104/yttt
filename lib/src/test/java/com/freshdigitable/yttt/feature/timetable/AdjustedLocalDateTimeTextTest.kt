@@ -7,7 +7,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.Locale
 
-class TimelineItemTest : ShouldSpec(
+class AdjustedLocalDateTimeTextTest : ShouldSpec(
     {
         should("JP_returnsCurrentDate") {
             // setup

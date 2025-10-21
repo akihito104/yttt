@@ -29,7 +29,7 @@ import java.time.Duration
 import java.time.Instant
 
 @RunWith(Enclosed::class)
-class LiveTimelineUpcomingItemDaoTest {
+class LiveVideoUpcomingItemDaoTest {
     private companion object {
         private val channels = listOf(
             YouTubeChannelTable(YouTubeChannel.Id("channel-0")),
