@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.data.model
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import java.time.Duration
+import java.time.Instant
 import kotlin.math.pow
 
 interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
@@ -20,6 +21,11 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
             cachedPlaylistWithItems = this,
             newItems = newItems,
         ).toUpdatable(ForUpdate.CacheControlImpl(newItems.item, newItems.cacheControl, this))
+
+        fun <T : YouTubePlaylistItem> YouTubePlaylistWithItem<T>.notModified(
+            fetchedAt: Instant,
+        ): Updatable<YouTubePlaylistWithItem<T>> =
+            this.toUpdatable(fetchedAt, ForUpdate.CacheControlImpl.maxAgeForNotModified(this.items, fetchedAt))
 
         fun <T : YouTubePlaylistItem> newPlaylist(
             playlist: Updatable<YouTubePlaylist>,
@@ -55,6 +61,15 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
             cacheControl: CacheControl,
             private val cachedPlaylistWithItems: YouTubePlaylistWithItem<*>,
         ) : CacheControl by cacheControl {
+            companion object {
+                fun maxAgeForNotModified(items: List<YouTubePlaylistItem>, fetchedAt: Instant): Duration {
+                    val latest = items.maxOf { it.publishedAt }
+                    val inactionDays = Duration.between(latest, fetchedAt).toDays().coerceIn(0L..DAYS_OF_WEEK)
+                    val pow = 2.0.pow(inactionDays.toDouble())
+                    return MAX_AGE_DEFAULT.multipliedBy(pow.toLong())
+                }
+            }
+
             override val maxAge: Duration
                 get() = if (items.isEmpty()) {
                     MAX_AGE_MAX
@@ -63,11 +78,7 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
                     val newIds = items.map { it.id }.toSet()
                     val isNotModified = cachedIds == newIds
                     if (isNotModified) {
-                        val latest = items.maxOf { it.publishedAt }
-                        val inactionDays =
-                            Duration.between(latest, fetchedAt).toDays().coerceIn(0L..DAYS_OF_WEEK)
-                        val pow = 2.0.pow(inactionDays.toDouble())
-                        MAX_AGE_DEFAULT.multipliedBy(pow.toLong())
+                        maxAgeForNotModified(items, checkNotNull(fetchedAt))
                     } else {
                         MAX_AGE_DEFAULT
                     }

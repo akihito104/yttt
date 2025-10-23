@@ -6,7 +6,6 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.isFresh
 import com.freshdigitable.yttt.data.model.Updatable.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.map
 import com.freshdigitable.yttt.data.model.Updatable.Companion.overrideMaxAge
-import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
@@ -15,6 +14,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail.Companion.isFromAnotherChannel
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
+import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem.Companion.notModified
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
@@ -118,7 +118,7 @@ class YouTubeRepository @Inject constructor(
         return remoteSource.fetchPlaylistWithItems(id, maxResult, c)
             .onSuccess { updatePlaylistWithItems(it.item, it.cacheControl) }
             .recoverFromNotModified { cacheControl ->
-                checkNotNull(c).toUpdatable(cacheControl).also {
+                checkNotNull(c).notModified(checkNotNull(cacheControl.fetchedAt)).also {
                     updatePlaylistWithItemsCacheControl(it.item, it.cacheControl)
                 }
             }
