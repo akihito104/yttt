@@ -94,6 +94,7 @@ class YouTubeRepositoryTest {
 
     @Inject
     lateinit var localSource: YouTubeDataSource.Local
+
     @Inject
     lateinit var extendedSource: YouTubeDataSource.Extended
 
@@ -231,6 +232,7 @@ class YouTubeRepositoryTest {
         // verify
         actual shouldBeSuccess {
             it!!.item.items shouldHaveSize 1
+            it.cacheControl.maxAge shouldBe YouTubePlaylistWithItems.MAX_AGE_DEFAULT
         }
     }
 
@@ -252,6 +254,7 @@ class YouTubeRepositoryTest {
         actual shouldBeSuccess {
             it!!.item.playlist.id shouldBe YouTubePlaylist.Id("0")
             it.cacheControl.fetchedAt shouldBe current
+            it.cacheControl.maxAge shouldBe Duration.ofDays(1)
         }
     }
 
@@ -291,6 +294,7 @@ class YouTubeRepositoryTest {
             it.item.items shouldHaveSize 1
             it.item.addedItems.shouldBeEmpty()
             it.item.eTag shouldBe "valid_eTag"
+            it.cacheControl.maxAge shouldBe YouTubePlaylistWithItems.MAX_AGE_DEFAULT
         }
     }
 }
