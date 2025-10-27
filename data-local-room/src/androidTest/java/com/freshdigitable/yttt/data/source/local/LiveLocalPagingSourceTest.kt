@@ -1,6 +1,7 @@
 package com.freshdigitable.yttt.data.source.local
 
 import com.freshdigitable.yttt.data.source.local.fixture.LiveDataSourceTestRule
+import com.freshdigitable.yttt.data.source.local.fixture.findAllArchivedVideos
 import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -48,7 +49,7 @@ class LiveLocalPagingSourceTest {
         pagingSource.upcoming(current).testWithRefresh {
             data.map { it.id.value }.shouldContainInOrder("upcoming")
         }
-        youtube.dao.findAllArchivedVideos()
+        rule.database.findAllArchivedVideos()
             .shouldContainExactlyInAnyOrder(inactive.map { it.item.id })
         youtube.dao.findUnusedVideoIds().shouldContainExactlyInAnyOrder(inactive.map { it.item.id })
     }

@@ -107,12 +107,9 @@ internal class YouTubeExtendedDataSource @Inject constructor(
 
     private suspend fun removeNotExistVideos() {
         database.withTransaction {
-            val archivedIds = dao.findAllArchivedVideos().toSet()
-            updateAsArchivedVideo(archivedIds)
-        }
-        database.withTransaction {
+            dao.cleanUpArchivedVideoEntities()
             val removingId = dao.findUnusedVideoIds().toSet()
-            removeVideo(removingId)
+            videoDataSource.removeVideo(removingId)
         }
     }
 
