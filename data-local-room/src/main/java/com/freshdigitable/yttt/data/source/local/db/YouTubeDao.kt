@@ -37,8 +37,12 @@ internal class YouTubeDao @Inject constructor(
         item: YouTubePlaylistWithItem<*>,
         cacheControl: CacheControl,
     ) = db.withTransaction {
-        videoDao.insertOrIgnoreVideoEntities(item.items.map { it.videoId }.toSet())
-        playlistDao.updatePlaylistWithItems(item, cacheControl)
+        if (item is YouTubePlaylistWithItemIdsDb) {
+            playlistDao.updatePlaylistWithItemsCacheControl(item, cacheControl)
+        } else {
+            videoDao.insertOrIgnoreVideoEntities(item.items.map { it.videoId }.toSet())
+            playlistDao.updatePlaylistWithItems(item, cacheControl)
+        }
     }
 
     override suspend fun removeVideoEntities(

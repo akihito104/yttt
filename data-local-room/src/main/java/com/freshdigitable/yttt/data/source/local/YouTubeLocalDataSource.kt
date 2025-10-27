@@ -101,7 +101,7 @@ internal class YouTubeExtendedDataSource @Inject constructor(
         val videoIds = dao.findVideoByPlaylistIds(playlists)
         dao.removePlaylistWithItemsEntitiesByPlaylistIds(playlists)
         if (videoIds.isNotEmpty()) {
-            removeVideo(videoIds.toSet())
+            videoDataSource.removeVideo(videoIds.toSet())
         }
     }
 
@@ -122,7 +122,7 @@ internal class YouTubeExtendedDataSource @Inject constructor(
         val videoIds = dao.findVideoIdsByChannelId(channelIds)
         val playlists = dao.findChannelRelatedPlaylists(channelIds)
         dao.removePlaylistWithItemsEntitiesByPlaylistIds(playlists.mapNotNull { it.uploadedPlayList })
-        removeVideo(videoIds.toSet())
+        videoDataSource.removeVideo(videoIds.toSet())
         dao.removeChannelEntities(channelIds)
     }
 
@@ -167,7 +167,7 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
     override suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id> =
         dao.fetchUpdatableVideoIds(current)
 
-    override suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+    internal suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
         fetchByIds(ids) {
             val thumbs = findThumbnailUrlByIds(it)
             dao.updateAsArchivedVideoEntities(it)
@@ -175,13 +175,29 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
         }.forEach { _ -> }
     }.getOrThrow()
 
-    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+    internal suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
         fetchByIds(ids) {
             val thumbs = findThumbnailUrlByIds(it)
             removeImageByUrl(thumbs)
             removeVideoEntities(it)
         }.forEach { _ -> }
     }.getOrThrow()
+
+    override suspend fun updateWithVideos(
+        archived: Set<YouTubeVideo.Id>,
+        removed: Set<YouTubeVideo.Id>,
+        videos: Collection<Updatable<YouTubeVideoExtended>>,
+    ) = database.withTransaction {
+        if (archived.isNotEmpty()) {
+            updateAsArchivedVideo(archived)
+        }
+        if (removed.isNotEmpty()) {
+            removeVideo(removed)
+        }
+        if (videos.isNotEmpty()) {
+            addVideo(videos)
+        }
+    }
 
     private suspend fun <I : YouTubeId, O> fetchByIds(ids: Set<I>, query: suspend YouTubeDao.(Set<I>) -> O): List<O> =
         if (ids.isEmpty()) {
@@ -271,13 +287,6 @@ internal class YouTubePlaylistLocalDataSource @Inject constructor(
 
     override suspend fun updatePlaylistWithItems(item: YouTubePlaylistWithItem<*>, cacheControl: CacheControl) {
         dao.updatePlaylistWithItems(item, cacheControl)
-    }
-
-    override suspend fun updatePlaylistWithItemsCacheControl(
-        item: YouTubePlaylistWithItem<*>,
-        cacheControl: CacheControl,
-    ) {
-        dao.updatePlaylistWithItemsCacheControl(item, cacheControl)
     }
 }
 
