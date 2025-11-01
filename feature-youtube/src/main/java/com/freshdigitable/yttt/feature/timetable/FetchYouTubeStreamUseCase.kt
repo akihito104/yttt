@@ -53,11 +53,13 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         return trace("loadList_yt") {
             liveRepository.cleanUp()
             val task = coroutineScope {
-                videoUpdateBatchFlow(this)
-                    .chunkByNewVideoIdCount(MAX_BATCH_SIZE)
+                merge(
+                    fetchVideoUpdateBatch(this),
+                    fetchUpdatableTimetableVideo(),
+                ).chunkedByNewVideoIdCount(MAX_BATCH_SIZE)
                     .mapAsync(this) { res ->
                         if (res.isFailure) {
-                            Result.failure(res.exceptionOrNull()!!)
+                            res.map {}
                         } else {
                             fetchVideos(res.getOrThrow())
                         }
@@ -66,7 +68,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             }
             val throwable = task.firstOrNull { it.isFailure }
             if (throwable != null) {
-                Result.failure(throwable.exceptionOrNull()!!)
+                throwable.map {}
             } else {
                 liveRepository.cleanUp()
                 Result.success(Unit)
@@ -74,91 +76,93 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
         }
     }
 
-    private fun videoUpdateBatchFlow(coroutineScope: CoroutineScope): Flow<Result<VideoUpdateBatch>> {
-        val subscriptionSummaries: Flow<Result<YouTubeSubscriptionSummaries>> = flow {
-            val subscriptions = liveRepository.fetchAllSubscription(dateTimeProvider.now())
-                .fold(mutableListOf<Result<YouTubeSubscriptionSummaries>>()) { acc, value ->
-                    acc.apply {
-                        add(value)
-                        emit(value)
-                    }
-                }.toList()
-            if (subscriptions.all { it.isSuccess }) {
-                val s = subscriptions.map { it.getOrThrow() }
-                val subIds = s.map { it.item }.flatten().map { it.subscriptionId }.toSet()
-                val queries = s.mapNotNull { it.saveEtag }
-                liveRepository.syncSubscriptionList(subIds, queries)
-            }
-        }
-        val updatablePlaylist: Flow<Result<List<YouTubePlaylist.Id>>> = flow {
-            subscriptionSummaries.mapNotNull { res ->
-                res.onFailure { emit(Result.failure(it)) }
-                    .getOrNull()
-            }.fold(mutableMapOf<YouTubeChannel.Id, YouTubePlaylist.Id?>()) { acc, value ->
-                val current = dateTimeProvider.now()
-                val updatable = value.item.filter { it.isPlaylistItemUpdatable(current) }
-                    .mapNotNull { it.uploadedPlaylistId }
-                if (updatable.isNotEmpty()) {
-                    emit(Result.success(updatable))
-                }
+    private fun fetchVideoUpdateBatch(coroutineScope: CoroutineScope): Flow<Result<VideoUpdateBatch>> =
+        updateSubscription()
+            .then(::fetchUpdatablePlaylistId)
+            .then { createToUpdatePlaylistAndVideoTask(coroutineScope, it) }
+
+    private fun updateSubscription(): Flow<Result<SubscriptionSummaryTask>> = flow {
+        val subscriptions = liveRepository.fetchAllSubscription(dateTimeProvider.now())
+            .fold(mutableListOf<Result<SubscriptionSummaryTask>>()) { acc, value ->
                 acc.apply {
-                    value.item.filter { it.uploadedPlaylistId == null }.map { it.channelId }
-                        .forEach { putIfAbsent(it, null) }
-                    filterValues { it == null }.keys.chunked(MAX_BATCH_SIZE)
-                        .filter { !value.hasNextToken || it.size == MAX_BATCH_SIZE }
-                        .forEach { ch ->
-                            liveRepository.fetchChannelRelatedPlaylistList(ch.toSet())
-                                .onFailure {
-                                    logE(throwable = it) { "updateSummary: " }
-                                    emit(Result.failure(it))
-                                }
-                                .onSuccess { c ->
-                                    val res = c.associate { it.id to it.uploadedPlayList!! }
-                                    if (res.isNotEmpty()) {
-                                        putAll(res)
-                                        emit(Result.success(res.values.toList()))
-                                    }
-                                }
-                        }
+                    add(value)
+                    emit(value)
                 }
+            }.toList()
+        if (subscriptions.all { it.isSuccess }) {
+            val s = subscriptions.map { it.getOrThrow() }
+            val subIds = s.map { it.item }.flatten().map { it.subscriptionId }.toSet()
+            val queries = s.mapNotNull { it.updatedQuery }
+            liveRepository.syncSubscriptionList(subIds, queries)
+        }
+    }
+
+    private fun fetchUpdatablePlaylistId(
+        subscriptionTask: Flow<Result<SubscriptionSummaryTask>>,
+    ): Flow<Result<List<YouTubePlaylist.Id>>> = flow {
+        subscriptionTask.mapNotNull { res ->
+            res.onFailure { emit(Result.failure(it)) }.getOrNull()
+        }.fold(mutableMapOf<YouTubeChannel.Id, YouTubePlaylist.Id?>()) { acc, value ->
+            val current = dateTimeProvider.now()
+            val updatable = value.item.filter { it.isPlaylistItemUpdatable(current) }
+                .mapNotNull { it.uploadedPlaylistId }
+            if (updatable.isNotEmpty()) {
+                emit(Result.success(updatable))
+            }
+            acc.apply {
+                value.item.filter { it.uploadedPlaylistId == null }.map { it.channelId }
+                    .forEach { putIfAbsent(it, null) }
+                filterValues { it == null }.keys.chunked(MAX_BATCH_SIZE)
+                    .filter { !value.hasNextToken || it.size == MAX_BATCH_SIZE }
+                    .forEach { ch ->
+                        val res = liveRepository.fetchChannelRelatedPlaylistList(ch.toSet())
+                            .onFailure { logE(throwable = it) { "fetchChannelPlaylist: $ch" } }
+                            .map { chPlaylist -> chPlaylist.associate { it.id to it.uploadedPlayList!! } }
+                            .onSuccess { putAll(it) }
+                        emit(res.map { it.values.toList() })
+                    }
             }
         }
-        val videoUpdateBatch: Flow<Result<VideoUpdateBatch>> = channelFlow {
-            val tasks = mutableListOf<Job>()
-            updatablePlaylist.mapNotNull { res ->
-                res.onFailure { send(Result.failure(it)) }
-                    .getOrNull()
-            }.fold(mutableMapOf<YouTubePlaylist.Id, Job>()) { acc, value ->
-                acc.values.removeIf { it.isCancelled || it.isCompleted }
-                val added = value.associateWith { id ->
-                    coroutineScope.async(start = CoroutineStart.LAZY) {
-                        liveRepository.fetchPlaylistWithItems(id, maxResult = 10)
-                            .onFailure {
-                                logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" }
-                                send(Result.failure(it))
-                            }
-                            .onSuccess {
-                                if (it.item.addedItems.isEmpty()) {
-                                    liveRepository.updatePlaylistWithItems(it.item, it.cacheControl)
-                                } else {
-                                    val batch = it.toUpdateBatch()
-                                    send(Result.success(batch))
-                                }
-                            }
+    }
+
+    private fun createToUpdatePlaylistAndVideoTask(
+        coroutineScope: CoroutineScope,
+        updatePlaylistTask: Flow<Result<List<YouTubePlaylist.Id>>>,
+    ): Flow<Result<VideoUpdateBatch>> = channelFlow {
+        val tasks = mutableListOf<Job>()
+        updatePlaylistTask.mapNotNull { res ->
+            res.onFailure { send(Result.failure(it)) }.getOrNull()
+        }.fold(mutableMapOf<YouTubePlaylist.Id, Job>()) { acc, value ->
+            acc.values.removeIf { it.isCancelled || it.isCompleted }
+            val added = value.associateWith { id ->
+                coroutineScope.async(start = CoroutineStart.LAZY) {
+                    val res = updatePlaylistAndVideoBatch(id)
+                    if ((res.isSuccess && res.getOrNull() != null) || res.isFailure) {
+                        send(res.map { checkNotNull(it) })
                     }
                 }
-                tasks.add(coroutineScope.launch { added.values.awaitAll() })
-                acc.apply { putAll(added) }
-            }.values.joinAll()
-            tasks.joinAll()
-        }
-        val currentVideos: Flow<Result<VideoUpdateBatch>> = flow {
-            val current = dateTimeProvider.now()
-            liveRepository.fetchUpdatableVideoIds(current)
-                .chunked(MAX_BATCH_SIZE)
-                .forEach { emit(Result.success(it to null)) }
-        }
-        return merge(currentVideos, videoUpdateBatch)
+            }
+            tasks.add(coroutineScope.launch { added.values.awaitAll() })
+            acc.apply { putAll(added) }
+        }.values.joinAll()
+        tasks.joinAll()
+    }
+
+    private suspend fun updatePlaylistAndVideoBatch(id: YouTubePlaylist.Id): Result<VideoUpdateBatch?> =
+        liveRepository.fetchPlaylistWithItems(id, maxResult = 10).map {
+            if (it.item.addedItems.isEmpty()) {
+                liveRepository.updatePlaylistWithItems(it.item, it.cacheControl)
+                null
+            } else {
+                it.toUpdateBatch()
+            }
+        }.onFailure { logE(throwable = it) { "fetchVideoByPlaylistIdTask: playlistId> $id" } }
+
+    private fun fetchUpdatableTimetableVideo(): Flow<Result<VideoUpdateBatch>> = flow {
+        val current = dateTimeProvider.now()
+        liveRepository.fetchUpdatableVideoIds(current)
+            .chunked(MAX_BATCH_SIZE)
+            .forEach { emit(Result.success(it to null)) }
     }
 
     private suspend fun AppTrace.fetchVideos(
@@ -191,12 +195,16 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                 }
             }
     }
-}
 
-private inline fun <T, R> Flow<T>.mapAsync(
-    coroutineScope: CoroutineScope,
-    crossinline body: suspend (T) -> R,
-): Flow<Deferred<R>> = map { coroutineScope.async { body(it) } }
+    companion object {
+        private inline fun <T, R> Flow<T>.mapAsync(
+            coroutineScope: CoroutineScope,
+            crossinline body: suspend (T) -> R,
+        ): Flow<Deferred<R>> = map { coroutineScope.async { body(it) } }
+
+        private inline fun <T, R> Flow<T>.then(crossinline block: (Flow<T>) -> Flow<R>): Flow<R> = block(this)
+    }
+}
 
 private val SUBSCRIPTION_FETCH_PERIOD = Duration.ofHours(2)
 internal val YouTubeRepository.subscriptionCacheControl: CacheControl
@@ -204,28 +212,28 @@ internal val YouTubeRepository.subscriptionCacheControl: CacheControl
 
 internal fun YouTubeRepository.fetchAllSubscription(
     current: Instant,
-): Flow<Result<YouTubeSubscriptionSummaries>> = if (subscriptionCacheControl.isFresh(current)) {
+): Flow<Result<SubscriptionSummaryTask>> = if (subscriptionCacheControl.isFresh(current)) {
     flow {
         var offset = 0
         do {
             val item = findSubscriptionSummariesByOffset(offset, MAX_BATCH_SIZE)
-            emit(Result.success(YouTubeSubscriptionSummaries(item = item)))
+            emit(Result.success(SubscriptionSummaryTask(item = item)))
             offset += MAX_BATCH_SIZE
         } while (findSubscriptionQuery(offset) != null)
     }
 } else {
     flow {
-        var summary = YouTubeSubscriptionSummaries(query = findSubscriptionQuery(0))
+        var summary = SubscriptionSummaryTask(query = findSubscriptionQuery(0))
         do {
             val s = fetchPagedSubscription(summary).map {
                 val o = summary.offset + MAX_BATCH_SIZE
-                YouTubeSubscriptionSummaries(
+                SubscriptionSummaryTask(
                     item = findSubscriptionSummaries(it.item.map { i -> i.id }),
                     offset = o,
                     query = findSubscriptionQuery(o),
                     token = it.nextPageToken,
                     fetchedAt = it.cacheControl.fetchedAt,
-                    saveEtag = YouTubeSubscriptionQuery.forAlphabetical(
+                    updatedQuery = YouTubeSubscriptionQuery.forAlphabetical(
                         summary.offset,
                         summary.nextPageToken,
                         it.eTag,
@@ -233,7 +241,7 @@ internal fun YouTubeRepository.fetchAllSubscription(
                 )
             }.recoverFromNotModified {
                 val o = summary.offset + MAX_BATCH_SIZE
-                YouTubeSubscriptionSummaries(
+                SubscriptionSummaryTask(
                     item = findSubscriptionSummariesByOffset(summary.offset, MAX_BATCH_SIZE),
                     offset = o,
                     query = findSubscriptionQuery(o),
@@ -252,17 +260,17 @@ internal fun YouTubeRepository.fetchAllSubscription(
     }
 }
 
-internal class YouTubeSubscriptionSummaries(
+internal class SubscriptionSummaryTask(
     override val offset: Int = 0,
     val item: List<YouTubeSubscriptionSummary> = emptyList(),
     private val query: YouTubeSubscriptionQuery? = null,
     private val token: String? = null,
     val fetchedAt: Instant? = null,
-    val saveEtag: YouTubeSubscriptionQuery? = null,
+    val updatedQuery: YouTubeSubscriptionQuery? = null,
 ) : YouTubeSubscriptionQuery {
     override val nextPageToken: String? get() = token ?: query?.nextPageToken
     override val eTag: String? get() = query?.eTag
-    val hasNextToken: Boolean get() = (nextPageToken ?: query?.nextPageToken) != null
+    val hasNextToken: Boolean get() = nextPageToken != null
 }
 
 typealias VideoUpdateBatch = Pair<List<YouTubeVideo.Id>, Updatable<YouTubePlaylistWithItems>?>
@@ -271,7 +279,7 @@ val VideoUpdateBatch.videoIds: List<YouTubeVideo.Id> get() = first
 val VideoUpdateBatch.updatablePlaylistWithItems: Updatable<YouTubePlaylistWithItems>? get() = second
 fun Updatable<YouTubePlaylistWithItems>.toUpdateBatch(): VideoUpdateBatch = item.addedItems.map { it.videoId } to this
 
-internal fun Flow<Result<VideoUpdateBatch>>.chunkByNewVideoIdCount(
+internal fun Flow<Result<VideoUpdateBatch>>.chunkedByNewVideoIdCount(
     count: Int,
 ): Flow<Result<List<VideoUpdateBatch>>> {
     require(count > 0) { "size must be greater than 0" }
