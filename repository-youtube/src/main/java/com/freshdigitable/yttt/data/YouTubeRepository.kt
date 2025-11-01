@@ -124,7 +124,7 @@ class YouTubeRepository @Inject constructor(
     override suspend fun fetchChannelList(
         ids: Set<YouTubeChannel.Id>,
     ): Result<List<YouTubeChannel>> = localSource.fetchChannelList(ids).mapCatching { cache ->
-        val needed = ids - cache.map { it.id }
+        val needed = ids - cache.map { it.id }.toSet()
         if (needed.isEmpty()) {
             cache
         } else {
@@ -138,7 +138,7 @@ class YouTubeRepository @Inject constructor(
         ids: Set<YouTubeChannel.Id>,
     ): Result<List<YouTubeChannelRelatedPlaylist>> =
         localSource.fetchChannelRelatedPlaylistList(ids).mapCatching { cache ->
-            val needed = ids - cache.map { it.id }
+            val needed = ids - cache.map { it.id }.toSet()
             if (needed.isEmpty()) {
                 cache
             } else {
