@@ -172,8 +172,7 @@ internal interface YouTubeSubscriptionDao :
     YouTubeSubscriptionRelevanceOrderTable.Dao,
     YouTubeSubscriptionSummaryDb.Dao {
     suspend fun addSubscriptionEntities(subscriptions: Collection<YouTubeSubscription>)
-    suspend fun addSubscriptionQuery(query: Collection<YouTubeSubscriptionQuery>)
-    suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>)
+    suspend fun syncSubscriptionList(subscriptions: Set<YouTubeSubscription.Id>, query: List<YouTubeSubscriptionQuery>)
 }
 
 internal class YouTubeSubscriptionDaoImpl @Inject constructor(
@@ -194,19 +193,29 @@ internal class YouTubeSubscriptionDaoImpl @Inject constructor(
             }
         }
 
-    override suspend fun addSubscriptionQuery(query: Collection<YouTubeSubscriptionQuery>) {
+    override suspend fun syncSubscriptionList(
+        subscriptions: Set<YouTubeSubscription.Id>,
+        query: List<YouTubeSubscriptionQuery>,
+    ) = db.withTransaction {
+        if (query.isNotEmpty()) {
+            addSubscriptionQuery(query)
+        }
+        val subs = findSubscriptionIdsByRemainingIds(subscriptions)
+        removeSubscriptionEntities(subs)
+    }
+
+    private suspend fun addSubscriptionQuery(query: Collection<YouTubeSubscriptionQuery>) {
         check(query.all { it.order == YouTubeSubscriptionQuery.Order.ALPHABETICAL })
         val t = query.map {
             YouTubeSubscriptionEtagTable(it.offset, it.nextPageToken, checkNotNull(it.eTag))
         }
-        db.withTransaction { addSubscriptionEtag(t) }
+        addSubscriptionEtag(t)
     }
 
-    override suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>) =
-        db.withTransaction {
-            removeSubscriptionsRelevanceOrdered(id)
-            removeSubscriptions(id)
-        }
+    private suspend fun removeSubscriptionEntities(id: Collection<YouTubeSubscription.Id>) = db.withTransaction {
+        removeSubscriptionsRelevanceOrdered(id)
+        removeSubscriptions(id)
+    }
 
     override suspend fun deleteTable() = db.withTransaction {
         listOf(

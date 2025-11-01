@@ -9,7 +9,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
-import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
@@ -201,7 +200,6 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
 
 @Singleton
 internal class YouTubeSubscriptionLocalDataSource @Inject constructor(
-    private val database: AppDatabase,
     private val dao: YouTubeDao,
     private val ioScope: IoScope,
 ) : YouTubeSubscriptionDataSource.Local, YouTubeSubscriptionDataSource.Extended {
@@ -230,13 +228,7 @@ internal class YouTubeSubscriptionLocalDataSource @Inject constructor(
     override suspend fun syncSubscriptionList(
         subscriptions: Set<YouTubeSubscription.Id>,
         query: List<YouTubeSubscriptionQuery>,
-    ) = database.withTransaction {
-        if (query.isNotEmpty()) {
-            dao.addSubscriptionQuery(query)
-        }
-        val subs = dao.findSubscriptionIdsByRemainingIds(subscriptions)
-        dao.removeSubscriptionEntities(subs)
-    }
+    ) = dao.syncSubscriptionList(subscriptions, query)
 
     override suspend fun fetchPagedSubscription(
         query: YouTubeSubscriptionQuery,
@@ -278,7 +270,6 @@ internal class YouTubePlaylistLocalDataSource @Inject constructor(
 }
 
 internal class YouTubeChannelLocalDataSource @Inject constructor(
-    private val database: AppDatabase,
     private val dao: YouTubeDao,
     private val ioScope: IoScope,
 ) : YouTubeChannelDataSource.Local {
@@ -314,8 +305,5 @@ internal class YouTubeChannelLocalDataSource @Inject constructor(
     }
 
     override suspend fun addChannelDetailList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>) =
-        database.withTransaction {
-            dao.addChannelDetails(channelDetail)
-            dao.addChannelRelatedPlaylistList(channelDetail.map { it.item })
-        }
+        dao.addChannelDetailList(channelDetail)
 }

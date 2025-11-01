@@ -31,6 +31,11 @@ internal class YouTubeDao @Inject constructor(
         addSubscriptionEntities(subscriptions)
     }
 
+    suspend fun addChannelDetailList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>) = db.withTransaction {
+        addChannelDetails(channelDetail)
+        addChannelRelatedPlaylistList(channelDetail.map { it.item })
+    }
+
     suspend fun addChannelRelatedPlaylistList(entities: Collection<YouTubeChannelRelatedPlaylist>) =
         db.withTransaction {
             addPlaylistEntities(entities.mapNotNull { it.uploadedPlayList })

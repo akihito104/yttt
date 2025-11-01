@@ -32,7 +32,6 @@ internal class YouTubeDatabaseTestRule : DataSourceTestRule<YouTubeDatabaseTestR
             ioScope = ioScope,
         )
         private val subscriptionDataSource = YouTubeSubscriptionLocalDataSource(
-            database = database,
             dao = dao,
             ioScope = ioScope,
         )
@@ -43,7 +42,6 @@ internal class YouTubeDatabaseTestRule : DataSourceTestRule<YouTubeDatabaseTestR
         val localSource = YouTubeLocalDataSource(
             dao = dao,
             channelDataSource = YouTubeChannelLocalDataSource(
-                database = database,
                 dao = dao,
                 ioScope = ioScope,
             ),
