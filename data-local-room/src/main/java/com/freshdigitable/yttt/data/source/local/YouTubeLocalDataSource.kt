@@ -82,6 +82,7 @@ internal class YouTubeExtendedDataSource @Inject constructor(
     private val videoDataSource: YouTubeVideoLocalDataSource,
     private val subscriptionDataSource: YouTubeSubscriptionLocalDataSource,
     private val playlistDataSource: YouTubePlaylistLocalDataSource,
+    private val ioScope: IoScope,
 ) : YouTubeDataSource.Extended,
     YouTubeVideoDataSource.Extended by videoDataSource,
     YouTubeSubscriptionDataSource.Extended by subscriptionDataSource,
@@ -102,7 +103,7 @@ internal class YouTubeExtendedDataSource @Inject constructor(
         val videoIds = dao.findVideoByPlaylistIds(playlists)
         dao.removePlaylistWithItemsEntitiesByPlaylistIds(playlists)
         if (videoIds.isNotEmpty()) {
-            videoDataSource.removeVideo(videoIds.toSet())
+            removeVideo(videoIds.toSet())
         }
     }
 
@@ -110,7 +111,7 @@ internal class YouTubeExtendedDataSource @Inject constructor(
         database.withTransaction {
             dao.cleanUpArchivedVideoEntities()
             val removingId = dao.findUnusedVideoIds().toSet()
-            videoDataSource.removeVideo(removingId)
+            removeVideo(removingId)
         }
     }
 
@@ -123,9 +124,17 @@ internal class YouTubeExtendedDataSource @Inject constructor(
         val videoIds = dao.findVideoIdsByChannelId(channelIds)
         val playlists = dao.findChannelRelatedPlaylists(channelIds)
         dao.removePlaylistWithItemsEntitiesByPlaylistIds(playlists.mapNotNull { it.uploadedPlayList })
-        videoDataSource.removeVideo(videoIds.toSet())
+        removeVideo(videoIds.toSet())
         dao.removeChannelEntities(channelIds)
     }
+
+    private suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+        dao.fetchByIdBatch(ids) {
+            val thumbs = findThumbnailUrlByIds(it)
+            removeImageByUrl(thumbs)
+            removeVideoEntities(it)
+        }.forEach { _ -> }
+    }.getOrThrow()
 
     override suspend fun deleteAllTables() {
         dao.deleteTable()
@@ -143,7 +152,7 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
         if (ids.isEmpty()) {
             Result.success(emptyList())
         } else {
-            ioScope.asResult { fetchByIds(ids) { findVideosById(it) }.flatten() }
+            ioScope.asResult { dao.fetchByIdBatch(ids) { findVideosById(it) }.flatten() }
         }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
@@ -168,22 +177,6 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
     override suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id> =
         dao.fetchUpdatableVideoIds(current)
 
-    internal suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
-        fetchByIds(ids) {
-            val thumbs = findThumbnailUrlByIds(it)
-            dao.updateAsArchivedVideoEntities(it)
-            removeImageByUrl(thumbs)
-        }.forEach { _ -> }
-    }.getOrThrow()
-
-    internal suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
-        fetchByIds(ids) {
-            val thumbs = findThumbnailUrlByIds(it)
-            removeImageByUrl(thumbs)
-            removeVideoEntities(it)
-        }.forEach { _ -> }
-    }.getOrThrow()
-
     override suspend fun updateWithVideos(
         queriedId: Collection<YouTubeVideo.Id>,
         videos: Collection<Updatable<YouTubeVideoExtended>>,
@@ -204,18 +197,6 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
             dao.addVideoEntities(videos)
         }
     }
-
-    private suspend fun <I : YouTubeId, O> fetchByIds(ids: Set<I>, query: suspend YouTubeDao.(Set<I>) -> O): List<O> =
-        if (ids.isEmpty()) {
-            emptyList()
-        } else if (ids.size < YouTubeDataSource.MAX_BATCH_SIZE) {
-            listOf(dao.query(ids))
-        } else {
-            val a = database.withTransaction {
-                ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE).map { dao.query(it.toSet()) }
-            }
-            listOf(a).flatten()
-        }
 }
 
 @Singleton

@@ -57,6 +57,7 @@ internal class YouTubeDatabaseTestRule : DataSourceTestRule<YouTubeDatabaseTestR
             videoDataSource = videoDataSource,
             subscriptionDataSource = subscriptionDataSource,
             playlistDataSource = playlistDataSource,
+            ioScope = ioScope,
         )
     }
 }
