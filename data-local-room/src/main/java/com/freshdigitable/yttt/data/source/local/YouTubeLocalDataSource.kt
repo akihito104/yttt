@@ -18,6 +18,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
@@ -184,18 +185,23 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
     }.getOrThrow()
 
     override suspend fun updateWithVideos(
-        archived: Set<YouTubeVideo.Id>,
-        removed: Set<YouTubeVideo.Id>,
+        queriedId: Collection<YouTubeVideo.Id>,
         videos: Collection<Updatable<YouTubeVideoExtended>>,
     ) = database.withTransaction {
-        if (archived.isNotEmpty()) {
-            updateAsArchivedVideo(archived)
+        val v = videos.map { it.item }
+        val archivedId = v.filter { it.isArchived }.map { it.id }.toSet()
+        if (archivedId.isNotEmpty()) {
+            dao.updateAsArchivedVideoEntities(archivedId)
         }
+        val removed = queriedId - v.map { it.id }.toSet()
         if (removed.isNotEmpty()) {
-            removeVideo(removed)
+            val thumbs = dao.findThumbnailUrlByIds(removed)
+            removeImageByUrl(thumbs)
+            dao.removeVideoEntities(removed)
         }
-        if (videos.isNotEmpty()) {
-            addVideo(videos)
+        val added = videos.filter { !it.item.isArchived }
+        if (added.isNotEmpty()) {
+            dao.addVideoEntities(videos)
         }
     }
 

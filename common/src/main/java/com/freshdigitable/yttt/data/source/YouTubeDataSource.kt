@@ -89,8 +89,7 @@ interface YouTubeVideoDataSource {
         suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
         suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>)
         suspend fun updateWithVideos(
-            archived: Set<YouTubeVideo.Id>,
-            removed: Set<YouTubeVideo.Id>,
+            queriedId: Collection<YouTubeVideo.Id>,
             videos: Collection<Updatable<YouTubeVideoExtended>>,
         )
 

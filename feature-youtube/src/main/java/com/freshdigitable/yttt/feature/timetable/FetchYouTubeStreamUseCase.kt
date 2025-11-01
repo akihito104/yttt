@@ -178,17 +178,13 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
                     incrementMetric("update_remove", removed.size.toLong())
                 }
 
-                val url = v.filter { it.isThumbnailUpdatable }
+                val url = v.filter { it.isThumbnailUpdatable || it.isArchived }
                     .map { it.thumbnailUrl }
                 if (url.isNotEmpty()) {
                     liveRepository.removeImageByUrl(url)
                 }
 
-                liveRepository.updateWithVideos(
-                    archived,
-                    removed.toSet(),
-                    video.filter { !it.item.isArchived },
-                )
+                liveRepository.updateWithVideos(videoIds, video)
                 incrementMetric("new_stream", videoIds.size.toLong())
                 batch.mapNotNull { it.updatablePlaylistWithItems }.forEach {
                     liveRepository.updatePlaylistWithItems(it.item, it.cacheControl)
