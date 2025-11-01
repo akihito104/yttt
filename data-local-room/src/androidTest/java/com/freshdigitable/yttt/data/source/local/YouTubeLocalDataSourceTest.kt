@@ -22,6 +22,7 @@ import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity.Companion.li
 import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
+import com.freshdigitable.yttt.data.source.local.fixture.findAllArchivedVideos
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.fromRemote
 import io.kotest.assertions.asClue
@@ -325,7 +326,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             extendedSource.cleanUp()
             // verify
-            dao.findAllArchivedVideos().shouldContainExactlyInAnyOrder(archivedInPlaylist.item.id)
+            database.findAllArchivedVideos().shouldContainExactlyInAnyOrder(archivedInPlaylist.item.id)
             dao.findUnusedVideoIds().shouldBeEmpty()
             val actual = dao.findVideosById(videos.map { it.item.id })
             actual.containsVideoIdInAnyOrder(upcoming, live, freeChat, endlessLive)
@@ -340,7 +341,7 @@ class YouTubeLocalDataSourceTest {
             // exercise
             extendedSource.cleanUp()
             // verify
-            dao.findAllArchivedVideos()
+            database.findAllArchivedVideos()
                 .shouldContainExactlyInAnyOrder(listOf(live, archivedInPlaylist).map { it.item.id })
             dao.findUnusedVideoIds().shouldBeEmpty()
             val actual = dao.findVideosById(videos.map { it.item.id })
@@ -463,7 +464,7 @@ class YouTubeLocalDataSourceTest {
             // verify
             dao.findChannelLogs(removedSummary.channelId).shouldBeEmpty()
             dao.check(removedSummary, items)
-            dao.findAllArchivedVideos() shouldHaveSize 6
+            database.findAllArchivedVideos() shouldHaveSize 6
         }
 
         @Test

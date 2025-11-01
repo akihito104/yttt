@@ -9,7 +9,6 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelSection
-import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItemDetails
@@ -18,6 +17,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isArchived
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.IoScope
@@ -81,6 +81,7 @@ internal class YouTubeExtendedDataSource @Inject constructor(
     private val videoDataSource: YouTubeVideoLocalDataSource,
     private val subscriptionDataSource: YouTubeSubscriptionLocalDataSource,
     private val playlistDataSource: YouTubePlaylistLocalDataSource,
+    private val ioScope: IoScope,
 ) : YouTubeDataSource.Extended,
     YouTubeVideoDataSource.Extended by videoDataSource,
     YouTubeSubscriptionDataSource.Extended by subscriptionDataSource,
@@ -107,10 +108,7 @@ internal class YouTubeExtendedDataSource @Inject constructor(
 
     private suspend fun removeNotExistVideos() {
         database.withTransaction {
-            val archivedIds = dao.findAllArchivedVideos().toSet()
-            updateAsArchivedVideo(archivedIds)
-        }
-        database.withTransaction {
+            dao.cleanUpArchivedVideoEntities()
             val removingId = dao.findUnusedVideoIds().toSet()
             removeVideo(removingId)
         }
@@ -129,6 +127,14 @@ internal class YouTubeExtendedDataSource @Inject constructor(
         dao.removeChannelEntities(channelIds)
     }
 
+    private suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
+        dao.fetchByIdBatch(ids) {
+            val thumbs = findThumbnailUrlByIds(it)
+            removeImageByUrl(thumbs)
+            removeVideoEntities(it)
+        }.forEach { _ -> }
+    }.getOrThrow()
+
     override suspend fun deleteAllTables() {
         dao.deleteTable()
     }
@@ -145,7 +151,7 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
         if (ids.isEmpty()) {
             Result.success(emptyList())
         } else {
-            ioScope.asResult { fetchByIds(ids) { findVideosById(it) }.flatten() }
+            ioScope.asResult { dao.fetchByIdBatch(ids) { findVideosById(it) }.flatten() }
         }
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
@@ -170,38 +176,30 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
     override suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id> =
         dao.fetchUpdatableVideoIds(current)
 
-    override suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
-        fetchByIds(ids) {
-            val thumbs = findThumbnailUrlByIds(it)
-            dao.updateAsArchivedVideoEntities(it)
-            removeImageByUrl(thumbs)
-        }.forEach { _ -> }
-    }.getOrThrow()
-
-    override suspend fun removeVideo(ids: Set<YouTubeVideo.Id>): Unit = ioScope.asResult {
-        fetchByIds(ids) {
-            val thumbs = findThumbnailUrlByIds(it)
-            removeImageByUrl(thumbs)
-            removeVideoEntities(it)
-        }.forEach { _ -> }
-    }.getOrThrow()
-
-    private suspend fun <I : YouTubeId, O> fetchByIds(ids: Set<I>, query: suspend YouTubeDao.(Set<I>) -> O): List<O> =
-        if (ids.isEmpty()) {
-            emptyList()
-        } else if (ids.size < YouTubeDataSource.MAX_BATCH_SIZE) {
-            listOf(dao.query(ids))
-        } else {
-            val a = database.withTransaction {
-                ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE).map { dao.query(it.toSet()) }
-            }
-            listOf(a).flatten()
+    override suspend fun updateWithVideos(
+        queriedId: Collection<YouTubeVideo.Id>,
+        videos: Collection<Updatable<YouTubeVideoExtended>>,
+    ) = database.withTransaction {
+        val v = videos.map { it.item }
+        val archivedId = v.filter { it.isArchived }.map { it.id }.toSet()
+        if (archivedId.isNotEmpty()) {
+            dao.updateAsArchivedVideoEntities(archivedId)
         }
+        val removed = queriedId - v.map { it.id }.toSet()
+        if (removed.isNotEmpty()) {
+            val thumbs = dao.findThumbnailUrlByIds(removed)
+            removeImageByUrl(thumbs)
+            dao.removeVideoEntities(removed)
+        }
+        val added = videos.filter { !it.item.isArchived }
+        if (added.isNotEmpty()) {
+            dao.addVideoEntities(videos)
+        }
+    }
 }
 
 @Singleton
 internal class YouTubeSubscriptionLocalDataSource @Inject constructor(
-    private val database: AppDatabase,
     private val dao: YouTubeDao,
     private val ioScope: IoScope,
 ) : YouTubeSubscriptionDataSource.Local, YouTubeSubscriptionDataSource.Extended {
@@ -230,13 +228,7 @@ internal class YouTubeSubscriptionLocalDataSource @Inject constructor(
     override suspend fun syncSubscriptionList(
         subscriptions: Set<YouTubeSubscription.Id>,
         query: List<YouTubeSubscriptionQuery>,
-    ) = database.withTransaction {
-        if (query.isNotEmpty()) {
-            dao.addSubscriptionQuery(query)
-        }
-        val subs = dao.findSubscriptionIdsByRemainingIds(subscriptions)
-        dao.removeSubscriptionEntities(subs)
-    }
+    ) = dao.syncSubscriptionList(subscriptions, query)
 
     override suspend fun fetchPagedSubscription(
         query: YouTubeSubscriptionQuery,
@@ -275,17 +267,9 @@ internal class YouTubePlaylistLocalDataSource @Inject constructor(
     override suspend fun updatePlaylistWithItems(item: YouTubePlaylistWithItem<*>, cacheControl: CacheControl) {
         dao.updatePlaylistWithItems(item, cacheControl)
     }
-
-    override suspend fun updatePlaylistWithItemsCacheControl(
-        item: YouTubePlaylistWithItem<*>,
-        cacheControl: CacheControl,
-    ) {
-        dao.updatePlaylistWithItemsCacheControl(item, cacheControl)
-    }
 }
 
 internal class YouTubeChannelLocalDataSource @Inject constructor(
-    private val database: AppDatabase,
     private val dao: YouTubeDao,
     private val ioScope: IoScope,
 ) : YouTubeChannelDataSource.Local {
@@ -321,8 +305,5 @@ internal class YouTubeChannelLocalDataSource @Inject constructor(
     }
 
     override suspend fun addChannelDetailList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>) =
-        database.withTransaction {
-            dao.addChannelDetails(channelDetail)
-            dao.addChannelRelatedPlaylistList(channelDetail.map { it.item })
-        }
+        dao.addChannelDetailList(channelDetail)
 }

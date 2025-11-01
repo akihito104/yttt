@@ -6,6 +6,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.YouTubeVideoEntity
 import com.freshdigitable.yttt.data.source.local.fixture.LiveDataSourceTestRule
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
+import com.freshdigitable.yttt.data.source.local.fixture.findAllArchivedVideos
 import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.assertions.asClue
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -30,7 +31,6 @@ class YouTubeVideoTablesTest {
 
         @Test
         fun findApis_returnEmpty() = dbRule.runWithScope {
-            dao.findAllArchivedVideos().shouldBeEmpty()
             dao.findUnusedVideoIds().shouldBeEmpty()
             dao.findVideosById(listOf(YouTubeVideo.Id("test"))).shouldBeEmpty()
             dao.findFreeChatItems(listOf(YouTubeVideo.Id("test"))).shouldBeEmpty()
@@ -151,7 +151,8 @@ class YouTubeVideoTablesTest {
             // exercise
             dao.removeVideoEntities(videoIds)
             // verify
-            dao.findAllArchivedVideos().shouldBeEmpty()
+            database.findAllArchivedVideos().shouldBeEmpty()
+            dao.findVideosById(videoIds).shouldBeEmpty()
         }
 
         @Test
@@ -161,7 +162,8 @@ class YouTubeVideoTablesTest {
             // exercise
             dao.updateAsArchivedVideoEntities(videoIds)
             // verify
-            dao.findAllArchivedVideos().shouldContainExactlyInAnyOrder(videoIds)
+            database.findAllArchivedVideos().shouldContainExactlyInAnyOrder(videoIds)
+            dao.findVideosById(videoIds).shouldBeEmpty()
             dao.fetchUpdatableVideoIds(Instant.EPOCH).shouldBeEmpty()
         }
 

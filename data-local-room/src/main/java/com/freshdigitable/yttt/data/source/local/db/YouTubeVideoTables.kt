@@ -17,6 +17,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
+import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable.Dao.Companion.SQL_FIND_ALL_ARCHIVED_VIDEOS
 import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
@@ -32,6 +33,10 @@ internal class YouTubeVideoTable(
 ) {
     @androidx.room.Dao
     internal interface Dao : TableDeletable {
+        companion object {
+            internal const val SQL_FIND_ALL_ARCHIVED_VIDEOS = "SELECT id FROM video WHERE broadcast_content IS 'none'"
+        }
+
         @Upsert
         suspend fun addVideos(videos: Collection<YouTubeVideoTable>)
 
@@ -48,9 +53,6 @@ internal class YouTubeVideoTable(
 
         @Query("DELETE FROM video WHERE id IN (:videoIds)")
         suspend fun removeVideos(videoIds: Collection<YouTubeVideo.Id>)
-
-        @Query("SELECT id FROM video WHERE broadcast_content = 'none'")
-        suspend fun findAllArchivedVideos(): List<YouTubeVideo.Id>
 
         @Query(
             "SELECT v.id FROM video AS v " +
@@ -118,6 +120,9 @@ internal class YouTubeVideoDetailTable(
 
         @Query("DELETE FROM video_detail WHERE video_id IN (:ids)")
         suspend fun removeVideoDetails(ids: Collection<YouTubeVideo.Id>)
+
+        @Query("DELETE FROM video_detail WHERE video_id IN ($SQL_FIND_ALL_ARCHIVED_VIDEOS)")
+        suspend fun cleanUpArchivedVideoDetails()
 
         @Query("DELETE FROM video_detail")
         override suspend fun deleteTable()
@@ -192,6 +197,9 @@ internal class FreeChatTable(
         @Query("DELETE FROM free_chat WHERE video_id IN(:ids)")
         suspend fun removeFreeChatItems(ids: Collection<YouTubeVideo.Id>)
 
+        @Query("DELETE FROM free_chat WHERE video_id IN($SQL_FIND_ALL_ARCHIVED_VIDEOS)")
+        suspend fun cleanUpArchivedFreeChat()
+
         @Query("DELETE FROM free_chat")
         override suspend fun deleteTable()
     }
@@ -257,6 +265,9 @@ internal class YouTubeVideoExpireTable(
         @Query("DELETE FROM video_expire WHERE video_id IN (:ids)")
         suspend fun removeLiveVideoExpire(ids: Collection<YouTubeVideo.Id>)
 
+        @Query("DELETE FROM video_expire WHERE video_id IN ($SQL_FIND_ALL_ARCHIVED_VIDEOS)")
+        suspend fun cleanUpArchivedLiveVideoExpire()
+
         @Query("DELETE FROM video_expire")
         override suspend fun deleteTable()
     }
@@ -287,6 +298,8 @@ internal interface YouTubeVideoDao :
         isFreeChat: Boolean,
         maxAge: Duration,
     )
+
+    suspend fun cleanUpArchivedVideoEntities()
 }
 
 internal class YouTubeVideoDaoImpl @Inject constructor(
@@ -335,6 +348,12 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
         removeFreeChatItems(videoIds)
         removeLiveVideoExpire(videoIds)
         removeVideoDetails(videoIds)
+    }
+
+    override suspend fun cleanUpArchivedVideoEntities() = db.withTransaction {
+        cleanUpArchivedFreeChat()
+        cleanUpArchivedLiveVideoExpire()
+        cleanUpArchivedVideoDetails()
     }
 
     override suspend fun addFreeChatItemEntities(

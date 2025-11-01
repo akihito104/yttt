@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -69,7 +70,7 @@ internal fun TimetableTabScreen(
         tabCount = TimetablePage.entries.size,
         tab = { index ->
             val (page, item) = checkNotNull(items[index])
-            TimetableTabData(page, item.itemCount).title()
+            remember(item.itemCount) { TimetableTabData(page, item.itemCount) }.title()
         },
         modifier = modifier,
         tabModifier = tabModifier,
@@ -77,7 +78,7 @@ internal fun TimetableTabScreen(
         val (page, item) = checkNotNull(items[index])
         TimetableScreen(
             page = page,
-            itemProvider = { item },
+            pagingItem = item,
             timeAdjustmentProvider = { timeAdjustment.value },
             lazyListState = checkNotNull(listState[page]),
             refreshingProvider = { refreshing.value },
