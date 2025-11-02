@@ -76,7 +76,7 @@ class LiveVideoOnAirItemDaoTest {
                 localSource.setMe(me.toUpdatable(cacheControl))
                 localSource.replaceAllFollowings(followings(me.id, broadcasters))
                 localSource.addUsers(users.map { it.toUpdatable(cacheControl) })
-                dao.replaceChannelScheduleEntities(users[0].id, updatable)
+                dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
             }
             // exercise
             dao.getAllOnAirPagingSource().testWithRefresh {

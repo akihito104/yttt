@@ -116,7 +116,7 @@ class LiveVideoUpcomingItemDaoTest {
                     streamSchedule(id = "stream-1", startTime = now + (Duration.ofDays(7) + Duration.ofSeconds(1))),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
-                dao.replaceChannelScheduleEntities(users[0].id, updatable)
+                dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
             }
             // exercise
             dao.getAllUpcomingPagingSource(now).testWithRefresh {
@@ -137,7 +137,7 @@ class LiveVideoUpcomingItemDaoTest {
                     ),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
-                dao.replaceChannelScheduleEntities(users[0].id, updatable)
+                dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
             }
             // exercise
             dao.getAllUpcomingPagingSource(now).testWithRefresh {
@@ -160,7 +160,7 @@ class LiveVideoUpcomingItemDaoTest {
                     ),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
-                dao.replaceChannelScheduleEntities(users[0].id, updatable)
+                dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
             }
             // exercise
             dao.getAllUpcomingPagingSource(now).testWithRefresh {
@@ -250,7 +250,7 @@ class LiveVideoUpcomingItemDaoTest {
                     streamSchedule(id = "stream-1", startTime = now + Duration.ofDays(3)),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
-                dao.replaceChannelScheduleEntities(users[0].id, updatable)
+                dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
             }
             // exercise
             dao.getAllUpcomingPagingSource(now).testWithRefresh {
@@ -270,7 +270,7 @@ class LiveVideoUpcomingItemDaoTest {
                 )
                 segments.forEach { (user, segment) ->
                     val updatable = channelSchedule(segment, user).toUpdatable<TwitchChannelSchedule?>(cacheControl)
-                    dao.replaceChannelScheduleEntities(user.id, updatable)
+                    dao.replaceChannelScheduleEntitiesBatch(mapOf(user.id to updatable))
                 }
             }
             // exercise
@@ -298,7 +298,7 @@ class LiveVideoUpcomingItemDaoTest {
                     streamSchedule(id = "stream-1", startTime = now + Duration.ofDays(3)),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
-                dao.replaceChannelScheduleEntities(users[0].id, updatable)
+                dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
             }
             // exercise
             dao.getAllUpcomingPagingSource(now).testWithRefresh {
@@ -327,7 +327,7 @@ class LiveVideoUpcomingItemDaoTest {
                     streamSchedule(id = "stream-1", startTime = startTime, title = "title1"),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
-                dao.replaceChannelScheduleEntities(users[0].id, updatable)
+                dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
             }
             // exercise
             dao.getAllUpcomingPagingSource(now).testWithRefresh {

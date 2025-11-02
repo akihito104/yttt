@@ -10,15 +10,16 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Upsert
 import androidx.room.withTransaction
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
 
@@ -116,9 +117,6 @@ internal class TwitchStreamScheduleTable(
 
         @Query("DELETE FROM twitch_channel_schedule_stream WHERE user_id IN (:ids)")
         suspend fun removeChannelStreamSchedulesByUserIds(ids: Collection<TwitchUser.Id>)
-
-        @Query("DELETE FROM twitch_channel_schedule_stream WHERE id IN (:ids)")
-        suspend fun removeChannelStreamSchedulesByIds(ids: Collection<TwitchChannelSchedule.Stream.Id>)
 
         @Query("DELETE FROM twitch_channel_schedule_stream")
         override suspend fun deleteTable()
@@ -227,9 +225,6 @@ internal class TwitchLiveScheduleDb(
                     "INNER JOIN twitch_user_detail_view AS u ON s.user_id = u.user_id"
         }
 
-        @Query(SQL_LIVE_SCHEDULE)
-        fun watchLiveSchedule(): Flow<List<TwitchLiveScheduleDb>>
-
         @Query("$SQL_LIVE_SCHEDULE WHERE s.id = :id")
         suspend fun findLiveSchedule(id: TwitchChannelSchedule.Stream.Id): TwitchLiveScheduleDb?
     }
@@ -251,14 +246,11 @@ internal interface TwitchScheduleDao :
     TwitchCategoryTable.Dao,
     TwitchChannelScheduleStream.Dao,
     TwitchLiveScheduleDb.Dao {
-    suspend fun replaceChannelScheduleEntities(
-        broadcasterId: TwitchUser.Id,
-        updatable: Updatable<TwitchChannelSchedule?>,
-    )
-
+    suspend fun replaceChannelScheduleEntitiesBatch(batch: Map<TwitchUser.Id, Updatable<TwitchChannelSchedule?>>)
     suspend fun removeChannelScheduleEntities(id: Collection<TwitchUser.Id>)
     suspend fun addCategoryEntities(streams: Collection<TwitchStream>)
     suspend fun upsertCategoryEntities(category: Collection<TwitchCategory>)
+    suspend fun findChannelSchedule(userId: TwitchUser.Id): Updatable<TwitchChannelSchedule?>
 }
 
 internal class TwitchScheduleDaoImpl @Inject constructor(
@@ -270,11 +262,33 @@ internal class TwitchScheduleDaoImpl @Inject constructor(
     TwitchChannelScheduleStream.Dao by db.twitchScheduleStreamDao,
     TwitchCategoryTable.Dao by db.twitchCategoryDao,
     TwitchLiveScheduleDb.Dao by db.twitchLiveScheduleDao {
-    override suspend fun replaceChannelScheduleEntities(
+    override suspend fun findChannelSchedule(
+        userId: TwitchUser.Id,
+    ): Updatable<TwitchChannelSchedule?> = db.withTransaction {
+        val vacation = findChannelVacationUpdatable(userId)
+            ?: return@withTransaction Updatable.create(null, CacheControl.EMPTY)
+        val schedule = findStreamScheduleByUserId(userId)
+        TwitchChannelScheduleImpl(
+            segments = schedule,
+            broadcaster = vacation.user,
+            vacation = vacation.vacation,
+        ).toUpdatable(vacation.cacheControl)
+    }
+
+    override suspend fun replaceChannelScheduleEntitiesBatch(
+        batch: Map<TwitchUser.Id, Updatable<TwitchChannelSchedule?>>,
+    ) = db.withTransaction {
+        batch.forEach { replaceChannelScheduleEntities(it.key, it.value) }
+    }
+
+    private suspend fun replaceChannelScheduleEntities(
         broadcasterId: TwitchUser.Id,
         updatable: Updatable<TwitchChannelSchedule?>,
-    ) = db.withTransaction {
+    ) {
         val schedule = updatable.item
+        if (schedule is TwitchChannelScheduleImpl) {
+            return
+        }
         val streams = schedule?.segments?.map { it.toStreamScheduleTable(broadcasterId) }
         val vacations = schedule?.vacation.toVacationScheduleTable(broadcasterId)
         val expire = TwitchChannelScheduleExpireTable(broadcasterId, updatable.cacheControl.toDb())
@@ -332,3 +346,9 @@ private fun TwitchChannelSchedule.Vacation?.toVacationScheduleTable(
 )
 
 private fun TwitchCategory.toTable(): TwitchCategoryTable = TwitchCategoryTable(id, name, artUrlBase, igdbId)
+
+internal class TwitchChannelScheduleImpl(
+    override val segments: List<TwitchChannelSchedule.Stream>?,
+    override val broadcaster: TwitchUser,
+    override val vacation: TwitchChannelSchedule.Vacation?,
+) : TwitchChannelSchedule

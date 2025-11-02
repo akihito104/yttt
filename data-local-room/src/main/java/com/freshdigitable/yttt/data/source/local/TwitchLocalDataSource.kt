@@ -3,8 +3,6 @@ package com.freshdigitable.yttt.data.source.local
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
-import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchStreams
@@ -20,7 +18,6 @@ import com.freshdigitable.yttt.data.source.TwitchScheduleDataSource
 import com.freshdigitable.yttt.data.source.TwitchStreamDataSource
 import com.freshdigitable.yttt.data.source.TwitchUserDataSource
 import com.freshdigitable.yttt.data.source.local.db.TwitchDao
-import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -104,8 +101,6 @@ internal class TwitchStreamLocalDataSource @Inject constructor(
     private val ioScope: IoScope,
     imageDataSource: ImageDataSource,
 ) : TwitchStreamDataSource.Local, TwitchStreamDataSource.Extended, ImageDataSource by imageDataSource {
-    override val onAir: Flow<List<TwitchLiveStream>> = dao.watchStream()
-
     override suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>) {
         dao.replaceAllStreams(followedStreams)
         removeImageByUrl(followedStreams.item.deletedThumbnails)
@@ -130,12 +125,6 @@ internal class TwitchScheduleLocalDataSource @Inject constructor(
     private val dao: TwitchDao,
     private val ioScope: IoScope,
 ) : TwitchScheduleDataSource.Local, TwitchScheduleDataSource.Extended {
-    override val upcoming: Flow<List<TwitchLiveSchedule>> = dao.watchLiveSchedule()
-
-    override suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>) {
-        dao.removeChannelStreamSchedulesByIds(id)
-    }
-
     override suspend fun fetchFollowedStreamSchedule(
         id: TwitchUser.Id,
         maxCount: Int, // ignore
@@ -143,10 +132,9 @@ internal class TwitchScheduleLocalDataSource @Inject constructor(
         dao.findChannelSchedule(id)
     }
 
-    override suspend fun setFollowedStreamSchedule(
-        userId: TwitchUser.Id,
-        schedule: Updatable<TwitchChannelSchedule?>,
+    override suspend fun setFollowedStreamScheduleBatch(
+        schedules: Map<TwitchUser.Id, Updatable<TwitchChannelSchedule?>>,
     ) {
-        dao.replaceChannelScheduleEntities(userId, schedule)
+        dao.replaceChannelScheduleEntitiesBatch(schedules)
     }
 }
