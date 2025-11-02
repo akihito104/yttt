@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.withTransaction
-import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
@@ -9,7 +8,6 @@ import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.Updatable
-import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import javax.inject.Inject
@@ -29,19 +27,6 @@ internal class TwitchDao @Inject constructor(
     suspend fun findStreamSchedule(
         id: TwitchChannelSchedule.Stream.Id,
     ): TwitchLiveVideo<TwitchChannelSchedule.Stream.Id>? = findLiveSchedule(id)
-
-    suspend fun findChannelSchedule(
-        userId: TwitchUser.Id,
-    ): Updatable<TwitchChannelSchedule?> = db.withTransaction {
-        val vacation = findChannelVacationUpdatable(userId)
-            ?: return@withTransaction Updatable.create(null, CacheControl.EMPTY)
-        val schedule = findStreamScheduleByUserId(userId)
-        object : TwitchChannelSchedule {
-            override val segments: List<TwitchChannelSchedule.Stream>? get() = schedule
-            override val broadcaster: TwitchUser get() = vacation.user
-            override val vacation: TwitchChannelSchedule.Vacation? get() = vacation.vacation
-        }.toUpdatable(vacation.cacheControl)
-    }
 
     suspend fun fetchCategory(id: Set<TwitchCategory.Id>): List<TwitchCategory> = findCategoryById(id)
 

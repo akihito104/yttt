@@ -2,10 +2,14 @@ package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.withTransaction
 import com.freshdigitable.yttt.data.model.CacheControl
+import com.freshdigitable.yttt.data.model.Updatable
+import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
+import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.deferForeignKeys
 import javax.inject.Inject
@@ -27,6 +31,11 @@ internal class YouTubeDao @Inject constructor(
         addSubscriptionEntities(subscriptions)
     }
 
+    suspend fun addChannelDetailList(channelDetail: Collection<Updatable<YouTubeChannelDetail>>) = db.withTransaction {
+        addChannelDetails(channelDetail)
+        addChannelRelatedPlaylistList(channelDetail.map { it.item })
+    }
+
     suspend fun addChannelRelatedPlaylistList(entities: Collection<YouTubeChannelRelatedPlaylist>) =
         db.withTransaction {
             addPlaylistEntities(entities.mapNotNull { it.uploadedPlayList })
@@ -37,8 +46,12 @@ internal class YouTubeDao @Inject constructor(
         item: YouTubePlaylistWithItem<*>,
         cacheControl: CacheControl,
     ) = db.withTransaction {
-        videoDao.insertOrIgnoreVideoEntities(item.items.map { it.videoId }.toSet())
-        playlistDao.updatePlaylistWithItems(item, cacheControl)
+        if (item is YouTubePlaylistWithItemIdsDb) {
+            playlistDao.updatePlaylistWithItemsCacheControl(item, cacheControl)
+        } else {
+            videoDao.insertOrIgnoreVideoEntities(item.items.map { it.videoId }.toSet())
+            playlistDao.updatePlaylistWithItems(item, cacheControl)
+        }
     }
 
     override suspend fun removeVideoEntities(
@@ -52,6 +65,18 @@ internal class YouTubeDao @Inject constructor(
         db.deferForeignKeys()
         listOf(videoDao, channelDao, subscriptionDao, playlistDao).forEach { it.deleteTable() }
     }
+
+    suspend fun <I : YouTubeId, O> fetchByIdBatch(ids: Set<I>, query: suspend YouTubeDao.(Set<I>) -> O): List<O> =
+        if (ids.isEmpty()) {
+            emptyList()
+        } else if (ids.size < YouTubeDataSource.MAX_BATCH_SIZE) {
+            listOf(this.query(ids))
+        } else {
+            val a = db.withTransaction {
+                ids.chunked(YouTubeDataSource.MAX_BATCH_SIZE).map { this.query(it.toSet()) }
+            }
+            listOf(a).flatten()
+        }
 }
 
 internal interface YouTubeDaoProviders :

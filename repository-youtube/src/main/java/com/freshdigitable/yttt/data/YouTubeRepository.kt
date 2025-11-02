@@ -113,22 +113,18 @@ class YouTubeRepository @Inject constructor(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         cache: YouTubePlaylistWithItem<*>?,
-    ): Result<Updatable<YouTubePlaylistWithItems>?> {
+    ): Result<Updatable<YouTubePlaylistWithItems>> {
         val c = localSource.fetchPlaylistWithItems(id, maxResult).getOrNull()?.item
         return remoteSource.fetchPlaylistWithItems(id, maxResult, c)
-            .onSuccess { updatePlaylistWithItems(it.item, it.cacheControl) }
             .recoverFromNotModified { cacheControl ->
-                checkNotNull(c).notModified(checkNotNull(cacheControl.fetchedAt)).also {
-                    updatePlaylistWithItemsCacheControl(it.item, it.cacheControl)
-                }
+                checkNotNull(c).notModified(checkNotNull(cacheControl.fetchedAt))
             }
-            .map { it }
     }
 
     override suspend fun fetchChannelList(
         ids: Set<YouTubeChannel.Id>,
     ): Result<List<YouTubeChannel>> = localSource.fetchChannelList(ids).mapCatching { cache ->
-        val needed = ids - cache.map { it.id }
+        val needed = ids - cache.map { it.id }.toSet()
         if (needed.isEmpty()) {
             cache
         } else {
@@ -142,7 +138,7 @@ class YouTubeRepository @Inject constructor(
         ids: Set<YouTubeChannel.Id>,
     ): Result<List<YouTubeChannelRelatedPlaylist>> =
         localSource.fetchChannelRelatedPlaylistList(ids).mapCatching { cache ->
-            val needed = ids - cache.map { it.id }
+            val needed = ids - cache.map { it.id }.toSet()
             if (needed.isEmpty()) {
                 cache
             } else {

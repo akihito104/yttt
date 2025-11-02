@@ -92,10 +92,8 @@ class TwitchRepository @Inject constructor(
         if (cache.isSuccess && checkNotNull(cache.getOrNull()).isFresh(current)) {
             return cache
         }
-        return remoteDataSource.fetchFollowedStreamSchedule(id, maxCount).onSuccess {
-            val updatable = it.overrideMaxAge(TwitchChannelSchedule.MAX_AGE_CHANNEL_SCHEDULE)
-            localDataSource.setFollowedStreamSchedule(id, updatable)
-        }
+        return remoteDataSource.fetchFollowedStreamSchedule(id, maxCount)
+            .map { it.overrideMaxAge(TwitchChannelSchedule.MAX_AGE_CHANNEL_SCHEDULE) }
     }
 
     override suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>> =

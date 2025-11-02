@@ -3,8 +3,6 @@ package com.freshdigitable.yttt.data.source
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchFollowings
-import com.freshdigitable.yttt.data.model.TwitchLiveSchedule
-import com.freshdigitable.yttt.data.model.TwitchLiveStream
 import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStreams
 import com.freshdigitable.yttt.data.model.TwitchUser
@@ -12,7 +10,6 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.model.Updatable
-import kotlinx.coroutines.flow.Flow
 
 interface TwitchDataSource : TwitchUserDataSource, TwitchStreamDataSource, TwitchScheduleDataSource {
     suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>>
@@ -61,7 +58,6 @@ interface TwitchStreamDataSource {
     suspend fun fetchFollowedStreams(me: TwitchUser.Id? = null): Result<Updatable<TwitchStreams>?>
     interface Local : TwitchStreamDataSource
     interface Extended {
-        val onAir: Flow<List<TwitchLiveStream>>
         suspend fun replaceFollowedStreams(followedStreams: Updatable<TwitchStreams.Updated>)
         suspend fun fetchStreamDetail(id: TwitchVideo.TwitchVideoId): TwitchLiveVideo<out TwitchVideo.TwitchVideoId>?
     }
@@ -75,13 +71,9 @@ interface TwitchScheduleDataSource {
         maxCount: Int = 10,
     ): Result<Updatable<TwitchChannelSchedule?>>
 
-    interface Local : TwitchScheduleDataSource {
-        suspend fun setFollowedStreamSchedule(userId: TwitchUser.Id, schedule: Updatable<TwitchChannelSchedule?>)
-    }
-
+    interface Local : TwitchScheduleDataSource
     interface Extended {
-        val upcoming: Flow<List<TwitchLiveSchedule>>
-        suspend fun removeStreamScheduleById(id: Set<TwitchChannelSchedule.Stream.Id>)
+        suspend fun setFollowedStreamScheduleBatch(schedules: Map<TwitchUser.Id, Updatable<TwitchChannelSchedule?>>)
     }
 
     interface Remote : TwitchScheduleDataSource

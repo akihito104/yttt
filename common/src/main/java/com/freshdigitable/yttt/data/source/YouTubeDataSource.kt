@@ -88,8 +88,10 @@ interface YouTubeVideoDataSource {
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>>
         suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
         suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>)
-        suspend fun updateAsArchivedVideo(ids: Set<YouTubeVideo.Id>)
-        suspend fun removeVideo(ids: Set<YouTubeVideo.Id>)
+        suspend fun updateWithVideos(
+            queriedId: Collection<YouTubeVideo.Id>,
+            videos: Collection<Updatable<YouTubeVideoExtended>>,
+        )
 
         suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>)
         suspend fun removeFreeChatItems(ids: Set<YouTubeVideo.Id>)
@@ -149,7 +151,6 @@ interface YouTubePlaylistDataSource {
 
     interface Extended {
         suspend fun updatePlaylistWithItems(item: YouTubePlaylistWithItem<*>, cacheControl: CacheControl)
-        suspend fun updatePlaylistWithItemsCacheControl(item: YouTubePlaylistWithItem<*>, cacheControl: CacheControl)
     }
 
     interface Remote : YouTubePlaylistDataSource {

@@ -305,6 +305,7 @@ class FetchYouTubeStreamUseCaseTest {
                 FakeDateTimeProviderModule.instant = current
                 fakeClient = FakeYouTubeClientModule.setup(10, 2, current)
                 hiltRule.inject()
+                extendedSource.deleteAllTables()
                 sut.invoke()
             },
         )
@@ -331,7 +332,9 @@ class FetchYouTubeStreamUseCaseTest {
             // verify
             actual.shouldBeSuccess()
             livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
-            livePagingSource.upcoming(dateTimeProvider.now()).testForAllPage { getPages().flatten() shouldHaveSize 200 }
+            livePagingSource.upcoming(dateTimeProvider.now()).testForAllPage {
+                getPages().flatten() shouldHaveSize 200
+            }
             livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
             extendedSource.subscriptionsFetchedAt shouldBe Instant.parse("2025-04-20T03:00:00Z")
         }
@@ -427,6 +430,7 @@ class FetchYouTubeStreamUseCaseTest {
                 FakeDateTimeProviderModule.instant = current
                 fakeClient = FakeYouTubeClientModule.setup(150, 2, current)
                 hiltRule.inject()
+                extendedSource.deleteAllTables()
                 sut.invoke()
                 extendedSource.findSubscriptionQuery(0).shouldNotBeNull().eTag.shouldNotBeNull()
             },

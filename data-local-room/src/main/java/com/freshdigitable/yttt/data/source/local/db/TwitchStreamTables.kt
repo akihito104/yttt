@@ -15,7 +15,6 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
 
@@ -96,9 +95,6 @@ internal data class TwitchStreamDbView(
 
         @Query("$SQL_STREAM WHERE s.id = :id")
         suspend fun findStream(id: TwitchStream.Id): TwitchStreamDbView
-
-        @Query("$SQL_STREAM ORDER BY s.started_at DESC")
-        fun watchStream(): Flow<List<TwitchStreamDbView>>
 
         @Query("$SQL_STREAM ORDER BY s.started_at DESC")
         suspend fun findAllStreams(): List<TwitchStreamDbView>

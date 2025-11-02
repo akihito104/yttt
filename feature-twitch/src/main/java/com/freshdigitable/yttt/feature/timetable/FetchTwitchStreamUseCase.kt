@@ -3,8 +3,6 @@ package com.freshdigitable.yttt.feature.timetable
 import com.freshdigitable.yttt.AppPerformance.Companion.trace
 import com.freshdigitable.yttt.AppTrace
 import com.freshdigitable.yttt.data.TwitchRepository
-import com.freshdigitable.yttt.data.model.DateTimeProvider
-import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchBroadcaster
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
@@ -17,6 +15,7 @@ import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logE
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -25,7 +24,6 @@ import javax.inject.Inject
 internal class FetchTwitchStreamUseCase @Inject constructor(
     private val twitchRepository: TwitchRepository,
     @param:LivePlatformQualifier(Twitch::class) private val accountRepository: AccountRepository,
-    private val dateTimeProvider: DateTimeProvider,
 ) : FetchStreamUseCase {
     override suspend operator fun invoke(): Result<Unit> {
         val account = checkAccount()
@@ -57,7 +55,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
     ): Result<Set<TwitchUser.Id>> = coroutineScope {
         val tasks = listOf(
             async { updateOnAirStreams(me).map { u -> u.map { it.user.id } } },
-            async { updateChannelSchedules(me, trace).map { s -> s.map { it.broadcaster.id } } },
+            async { updateChannelSchedules(this, me, trace).map { s -> s.map { it.broadcaster.id } } },
         ).awaitAll()
         if (tasks.all { it.isSuccess }) {
             Result.success(tasks.mapNotNull { it.getOrNull() }.flatten().toSet())
@@ -80,6 +78,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         }.map { checkNotNull(it).item.streams }
 
     private suspend fun updateChannelSchedules(
+        coroutineScope: CoroutineScope,
         me: TwitchUserDetail,
         t: AppTrace,
     ): Result<List<TwitchChannelSchedule>> {
@@ -92,7 +91,7 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
             }.map { it.item.followings }
             .getOrDefault(emptyList())
         t.putMetric("subs", followings.size.toLong())
-        return fetchAllSchedule(followings).onSuccess { schedule ->
+        return fetchAllSchedule(coroutineScope, followings).onSuccess { schedule ->
             val categoryId = schedule.flatMap { s ->
                 s.segments?.mapNotNull { it.category?.id } ?: emptyList()
             }.toSet()
@@ -103,31 +102,26 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         }
     }
 
-    private suspend fun fetchAllSchedule(following: List<TwitchBroadcaster>): Result<List<TwitchChannelSchedule>> {
+    private suspend fun fetchAllSchedule(
+        coroutineScope: CoroutineScope,
+        following: List<TwitchBroadcaster>,
+    ): Result<List<TwitchChannelSchedule>> {
         if (following.isEmpty()) {
             return Result.success(emptyList())
         }
-        val tasks = coroutineScope {
-            following.map { async { updateChannelSchedule(it) } }
+        val tasks = following.map {
+            coroutineScope.async { it.id to twitchRepository.fetchFollowedStreamSchedule(it.id) }
         }
-        val results = tasks.awaitAll()
+        val schedules = tasks.awaitAll().toMap()
+        twitchRepository.setFollowedStreamScheduleBatch(
+            schedules.filterValues { it.isSuccess }
+                .mapValues { it.value.getOrThrow() },
+        )
+        val results = schedules.values.map { s -> s.map { it.item } }
         return if (results.all { it.isSuccess }) {
             Result.success(results.mapNotNull { it.getOrNull() })
         } else {
             Result.failure(results.first { it.isFailure }.exceptionOrNull()!!)
         }
     }
-
-    private suspend fun updateChannelSchedule(it: TwitchBroadcaster): Result<TwitchChannelSchedule?> =
-        twitchRepository.fetchFollowedStreamSchedule(it.id).onSuccess { s ->
-            val segments = s.item?.segments ?: return@onSuccess
-            val current = dateTimeProvider.now()
-            val finished = segments.filter {
-                (it.startTime + LiveVideo.UPCOMING_DEADLINE) < current ||
-                    (it.endTime != null && checkNotNull(it.endTime) < current)
-            }.map { it.id }
-            if (finished.isNotEmpty()) {
-                twitchRepository.removeStreamScheduleById(finished.toSet())
-            }
-        }.onFailure { logE(throwable = it) { "updateChannelSchedule: " } }.map { it.item }
 }

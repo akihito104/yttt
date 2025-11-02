@@ -231,7 +231,7 @@ class YouTubeRepositoryTest {
         val actual = sut.fetchPlaylistWithItems(YouTubePlaylist.Id("0"), 10)
         // verify
         actual shouldBeSuccess {
-            it!!.item.items shouldHaveSize 1
+            it.item.items shouldHaveSize 1
             it.cacheControl.maxAge shouldBe YouTubePlaylistWithItems.MAX_AGE_DEFAULT
         }
     }
@@ -252,7 +252,7 @@ class YouTubeRepositoryTest {
         val actual = sut.fetchPlaylistWithItems(YouTubePlaylist.Id("0"), 10)
         // verify
         actual shouldBeSuccess {
-            it!!.item.playlist.id shouldBe YouTubePlaylist.Id("0")
+            it.item.playlist.id shouldBe YouTubePlaylist.Id("0")
             it.cacheControl.fetchedAt shouldBe current
             it.cacheControl.maxAge shouldBe Duration.ofDays(1)
         }
@@ -290,7 +290,7 @@ class YouTubeRepositoryTest {
         val actual = sut.fetchPlaylistWithItems(playlistId, 10)
         // verify
         actual shouldBeSuccess {
-            it!!.item.playlist.id shouldBe cache.item.playlist.id
+            it.item.playlist.id shouldBe cache.item.playlist.id
             it.item.items shouldHaveSize 1
             it.item.addedItems.shouldBeEmpty()
             it.item.eTag shouldBe "valid_eTag"
