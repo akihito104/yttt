@@ -76,10 +76,12 @@ class LiveVideoDetailItemTest : ShouldSpec(
                 params,
             ) { param ->
                 // setup
-                val sut = LiveVideoDetailImpl(param)
+                val sut = DetailItem(
+                    LiveVideoDetailImpl(param),
+                    TimeAdjustment(Duration.ofHours(param.extraHourOfDay), commonZoneId, commonLocale),
+                )
                 // exercise
-                val actual =
-                    sut.statsText(TimeAdjustment(Duration.ofHours(param.extraHourOfDay), commonZoneId, commonLocale))
+                val actual = sut.statsText()
                 // verify
                 actual shouldBe param.expected
             }
@@ -97,7 +99,7 @@ internal data class StatsTextParam(
 )
 
 private class LiveVideoDetailImpl(private val param: StatsTextParam) : LiveVideoDetail {
-    override val dateTime: Instant? get() = param.dateTime
+    override val dateTime: Instant get() = param.dateTime
     override val viewerCount: BigInteger? get() = param.viewerCount
     override val contentType: TimetablePage get() = param.contentType
     override val id: LiveVideo.Id get() = LiveVideo.Id("id", YouTubeVideo.Id::class)
