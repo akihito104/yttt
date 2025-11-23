@@ -18,8 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.DATE_WEEKDAY_MINUTES
-import com.freshdigitable.yttt.data.model.DATE_WEEKDAY_SECONDS
 import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
@@ -30,7 +28,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
-import com.freshdigitable.yttt.feature.timetable.toAdjustedLocalDateTimeText
+import com.freshdigitable.yttt.feature.video.DetailItem
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
 import java.math.BigInteger
 import java.time.Instant
@@ -47,10 +45,8 @@ fun VideoDetailScreen(
     val menuItems = viewModel.contextMenuItems.collectAsState(initial = emptyList())
     topAppBarStateHolder.updateMenuItems(menuItems.value)
     val item = viewModel.detail.collectAsState(null)
-    val timeAdjustment = viewModel.timeAdjustment.collectAsState()
     VideoDetailScreen(
         videoProvider = { item.value },
-        timeAdjustmentProvider = { timeAdjustment.value },
         modifier = modifier,
         thumbnailModifier = thumbnailModifier,
         titleModifier = titleModifier,
@@ -60,8 +56,7 @@ fun VideoDetailScreen(
 
 @Composable
 private fun VideoDetailScreen(
-    videoProvider: () -> LiveVideoDetail?,
-    timeAdjustmentProvider: () -> TimeAdjustment,
+    videoProvider: () -> DetailItem?,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
     titleModifier: Modifier = Modifier,
@@ -93,8 +88,7 @@ private fun VideoDetailScreen(
                 modifier = titleModifier,
                 dialog = dialog,
             )
-            val timeAdjustment = timeAdjustmentProvider()
-            val statsText = video.statsText(timeAdjustment)
+            val statsText = video.statsText()
             if (statsText.isNotEmpty()) {
                 Text(
                     text = statsText,
@@ -117,17 +111,13 @@ private fun VideoDetailScreen(
     LinkAnnotationDialog(state = dialog)
 }
 
-fun LiveVideoDetail.statsText(timeAdjustment: TimeAdjustment): String {
+internal fun DetailItem.statsText(): String {
     val time = when (contentType) {
-        TimetablePage.OnAir ->
-            "Started:${checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, DATE_WEEKDAY_SECONDS)}"
-
-        TimetablePage.Upcoming ->
-            "Starting:${checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, DATE_WEEKDAY_MINUTES)}"
-
+        TimetablePage.OnAir -> "Started:${checkNotNull(adjustedDateTime)}"
+        TimetablePage.Upcoming -> "Starting:${checkNotNull(adjustedDateTime)}"
         else -> null
     }
-    val count = if (viewerCount != null) "Viewers:$viewerCount" else null
+    val count = viewerCount?.let { "Viewers:$it" }
     return listOfNotNull(time, count).joinToString("・")
 }
 
@@ -135,34 +125,27 @@ fun LiveVideoDetail.statsText(timeAdjustment: TimeAdjustment): String {
 @Composable
 private fun VideoDetailComposePreview() {
     val detail = DetailItem(
-        id = LiveVideo.Id("id", YouTubeVideo.Id::class),
-        title = AnnotatableString.create("title") { emptyList() },
-        channel = LiveChannelEntity(
-            id = LiveChannel.Id("channel", YouTubeChannel.Id::class),
-            title = "channel",
-            iconUrl = "iconUrl",
-            platform = YouTube,
-        ),
-        description = AnnotatableString.create("description\nhttps://example.com") { emptyList() },
-        viewerCount = BigInteger.valueOf(100),
-        contentType = TimetablePage.Upcoming,
-        dateTime = Instant.now(),
+        detail = object : LiveVideoDetail {
+            override val id: LiveVideo.Id = LiveVideo.Id("id", YouTubeVideo.Id::class)
+            override val channel: LiveChannel = LiveChannelEntity(
+                id = LiveChannel.Id("channel", YouTubeChannel.Id::class),
+                title = "channel",
+                iconUrl = "iconUrl",
+                platform = YouTube,
+            )
+            override val thumbnailUrl: String = ""
+            override val title: AnnotatableString = AnnotatableString.create("title") { emptyList() }
+            override val description: AnnotatableString =
+                AnnotatableString.create("description\nhttps://example.com") { emptyList() }
+            override val dateTime: Instant? = Instant.now()
+            override val viewerCount: BigInteger? = BigInteger.valueOf(100)
+            override val contentType: TimetablePage = TimetablePage.Upcoming
+        },
+        timeAdjustment = TimeAdjustment.zero(),
     )
     AppTheme {
         VideoDetailScreen(
             videoProvider = { detail },
-            timeAdjustmentProvider = { TimeAdjustment.zero() },
         )
     }
 }
-
-private data class DetailItem(
-    override val id: LiveVideo.Id,
-    override val title: AnnotatableString,
-    override val thumbnailUrl: String = "",
-    override val channel: LiveChannel,
-    override val description: AnnotatableString,
-    override val viewerCount: BigInteger?,
-    override val dateTime: Instant?,
-    override val contentType: TimetablePage,
-) : LiveVideoDetail

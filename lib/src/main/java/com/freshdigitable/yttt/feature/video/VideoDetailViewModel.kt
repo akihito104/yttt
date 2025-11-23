@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.feature.video
 
+import androidx.compose.runtime.Stable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,10 +10,14 @@ import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TopAppBarMenuItem
 import com.freshdigitable.yttt.compose.onFailureWithSnackbarMessage
 import com.freshdigitable.yttt.data.SettingRepository
+import com.freshdigitable.yttt.data.model.DATE_WEEKDAY_MINUTES
+import com.freshdigitable.yttt.data.model.DATE_WEEKDAY_SECONDS
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.di.IdBaseClassMap
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimetableContextMenuSelector
+import com.freshdigitable.yttt.feature.timetable.TimetablePage
+import com.freshdigitable.yttt.feature.timetable.toAdjustedLocalDateTimeText
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -39,12 +44,11 @@ class VideoDetailViewModel @AssistedInject constructor(
 
     private val videoId = savedStateHandle.toLiveVideoRoute
     private val findLiveVideo = checkNotNull(findLiveVideoTable[videoId.type.java])
-    val timeAdjustment = settingRepository.timeAdjustment
-        .stateIn(viewModelScope, SharingStarted.Lazily, TimeAdjustment.zero())
-    internal val detail: Flow<LiveVideoDetail?> = flowOf(videoId).map { id ->
-        findLiveVideo(id)
+    internal val detail: Flow<DetailItem?> = settingRepository.timeAdjustment.map { adjustment ->
+        findLiveVideo(videoId)
             .onFailureWithSnackbarMessage(sender)
             .onSuccess { if (it == null) sender.send(SnackbarMessage("Video not found")) }
+            .map { detail -> detail?.let { DetailItem(it, adjustment) } }
             .getOrNull()
     }
 
@@ -57,4 +61,18 @@ class VideoDetailViewModel @AssistedInject constructor(
             }
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+}
+
+@Stable
+internal class DetailItem(
+    detail: LiveVideoDetail,
+    timeAdjustment: TimeAdjustment,
+) : LiveVideoDetail by detail {
+    val adjustedDateTime: String? = when (detail.contentType) {
+        TimetablePage.OnAir -> checkNotNull(dateTime).toAdjustedLocalDateTimeText(timeAdjustment, DATE_WEEKDAY_SECONDS)
+        TimetablePage.Upcoming -> checkNotNull(dateTime)
+            .toAdjustedLocalDateTimeText(timeAdjustment, DATE_WEEKDAY_MINUTES)
+
+        TimetablePage.FreeChat -> null
+    }
 }

@@ -62,7 +62,6 @@ internal fun TimetableTabScreen(
         consume = viewModel::loadList,
     )
     val listState = TimetablePage.entries.associateWith { rememberLazyListState() }
-    val timeAdjustment = viewModel.timeAdjustment.collectAsState()
     val items = TimetablePage.entries.associate {
         it.ordinal to (it to checkNotNull(viewModel.pagers[it]).collectAsLazyPagingItems())
     }
@@ -78,8 +77,7 @@ internal fun TimetableTabScreen(
         val (page, item) = checkNotNull(items[index])
         TimetableScreen(
             page = page,
-            pagingItem = item,
-            timeAdjustmentProvider = { timeAdjustment.value },
+            pagingItem = { item },
             lazyListState = checkNotNull(listState[page]),
             refreshingProvider = { refreshing.value },
             titleModifier = titleModifier,

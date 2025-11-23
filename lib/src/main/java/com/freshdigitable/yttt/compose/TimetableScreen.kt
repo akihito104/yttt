@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.paging.PagingData
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.freeChat
@@ -24,8 +25,8 @@ import com.freshdigitable.yttt.compose.LiveVideoPreviewParamProvider.Companion.u
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.compose.preview.PreviewLightMode
 import com.freshdigitable.yttt.data.model.LiveVideo
-import com.freshdigitable.yttt.feature.timetable.GroupKey
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
+import com.freshdigitable.yttt.feature.timetable.TimetableItem
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,8 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 @Composable
 fun TimetableScreen(
     page: TimetablePage,
-    pagingItem: LazyPagingItems<LiveVideo>,
-    timeAdjustmentProvider: () -> TimeAdjustment,
+    pagingItem: () -> LazyPagingItems<TimetableItem>,
     refreshingProvider: () -> Boolean,
     onRefresh: () -> Unit,
     onListItemClick: (LiveVideo.Id) -> Unit,
@@ -57,12 +57,10 @@ fun TimetableScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             content = timetableContent(
                 page,
-                pagingItem,
-                timeAdjustmentProvider(),
-            ) { item, timeAdjustment ->
+                pagingItem(),
+            ) { item ->
                 LiveVideoListItemView(
                     video = item,
-                    timeAdjustment = timeAdjustment,
                     modifier = Modifier.animateItem(),
                     thumbnailModifier = thumbnailModifier(item.id),
                     titleModifier = titleModifier(item.id),
@@ -76,15 +74,13 @@ fun TimetableScreen(
 
 private fun timetableContent(
     page: TimetablePage,
-    pagingItem: LazyPagingItems<LiveVideo>,
-    timeAdjustment: TimeAdjustment,
-    content: @Composable LazyItemScope.(LiveVideo, TimeAdjustment) -> Unit,
+    pagingItem: LazyPagingItems<TimetableItem>,
+    content: @Composable LazyItemScope.(TimetableItem.Video) -> Unit,
 ): LazyListScope.() -> Unit = when (page.type) {
     TimetablePage.Type.SIMPLE -> {
         {
             simpleContent(
                 pagingItems = pagingItem,
-                timeAdjustment = timeAdjustment,
                 content = content,
             )
         }
@@ -94,7 +90,6 @@ private fun timetableContent(
         {
             groupedContent(
                 pagingItems = pagingItem,
-                timeAdjustment = timeAdjustment,
                 content = content,
             )
         }
@@ -102,9 +97,8 @@ private fun timetableContent(
 }
 
 private fun LazyListScope.simpleContent(
-    pagingItems: LazyPagingItems<LiveVideo>,
-    timeAdjustment: TimeAdjustment,
-    content: @Composable LazyItemScope.(LiveVideo, TimeAdjustment) -> Unit,
+    pagingItems: LazyPagingItems<TimetableItem>,
+    content: @Composable LazyItemScope.(TimetableItem.Video) -> Unit,
 ) {
     AppLogger.logD("simpleContent:") { "start:" }
     items(
@@ -112,60 +106,62 @@ private fun LazyListScope.simpleContent(
         key = pagingItems.itemKey { it.itemKey },
     ) { i ->
         val item = pagingItems[i] ?: return@items
-        content(item, timeAdjustment)
+        content(item as TimetableItem.Video)
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 private fun LazyListScope.groupedContent(
-    pagingItems: LazyPagingItems<LiveVideo>,
-    timeAdjustment: TimeAdjustment,
-    content: @Composable LazyItemScope.(LiveVideo, TimeAdjustment) -> Unit,
+    pagingItems: LazyPagingItems<TimetableItem>,
+    content: @Composable LazyItemScope.(TimetableItem.Video) -> Unit,
 ) {
     AppLogger.logD("groupedContent:") { "start:" }
-    val grouped = buildMap {
-        for (i in 0 until pagingItems.itemSnapshotList.items.size) {
-            val index = i + pagingItems.itemSnapshotList.placeholdersBefore
-            val item = pagingItems.peek(index) ?: continue
-            val key = GroupKey.create(item.dateTime, timeAdjustment.extraHourOfDay, timeAdjustment.zoneId)
-            val list = getOrPut(key) { mutableListOf() }
-            list.add(index)
-        }
-    }.mapKeys { it.key.text }
-    grouped.forEach { (datetime, indices) ->
-        stickyHeader(key = datetime) {
+    val snapshot = pagingItems.itemSnapshotList
+    val grouped = snapshot.items.map { it as TimetableItem.GroupedVideo }
+        .mapIndexed { i, item -> item.key to i + snapshot.placeholdersBefore }
+        .groupBy { (k, _) -> k }
+        .mapValues { (_, v) -> v.map { it.second } }
+    items(
+        count = snapshot.placeholdersBefore,
+        key = pagingItems.itemKey { it.itemKey },
+        contentType = pagingItems.itemContentType { "placeholder" },
+        itemContent = {},
+    )
+    grouped.forEach { (header, itemIndex) ->
+        stickyHeader(
+            key = header.text,
+            contentType = "header",
+        ) {
             LiveVideoHeaderView(
-                label = datetime,
+                label = header.text,
                 modifier = Modifier.animateItem(),
             )
         }
         items(
-            items = indices,
-            key = { i -> pagingItems.itemKey { it.itemKey }(i) },
-        ) { index ->
-            val item = pagingItems[index] ?: return@items
-            content(item, timeAdjustment)
+            items = itemIndex,
+            key = { index -> pagingItems.itemKey { it.itemKey }(index) },
+            contentType = { "content" },
+        ) {
+            val item = pagingItems[it] as? TimetableItem.Video ?: return@items
+            content(item)
         }
     }
 }
-
-private val LiveVideo.itemKey: String get() = "${id.type.qualifiedName}_${id.value}"
 
 @PreviewLightMode
 @Composable
 private fun SimpleTimetableScreenPreview() {
     val page = MutableStateFlow(
         PagingData.from(
-            data = listOf(freeChat()),
+            data = listOf<TimetableItem>(TimetableItem.Video(freeChat(), TimeAdjustment.zero())),
         ),
     ).collectAsLazyPagingItems()
     AppTheme {
         TimetableScreen(
             page = TimetablePage.FreeChat,
-            pagingItem = page,
+            pagingItem = { page },
             refreshingProvider = { false },
             onRefresh = {},
-            timeAdjustmentProvider = { TimeAdjustment.zero() },
             onListItemClick = {},
             onMenuClick = {},
         )
@@ -177,14 +173,13 @@ private fun SimpleTimetableScreenPreview() {
 private fun GroupedTimetableScreenPreview() {
     val items = MutableStateFlow(
         PagingData.from(
-            data = listOf(upcomingVideo()),
+            data = listOf<TimetableItem>(TimetableItem.GroupedVideo(upcomingVideo(), TimeAdjustment.zero())),
         ),
     ).collectAsLazyPagingItems()
     AppTheme {
         TimetableScreen(
             refreshingProvider = { false },
-            pagingItem = items,
-            timeAdjustmentProvider = { TimeAdjustment.zero() },
+            pagingItem = { items },
             onRefresh = {},
             page = TimetablePage.Upcoming,
             onListItemClick = {},
