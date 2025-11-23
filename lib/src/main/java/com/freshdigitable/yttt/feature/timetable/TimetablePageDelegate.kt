@@ -5,7 +5,6 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.PagingSource
-import androidx.paging.insertSeparators
 import androidx.paging.map
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
@@ -57,27 +56,12 @@ internal class TimetablePageDelegateImpl @Inject constructor(
         private fun PagingData<out LiveVideo>.createGroupedVideoWithHeader(
             timeAdjustment: TimeAdjustment,
         ): PagingData<TimetableItem> = map { TimetableItem.GroupedVideo(it, timeAdjustment) }
-            .insertSeparators { before, after ->
-                if (before == null && after != null) {
-                    TimetableItem.Header(after.key.text)
-                } else if (isHeaderNeeded(before, after)) {
-                    TimetableItem.Header(checkNotNull(after).key.text)
-                } else {
-                    null
-                }
-            }
-
-        private fun isHeaderNeeded(before: TimetableItem.GroupedVideo?, after: TimetableItem.GroupedVideo?): Boolean {
-            if (before == null || after == null) {
-                return false
-            }
-            return before.key != after.key
-        }
     }
 }
 
 sealed interface TimetableItem {
     val adjustedDateTime: String
+    val itemKey: String
 
     @Stable
     open class Video(
@@ -85,6 +69,7 @@ sealed interface TimetableItem {
         timeAdjustment: TimeAdjustment,
     ) : TimetableItem, LiveVideo by video {
         override val adjustedDateTime: String = dateTime.toAdjustedLocalDateTimeText(timeAdjustment)
+        override val itemKey: String = "${id.type.qualifiedName}_${id.value}"
     }
 
     @Stable
@@ -94,9 +79,4 @@ sealed interface TimetableItem {
     ) : Video(video, timeAdjustment) {
         internal val key: GroupKey = GroupKey.create(dateTime, timeAdjustment.extraHourOfDay, timeAdjustment.zoneId)
     }
-
-    @Stable
-    class Header(
-        override val adjustedDateTime: String,
-    ) : TimetableItem
 }

@@ -17,12 +17,14 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -30,6 +32,7 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel(assistedFactory = TimetableTabViewModel.Factory::class)
 internal class TimetableTabViewModel @AssistedInject constructor(
@@ -86,14 +89,11 @@ internal class TimetableTabViewModel @AssistedInject constructor(
         contextMenuDelegate.tearDownMenu()
     }
 
+    @OptIn(FlowPreview::class)
     val pagers = TimetablePage.entries.associateWith { p ->
         current.flatMapLatest { timetablePageDelegate.getTimetableItemPager(p)(it) }
+            .debounce(300.milliseconds)
             .cachedIn(viewModelScope)
-    }
-
-    companion object {
-        @Suppress("unused")
-        private val TAG = TimetableTabViewModel::class.java.simpleName
     }
 }
 

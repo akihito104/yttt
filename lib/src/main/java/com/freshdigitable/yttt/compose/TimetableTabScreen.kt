@@ -77,7 +77,7 @@ internal fun TimetableTabScreen(
         val (page, item) = checkNotNull(items[index])
         TimetableScreen(
             page = page,
-            pagingItem = item,
+            pagingItem = { item },
             lazyListState = checkNotNull(listState[page]),
             refreshingProvider = { refreshing.value },
             titleModifier = titleModifier,
