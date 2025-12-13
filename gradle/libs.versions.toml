@@ -1,13 +1,13 @@
 [versions]
-androidGradlePlugin = "8.13.0"
+androidGradlePlugin = "8.13.2"
 desugarJdkLib = "2.1.5"
-androidTools = "31.13.0"
-kotlin = "2.2.20"
-ksp = "2.2.20-2.0.3" # https://github.com/google/ksp/releases
+androidTools = "31.13.2"
+kotlin = "2.2.21"
+ksp = "2.3.3" # https://github.com/google/ksp/releases
 kotlinxCoroutinesCore = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
 kotlinxSerializationJson = "1.9.0"
-licensee = "1.13.0"
-oss-license-plugin = "0.10.9"
+licensee = "1.14.1"
+oss-license-plugin = "0.10.10"
 oss-license-lib = "17.3.0"
 
 androidxComposeBom = "2025.12.00"
@@ -15,21 +15,21 @@ compose-runtime = "1.10.0"
 compose-animation = "1.10.0"
 accompanistPermissions = "0.37.3"
 # https://developer.android.com/jetpack/androidx/explorer
-androidxActivityKtx = "1.11.0"
+androidxActivityKtx = "1.12.1"
 appcompat = "1.7.1"
 core-ktx = "1.17.0"
-lifecycle-ktx = "2.9.3"
-navigation-compose = "2.9.4"
-work-runtime-ktx = "2.10.4"
-datastore-preferences = "1.1.7"
-room-ktx = "2.8.0"
+lifecycle-ktx = "2.10.0"
+navigation-compose = "2.9.6"
+work-runtime-ktx = "2.11.0"
+datastore-preferences = "1.2.0"
+room-ktx = "2.8.4"
 paging = "3.3.6"
-hilt = "2.57.1"
+hilt = "2.57.2"
 hilt-android = "1.3.0"
 
 # https://developers.google.com/android/guides/setup
 play-services-auth = "21.4.0"
-play-services-base = "18.8.0"
+play-services-base = "18.9.0"
 # https://github.com/googleapis/google-api-java-client
 google-api-client-android = "2.8.1"
 # https://github.com/googleapis/google-api-java-client-services/blob/main/clients/google-api-services-youtube/v3/README.md
@@ -39,17 +39,17 @@ glide = "5.0.5"
 glide-compose = "1.0.0-beta08"
 # https://coil-kt.github.io/coil/
 coil = "3.3.0"
-okhttp = "5.1.0"
+okhttp = "5.3.2"
 retrofit = "3.0.0"
 kermit = "2.0.8"
 leakcanaryAndroid = "2.14"
 detekt = "1.23.8"
-detekt-compose-rules = "0.4.27"
+detekt-compose-rules = "0.4.28"
 
 junit = "4.13.2"
-kotest = "6.0.3"
+kotest = "6.0.7"
 test-runner = "1.7.0"
-mockk = "1.14.5"
+mockk = "1.14.7"
 androidx-junit = "1.3.0"
 espresso-core = "3.7.0"
 turbine = "1.2.1"
@@ -60,6 +60,7 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "androidxComposeBom" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-material-icons = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-compose-runtime-livedata = { module = "androidx.compose.runtime:runtime-livedata" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
@@ -78,7 +79,6 @@ androidx-navigation-compose = { module = "androidx.navigation:navigation-compose
 androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "paging" }
 androidx-paging-runtime = { module = "androidx.paging:paging-runtime", version.ref = "paging" }
 androidx-paging-testing = { module = "androidx.paging:paging-testing", version.ref = "paging" }
-androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room-ktx" }
 androidx-room-paging = { module = "androidx.room:room-paging", version.ref = "room-ktx" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room-ktx" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room-ktx" }
