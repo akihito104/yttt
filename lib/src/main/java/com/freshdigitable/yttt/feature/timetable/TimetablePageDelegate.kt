@@ -9,10 +9,13 @@ import androidx.paging.map
 import com.freshdigitable.yttt.data.SettingRepository
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.source.LiveDataPagingSource
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
 
 internal interface TimetablePageDelegate {
     fun getTimetableItemPager(page: TimetablePage): (Instant) -> Flow<PagingData<TimetableItem>>
@@ -35,12 +38,13 @@ internal class TimetablePageDelegateImpl @Inject constructor(
             TimetablePage.FreeChat to { createVideo(it) },
         )
 
+    @OptIn(FlowPreview::class)
     override fun getTimetableItemPager(page: TimetablePage): (Instant) -> Flow<PagingData<TimetableItem>> {
         val factory = checkNotNull(pageFactory[page])
         val creator = checkNotNull(pagingDataFactory[page])
         return { current ->
             combine(
-                Pager(pageConfig) { factory(current) }.flow,
+                Pager(pageConfig) { factory(current) }.flow.debounce(300.milliseconds),
                 settingRepository.timeAdjustment,
             ) { pagingData, timeAdjustment -> pagingData.creator(timeAdjustment) }
         }
