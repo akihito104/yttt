@@ -83,12 +83,16 @@ internal class FetchTwitchStreamUseCase @Inject constructor(
         t: AppTrace,
     ): Result<List<TwitchChannelSchedule>> {
         val followings = twitchRepository.fetchAllFollowings(me.id)
-            .onFailure { return Result.failure(it) }
             .onSuccess {
-                if (it is TwitchFollowings.Updated) {
+                if (it is TwitchFollowings.Updated && it.removed.isNotEmpty()) {
                     twitchRepository.cleanUpByUserId(it.removed)
                 }
-            }.map { it.item.followings }
+            }
+            .onFailure {
+                logE(throwable = it) { "updateChannelSchedules: " }
+                return Result.failure(it)
+            }
+            .map { it.item.followings }
             .getOrDefault(emptyList())
         t.putMetric("subs", followings.size.toLong())
         return fetchAllSchedule(coroutineScope, followings).onSuccess { schedule ->

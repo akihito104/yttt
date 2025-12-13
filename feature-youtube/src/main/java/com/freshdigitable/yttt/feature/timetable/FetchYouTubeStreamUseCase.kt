@@ -51,7 +51,6 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             return Result.success(Unit)
         }
         return trace("loadList_yt") {
-            liveRepository.cleanUp()
             val task = coroutineScope {
                 merge(
                     fetchVideoUpdateBatch(this),
