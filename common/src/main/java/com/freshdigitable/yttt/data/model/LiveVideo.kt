@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.data.model
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import kotlinx.serialization.Serializable
 import java.math.BigInteger
-import java.time.Duration
 import java.time.Instant
 import kotlin.reflect.KClass
 
@@ -32,7 +31,6 @@ interface LiveVideo : LiveVideoThumbnail {
 
     companion object {
         const val UPCOMING_DEADLINE_HOURS: Long = 6
-        val UPCOMING_DEADLINE: Duration = Duration.ofHours(UPCOMING_DEADLINE_HOURS)
     }
 }
 
