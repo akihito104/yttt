@@ -345,6 +345,7 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
     private suspend fun removeVideoDetailEntities(
         videoIds: Collection<YouTubeVideo.Id>,
     ) = db.withTransaction {
+        videoIds.forEach { removePinnedVideo(it) }
         removeFreeChatItems(videoIds)
         removeLiveVideoExpire(videoIds)
         removeVideoDetails(videoIds)

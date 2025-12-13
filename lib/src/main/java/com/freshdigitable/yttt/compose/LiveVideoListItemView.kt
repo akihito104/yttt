@@ -39,7 +39,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
-import com.freshdigitable.yttt.feature.timetable.toAdjustedLocalDateTimeText
+import com.freshdigitable.yttt.feature.timetable.TimetableItem
 import com.freshdigitable.yttt.lib.R
 import java.time.Instant
 import java.time.LocalDateTime
@@ -48,8 +48,7 @@ import java.time.temporal.ChronoUnit
 
 @Composable
 fun LiveVideoListItemView(
-    video: LiveVideo,
-    timeAdjustment: TimeAdjustment,
+    video: TimetableItem.Video,
     onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
@@ -59,7 +58,6 @@ fun LiveVideoListItemView(
     if (onMenuClick == null) {
         LiveVideoListItemView(
             video = video,
-            timeAdjustment = timeAdjustment,
             modifier = modifier,
             thumbnailModifier = thumbnailModifier,
             titleModifier = titleModifier,
@@ -69,7 +67,6 @@ fun LiveVideoListItemView(
         Box(modifier = modifier) {
             LiveVideoListItemView(
                 video = video,
-                timeAdjustment = timeAdjustment,
                 thumbnailModifier = thumbnailModifier,
                 titleModifier = titleModifier,
                 onItemClick = onItemClick,
@@ -88,8 +85,7 @@ fun LiveVideoListItemView(
 
 @Composable
 private fun LiveVideoListItemView(
-    video: LiveVideo,
-    timeAdjustment: TimeAdjustment,
+    video: TimetableItem.Video,
     onItemClick: () -> Unit,
     modifier: Modifier = Modifier,
     thumbnailModifier: Modifier = Modifier,
@@ -121,7 +117,7 @@ private fun LiveVideoListItemView(
                     lineHeight = (14 * 1.25).sp,
                 )
                 Text(
-                    text = video.dateTime.toAdjustedLocalDateTimeText(timeAdjustment),
+                    text = video.adjustedDateTime,
                     fontSize = 12.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -197,7 +193,7 @@ private fun LiveVideoListItemViewPreview(
     @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveVideo,
 ) {
     AppTheme {
-        LiveVideoListItemView(video, TimeAdjustment.zero(), onItemClick = {}) {}
+        LiveVideoListItemView(TimetableItem.Video(video, TimeAdjustment.zero()), onItemClick = {}) {}
     }
 }
 

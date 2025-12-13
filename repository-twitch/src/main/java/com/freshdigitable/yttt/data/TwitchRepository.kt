@@ -35,7 +35,7 @@ class TwitchRepository @Inject constructor(
             val current = dateTimeProvider.now()
             val c = cache.filter { it.isFresh(current) }
                 .filter { it.item.profileImageUrl.isNotEmpty() }
-            val remoteIds = ids - c.map { it.item.id }
+            val remoteIds = ids - c.map { it.item.id }.toSet()
             if (remoteIds.isEmpty()) {
                 cache
             } else {
