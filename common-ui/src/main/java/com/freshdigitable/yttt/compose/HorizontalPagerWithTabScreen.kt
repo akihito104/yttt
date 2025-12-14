@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerScope
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
@@ -49,7 +49,7 @@ fun HorizontalPagerWithTabScreen(
     AppLogger.logD("HorizontalPager") { "start:" }
     Column(modifier = modifier.fillMaxSize()) {
         val pagerState = rememberPagerState { tabCount }
-        ScrollableTabRow(
+        SecondaryScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
             edgePadding = edgePadding,
             modifier = Modifier
