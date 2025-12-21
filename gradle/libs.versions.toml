@@ -53,6 +53,7 @@ mockk = "1.14.7"
 androidx-junit = "1.3.0"
 espresso-core = "3.7.0"
 turbine = "1.2.1"
+jacoco = "0.8.13"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -147,3 +148,4 @@ yttt-android-library-compose = { id = "yttt.android.library.compose" }
 yttt-hilt = { id = "yttt.hilt" }
 yttt-kotest = { id = "yttt.kotest" }
 yttt-detekt = { id = "yttt.detekt" }
+yttt-jacoco = { id = "yttt.jacoco" }

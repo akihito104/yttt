@@ -24,6 +24,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         with(pluginManager) {
             applyAndroidLibrary()
             applyKotlinAndroid()
+            apply("yttt.jacoco")
         }
         extensions.configure<LibraryExtension> {
             configureAndroidSdk(this)
