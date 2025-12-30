@@ -2,11 +2,8 @@ import com.android.build.api.dsl.CommonExtension
 import com.freshdigitable.yttt.libs
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
-import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.register
-import org.gradle.kotlin.dsl.withType
 import org.gradle.testing.jacoco.plugins.JacocoPluginExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport
 
@@ -14,12 +11,12 @@ class JacocoPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit = with(target) {
         pluginManager.apply("jacoco")
 
+        val jacocoVersion = libs.findVersion("jacoco").map { it.toString() }.orElse("0.8.13")
         extensions.configure<JacocoPluginExtension> {
-            toolVersion = libs.findVersion("jacoco").map { it.toString() }.orElse("0.8.13")
+            toolVersion = jacocoVersion
         }
 
         if (this == rootProject) {
-            // ルートプロジェクトの場合、全サブプロジェクトのレポートを統合するタスクを作成
             tasks.register<JacocoReport>("jacocoFullReport") {
                 group = "Reporting"
                 description = "Generates a merged JaCoCo coverage report from all subprojects."
@@ -27,11 +24,16 @@ class JacocoPlugin : Plugin<Project> {
                 val subprojectsWithJacoco = subprojects.filter { subproject ->
                     subproject.pluginManager.hasPlugin("yttt.jacoco") || subproject.pluginManager.hasPlugin("jacoco")
                 }
-                // 各プロジェクトのテストタスクに依存させる
-                dependsOn(subprojectsWithJacoco.flatMap { it.tasks.withType<Test>() })
+
+                subprojectsWithJacoco.forEach { s ->
+                    val tasks = s.tasks.matching {
+                        it.name.startsWith("create") && it.name.endsWith("TestCoverageReport")
+                    }
+                    dependsOn(tasks)
+                }
 
                 val classDirs = subprojectsWithJacoco.map { subproject ->
-                    subproject.fileTree(subproject.layout.buildDirectory.dir("intermediates/javac/debug")) {
+                    subproject.fileTree(subproject.layout.buildDirectory.dir("intermediates/javac/debug/classes")) {
                         exclude(fileFilter)
                     } + subproject.fileTree(subproject.layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
                         exclude(fileFilter)
@@ -45,31 +47,21 @@ class JacocoPlugin : Plugin<Project> {
                     )
                 }.flatten()
 
-                val execData = subprojectsWithJacoco.map { subproject ->
-                    subproject.fileTree(subproject.layout.buildDirectory) {
-                        include("outputs/unit_test_code_coverage/debugUnitTest/*.exec")
-                        include("jacoco/testDebugUnitTest.exec")
-                        include("outputs/code_coverage/debugAndroidTest/connected/*.ec")
-                    }
+                val execData = fileTree(rootDir) {
+                    include("**/outputs/unit_test_code_coverage/**/*.exec")
+                    include("**/outputs/code_coverage/**/*.ec")
+                    include("**/outputs/connected_android_test_additional_output/**/*.ec")
+                    include("**/intermediates/code_coverage/**/*.ec")
+                    include("**/jacoco/*.exec")
                 }
 
                 sourceDirectories.setFrom(files(sourceDirs))
                 classDirectories.setFrom(files(classDirs))
-                executionData.setFrom(files(execData))
+                executionData.setFrom(execData)
 
                 reports {
                     xml.required.set(true)
                     html.required.set(true)
-                }
-            }
-        } else {
-            // サブプロジェクト（Androidモジュール）の場合、カバレッジ収集を有効化
-            extensions.findByType<CommonExtension<*, *, *, *, *, *>>()?.apply {
-                buildTypes {
-                    getByName("debug") {
-                        enableUnitTestCoverage = true
-                        enableAndroidTestCoverage = true
-                    }
                 }
             }
         }
@@ -85,4 +77,23 @@ class JacocoPlugin : Plugin<Project> {
         "com/freshdigitable/yttt/di/*",
         "com/freshdigitable/yttt/test/*",
     )
+
+    companion object {
+        inline fun <reified T : CommonExtension<*, *, *, *, *, *>> Project.configureCoverage() = configure<T> {
+            val hasUnitTest = sourceSets.getByName("test").java.directories.any { dir ->
+                layout.projectDirectory.dir(dir).asFile.walkTopDown()
+                    .any { it.name.endsWith(".kt") || it.name.endsWith(".java") }
+            }
+            val hasAndroidTest = sourceSets.getByName("androidTest").java.directories.any { dir ->
+                layout.projectDirectory.dir(dir).asFile.walkTopDown()
+                    .any { it.name.endsWith(".kt") || it.name.endsWith(".java") }
+            }
+            buildTypes {
+                getByName("debug") {
+                    enableUnitTestCoverage = hasUnitTest
+                    enableAndroidTestCoverage = hasAndroidTest
+                }
+            }
+        }
+    }
 }
