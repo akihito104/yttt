@@ -202,8 +202,9 @@ internal class FakeYouTubeClientImpl(
 
     override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> {
         logD { "fetchSubscription: $query" }
-        return if (subscription != null) subscription!!.invoke()
-        else {
+        return if (subscription != null) {
+            subscription!!.invoke()
+        } else {
             when (query.order) {
                 YouTubeSubscriptionQuery.Order.ALPHABETICAL -> subscriptions[query.nextPageToken]!!.invoke()
                 YouTubeSubscriptionQuery.Order.RELEVANCE -> subscriptionsInRelevanceOrder[query.nextPageToken]!!.invoke()

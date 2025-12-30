@@ -141,7 +141,9 @@ class AddStreamWorkerTest {
     private fun initTestWorkManager() {
         val context = InstrumentationRegistry.getInstrumentation().context
         WorkManagerTestInitHelper.initializeTestWorkManager(
-            context, config, WorkManagerTestInitHelper.ExecutorsMode.PRESERVE_EXECUTORS,
+            context,
+            config,
+            WorkManagerTestInitHelper.ExecutorsMode.PRESERVE_EXECUTORS,
         )
     }
 }

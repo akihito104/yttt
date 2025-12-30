@@ -198,10 +198,13 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeClientModule.setup(10, 2, current).apply {
                 val base = playlistItem!!
                 playlistItem = { id ->
-                    if (id.value.contains("1")) throw YouTubeException.internalServerError(
-                        cacheControl = CacheControl.create(current, null),
-                    )
-                    else base.invoke(id)
+                    if (id.value.contains("1")) {
+                        throw YouTubeException.internalServerError(
+                            cacheControl = CacheControl.create(current, null),
+                        )
+                    } else {
+                        base.invoke(id)
+                    }
                 }
             }
             hiltRule.inject()
@@ -219,10 +222,13 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeClientModule.setup(10, 2, current).apply {
                 val base = playlistItem!!
                 playlistItem = { id ->
-                    if (id.value.contains("1")) throw YouTubeException.notFound(
-                        cacheControl = CacheControl.create(current, null),
-                    )
-                    else base.invoke(id)
+                    if (id.value.contains("1")) {
+                        throw YouTubeException.notFound(
+                            cacheControl = CacheControl.create(current, null),
+                        )
+                    } else {
+                        base.invoke(id)
+                    }
                 }
             }
             hiltRule.inject()
@@ -239,8 +245,11 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             FakeYouTubeClientModule.setup(10, 2, current).apply {
                 video = { id ->
-                    if (id.any { it.value.contains("1") }) throw YouTubeException.internalServerError()
-                    else videoDefault.invoke(id)
+                    if (id.any { it.value.contains("1") }) {
+                        throw YouTubeException.internalServerError()
+                    } else {
+                        videoDefault.invoke(id)
+                    }
                 }
             }
             hiltRule.inject()
@@ -280,7 +289,9 @@ class FetchYouTubeStreamUseCaseTest {
                     if (page == 0) {
                         page++
                         channelDefault(it)
-                    } else throw YouTubeException.internalServerError()
+                    } else {
+                        throw YouTubeException.internalServerError()
+                    }
                 }
             }
             hiltRule.inject()
@@ -399,10 +410,13 @@ class FetchYouTubeStreamUseCaseTest {
                     }
                     val base = fakeClient.playlistItem!!
                     fakeClient.playlistItem = { id ->
-                        if (id.value.contains("1")) throw YouTubeException.notModified(
-                            cacheControl = CacheControl.create(it, null),
-                        )
-                        else base.invoke(id)
+                        if (id.value.contains("1")) {
+                            throw YouTubeException.notModified(
+                                cacheControl = CacheControl.create(it, null),
+                            )
+                        } else {
+                            base.invoke(id)
+                        }
                     }
                 }
                 instant = current + Duration.ofHours(3)
@@ -542,10 +556,13 @@ class FetchYouTubeStreamUseCaseTest {
             val s = checkNotNull(fakeClient.subscription)
             fakeClient.subscription = { t, e ->
                 val res = s(t, e)
-                if (res.nextPageToken != null) res
-                else throw YouTubeException.internalServerError(
-                    cacheControl = CacheControl.fromRemote(FakeDateTimeProviderModule.instant!!),
-                )
+                if (res.nextPageToken != null) {
+                    res
+                } else {
+                    throw YouTubeException.internalServerError(
+                        cacheControl = CacheControl.fromRemote(FakeDateTimeProviderModule.instant!!),
+                    )
+                }
             }
             val networkRes = fakeClient.wrapSubscriptionAsResult()
             // exercise
@@ -702,10 +719,13 @@ private class FakeYouTubeClientImpl(
             }.toMap()
             subscription = { token, etag ->
                 val r = checkNotNull(subRes[token])
-                if (r.eTag != etag) r
-                else throw YouTubeException.notModified(
-                    cacheControl = CacheControl.create(current, null),
-                )
+                if (r.eTag != etag) {
+                    r
+                } else {
+                    throw YouTubeException.notModified(
+                        cacheControl = CacheControl.create(current, null),
+                    )
+                }
             }
             videos = channelDetail.flatMap { c ->
                 (1..itemsPerPlaylist).map { videoFactory(it, c) }

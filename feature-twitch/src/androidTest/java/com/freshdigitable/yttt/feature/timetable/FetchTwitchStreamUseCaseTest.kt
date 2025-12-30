@@ -463,7 +463,8 @@ class FetchTwitchStreamUseCaseTest {
 private val me = userDetail("1", "me")
 
 private fun userDetail(
-    id: String, name: String = "user_$id",
+    id: String,
+    name: String = "user_$id",
 ): TwitchUserDetail = object : TwitchUserDetail {
     override val id: TwitchUser.Id get() = TwitchUser.Id(id)
     override val loginName: String get() = name
