@@ -67,27 +67,21 @@ class JacocoPlugin : Plugin<Project> {
         }
     }
 
-    private val fileFilter = listOf(
-        "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
-        "**/*Test*.*", "android/**/*.*",
-        "**/*Hilt*.*", "**/dagger/hilt/internal/*", "**/hilt_aggregated_deps/*",
-        "**/*_Factory.*", "**/*_MembersInjector.*", "**/*Module_*",
-        "**/*_Dao_Impl.*", "**/*AppDatabase_Impl.*",
-        "com/freshdigitable/yttt/**/di/*",
-        "com/freshdigitable/yttt/di/*",
-        "com/freshdigitable/yttt/test/*",
-    )
-
     companion object {
+        private val fileFilter = listOf(
+            "**/R.class", "**/R$*.class", "**/BuildConfig.*", "**/Manifest*.*",
+            "**/*Test*.*", "android/**/*.*",
+            "**/*Hilt*.*", "**/dagger/hilt/internal/*", "**/hilt_aggregated_deps/*",
+            "**/*_Factory.*", "**/*_MembersInjector.*", "**/*Module_*",
+            "**/*_Dao_Impl.*", "**/*AppDatabase_Impl.*",
+            "com/freshdigitable/yttt/**/di/*",
+            "com/freshdigitable/yttt/di/*",
+            "com/freshdigitable/yttt/test/*",
+        )
+
         inline fun <reified T : CommonExtension<*, *, *, *, *, *>> Project.configureCoverage() = configure<T> {
-            val hasUnitTest = sourceSets.getByName("test").java.directories.any { dir ->
-                layout.projectDirectory.dir(dir).asFile.walkTopDown()
-                    .any { it.name.endsWith(".kt") || it.name.endsWith(".java") }
-            }
-            val hasAndroidTest = sourceSets.getByName("androidTest").java.directories.any { dir ->
-                layout.projectDirectory.dir(dir).asFile.walkTopDown()
-                    .any { it.name.endsWith(".kt") || it.name.endsWith(".java") }
-            }
+            val hasUnitTest = sourceSets.getByName("test").java.directories.any { hasSourceFile(it) }
+            val hasAndroidTest = sourceSets.getByName("androidTest").java.directories.any { hasSourceFile(it) }
             buildTypes {
                 getByName("debug") {
                     enableUnitTestCoverage = hasUnitTest
@@ -95,5 +89,8 @@ class JacocoPlugin : Plugin<Project> {
                 }
             }
         }
+
+        fun Project.hasSourceFile(dir: String): Boolean = layout.projectDirectory.dir(dir).asFile.walkTopDown()
+            .any { it.name.endsWith(".kt") || it.name.endsWith(".java") }
     }
 }
