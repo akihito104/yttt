@@ -1,6 +1,4 @@
-import JacocoPlugin.Companion.configureCoverage
 import com.android.build.api.dsl.ApplicationExtension
-import com.android.build.gradle.internal.dsl.BaseAppModuleExtension
 import com.freshdigitable.yttt.applyAndroidApplication
 import com.freshdigitable.yttt.applyKotlinAndroid
 import com.freshdigitable.yttt.configureAndroidSdk
@@ -17,7 +15,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         with(pluginManager) {
             applyAndroidApplication()
             applyKotlinAndroid()
-            apply("yttt.jacoco")
+            apply("yttt.testing")
         }
 
         extensions.configure<ApplicationExtension> {
@@ -25,7 +23,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
             configureKotlin<KotlinAndroidProjectExtension>()
             testOptions.animationsDisabled = true
             configureDesugaring(this)
-            configureCoverage<BaseAppModuleExtension>()
         }
     }
 }

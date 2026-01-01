@@ -9,5 +9,5 @@ plugins {
     alias(libs.plugins.hilt.android) apply false
     alias(libs.plugins.detekt) apply false
     alias(libs.plugins.yttt.detekt)
-    alias(libs.plugins.yttt.jacoco)
+    alias(libs.plugins.yttt.testing)
 }

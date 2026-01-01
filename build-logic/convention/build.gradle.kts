@@ -56,9 +56,9 @@ gradlePlugin {
             id = "yttt.detekt"
             implementationClass = "DetektConventionPlugin"
         }
-        register("jacoco") {
-            id = "yttt.jacoco"
-            implementationClass = "JacocoPlugin"
+        register("testing") {
+            id = "yttt.testing"
+            implementationClass = "TestingPlugin"
         }
     }
 }

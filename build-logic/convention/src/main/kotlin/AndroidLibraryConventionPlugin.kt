@@ -1,4 +1,3 @@
-import JacocoPlugin.Companion.configureCoverage
 import com.android.build.api.dsl.LibraryExtension
 import com.freshdigitable.yttt.applyAndroidLibrary
 import com.freshdigitable.yttt.applyDetekt
@@ -25,13 +24,12 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         with(pluginManager) {
             applyAndroidLibrary()
             applyKotlinAndroid()
-            apply("yttt.jacoco")
+            apply("yttt.testing")
         }
         extensions.configure<LibraryExtension> {
             configureAndroidSdk(this)
             configureKotlin<KotlinAndroidProjectExtension>()
             configureDesugaring(this)
-            configureCoverage<LibraryExtension>()
         }
     }
 }
