@@ -15,7 +15,7 @@ compose-runtime = "1.10.0"
 compose-animation = "1.10.0"
 accompanistPermissions = "0.37.3"
 # https://developer.android.com/jetpack/androidx/explorer
-androidxActivityKtx = "1.12.1"
+androidxActivityKtx = "1.12.2"
 appcompat = "1.7.1"
 core-ktx = "1.17.0"
 lifecycle-ktx = "2.10.0"
