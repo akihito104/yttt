@@ -24,6 +24,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         with(pluginManager) {
             applyAndroidLibrary()
             applyKotlinAndroid()
+            apply("yttt.testing")
         }
         extensions.configure<LibraryExtension> {
             configureAndroidSdk(this)

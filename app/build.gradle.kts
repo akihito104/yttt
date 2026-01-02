@@ -1,3 +1,5 @@
+import com.google.android.gms.oss.licenses.plugin.DependencyTask
+
 plugins {
     alias(libs.plugins.yttt.android.application.compose)
     alias(libs.plugins.yttt.hilt)
@@ -68,4 +70,12 @@ licensee {
     allowUrl("https://developer.android.com/studio/terms.html")
     ignoreDependencies("junit")
     ignoreDependencies("org.hamcrest")
+}
+
+// https://github.com/google/play-services-plugins/issues/327#issuecomment-3596475196
+tasks.withType<DependencyTask>().configureEach {
+    val taskName = name.replace("DependencyTask", "LicensesCleanUpTask")
+    if (project.tasks.findByName(taskName) != null) {
+        dependsOn(taskName)
+    }
 }

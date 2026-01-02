@@ -56,5 +56,9 @@ gradlePlugin {
             id = "yttt.detekt"
             implementationClass = "DetektConventionPlugin"
         }
+        register("testing") {
+            id = "yttt.testing"
+            implementationClass = "TestingPlugin"
+        }
     }
 }

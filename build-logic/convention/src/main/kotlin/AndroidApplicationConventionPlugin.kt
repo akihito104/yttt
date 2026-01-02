@@ -15,6 +15,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
         with(pluginManager) {
             applyAndroidApplication()
             applyKotlinAndroid()
+            apply("yttt.testing")
         }
 
         extensions.configure<ApplicationExtension> {

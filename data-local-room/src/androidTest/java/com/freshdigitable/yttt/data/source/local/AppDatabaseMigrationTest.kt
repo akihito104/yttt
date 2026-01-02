@@ -278,29 +278,41 @@ class AppDatabaseMigrationTest {
 
         @Before
         fun setup(): Unit = rule.oldDb.use {
-            rule.insertForSetup("channel" to listOf(ContentValues().apply {
-                put("id", "channel_0")
-                put("title", "channel_title_0")
-                put("icon", "")
-            }))
-            rule.insertForSetup("playlist" to listOf(ContentValues().apply {
-                put("id", "channel_0-playlist_uploaded")
-                put("title", "uploaded")
-                put("thumbnail_url", "")
-            }))
-            rule.insertForSetup("channel_addition" to listOf(ContentValues().apply {
-                put("id", "channel_0")
-                put("banner_url", "")
-                put("subscriber_count", "10")
-                put("is_subscriber_hidden", "false")
-                put("video_count", "4")
-                put("view_count", "300")
-                put("published_at", "0")
-                put("custom_url", "@channel_0")
-                put("keywords", "")
-                put("description", "")
-                put("uploaded_playlist_id", "channel_0-playlist_uploaded")
-            }))
+            rule.insertForSetup(
+                "channel" to listOf(
+                    ContentValues().apply {
+                        put("id", "channel_0")
+                        put("title", "channel_title_0")
+                        put("icon", "")
+                    }
+                )
+            )
+            rule.insertForSetup(
+                "playlist" to listOf(
+                    ContentValues().apply {
+                        put("id", "channel_0-playlist_uploaded")
+                        put("title", "uploaded")
+                        put("thumbnail_url", "")
+                    }
+                )
+            )
+            rule.insertForSetup(
+                "channel_addition" to listOf(
+                    ContentValues().apply {
+                        put("id", "channel_0")
+                        put("banner_url", "")
+                        put("subscriber_count", "10")
+                        put("is_subscriber_hidden", "false")
+                        put("video_count", "4")
+                        put("view_count", "300")
+                        put("published_at", "0")
+                        put("custom_url", "@channel_0")
+                        put("keywords", "")
+                        put("description", "")
+                        put("uploaded_playlist_id", "channel_0-playlist_uploaded")
+                    }
+                )
+            )
         }
 
         @Test
@@ -320,22 +332,32 @@ class AppDatabaseMigrationTest {
 
         @Test
         fun insert(): Unit = rule.run {
-            newDb.insert("channel", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
-                put("id", "channel_99")
-                put("title", "channel_99_title")
-                put("icon", "")
-            })
-            newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
-                put("id", "channel_99-playlist_uploaded")
-                put("title", "uploaded")
-                put("thumbnail_url", "")
-            })
             newDb.insert(
-                "yt_channel_related_playlist", SQLiteDatabase.CONFLICT_ABORT,
+                "channel",
+                SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("id", "channel_99")
+                    put("title", "channel_99_title")
+                    put("icon", "")
+                }
+            )
+            newDb.insert(
+                "playlist",
+                SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("id", "channel_99-playlist_uploaded")
+                    put("title", "uploaded")
+                    put("thumbnail_url", "")
+                }
+            )
+            newDb.insert(
+                "yt_channel_related_playlist",
+                SQLiteDatabase.CONFLICT_ABORT,
                 ContentValues().apply {
                     put("channel_id", "channel_99")
                     put("uploaded_playlist_id", "channel_99-playlist_uploaded")
-                })
+                }
+            )
             newDb.query("select * from yt_channel_related_playlist").use { c ->
                 c.count shouldBe 2
             }
@@ -343,35 +365,47 @@ class AppDatabaseMigrationTest {
 
         @Test
         fun insert_throwsConstraintExceptionForChannel(): Unit = rule.run {
-            newDb.insert("playlist", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
-                put("id", "channel_99-playlist_uploaded")
-                put("title", "uploaded")
-                put("thumbnail_url", "")
-            })
+            newDb.insert(
+                "playlist",
+                SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("id", "channel_99-playlist_uploaded")
+                    put("title", "uploaded")
+                    put("thumbnail_url", "")
+                }
+            )
             shouldThrow<SQLiteConstraintException> {
                 newDb.insert(
-                    "yt_channel_related_playlist", SQLiteDatabase.CONFLICT_ABORT,
+                    "yt_channel_related_playlist",
+                    SQLiteDatabase.CONFLICT_ABORT,
                     ContentValues().apply {
                         put("channel_id", "channel_99")
                         put("uploaded_playlist_id", "channel_99-playlist_uploaded")
-                    })
+                    }
+                )
             }
         }
 
         @Test
         fun insert_throwsConstraintExceptionForPlaylist(): Unit = rule.run {
-            newDb.insert("channel", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
-                put("id", "channel_99")
-                put("title", "channel_99_title")
-                put("icon", "")
-            })
+            newDb.insert(
+                "channel",
+                SQLiteDatabase.CONFLICT_ABORT,
+                ContentValues().apply {
+                    put("id", "channel_99")
+                    put("title", "channel_99_title")
+                    put("icon", "")
+                }
+            )
             shouldThrow<SQLiteConstraintException> {
                 newDb.insert(
-                    "yt_channel_related_playlist", SQLiteDatabase.CONFLICT_ABORT,
+                    "yt_channel_related_playlist",
+                    SQLiteDatabase.CONFLICT_ABORT,
                     ContentValues().apply {
                         put("channel_id", "channel_99")
                         put("uploaded_playlist_id", "channel_99-playlist_uploaded")
-                    })
+                    }
+                )
             }
         }
     }
@@ -383,33 +417,41 @@ class AppDatabaseMigrationTest {
         @Before
         fun setup(): Unit = rule.oldDb.use {
             rule.insertForSetup(
-                "channel" to listOf(ContentValues().apply {
-                    put("id", "channel_1")
-                    put("title", "channel_title_0")
-                    put("icon", "")
-                }),
-                "video" to listOf(ContentValues().apply {
-                    put("id", "video_1")
-                    put("title", "title")
-                    put("channel_id", "channel_1")
-                    put("schedule_start_datetime", 0)
-                    putNull("schedule_end_datetime")
-                    put("actual_start_datetime", 100)
-                    put("actual_end_datetime", 10000)
-                    put("thumbnail", "<thumbnail url>")
-                    put("viewer_count", 300)
-                    put("description", "description")
-                    put("broadcast_content", "upcoming")
-                }),
-                "yt_video_is_archived" to listOf(ContentValues().apply {
-                    put("video_id", "video_2")
-                    put("is_archived", true)
-                }),
-                "playlist" to listOf(ContentValues().apply {
-                    put("id", "channel_1-playlist_uploaded")
-                    put("title", "uploaded")
-                    put("thumbnail_url", "")
-                }),
+                "channel" to listOf(
+                    ContentValues().apply {
+                        put("id", "channel_1")
+                        put("title", "channel_title_0")
+                        put("icon", "")
+                    }
+                ),
+                "video" to listOf(
+                    ContentValues().apply {
+                        put("id", "video_1")
+                        put("title", "title")
+                        put("channel_id", "channel_1")
+                        put("schedule_start_datetime", 0)
+                        putNull("schedule_end_datetime")
+                        put("actual_start_datetime", 100)
+                        put("actual_end_datetime", 10000)
+                        put("thumbnail", "<thumbnail url>")
+                        put("viewer_count", 300)
+                        put("description", "description")
+                        put("broadcast_content", "upcoming")
+                    }
+                ),
+                "yt_video_is_archived" to listOf(
+                    ContentValues().apply {
+                        put("video_id", "video_2")
+                        put("is_archived", true)
+                    }
+                ),
+                "playlist" to listOf(
+                    ContentValues().apply {
+                        put("id", "channel_1-playlist_uploaded")
+                        put("title", "uploaded")
+                        put("thumbnail_url", "")
+                    }
+                ),
                 "playlist_item" to listOf(
                     ContentValues().apply {
                         put("id", "playlist_id_1")
@@ -456,12 +498,16 @@ class AppDatabaseMigrationTest {
         @Test
         fun fkConstraint_playlistItem_to_video(): Unit = rule.run {
             shouldThrow<SQLiteConstraintException> {
-                newDb.insert("playlist_item", SQLiteDatabase.CONFLICT_ABORT, ContentValues().apply {
-                    put("id", "playlist_id_2")
-                    put("playlist_id", "channel_1-playlist_uploaded")
-                    put("video_id", "video_100")
-                    put("published_at", 0)
-                })
+                newDb.insert(
+                    "playlist_item",
+                    SQLiteDatabase.CONFLICT_ABORT,
+                    ContentValues().apply {
+                        put("id", "playlist_id_2")
+                        put("playlist_id", "channel_1-playlist_uploaded")
+                        put("video_id", "video_100")
+                        put("published_at", 0)
+                    }
+                )
             }
         }
     }

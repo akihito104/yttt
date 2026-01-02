@@ -352,7 +352,8 @@ class YouTubeLocalDataSourceTest {
     class WhenSubscriptionIsRemoved : Base() {
         private val allDomainChannels = (1..3).map { FakeYouTubeClient.channelDetail(it) }
         private val subscriptions = allDomainChannels.mapIndexed { i, ch ->
-            object : YouTubeSubscriptionRelevanceOrdered,
+            object :
+                YouTubeSubscriptionRelevanceOrdered,
                 YouTubeSubscription by FakeYouTubeClient.subscription("sub_${ch.id.value}}", ch) {
                 override val order: Int get() = i
             }
