@@ -10,7 +10,7 @@ licensee = "1.14.1"
 oss-license-plugin = "0.10.10"
 oss-license-lib = "17.3.0"
 
-androidxComposeBom = "2025.12.00"
+androidxComposeBom = "2025.12.01"
 compose-runtime = "1.10.0"
 compose-animation = "1.10.0"
 accompanistPermissions = "0.37.3"
