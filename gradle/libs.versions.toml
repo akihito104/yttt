@@ -2,20 +2,20 @@
 androidGradlePlugin = "8.13.2"
 desugarJdkLib = "2.1.5"
 androidTools = "31.13.2"
-kotlin = "2.2.21"
-ksp = "2.3.3" # https://github.com/google/ksp/releases
+kotlin = "2.3.0"
+ksp = "2.3.4" # https://github.com/google/ksp/releases
 kotlinxCoroutinesCore = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
 kotlinxSerializationJson = "1.9.0"
 licensee = "1.14.1"
 oss-license-plugin = "0.10.10"
 oss-license-lib = "17.3.0"
 
-androidxComposeBom = "2025.12.00"
+androidxComposeBom = "2025.12.01"
 compose-runtime = "1.10.0"
 compose-animation = "1.10.0"
 accompanistPermissions = "0.37.3"
 # https://developer.android.com/jetpack/androidx/explorer
-androidxActivityKtx = "1.12.1"
+androidxActivityKtx = "1.12.2"
 appcompat = "1.7.1"
 core-ktx = "1.17.0"
 lifecycle-ktx = "2.10.0"
@@ -108,6 +108,7 @@ kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlin-metadata = { module = "org.jetbrains.kotlin:kotlin-metadata-jvm", version.ref = "kotlin" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanaryAndroid" }
 mockk = { module = "io.mockk:mockk", version.ref = "mockk" }

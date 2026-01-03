@@ -14,6 +14,8 @@ class HiltConventionPlugin : Plugin<Project> {
         pluginManager.applyKsp()
         dependencies {
             ksp(libs.hiltCompiler)
+            // https://github.com/google/dagger/issues/5001
+            ksp(libs.findLibrary("kotlin-metadata"))
         }
 
         pluginManager.withPlugin("com.android.base") {
