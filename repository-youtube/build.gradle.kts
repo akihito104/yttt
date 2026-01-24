@@ -16,7 +16,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
             consumerProguardFiles("consumer-rules.pro")
         }
@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.google.api.services.youtube) {
         exclude(group = "org.apache.httpcomponents")
     }
+    implementation(libs.okhttp)
     implementation(libs.play.services.base)
     implementation(libs.play.services.auth)
     implementation(libs.androidx.datastore.preferences)

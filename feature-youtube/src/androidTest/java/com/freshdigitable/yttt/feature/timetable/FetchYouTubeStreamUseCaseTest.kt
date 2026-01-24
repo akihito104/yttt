@@ -33,6 +33,7 @@ import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.fromRemote
@@ -82,7 +83,6 @@ class FetchYouTubeStreamUseCaseTest {
         fun setup() {
             FakeDateTimeProviderModule.instant = current
             FakeYouTubeAccountModule.account = null
-            FakeYouTubeClientModule.clean()
         }
 
         @After
@@ -109,17 +109,19 @@ class FetchYouTubeStreamUseCaseTest {
         fun videoAndSubscriptionAreEmpty_whenSuccess() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-                subscription = { token, _ ->
-                    if (token == null) {
-                        NetworkResponse.create(
-                            emptyList<YouTubeSubscription>().toUpdatable(),
-                            eTag = "empty_etag",
-                        )
-                    } else {
-                        throw AssertionError()
-                    }
-                },
+            server.setClient(
+                FakeYouTubeClientImpl(
+                    subscription = { token, _ ->
+                        if (token == null) {
+                            NetworkResponse.create(
+                                emptyList<YouTubeSubscription>().toUpdatable(),
+                                eTag = "empty_etag",
+                            )
+                        } else {
+                            throw AssertionError()
+                        }
+                    },
+                ),
             )
             hiltRule.inject()
             // exercise
@@ -136,8 +138,10 @@ class FetchYouTubeStreamUseCaseTest {
         fun failedToGetSubscription_returnsFailure() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-                subscription = { _, _ -> throw YouTubeException.internalServerError() },
+            server.setClient(
+                FakeYouTubeClientImpl(
+                    subscription = { _, _ -> throw YouTubeException.internalServerError() },
+                ),
             )
             hiltRule.inject()
             // exercise
@@ -155,9 +159,11 @@ class FetchYouTubeStreamUseCaseTest {
         fun videoFromNewPlaylistItem_returns20Videos() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.setup(10, 2, current) { i, c ->
-                video(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
-            }
+            server.setClient(
+                FakeYouTubeClientModule.setup(10, 2, current) { i, c ->
+                    video(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
+                },
+            )
             hiltRule.inject()
             // exercise
             val actual = sut.invoke()
@@ -176,9 +182,11 @@ class FetchYouTubeStreamUseCaseTest {
         fun failedToGetChannelDetails_returnsFailure() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.setup(10, 2, current).apply {
-                channel = { throw YouTubeException.internalServerError() }
-            }
+            server.setClient(
+                FakeYouTubeClientModule.setup(10, 2, current).apply {
+                    channel = { throw YouTubeException.internalServerError() }
+                },
+            )
             hiltRule.inject()
             // exercise
             val actual = sut.invoke()
@@ -195,18 +203,20 @@ class FetchYouTubeStreamUseCaseTest {
         fun failedToGetPlaylistItem_returnsFailure() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.setup(10, 2, current).apply {
-                val base = playlistItem!!
-                playlistItem = { id ->
-                    if (id.value.contains("1")) {
-                        throw YouTubeException.internalServerError(
-                            cacheControl = CacheControl.create(current, null),
-                        )
-                    } else {
-                        base.invoke(id)
+            server.setClient(
+                FakeYouTubeClientModule.setup(10, 2, current).apply {
+                    val base = playlistItem!!
+                    playlistItem = { id ->
+                        if (id.value.contains("1")) {
+                            throw YouTubeException.internalServerError(
+                                cacheControl = CacheControl.create(current, null),
+                            )
+                        } else {
+                            base.invoke(id)
+                        }
                     }
-                }
-            }
+                },
+            )
             hiltRule.inject()
             // exercise
             val actual = sut.invoke()
@@ -219,18 +229,20 @@ class FetchYouTubeStreamUseCaseTest {
         fun getPlaylistItemReceivesNotFound_resultIsRecovered() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.setup(10, 2, current).apply {
-                val base = playlistItem!!
-                playlistItem = { id ->
-                    if (id.value.contains("1")) {
-                        throw YouTubeException.notFound(
-                            cacheControl = CacheControl.create(current, null),
-                        )
-                    } else {
-                        base.invoke(id)
+            server.setClient(
+                FakeYouTubeClientModule.setup(10, 2, current).apply {
+                    val base = playlistItem!!
+                    playlistItem = { id ->
+                        if (id.value.contains("1")) {
+                            throw YouTubeException.notFound(
+                                cacheControl = CacheControl.create(current, null),
+                            )
+                        } else {
+                            base.invoke(id)
+                        }
                     }
-                }
-            }
+                },
+            )
             hiltRule.inject()
             // exercise
             val actual = sut.invoke()
@@ -243,15 +255,17 @@ class FetchYouTubeStreamUseCaseTest {
         fun failedToGetVideoDetail_returnsFailure() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.setup(10, 2, current).apply {
-                video = { id ->
-                    if (id.any { it.value.contains("1") }) {
-                        throw YouTubeException.internalServerError()
-                    } else {
-                        videoDefault.invoke(id)
+            server.setClient(
+                FakeYouTubeClientModule.setup(10, 2, current).apply {
+                    video = { id ->
+                        if (id.any { it.value.contains("1") }) {
+                            throw YouTubeException.internalServerError()
+                        } else {
+                            videoDefault.invoke(id)
+                        }
                     }
-                }
-            }
+                },
+            )
             hiltRule.inject()
             // exercise
             val actual = sut.invoke()
@@ -264,9 +278,11 @@ class FetchYouTubeStreamUseCaseTest {
         fun videoFromNewPlaylistItem_fetch2PagesOfSubscription_returns200Videos() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.setup(100, 2, current) { i, c ->
-                video(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
-            }
+            server.setClient(
+                FakeYouTubeClientModule.setup(100, 2, current) { i, c ->
+                    video(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
+                },
+            )
             hiltRule.inject()
             // exercise
             val actual = sut.invoke()
@@ -283,17 +299,19 @@ class FetchYouTubeStreamUseCaseTest {
         fun failedToGetChannelDetailsAt2ndPageOfSubscription_returnsFailure() = testScope.runTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
-            FakeYouTubeClientModule.setup(100, 2, current).apply {
-                var page = 0
-                this.channel = {
-                    if (page == 0) {
-                        page++
-                        channelDefault(it)
-                    } else {
-                        throw YouTubeException.internalServerError()
+            server.setClient(
+                FakeYouTubeClientModule.setup(100, 2, current).apply {
+                    var page = 0
+                    this.channel = {
+                        if (page == 0) {
+                            page++
+                            channelDefault(it)
+                        } else {
+                            throw YouTubeException.internalServerError()
+                        }
                     }
-                }
-            }
+                },
+            )
             hiltRule.inject()
             // exercise
             val actual = sut.invoke()
@@ -315,6 +333,7 @@ class FetchYouTubeStreamUseCaseTest {
                 FakeYouTubeAccountModule.account = "account"
                 FakeDateTimeProviderModule.instant = current
                 fakeClient = FakeYouTubeClientModule.setup(10, 2, current)
+                server.setClient(fakeClient)
                 hiltRule.inject()
                 extendedSource.deleteAllTables()
                 sut.invoke()
@@ -443,6 +462,7 @@ class FetchYouTubeStreamUseCaseTest {
                 FakeYouTubeAccountModule.account = "account"
                 FakeDateTimeProviderModule.instant = current
                 fakeClient = FakeYouTubeClientModule.setup(150, 2, current)
+                server.setClient(fakeClient)
                 hiltRule.inject()
                 extendedSource.deleteAllTables()
                 sut.invoke()
@@ -592,6 +612,9 @@ class FetchYouTubeStreamUseCaseTest {
         @get:Rule(order = 2)
         val traceRule = AppTraceVerifier()
 
+        @get:Rule(order = 3)
+        val server = MockServerRule()
+
         @Inject
         lateinit var extendedSource: YouTubeDataSource.Extended
 
@@ -639,7 +662,6 @@ private fun FakeYouTubeClientModule.Companion.setup(
     videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo = ::video,
 ): FakeYouTubeClientImpl =
     FakeYouTubeClientImpl().apply { setup(subscriptionCount, itemsPerPlaylist, current, videoFactory) }
-        .also { client = it }
 
 internal fun video(
     id: Int,
@@ -653,7 +675,7 @@ internal fun video(
     override val liveBroadcastContent: YouTubeVideo.BroadcastType = liveBroadcastContent
     override val title: String = ""
     override val thumbnailUrl: String = ""
-    override val scheduledStartDateTime: Instant? = scheduleStartDateTime
+    override val scheduledStartDateTime: Instant = scheduleStartDateTime
     override val scheduledEndDateTime: Instant? = null
     override val actualStartDateTime: Instant? =
         if (liveBroadcastContent == YouTubeVideo.BroadcastType.LIVE) actualStartDateTime else null

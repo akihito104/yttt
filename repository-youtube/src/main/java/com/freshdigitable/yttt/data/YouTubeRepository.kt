@@ -43,7 +43,7 @@ class YouTubeRepository @Inject constructor(
     ): Result<NetworkResponse<List<YouTubeSubscription>>> =
         remoteSource.fetchPagedSubscription(query).onSuccess {
             addPagedSubscription(it.item)
-            if (it.nextPageToken == null) {
+            if (it.nextPageToken.isNullOrEmpty()) {
                 val fetchedAt = it.cacheControl.fetchedAt!!
                 when (query.order) {
                     YouTubeSubscriptionQuery.Order.ALPHABETICAL ->

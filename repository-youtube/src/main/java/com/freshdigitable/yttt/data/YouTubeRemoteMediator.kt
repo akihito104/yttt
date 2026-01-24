@@ -49,11 +49,10 @@ internal class YouTubeRemoteMediator @Inject constructor(
         if (!accountRepository.hasAccount()) {
             return MediatorResult.Success(endOfPaginationReached = true)
         }
-        when (loadType) {
+        return when (loadType) {
             LoadType.REFRESH -> fetchPagedSubscriptions()
-            LoadType.PREPEND, LoadType.APPEND -> Unit
+            LoadType.PREPEND, LoadType.APPEND -> MediatorResult.Success(true)
         }
-        return MediatorResult.Success(true)
     }
 
     private suspend fun fetchPagedSubscriptions(): MediatorResult {
@@ -67,7 +66,7 @@ internal class YouTubeRemoteMediator @Inject constructor(
                 items.addAll(r.item)
                 token = r.nextPageToken
             }
-        } while (token != null)
+        } while (!token.isNullOrEmpty())
         repository.syncSubscriptionList(items.map { it.id }.toSet(), emptyList())
         repository.cleanUp()
         return MediatorResult.Success(true)

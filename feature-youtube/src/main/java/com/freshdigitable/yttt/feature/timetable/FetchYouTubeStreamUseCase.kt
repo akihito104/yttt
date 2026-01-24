@@ -252,7 +252,7 @@ internal fun YouTubeRepository.fetchAllSubscription(
             }
             emit(s)
             summary = s.getOrThrow()
-        } while (summary.nextPageToken != null)
+        } while (summary.hasNextToken)
         if (summary.fetchedAt != null) {
             subscriptionsFetchedAt = summary.fetchedAt
         }
@@ -269,7 +269,7 @@ internal class SubscriptionSummaryTask(
 ) : YouTubeSubscriptionQuery {
     override val nextPageToken: String? get() = token ?: query?.nextPageToken
     override val eTag: String? get() = query?.eTag
-    val hasNextToken: Boolean get() = nextPageToken != null
+    val hasNextToken: Boolean get() = !nextPageToken.isNullOrEmpty()
 }
 
 typealias VideoUpdateBatch = Pair<List<YouTubeVideo.Id>, Updatable<YouTubePlaylistWithItems>?>

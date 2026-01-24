@@ -20,7 +20,7 @@ import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
-import com.freshdigitable.yttt.test.FakeYouTubeClientModule
+import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.shouldBeSuccess
 import dagger.Binds
@@ -61,13 +61,16 @@ class YouTubeRemoteMediatorTest {
 
     @get:Rule(order = 1)
     val testScope = TestCoroutineScopeRule()
+
+    @get:Rule(order = 2)
+    val server = MockServerRule()
     private val client = FakeYouTubeClientImpl()
 
     @Before
     fun setup() {
         FakeDateTimeProviderModule.instant = Instant.parse("2025-08-01T14:00:00Z")
         FakeDateTimeProviderModule.onTimeAdvanced = { client.current = it }
-        FakeYouTubeClientModule.client = client
+        server.setClient(client)
         hiltRule.inject()
     }
 
