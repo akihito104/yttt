@@ -16,7 +16,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -34,4 +34,8 @@ dependencies {
     implementation(libs.kotest.assertions.core)
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.testing)
+    implementation(libs.google.api.client.android) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation("com.squareup.okhttp3:mockwebserver3:${libs.versions.okhttp.get()}")
 }
