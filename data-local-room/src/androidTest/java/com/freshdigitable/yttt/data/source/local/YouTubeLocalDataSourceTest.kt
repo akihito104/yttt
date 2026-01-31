@@ -305,16 +305,14 @@ class YouTubeLocalDataSourceTest {
             extendedSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             val channels = videos.map { it.item.channel }.distinctBy { it.id }.toList()
             extendedSource.addPagedSubscription(
-                channels.map {
-                    FakeYouTubeClient.subscription("subs_${it.id.value}", it)
-                },
+                channels.map { subscription("subs_${it.id.value}", it) },
             )
             dao.addChannelEntities(channels)
             localSource.addChannelRelatedPlaylists(
                 listOf(
                     object : YouTubeChannelRelatedPlaylist {
                         override val id: YouTubeChannel.Id get() = channel.id
-                        override val uploadedPlayList: YouTubePlaylist.Id? get() = playlistId
+                        override val uploadedPlayList: YouTubePlaylist.Id get() = playlistId
                     },
                 ),
             )
@@ -354,7 +352,7 @@ class YouTubeLocalDataSourceTest {
         private val subscriptions = allDomainChannels.mapIndexed { i, ch ->
             object :
                 YouTubeSubscriptionRelevanceOrdered,
-                YouTubeSubscription by FakeYouTubeClient.subscription("sub_${ch.id.value}}", ch) {
+                YouTubeSubscription by subscription("sub_${ch.id.value}}", ch) {
                 override val order: Int get() = i
             }
         }
@@ -366,7 +364,7 @@ class YouTubeLocalDataSourceTest {
             val relatedPlaylists = allDomainChannels.map { ch ->
                 val uploadPlaylistId = YouTubePlaylist.Id("pl_${ch.id.value}")
                 object : YouTubeChannelRelatedPlaylist {
-                    override val uploadedPlayList: YouTubePlaylist.Id? get() = uploadPlaylistId
+                    override val uploadedPlayList: YouTubePlaylist.Id get() = uploadPlaylistId
                     override val id: YouTubeChannel.Id get() = ch.id
                 }
             }
@@ -380,7 +378,7 @@ class YouTubeLocalDataSourceTest {
                     )
                 }
                 val uploadPlaylistId = YouTubePlaylist.Id("pl_${domainChannel.id.value}")
-                val playlistItems = videosForThisChannel.mapIndexed { videoIndex, ytVideo ->
+                val playlistItems = videosForThisChannel.mapIndexed { _, ytVideo ->
                     FakeYouTubeClient.playlistItemDetail(
                         id = YouTubePlaylistItem.Id("pi_${uploadPlaylistId.value}_${ytVideo.item.id.value}"),
                         playlistId = uploadPlaylistId,
@@ -448,7 +446,7 @@ class YouTubeLocalDataSourceTest {
                     object : YouTubeChannelLog {
                         override val id: YouTubeChannelLog.Id get() = YouTubeChannelLog.Id("log1")
                         override val dateTime: Instant get() = Instant.EPOCH
-                        override val videoId: YouTubeVideo.Id? get() = videoId.first()
+                        override val videoId: YouTubeVideo.Id get() = videoId.first()
                         override val channelId: YouTubeChannel.Id get() = removedSummary.channelId
                         override val thumbnailUrl: String get() = ""
                         override val title: String get() = ""
@@ -654,3 +652,12 @@ private fun playlist(
     fetchedAt: Instant = Instant.EPOCH,
 ): Updatable<YouTubePlaylist> = FakeYouTubeClient.playlist(playlistId)
     .toUpdatable(cacheControl = CacheControl.fromRemote(fetchedAt))
+
+private fun subscription(
+    id: String,
+    channel: YouTubeChannel,
+): YouTubeSubscription = object : YouTubeSubscription {
+    override val id: YouTubeSubscription.Id = YouTubeSubscription.Id(id)
+    override val channel: YouTubeChannel = channel
+    override val subscribeSince: Instant = Instant.EPOCH
+}

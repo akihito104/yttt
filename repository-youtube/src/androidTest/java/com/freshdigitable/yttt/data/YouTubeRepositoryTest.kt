@@ -336,7 +336,7 @@ private class FakeRemoteSource(
     val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannel>>)? = null,
     val playlist: ((Set<YouTubePlaylist.Id>) -> Updatable<List<YouTubePlaylist>>)? = null,
     val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItem>>)? = null,
-) : FakeYouTubeClient() {
+) : FakeYouTubeClient {
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
         return NetworkResponse.create(videoList!!.invoke(ids))

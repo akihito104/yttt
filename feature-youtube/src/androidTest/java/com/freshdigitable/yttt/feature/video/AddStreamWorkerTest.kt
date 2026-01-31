@@ -156,7 +156,7 @@ class AddStreamWorkerTest {
 class FakeYouTubeClientImpl(
     private val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
     private val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannel>>)? = null,
-) : FakeYouTubeClient() {
+) : FakeYouTubeClient {
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
         return NetworkResponse.create(videoList!!.invoke(ids))

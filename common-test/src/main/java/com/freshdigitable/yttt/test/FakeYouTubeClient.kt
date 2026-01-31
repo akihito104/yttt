@@ -6,23 +6,19 @@ import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelBase
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
-import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
-import com.freshdigitable.yttt.data.model.YouTubeChannelSection
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
-import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.NetworkResponse
-import com.freshdigitable.yttt.data.source.remote.YouTubeClient
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.GoogleAccountModule
 import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient.Companion.currentDate
+import com.freshdigitable.yttt.test.Json.Companion.sha1
 import com.google.api.client.http.HttpRequestInitializer
 import dagger.Module
 import dagger.Provides
@@ -36,6 +32,7 @@ import okhttp3.internal.closeQuietly
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.math.BigInteger
+import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -63,60 +60,33 @@ interface FakeYouTubeClientModule {
     }
 }
 
-abstract class FakeYouTubeClient : YouTubeClient {
-    override fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>> =
+interface FakeYouTubeClient {
+    fun fetchSubscription(nextPageToken: String? = null, order: String): YouTubeResponseJson =
         throw NotImplementedError()
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>> =
+    fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>> =
         throw NotImplementedError()
 
-    override fun fetchChannelDetailList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannelDetail>> =
-        throw NotImplementedError()
-
-    override fun fetchChannelRelatedPlaylistList(
+    fun fetchChannelRelatedPlaylistList(
         ids: Set<YouTubeChannel.Id>,
     ): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> = throw NotImplementedError()
 
-    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
+    fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
         throw NotImplementedError()
 
-    override fun fetchPlaylistItems(
+    fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
     ): NetworkResponse<List<YouTubePlaylistItem>> = throw NotImplementedError()
 
-    override fun fetchPlaylistItemDetails(
-        id: YouTubePlaylist.Id,
-        maxResult: Long,
-    ): NetworkResponse<List<YouTubePlaylistItemDetail>> = throw NotImplementedError()
-
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
+    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
         throw NotImplementedError()
-
-    override fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>> =
-        throw NotImplementedError()
-
-    override fun fetchLiveChannelLogs(
-        channelId: YouTubeChannel.Id,
-        publishedAfter: Instant?,
-        maxResult: Long?,
-        token: String?,
-    ): NetworkResponse<List<YouTubeChannelLog>> = throw NotImplementedError()
 
     companion object {
         val currentDate: String
             get() = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("GMT"))
                 .format(FakeDateTimeProviderModule.instant)
-
-        fun subscription(
-            id: String,
-            channel: YouTubeChannel,
-        ): YouTubeSubscription = object : YouTubeSubscription {
-            override val id: YouTubeSubscription.Id = YouTubeSubscription.Id(id)
-            override val channel: YouTubeChannel = channel
-            override val subscribeSince: Instant = Instant.EPOCH
-        }
 
         fun channelDetail(
             id: Int,
@@ -209,6 +179,10 @@ fun YouTubeException.Companion.internalServerError(
 ): YouTubeException = YouTubeException(500, "Internal Server Error", throwable, cacheControl)
 
 class MockServerRule : TestWatcher() {
+    companion object {
+        const val PATH_SUBSCRIPTION = "/youtube/v3/subscriptions"
+    }
+
     private val server = MockWebServer()
     override fun starting(description: Description) {
         server.start()
@@ -258,36 +232,30 @@ class MockServerRule : TestWatcher() {
                         playlistItemJson(res.item)
                     }
 
-                    "/youtube/v3/subscriptions" -> {
+                    PATH_SUBSCRIPTION -> {
                         check(request.url.queryParameter("mine").toBoolean())
                         val eTag = request.headers["If-None-Match"]
                         val pageToken = request.url.queryParameter("pageToken")
-                        val order = request.url.queryParameter("order")
-                        val res = client.fetchSubscription(
-                            object : YouTubeSubscriptionQuery {
-                                override val offset: Int get() = error("unused value")
-                                override val nextPageToken: String? get() = pageToken
-                                override val eTag: String? get() = eTag
-                                override val order: YouTubeSubscriptionQuery.Order
-                                    get() = when (order) {
-                                        "relevance" -> YouTubeSubscriptionQuery.Order.RELEVANCE
-                                        "alphabetical" -> YouTubeSubscriptionQuery.Order.ALPHABETICAL
-                                        else -> error("unexpected order: $order")
-                                    }
-                            },
-                        )
-                        subscriptionJson(res)
+                        val order = requireNotNull(request.url.queryParameter("order"))
+                        val res = client.fetchSubscription(nextPageToken = pageToken, order = order)
+                        if (res.eTag == eTag) {
+                            throw YouTubeException.notModified()
+                        } else {
+                            res
+                        }
                     }
 
                     else -> throw AssertionError("unexpected path: $path")
                 }
+            }.also {
+                reqRes.add(request to it)
             }.fold(
                 onSuccess = {
                     MockResponse.Builder()
                         .code(200)
                         .addHeader("Content-Type", "application/json")
                         .addHeader("date", currentDate)
-                        .body(it)
+                        .body(it.toString())
                         .build()
                 },
                 onFailure = {
@@ -302,33 +270,44 @@ class MockServerRule : TestWatcher() {
         }
     }
 
+    private val reqRes: MutableList<Pair<RecordedRequest, Result<Json>>> = mutableListOf()
+    fun findRecordedResponse(path: String): List<Pair<String, Result<Json>>> {
+        return reqRes.filter { it.first.url.encodedPath == path }.map { it.first.url.encodedPath to it.second }
+    }
+
+    fun clearRecodedResponse() {
+        reqRes.clear()
+    }
+
     override fun finished(description: Description) {
         server.closeQuietly()
     }
 }
 
-private fun youtubeResponseJson(
-    kind: String,
-    etag: String = "etag",
-    nextPageToken: String? = null,
-    prevPageToken: String? = null,
-    totalResults: Int = 1,
-    items: List<Json>,
-): String = Json.Obj(
-    "kind" to kind,
-    "etag" to etag,
-    "nextPageToken" to nextPageToken,
-    "prevPageToken" to prevPageToken,
-    "pageInfo" to Json.Obj(
-        "totalResults" to totalResults,
-        "resultsPerPage" to items.size,
-    ),
-    "items" to Json.Arr(items),
-).toString()
+class YouTubeResponseJson(
+    private val kind: String,
+    val eTag: String = "etag",
+    private val nextPageToken: String? = null,
+    private val prevPageToken: String? = null,
+    private val totalResults: Int = 1,
+    private val items: List<Json>,
+) : Json() {
+    override fun toString(): String = Obj(
+        "kind" to kind,
+        "etag" to eTag,
+        "nextPageToken" to nextPageToken,
+        "prevPageToken" to prevPageToken,
+        "pageInfo" to Obj(
+            "totalResults" to totalResults,
+            "resultsPerPage" to items.size,
+        ),
+        "items" to Arr(items),
+    ).toString()
+}
 
-private fun videoJson(items: List<YouTubeVideo>): String = youtubeResponseJson(
+private fun videoJson(items: List<YouTubeVideo>): Json = YouTubeResponseJson(
     kind = "youtube#videoListResponse",
-    etag = "etag",
+    eTag = "etag",
     items = items.map { i ->
         Json.Obj(
             "kind" to "youtube#video",
@@ -369,7 +348,7 @@ private fun channelJson(
     items: List<YouTubeChannelBase>,
     hasSnippet: Boolean = false,
     hasContentDetail: Boolean = false,
-): String {
+): Json {
     val snippet: ((YouTubeChannelBase) -> Json?) = {
         if (hasSnippet) {
             val i = it as YouTubeChannel
@@ -409,9 +388,9 @@ private fun channelJson(
             null
         }
     }
-    return youtubeResponseJson(
+    return YouTubeResponseJson(
         kind = "youtube#channelListResponse",
-        etag = "etag",
+        eTag = "etag",
         items = items.map { i ->
             Json.Obj(
                 "kind" to "youtube#channel",
@@ -424,7 +403,7 @@ private fun channelJson(
     )
 }
 
-private fun playlistJson(items: List<YouTubePlaylist>): String = youtubeResponseJson(
+private fun playlistJson(items: List<YouTubePlaylist>): Json = YouTubeResponseJson(
     kind = "youtube#playlistListResponse",
     items = items.map {
         Json.Obj(
@@ -457,7 +436,7 @@ private fun playlistJson(items: List<YouTubePlaylist>): String = youtubeResponse
     },
 )
 
-private fun playlistItemJson(items: List<YouTubePlaylistItem>): String = youtubeResponseJson(
+private fun playlistItemJson(items: List<YouTubePlaylistItem>): Json = YouTubeResponseJson(
     kind = "youtube#playlistItemListResponse",
     items = items.map {
         Json.Obj(
@@ -475,27 +454,43 @@ private fun playlistItemJson(items: List<YouTubePlaylistItem>): String = youtube
     },
 )
 
-private fun subscriptionJson(res: NetworkResponse<List<YouTubeSubscription>>): String = youtubeResponseJson(
+fun subscriptionJson(
+    eTag: String? = null,
+    pageToken: String?,
+    size: Int,
+    factory: (Int) -> SubscriptionItemJson = { throw NotImplementedError() },
+): YouTubeResponseJson = subscriptionJson(eTag, pageToken, (0 until size).map(factory))
+
+fun subscriptionJson(
+    eTag: String? = null,
+    pageToken: String?,
+    items: List<SubscriptionItemJson>,
+): YouTubeResponseJson = YouTubeResponseJson(
     kind = "youtube#subscriptionListResponse",
-    etag = res.eTag ?: "etag",
-    nextPageToken = res.nextPageToken,
-    items = res.item.map {
-        Json.Obj(
+    eTag = eTag ?: items.joinToString(",") { it.key }.sha1(),
+    nextPageToken = pageToken,
+    items = items,
+)
+
+class SubscriptionItemJson(val id: String, val channelId: String, val channelTitle: String) : Json() {
+    val key: String = listOf(id, channelId, channelTitle).joinToString(",") { it }
+    private val json
+        get() = Obj(
             "kind" to "youtube#subscription",
-            "etag" to "etag",
-            "id" to it.id.value,
-            "snippet" to Json.Obj(
+            "etag" to key.sha1(),
+            "id" to id,
+            "snippet" to Obj(
                 "publishedAt" to "1970-01-01T00:00:00Z",
-                "channelTitle" to it.channel.title,
-                "title" to "title_${it.channel.title}",
+                "channelTitle" to channelTitle,
+                "title" to channelTitle,
                 "description" to "description",
-                "resourceId" to Json.Obj(
+                "resourceId" to Obj(
                     "kind" to "string",
-                    "channelId" to it.channel.id.value,
+                    "channelId" to channelId,
                 ),
-                "channelId" to it.channel.id.value,
-                "thumbnails" to Json.Obj(
-                    "medium" to Json.Obj(
+                "channelId" to channelId,
+                "thumbnails" to Obj(
+                    "medium" to Obj(
                         "url" to "<url is here>",
                         "width" to 240,
                         "height" to 240,
@@ -503,11 +498,20 @@ private fun subscriptionJson(res: NetworkResponse<List<YouTubeSubscription>>): S
                 ),
             ),
         )
-    },
-)
+
+    override fun toString(): String = json.toString()
+}
 
 sealed class Json {
-    class Obj(val map: Map<String, Json>) : Json() {
+    companion object {
+        private val md = MessageDigest.getInstance("SHA-1")
+        fun String.sha1(): String = md.run {
+            reset()
+            digest(toByteArray()).toHexString()
+        }
+    }
+
+    class Obj(val map: Map<String, Any>) : Json() {
         constructor(vararg pairs: Pair<String, Any?>) : this(
             pairs.filter { it.second != null }.associate {
                 it.first to when (val v = it.second) {
@@ -520,11 +524,11 @@ sealed class Json {
             },
         )
 
-        override fun toString(): String = "{" + map.entries.joinToString(",") { "\"${it.key}\":${it.value}" } + "}"
+        override fun toString(): String = map.entries.joinToString(",", "{", "}") { "\"${it.key}\":${it.value}" }
     }
 
     class Arr(val list: List<Json>) : Json() {
-        override fun toString(): String = "[" + list.joinToString(",") + "]"
+        override fun toString(): String = list.joinToString(",", "[", "]")
     }
 
     class Str(val str: String) : Json() {
