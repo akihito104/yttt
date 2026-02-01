@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
+import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
@@ -15,6 +16,7 @@ import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.data.source.remote.YouTubeVideoRemote
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.CallerVerifier
+import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
@@ -69,14 +71,14 @@ class YouTubeRepositoryTest {
     fun fetchVideoList_itemFromRemoteHasIconUrl() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = Instant.EPOCH
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val channelDetail = FakeYouTubeClient.channelTitle(1)
         server.setClient(
             FakeRemoteSource(
                 videoList = recorder.wrap(expected = 1) {
                     listOf(video(1, channelDetail)).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
                 },
-                channelList = recorder.wrap(expected = 1) {
-                    listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+                channelList = recorder.wrap(expected = 1) { id ->
+                    { part -> id.map { ChannelItemJson(id = it, part = part) } }
                 },
             ),
         )
@@ -159,7 +161,7 @@ class YouTubeRepositoryTest {
     fun fetchVideoList_videoFromRemoteAndChannelGetsException_returnsFailure() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val channelDetail = FakeYouTubeClient.channelTitle(1)
         server.setClient(
             FakeRemoteSource(
                 videoList = recorder.wrap(expected = 1) {
@@ -310,7 +312,7 @@ class YouTubeRepositoryTest {
     }
 }
 
-private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = YouTubeVideoRemote(
+private fun video(id: Int, channel: YouTubeChannelTitle): YouTubeVideo = YouTubeVideoRemote(
     Video().apply {
         this.id = "$id"
         snippet = VideoSnippet().apply {
@@ -333,7 +335,7 @@ private fun video(id: Int, channel: YouTubeChannel): YouTubeVideo = YouTubeVideo
 
 private class FakeRemoteSource(
     val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
-    val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannel>>)? = null,
+    val channelList: ((Set<YouTubeChannel.Id>) -> ((Set<String>) -> List<ChannelItemJson>))? = null,
     val playlist: ((Set<YouTubePlaylist.Id>) -> Updatable<List<YouTubePlaylist>>)? = null,
     val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItem>>)? = null,
 ) : FakeYouTubeClient {
@@ -342,9 +344,9 @@ private class FakeRemoteSource(
         return NetworkResponse.create(videoList!!.invoke(ids))
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>> {
-        logD { "fetchChannelList: $ids" }
-        return NetworkResponse.create(channelList!!.invoke(ids))
+    override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {
+        logD { "fetchChannels: $ids, $part" }
+        return channelList!!.invoke(ids)(part)
     }
 
     override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> {

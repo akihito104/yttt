@@ -8,7 +8,7 @@ import androidx.paging.RemoteMediator
 import androidx.paging.testing.asSnapshot
 import com.freshdigitable.yttt.data.FakeYouTubeClientImpl.Companion.subscriptionsRelevanceOrderedIds
 import com.freshdigitable.yttt.data.model.YouTube
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
@@ -67,7 +67,6 @@ class YouTubeRemoteMediatorTest {
     @Before
     fun setup() {
         FakeDateTimeProviderModule.instant = Instant.parse("2025-08-01T14:00:00Z")
-        FakeDateTimeProviderModule.onTimeAdvanced = { client.current = it }
         server.setClient(client)
         hiltRule.inject()
     }
@@ -144,7 +143,7 @@ class YouTubeRemoteMediatorTest {
     fun loadFromPager() = testScope.runTest {
         // setup
         FakeAccountRepositoryModule.account = "account"
-        client.channelDetails = (0..<20).map { FakeYouTubeClient.channelDetail(it) }
+        client.channelDetails = (0..<20).map { FakeYouTubeClient.channelTitle(it) }
         val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")
         FakeDateTimeProviderModule.instant = fetchedAt
         // exercise
@@ -159,7 +158,7 @@ class YouTubeRemoteMediatorTest {
     fun loadFromPager_fetchAfterUpdatingTimetableTask_inRelevanceOrder() = testScope.runTest {
         // setup
         FakeAccountRepositoryModule.account = "account"
-        client.channelDetails = (0..<20).map { FakeYouTubeClient.channelDetail(it) }
+        client.channelDetails = (0..<20).map { FakeYouTubeClient.channelTitle(it) }
         FakeDateTimeProviderModule.instant = Instant.parse("2025-08-01T13:20:00Z")
         // exercise
         repository.fetchPagedSubscription(
@@ -184,8 +183,7 @@ class YouTubeRemoteMediatorTest {
 }
 
 internal class FakeYouTubeClientImpl : FakeYouTubeClient {
-    var current: Instant = Instant.EPOCH
-    var channelDetails: List<YouTubeChannelDetail> = emptyList()
+    var channelDetails: List<YouTubeChannelTitle> = emptyList()
         set(value) {
             subscriptions = value.sortedBy { it.title }.toResponse()
             subscriptionsInRelevanceOrder = value.toResponse()
@@ -208,7 +206,7 @@ internal class FakeYouTubeClientImpl : FakeYouTubeClient {
     }
 
     companion object {
-        private fun Collection<YouTubeChannelDetail>.toResponse(): List<Pair<String?, () -> List<SubscriptionItemJson>>> =
+        private fun Collection<YouTubeChannelTitle>.toResponse(): List<Pair<String?, () -> List<SubscriptionItemJson>>> =
             chunked(50).mapIndexed { i, c ->
                 val key = if (i == 0) null else "token_$i"
                 key to { c.map { SubscriptionItemJson("s_${it.id.value}", it.id.value, it.title) } }

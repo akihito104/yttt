@@ -18,6 +18,7 @@ import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.feature.timetable.video
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.CallerVerifier
+import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
@@ -92,8 +93,10 @@ class AddStreamWorkerTest {
                 videoList = caller.wrap(expected = 1) {
                     listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
                 },
-                channelList = caller.wrap(expected = 1) {
-                    listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+                channelList = caller.wrap(expected = 1) { ids ->
+                    val details = listOf(channelDetail)
+                    check(details.map { it.id }.toSet() == ids)
+                    return@wrap { part -> details.map { ChannelItemJson(it, part) } }
                 },
             ),
         )
@@ -124,8 +127,10 @@ class AddStreamWorkerTest {
                 videoList = caller.wrap(expected = 1) {
                     listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
                 },
-                channelList = caller.wrap(expected = 1) {
-                    listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+                channelList = caller.wrap(expected = 1) { ids ->
+                    val details = listOf(channelDetail)
+                    check(details.map { it.id }.toSet() == ids)
+                    return@wrap { part -> details.map { ChannelItemJson(it, part) } }
                 },
             ),
         )
@@ -155,16 +160,16 @@ class AddStreamWorkerTest {
 
 class FakeYouTubeClientImpl(
     private val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
-    private val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannel>>)? = null,
+    private val channelList: ((Set<YouTubeChannel.Id>) -> ((Set<String>) -> List<ChannelItemJson>))? = null,
 ) : FakeYouTubeClient {
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
         return NetworkResponse.create(videoList!!.invoke(ids))
     }
 
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>> {
-        logD { "fetchChannelList: $ids" }
-        return NetworkResponse.create(channelList!!.invoke(ids))
+    override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {
+        logD { "fetchChannels: $ids, $part" }
+        return channelList!!.invoke(ids)(part)
     }
 }
 

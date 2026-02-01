@@ -4,9 +4,7 @@ import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeChannelBase
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
-import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
@@ -64,12 +62,8 @@ interface FakeYouTubeClient {
     fun fetchSubscription(nextPageToken: String? = null, order: String): YouTubeResponseJson =
         throw NotImplementedError()
 
-    fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>> =
+    fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> =
         throw NotImplementedError()
-
-    fun fetchChannelRelatedPlaylistList(
-        ids: Set<YouTubeChannel.Id>,
-    ): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> = throw NotImplementedError()
 
     fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> =
         throw NotImplementedError()
@@ -88,23 +82,29 @@ interface FakeYouTubeClient {
             get() = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("GMT"))
                 .format(FakeDateTimeProviderModule.instant)
 
+        fun channelTitle(id: Int = 1): YouTubeChannelTitle = object : YouTubeChannelTitle {
+            override val id: YouTubeChannel.Id get() = YouTubeChannel.Id("channel_$id")
+            override val title: String get() = "channel_$id"
+        }
+
         fun channelDetail(
-            id: Int,
+            id: Int = 1,
+            idValue: String = "channel_$id",
         ): YouTubeChannelDetail = object : YouTubeChannelDetail {
-            override val id: YouTubeChannel.Id = YouTubeChannel.Id("channel_$id")
-            override val uploadedPlayList: YouTubePlaylist.Id =
-                YouTubePlaylist.Id("playlist_${this.id.value}")
-            override val title: String = "channel$id"
-            override val iconUrl: String = "<url is here>"
-            override val bannerUrl: String = ""
-            override val subscriberCount: BigInteger = BigInteger.ONE
-            override val isSubscriberHidden: Boolean = false
-            override val videoCount: BigInteger = BigInteger.ONE
-            override val viewsCount: BigInteger = BigInteger.ONE
-            override val publishedAt: Instant = Instant.EPOCH
-            override val customUrl: String = ""
-            override val keywords: Collection<String> = emptyList()
-            override val description: String = ""
+            override val id: YouTubeChannel.Id get() = YouTubeChannel.Id(idValue)
+            override val uploadedPlayList: YouTubePlaylist.Id
+                get() = YouTubePlaylist.Id("playlist_${this.id.value}")
+            override val title: String get() = "channel_$idValue"
+            override val iconUrl: String get() = "<url is here>"
+            override val bannerUrl: String get() = ""
+            override val subscriberCount: BigInteger get() = BigInteger.ONE
+            override val isSubscriberHidden: Boolean get() = false
+            override val videoCount: BigInteger get() = BigInteger.ONE
+            override val viewsCount: BigInteger get() = BigInteger.ONE
+            override val publishedAt: Instant get() = Instant.EPOCH
+            override val customUrl: String get() = ""
+            override val keywords: Collection<String> get() = emptyList()
+            override val description: String get() = ""
         }
 
         fun playlist(id: YouTubePlaylist.Id): YouTubePlaylist = object : YouTubePlaylist {
@@ -203,19 +203,9 @@ class MockServerRule : TestWatcher() {
                     "/youtube/v3/channels" -> {
                         val id = requireNotNull(request.url.queryParameterValues("id"))
                             .mapNotNull { i -> i?.let { YouTubeChannel.Id(it) } }.toSet()
-                        when (val part = request.url.queryParameterValues("part").toSet()) {
-                            setOf("snippet") -> {
-                                val res = client.fetchChannelList(id)
-                                channelJson(res.item, hasSnippet = true)
-                            }
-
-                            setOf("contentDetails") -> {
-                                val res = client.fetchChannelRelatedPlaylistList(id)
-                                channelJson(res.item, hasContentDetail = true)
-                            }
-
-                            else -> error("unexpected part: $part")
-                        }
+                        val part = request.url.queryParameterValues("part").filterNotNull().toSet()
+                        val res = client.fetchChannels(id, part)
+                        channelJson(res)
                     }
 
                     "/youtube/v3/playlists" -> {
@@ -248,7 +238,7 @@ class MockServerRule : TestWatcher() {
                     else -> throw AssertionError("unexpected path: $path")
                 }
             }.also {
-                reqRes.add(request to it)
+                if (isLogging) reqRes.add(request to it)
             }.fold(
                 onSuccess = {
                     MockResponse.Builder()
@@ -270,13 +260,10 @@ class MockServerRule : TestWatcher() {
         }
     }
 
+    var isLogging: Boolean = false
     private val reqRes: MutableList<Pair<RecordedRequest, Result<Json>>> = mutableListOf()
     fun findRecordedResponse(path: String): List<Pair<String, Result<Json>>> {
         return reqRes.filter { it.first.url.encodedPath == path }.map { it.first.url.encodedPath to it.second }
-    }
-
-    fun clearRecodedResponse() {
-        reqRes.clear()
     }
 
     override fun finished(description: Description) {
@@ -344,63 +331,71 @@ private fun videoJson(items: List<YouTubeVideo>): Json = YouTubeResponseJson(
     },
 )
 
-private fun channelJson(
-    items: List<YouTubeChannelBase>,
-    hasSnippet: Boolean = false,
-    hasContentDetail: Boolean = false,
-): Json {
-    val snippet: ((YouTubeChannelBase) -> Json?) = {
-        if (hasSnippet) {
-            val i = it as YouTubeChannel
-            Json.Obj(
-                "title" to i.title,
-                "description" to "description",
-                "customUrl" to "",
-                "publishedAt" to "1970-01-01T00:00:00Z",
-                "thumbnails" to Json.Obj(
-                    "medium" to Json.Obj(
-                        "url" to "<url is here>",
-                        "width" to 240,
-                        "height" to 240,
-                    ),
-                ),
-                "defaultLanguage" to "ja",
-                "localized" to Json.Obj(
-                    "title" to i.title,
-                    "description" to "description",
-                ),
-                "country" to "jp",
-            )
-        } else {
-            null
-        }
-    }
-    val contentDetail: ((YouTubeChannelBase) -> Json?) = {
-        if (hasContentDetail) {
-            Json.Obj(
-                "relatedPlaylists" to Json.Obj(
-                    "likes" to "",
-                    "favorites" to "",
-                    "uploads" to (it as YouTubeChannelRelatedPlaylist).uploadedPlayList!!.value,
-                ),
-            )
-        } else {
-            null
-        }
-    }
-    return YouTubeResponseJson(
-        kind = "youtube#channelListResponse",
-        eTag = "etag",
-        items = items.map { i ->
-            Json.Obj(
-                "kind" to "youtube#channel",
-                "etag" to "etag",
-                "id" to i.id.value,
-                "snippet" to snippet(i),
-                "contentDetails" to contentDetail(i),
-            )
-        },
+private fun channelJson(items: List<ChannelItemJson>): YouTubeResponseJson = YouTubeResponseJson(
+    kind = "youtube#channelListResponse",
+    eTag = "etag",
+    items = items,
+)
+
+class ChannelItemJson(
+    override val id: YouTubeChannel.Id,
+    override val title: String = "channel_$id",
+    private val playlistId: String? = null,
+    val hasSnippet: Boolean,
+    val hasContentDetail: Boolean,
+) : Json(), YouTubeChannelTitle {
+    constructor(id: YouTubeChannel.Id, part: Set<String>) : this(
+        id = id,
+        hasSnippet = part.contains("snippet"),
+        hasContentDetail = part.contains("contentDetails"),
     )
+
+    constructor(channel: YouTubeChannelDetail, part: Set<String>) : this(
+        id = channel.id,
+        title = channel.title,
+        playlistId = channel.uploadedPlayList!!.value,
+        hasSnippet = part.contains("snippet"),
+        hasContentDetail = part.contains("contentDetails"),
+    )
+
+    private val json: Json
+        get() = Obj(
+            "kind" to "youtube#channel",
+            "etag" to "etag",
+            "id" to id.value,
+            "snippet" to if (hasSnippet) snippet else null,
+            "contentDetails" to if (hasContentDetail) contentDetail else null,
+        )
+    private val snippet: Json
+        get() = Obj(
+            "title" to title,
+            "description" to "description",
+            "customUrl" to "",
+            "publishedAt" to "1970-01-01T00:00:00Z",
+            "thumbnails" to Obj(
+                "medium" to Obj(
+                    "url" to "<url is here>",
+                    "width" to 240,
+                    "height" to 240,
+                ),
+            ),
+            "defaultLanguage" to "ja",
+            "localized" to Obj(
+                "title" to title,
+                "description" to "description",
+            ),
+            "country" to "jp",
+        )
+    private val contentDetail: Json
+        get() = Obj(
+            "relatedPlaylists" to Obj(
+                "likes" to "",
+                "favorites" to "",
+                "uploads" to (playlistId ?: "playlist_${id.value}"),
+            ),
+        )
+
+    override fun toString(): String = json.toString()
 }
 
 private fun playlistJson(items: List<YouTubePlaylist>): Json = YouTubeResponseJson(

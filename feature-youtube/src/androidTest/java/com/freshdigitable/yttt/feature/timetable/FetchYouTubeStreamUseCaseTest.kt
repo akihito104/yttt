@@ -11,7 +11,6 @@ import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
-import com.freshdigitable.yttt.data.model.YouTubeChannelRelatedPlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeVideo
@@ -27,6 +26,7 @@ import com.freshdigitable.yttt.feature.timetable.FakeYouTubeClientImpl.Companion
 import com.freshdigitable.yttt.feature.timetable.FakeYouTubeClientImpl.Companion.update
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.AppTraceVerifier
+import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
@@ -181,7 +181,7 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
                 FakeYouTubeClientModule.setup(10, 2, current).apply {
-                    channel = { throw YouTubeException.internalServerError() }
+                    channel = { _, _ -> throw YouTubeException.internalServerError() }
                 },
             )
             hiltRule.inject()
@@ -299,10 +299,10 @@ class FetchYouTubeStreamUseCaseTest {
             server.setClient(
                 FakeYouTubeClientModule.setup(100, 2, current).apply {
                     var page = 0
-                    this.channel = {
+                    this.channel = { id, part ->
                         if (page == 0) {
                             page++
-                            channelDefault(it)
+                            channelDefault(id, part)
                         } else {
                             throw YouTubeException.internalServerError()
                         }
@@ -483,7 +483,7 @@ class FetchYouTubeStreamUseCaseTest {
                 }
                 instant = current + Duration.ofHours(3)
             }
-            server.clearRecodedResponse()
+            server.isLogging = true
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -513,7 +513,7 @@ class FetchYouTubeStreamUseCaseTest {
                 }
                 instant = current + Duration.ofHours(3)
             }
-            server.clearRecodedResponse()
+            server.isLogging = true
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -543,7 +543,7 @@ class FetchYouTubeStreamUseCaseTest {
                 }
                 instant = current + Duration.ofHours(3)
             }
-            server.clearRecodedResponse()
+            server.isLogging = true
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -582,7 +582,7 @@ class FetchYouTubeStreamUseCaseTest {
                     s(t)
                 }
             }
-            server.clearRecodedResponse()
+            server.isLogging = true
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -684,7 +684,7 @@ private fun playlistItem(
 
 private class FakeYouTubeClientImpl(
     var subscription: ((String?) -> YouTubeResponseJson)? = null,
-    var channel: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelRelatedPlaylist>>)? = null,
+    var channel: ((Set<YouTubeChannel.Id>, Set<String>) -> List<ChannelItemJson>)? = null,
     var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItem>>)? = null,
     var video: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
 ) : FakeYouTubeClient {
@@ -702,8 +702,8 @@ private class FakeYouTubeClientImpl(
             videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo,
         ) {
             logD { "setup:$subscriptionCount,$itemsPerPlaylist,$current,$videoFactory" }
-            channelDetail =
-                (1..subscriptionCount).map { FakeYouTubeClient.channelDetail(it) }.sortedBy { it.title.lowercase() }
+            channelDetail = (1..subscriptionCount).map { FakeYouTubeClient.channelDetail(id = it) }
+                .sortedBy { it.title.lowercase() }
             update(itemsPerPlaylist, current, videoFactory)
         }
 
@@ -728,7 +728,7 @@ private class FakeYouTubeClientImpl(
                 (1..itemsPerPlaylist).map { videoFactory(it, c) }
             }
             val pi = channelDetail.associate { c ->
-                c.uploadedPlayList!! to videos.filter { it.channel.id == c.id }
+                c.uploadedPlayList!! to videos.filter { it.channel.id.value == c.id.value }
                     .mapIndexed { i, v -> playlistItem(i, c, v.id) }.toUpdatable(CacheControl.fromRemote(current))
             }
             playlistItem = { pi[it]!! }
@@ -740,17 +740,15 @@ private class FakeYouTubeClientImpl(
         return subscription!!.invoke(nextPageToken)
     }
 
-    val channelDefault: (Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannelRelatedPlaylist>> = { id ->
-        val c = channelDetail.associateBy { it.id }
-        id.mapNotNull { c[it] }.toUpdatable(CacheControl.fromRemote(current!!))
+    val channelDefault: (Set<YouTubeChannel.Id>, Set<String>) -> List<ChannelItemJson> = { id, part ->
+        val table = channelDetail.associateBy { it.id }
+        id.mapNotNull { i -> table[i]?.let { ChannelItemJson(channel = it, part = part) } }
     }
 
-    override fun fetchChannelRelatedPlaylistList(
-        ids: Set<YouTubeChannel.Id>,
-    ): NetworkResponse<List<YouTubeChannelRelatedPlaylist>> {
-        logD { "fetchChannelRelatedPlaylistList: $ids" }
+    override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {
+        logD { "fetchChannels: $ids, $part" }
         val channel = this.channel ?: channelDefault
-        return NetworkResponse.create(channel(ids))
+        return channel(ids, part)
     }
 
     val videoDefault: (Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>> = { id ->
