@@ -8,14 +8,10 @@ import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
-import com.freshdigitable.yttt.data.model.CacheControl
-import com.freshdigitable.yttt.data.model.Updatable
-import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import com.freshdigitable.yttt.feature.timetable.video
+import com.freshdigitable.yttt.feature.timetable.videoJson
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.ChannelItemJson
@@ -26,7 +22,7 @@ import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.freshdigitable.yttt.test.fromRemote
+import com.freshdigitable.yttt.test.VideoJson
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -87,12 +83,10 @@ class AddStreamWorkerTest {
     fun validUrl_stateIsSucceeded() = testScope.runTest {
         // setup
         val channelDetail = FakeYouTubeClient.channelDetail(1)
-        val video = video(1, channelDetail)
+        val video = videoJson(1, channelDetail)
         server.setClient(
             FakeYouTubeClientImpl(
-                videoList = caller.wrap(expected = 1) {
-                    listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-                },
+                videoList = caller.wrap(expected = 1) { listOf(video) },
                 channelList = caller.wrap(expected = 1) { ids ->
                     val details = listOf(channelDetail)
                     check(details.map { it.id }.toSet() == ids)
@@ -103,7 +97,7 @@ class AddStreamWorkerTest {
         hiltRule.inject()
         initTestWorkManager()
         val data =
-            AddStreamUseCase.Input.create("https://youtube.com/live/${video.id.value}".toUri())!!
+            AddStreamUseCase.Input.create("https://youtube.com/live/${video.id}".toUri())!!
         val context = InstrumentationRegistry.getInstrumentation().context
         // exercise
         val actual = AddStreamWorker.enqueue(context, data)
@@ -121,12 +115,10 @@ class AddStreamWorkerTest {
     fun validUrlForFreeChat_stateIsSucceeded() = testScope.runTest {
         // setup
         val channelDetail = FakeYouTubeClient.channelDetail(1)
-        val video = video(1, channelDetail)
+        val video = videoJson(1, channelDetail)
         server.setClient(
             FakeYouTubeClientImpl(
-                videoList = caller.wrap(expected = 1) {
-                    listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-                },
+                videoList = caller.wrap(expected = 1) { listOf(video) },
                 channelList = caller.wrap(expected = 1) { ids ->
                     val details = listOf(channelDetail)
                     check(details.map { it.id }.toSet() == ids)
@@ -136,7 +128,7 @@ class AddStreamWorkerTest {
         )
         hiltRule.inject()
         initTestWorkManager()
-        val uri = "https://youtube.com/live/${video.id.value}".toUri()
+        val uri = "https://youtube.com/live/${video.id}".toUri()
         val data = AddStreamUseCase.Input.create(uri, true)!!
         val context = InstrumentationRegistry.getInstrumentation().context
         // exercise
@@ -159,12 +151,12 @@ class AddStreamWorkerTest {
 }
 
 class FakeYouTubeClientImpl(
-    private val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
+    private val videoList: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
     private val channelList: ((Set<YouTubeChannel.Id>) -> ((Set<String>) -> List<ChannelItemJson>))? = null,
 ) : FakeYouTubeClient {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> {
         logD { "fetchVideoList: $ids" }
-        return NetworkResponse.create(videoList!!.invoke(ids))
+        return videoList!!.invoke(ids)
     }
 
     override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {

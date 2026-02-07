@@ -1,7 +1,6 @@
 package com.freshdigitable.yttt.data
 
 import com.freshdigitable.yttt.data.model.CacheControl
-import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
@@ -10,7 +9,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistWithItems
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.data.source.remote.YouTubeVideoRemote
@@ -26,6 +24,7 @@ import com.freshdigitable.yttt.test.PlaylistItemJson
 import com.freshdigitable.yttt.test.PlaylistJson
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
+import com.freshdigitable.yttt.test.VideoJson
 import com.freshdigitable.yttt.test.fromRemote
 import com.freshdigitable.yttt.test.internalServerError
 import com.freshdigitable.yttt.test.notFound
@@ -77,7 +76,12 @@ class YouTubeRepositoryTest {
         server.setClient(
             FakeRemoteSource(
                 videoList = recorder.wrap(expected = 1) {
-                    listOf(video(1, channelDetail)).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+                    val video = VideoJson(
+                        idNum = 1,
+                        channel = channelDetail,
+                        scheduledStartDateTime = Instant.parse("2022-01-01T00:00:00Z"),
+                    )
+                    listOf(video)
                 },
                 channelList = recorder.wrap(expected = 1) { id ->
                     { part -> id.map { ChannelItemJson(id = it, part = part) } }
@@ -139,7 +143,9 @@ class YouTubeRepositoryTest {
         server.setClient(
             FakeRemoteSource(
                 videoList = recorder.wrap(expected = 1) {
-                    listOf(video(1, channelDetail)).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+                    val video =
+                        VideoJson(1, channelDetail, scheduledStartDateTime = Instant.parse("2022-01-01T00:00:00Z"))
+                    listOf(video)
                 },
             ),
         )
@@ -166,9 +172,7 @@ class YouTubeRepositoryTest {
         val channelDetail = FakeYouTubeClient.channelTitle(1)
         server.setClient(
             FakeRemoteSource(
-                videoList = recorder.wrap(expected = 1) {
-                    listOf(video(1, channelDetail)).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-                },
+                videoList = recorder.wrap(expected = 1) { listOf(VideoJson(1, channelDetail)) },
                 channelList = recorder.wrap(expected = 1) {
                     throw YouTubeException.internalServerError()
                 },
@@ -192,9 +196,7 @@ class YouTubeRepositoryTest {
         val video = video(1, channelDetail)
         server.setClient(
             FakeRemoteSource(
-                videoList = recorder.wrap(expected = 1) {
-                    listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-                },
+                videoList = recorder.wrap(expected = 1) { listOf(VideoJson(video)) },
             ),
         )
         hiltRule.inject()
@@ -327,14 +329,14 @@ private fun video(id: Int, channel: YouTubeChannelTitle): YouTubeVideo = YouTube
 )
 
 private class FakeRemoteSource(
-    val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
+    val videoList: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
     val channelList: ((Set<YouTubeChannel.Id>) -> ((Set<String>) -> List<ChannelItemJson>))? = null,
     val playlist: ((Set<YouTubePlaylist.Id>) -> List<PlaylistJson>)? = null,
     val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> List<PlaylistItemJson>)? = null,
 ) : FakeYouTubeClient {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> {
         logD { "fetchVideoList: $ids" }
-        return NetworkResponse.create(videoList!!.invoke(ids))
+        return videoList!!.invoke(ids)
     }
 
     override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {

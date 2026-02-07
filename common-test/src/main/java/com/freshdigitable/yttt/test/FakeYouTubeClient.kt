@@ -10,7 +10,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.GoogleAccountModule
@@ -73,8 +72,7 @@ interface FakeYouTubeClient {
         eTag: String?,
     ): List<PlaylistItemJson> = throw NotImplementedError()
 
-    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> =
-        throw NotImplementedError()
+    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> = throw NotImplementedError()
 
     companion object {
         val currentDate: String
@@ -196,7 +194,7 @@ class MockServerRule : TestWatcher() {
                         val id = request.url.queryParameterValues("id")
                             .mapNotNull { i -> i?.let { YouTubeVideo.Id(it) } }
                         val items = client.fetchVideoList(id.toSet())
-                        videoJson(items.item)
+                        videoJson(items)
                     }
 
                     "/youtube/v3/channels" -> {
@@ -291,44 +289,78 @@ class YouTubeResponseJson(
     ).toString()
 }
 
-private fun videoJson(items: List<YouTubeVideo>): Json = YouTubeResponseJson(
+private fun videoJson(items: List<VideoJson>): Json = YouTubeResponseJson(
     kind = "youtube#videoListResponse",
     eTag = "etag",
-    items = items.map { i ->
-        Json.Obj(
+    items = items,
+)
+
+class VideoJson(
+    val id: YouTubeVideo.Id,
+    val channel: YouTubeChannelTitle,
+    val liveBroadcastContent: YouTubeVideo.BroadcastType = YouTubeVideo.BroadcastType.UPCOMING,
+    val scheduledStartDateTime: Instant? = null,
+    val actualStartDateTime: Instant? = null,
+    val actualEndDateTime: Instant? = null,
+) : Json() {
+    constructor(video: YouTubeVideo) : this(
+        video.id,
+        video.channel,
+        video.liveBroadcastContent,
+        video.scheduledStartDateTime,
+        video.actualStartDateTime,
+        video.actualEndDateTime,
+    )
+
+    constructor(
+        idNum: Int,
+        channel: YouTubeChannelTitle,
+        liveBroadcastContent: YouTubeVideo.BroadcastType = YouTubeVideo.BroadcastType.UPCOMING,
+        scheduledStartDateTime: Instant? = null,
+        actualStartDateTime: Instant? = null,
+        actualEndDateTime: Instant? = null,
+    ) : this(
+        YouTubeVideo.Id("${channel.id.value}-video_$idNum"),
+        channel, liveBroadcastContent,
+        scheduledStartDateTime, actualStartDateTime, actualEndDateTime,
+    )
+
+    val json: Json
+        get() = Obj(
             "kind" to "youtube#video",
             "etag" to "etag",
-            "id" to i.id.value,
-            "snippet" to Json.Obj(
+            "id" to id.value,
+            "snippet" to Obj(
                 "publishedAt" to null,
-                "channelId" to i.channel.id.value,
-                "title" to "title${i.id.value}",
+                "channelId" to channel.id.value,
+                "title" to "title${id.value}",
                 "description" to "description",
-                "thumbnails" to Json.Obj(
-                    "standard" to Json.Obj("url" to "<url is here>", "width" to 480, "height" to 360),
+                "thumbnails" to Obj(
+                    "standard" to Obj("url" to "<url is here>", "width" to 480, "height" to 360),
                 ),
-                "channelTitle" to i.channel.title,
-                "tags" to Json.Arr(emptyList()),
-                "categoryId" to "categoryid${i.id.value}",
-                "liveBroadcastContent" to i.liveBroadcastContent.name.lowercase(),
+                "channelTitle" to channel.title,
+                "tags" to Arr(emptyList()),
+                "categoryId" to "categoryid${id.value}",
+                "liveBroadcastContent" to liveBroadcastContent.name.lowercase(),
                 "defaultLanguage" to "ja",
-                "localized" to Json.Obj(
-                    "title" to "title${i.id.value}",
+                "localized" to Obj(
+                    "title" to "title${id.value}",
                     "description" to "description",
                 ),
                 "defaultAudioLanguage" to "ja",
             ),
-            "liveStreamingDetails" to Json.Obj(
-                "actualStartTime" to i.actualStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
-                "actualEndTime" to i.actualEndDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
-                "scheduledStartTime" to i.scheduledStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
+            "liveStreamingDetails" to Obj(
+                "actualStartTime" to actualStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
+                "actualEndTime" to actualEndDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
+                "scheduledStartTime" to scheduledStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
                 "scheduledEndTime" to null,
                 "concurrentViewers" to "100",
-                "activeLiveChatId" to "livechatid${i.id.value}",
+                "activeLiveChatId" to "livechatid${id.value}",
             ),
         )
-    },
-)
+
+    override fun toString(): String = json.toString()
+}
 
 private fun channelJson(items: List<ChannelItemJson>): YouTubeResponseJson = YouTubeResponseJson(
     kind = "youtube#channelListResponse",
