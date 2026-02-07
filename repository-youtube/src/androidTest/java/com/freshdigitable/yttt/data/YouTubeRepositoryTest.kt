@@ -22,6 +22,8 @@ import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.MockServerRule
+import com.freshdigitable.yttt.test.PlaylistItemJson
+import com.freshdigitable.yttt.test.PlaylistJson
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.fromRemote
@@ -225,13 +227,10 @@ class YouTubeRepositoryTest {
         server.setClient(
             FakeRemoteSource(
                 playlist = recorder.wrap(expected = 1) { ids ->
-                    ids.map { FakeYouTubeClient.playlist(it) }
-                        .toUpdatable(CacheControl.fromRemote(Instant.ofEpochMilli(1000)))
+                    ids.map { PlaylistJson(it.value) }
                 },
                 playlistItems = recorder.wrap(expected = 1) { ids ->
-                    {
-                        listOf(FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), ids)).toUpdatable()
-                    }
+                    { listOf(PlaylistItemJson("0", ids)) }
                 },
             ),
         )
@@ -252,10 +251,7 @@ class YouTubeRepositoryTest {
         FakeDateTimeProviderModule.instant = current
         server.setClient(
             FakeRemoteSource(
-                playlistItems = recorder.wrap(expected = 1) {
-                    val cacheControl = CacheControl.fromRemote(current)
-                    throw YouTubeException.notFound(cacheControl = cacheControl)
-                },
+                playlistItems = recorder.wrap(expected = 1) { throw YouTubeException.notFound() },
             ),
         )
         hiltRule.inject()
@@ -277,10 +273,7 @@ class YouTubeRepositoryTest {
         server.setClient(
             FakeRemoteSource(
                 playlistItems = recorder.wrap(expected = 1) {
-                    {
-                        val cacheControl = CacheControl.fromRemote(current)
-                        throw YouTubeException.notModified(cacheControl = cacheControl)
-                    }
+                    { throw YouTubeException.notModified() }
                 },
             ),
         )
@@ -336,8 +329,8 @@ private fun video(id: Int, channel: YouTubeChannelTitle): YouTubeVideo = YouTube
 private class FakeRemoteSource(
     val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
     val channelList: ((Set<YouTubeChannel.Id>) -> ((Set<String>) -> List<ChannelItemJson>))? = null,
-    val playlist: ((Set<YouTubePlaylist.Id>) -> Updatable<List<YouTubePlaylist>>)? = null,
-    val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> Updatable<List<YouTubePlaylistItem>>)? = null,
+    val playlist: ((Set<YouTubePlaylist.Id>) -> List<PlaylistJson>)? = null,
+    val playlistItems: ((YouTubePlaylist.Id) -> (String?) -> List<PlaylistItemJson>)? = null,
 ) : FakeYouTubeClient {
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
         logD { "fetchVideoList: $ids" }
@@ -349,18 +342,18 @@ private class FakeRemoteSource(
         return channelList!!.invoke(ids)(part)
     }
 
-    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>> {
+    override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<PlaylistJson> {
         logD { "fetchPlaylist: $ids" }
-        return NetworkResponse.create(playlist!!.invoke(ids))
+        return playlist!!.invoke(ids)
     }
 
     override fun fetchPlaylistItems(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItem>> {
+    ): List<PlaylistItemJson> {
         logD { "fetchPlaylistItems: $id" }
-        return NetworkResponse.create(playlistItems!!.invoke(id)(eTag))
+        return playlistItems!!.invoke(id)(eTag)
     }
 }
 

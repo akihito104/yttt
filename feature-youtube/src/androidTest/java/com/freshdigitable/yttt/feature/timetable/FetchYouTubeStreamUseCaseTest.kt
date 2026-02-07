@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.feature.timetable
 import androidx.paging.PagingSource
 import androidx.paging.testing.TestPager
 import com.freshdigitable.yttt.data.YouTubeAccountRepository
-import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.Updatable
@@ -12,7 +11,6 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.LiveDataPagingSource
@@ -32,11 +30,11 @@ import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.MockServerRule
+import com.freshdigitable.yttt.test.PlaylistItemJson
 import com.freshdigitable.yttt.test.SubscriptionItemJson
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.YouTubeResponseJson
-import com.freshdigitable.yttt.test.fromRemote
 import com.freshdigitable.yttt.test.internalServerError
 import com.freshdigitable.yttt.test.notFound
 import com.freshdigitable.yttt.test.notModified
@@ -157,7 +155,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientModule.setup(10, 2, current) { i, c ->
+                FakeYouTubeClientModule.setup(10, 2) { i, c ->
                     video(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
                 },
             )
@@ -180,7 +178,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientModule.setup(10, 2, current).apply {
+                FakeYouTubeClientModule.setup(10, 2).apply {
                     channel = { _, _ -> throw YouTubeException.internalServerError() }
                 },
             )
@@ -201,13 +199,11 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientModule.setup(10, 2, current).apply {
+                FakeYouTubeClientModule.setup(10, 2).apply {
                     val base = playlistItem!!
                     playlistItem = { id ->
                         if (id.value.contains("1")) {
-                            throw YouTubeException.internalServerError(
-                                cacheControl = CacheControl.create(current, null),
-                            )
+                            throw YouTubeException.internalServerError()
                         } else {
                             base.invoke(id)
                         }
@@ -227,13 +223,11 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientModule.setup(10, 2, current).apply {
+                FakeYouTubeClientModule.setup(10, 2).apply {
                     val base = playlistItem!!
                     playlistItem = { id ->
                         if (id.value.contains("1")) {
-                            throw YouTubeException.notFound(
-                                cacheControl = CacheControl.create(current, null),
-                            )
+                            throw YouTubeException.notFound()
                         } else {
                             base.invoke(id)
                         }
@@ -253,7 +247,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientModule.setup(10, 2, current).apply {
+                FakeYouTubeClientModule.setup(10, 2).apply {
                     video = { id ->
                         if (id.any { it.value.contains("1") }) {
                             throw YouTubeException.internalServerError()
@@ -276,7 +270,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientModule.setup(100, 2, current) { i, c ->
+                FakeYouTubeClientModule.setup(100, 2) { i, c ->
                     video(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
                 },
             )
@@ -297,7 +291,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientModule.setup(100, 2, current).apply {
+                FakeYouTubeClientModule.setup(100, 2).apply {
                     var page = 0
                     this.channel = { id, part ->
                         if (page == 0) {
@@ -329,7 +323,7 @@ class FetchYouTubeStreamUseCaseTest {
             setup = {
                 FakeYouTubeAccountModule.account = "account"
                 FakeDateTimeProviderModule.instant = current
-                fakeClient = FakeYouTubeClientModule.setup(10, 2, current)
+                fakeClient = FakeYouTubeClientModule.setup(10, 2)
                 server.setClient(fakeClient)
                 hiltRule.inject()
                 extendedSource.deleteAllTables()
@@ -347,7 +341,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.setup(100, 2, it) { i, c ->
+                    fakeClient.setup(100, 2) { i, c ->
                         video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
                     }
                 }
@@ -371,7 +365,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.setup(9, 2, it) { i, c ->
+                    fakeClient.setup(9, 2) { i, c ->
                         video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
                     }
                 }
@@ -394,7 +388,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.setup(10, 3, it) { i, c ->
+                    fakeClient.setup(10, 3) { i, c ->
                         video(
                             i,
                             c,
@@ -421,15 +415,13 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.setup(10, 3, it) { i, c ->
+                    fakeClient.setup(10, 3) { i, c ->
                         video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
                     }
                     val base = fakeClient.playlistItem!!
                     fakeClient.playlistItem = { id ->
                         if (id.value.contains("1")) {
-                            throw YouTubeException.notModified(
-                                cacheControl = CacheControl.create(it, null),
-                            )
+                            throw YouTubeException.notModified()
                         } else {
                             base.invoke(id)
                         }
@@ -458,7 +450,7 @@ class FetchYouTubeStreamUseCaseTest {
             setup = {
                 FakeYouTubeAccountModule.account = "account"
                 FakeDateTimeProviderModule.instant = current
-                fakeClient = FakeYouTubeClientModule.setup(150, 2, current)
+                fakeClient = FakeYouTubeClientModule.setup(150, 2)
                 server.setClient(fakeClient)
                 hiltRule.inject()
                 extendedSource.deleteAllTables()
@@ -477,7 +469,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.update(3, it) { i, c ->
+                    fakeClient.update(3) { i, c ->
                         video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
                     }
                 }
@@ -507,7 +499,7 @@ class FetchYouTubeStreamUseCaseTest {
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 50 }
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.update(3, it) { i, c ->
+                    fakeClient.update(3) { i, c ->
                         video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
                     }
                 }
@@ -537,7 +529,7 @@ class FetchYouTubeStreamUseCaseTest {
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.update(3, it) { i, c ->
+                    fakeClient.update(3) { i, c ->
                         video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
                     }
                 }
@@ -567,7 +559,7 @@ class FetchYouTubeStreamUseCaseTest {
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
             FakeDateTimeProviderModule.apply {
                 onTimeAdvanced = {
-                    fakeClient.update(3, it) { i, c ->
+                    fakeClient.update(3) { i, c ->
                         video(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
                     }
                 }
@@ -646,10 +638,9 @@ internal inline fun <reified T> Result<T>.shouldBeFailureOfYouTubeException(stat
 private fun FakeYouTubeClientModule.Companion.setup(
     subscriptionCount: Int,
     itemsPerPlaylist: Int,
-    current: Instant,
     videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo = ::video,
 ): FakeYouTubeClientImpl =
-    FakeYouTubeClientImpl().apply { setup(subscriptionCount, itemsPerPlaylist, current, videoFactory) }
+    FakeYouTubeClientImpl().apply { setup(subscriptionCount, itemsPerPlaylist, videoFactory) }
 
 internal fun video(
     id: Int,
@@ -672,20 +663,10 @@ internal fun video(
     override val viewerCount: BigInteger? = BigInteger.ONE
 }
 
-private fun playlistItem(
-    id: Int,
-    channelDetail: YouTubeChannelDetail,
-    videoId: YouTubeVideo.Id,
-): YouTubePlaylistItem = FakeYouTubeClient.playlistItem(
-    id = YouTubePlaylistItem.Id("playlistItem_${channelDetail.id.value}_$id"),
-    playlistId = channelDetail.uploadedPlayList!!,
-    videoId = videoId,
-)
-
 private class FakeYouTubeClientImpl(
     var subscription: ((String?) -> YouTubeResponseJson)? = null,
     var channel: ((Set<YouTubeChannel.Id>, Set<String>) -> List<ChannelItemJson>)? = null,
-    var playlistItem: ((YouTubePlaylist.Id) -> Updatable<List<YouTubePlaylistItem>>)? = null,
+    var playlistItem: ((YouTubePlaylist.Id) -> List<PlaylistItemJson>)? = null,
     var video: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
 ) : FakeYouTubeClient {
     val current: Instant? get() = FakeDateTimeProviderModule.instant
@@ -698,18 +679,16 @@ private class FakeYouTubeClientImpl(
         fun FakeYouTubeClientImpl.setup(
             subscriptionCount: Int,
             itemsPerPlaylist: Int,
-            current: Instant,
             videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo,
         ) {
-            logD { "setup:$subscriptionCount,$itemsPerPlaylist,$current,$videoFactory" }
+            logD { "setup:$subscriptionCount,$itemsPerPlaylist,$videoFactory" }
             channelDetail = (1..subscriptionCount).map { FakeYouTubeClient.channelDetail(id = it) }
                 .sortedBy { it.title.lowercase() }
-            update(itemsPerPlaylist, current, videoFactory)
+            update(itemsPerPlaylist, videoFactory)
         }
 
         fun FakeYouTubeClientImpl.update(
             itemsPerPlaylist: Int,
-            current: Instant,
             videoFactory: (Int, YouTubeChannelDetail) -> YouTubeVideo,
         ) {
             val chunked = channelDetail.chunked(50)
@@ -724,14 +703,21 @@ private class FakeYouTubeClientImpl(
                 val nextPageToken = subsTable.getOrNull(index + 1)?.first
                 subscriptionJson(pageToken = nextPageToken, items = sub)
             }
-            videos = channelDetail.flatMap { c ->
+            val v = channelDetail.flatMap { c ->
                 (1..itemsPerPlaylist).map { videoFactory(it, c) }
             }
+            val vTable = v.groupBy { it.channel.id }
+            videos = v
             val pi = channelDetail.associate { c ->
-                c.uploadedPlayList!! to videos.filter { it.channel.id.value == c.id.value }
-                    .mapIndexed { i, v -> playlistItem(i, c, v.id) }.toUpdatable(CacheControl.fromRemote(current))
+                val playlistId = c.uploadedPlayList!!
+                val vt = vTable[c.id]!!
+                playlistId to {
+                    vt.mapIndexed { i, v ->
+                        PlaylistItemJson("playlistItem_${c.id.value}_$i", playlistId, v.id.value)
+                    }
+                }
             }
-            playlistItem = { pi[it]!! }
+            playlistItem = { pi[it]!!() }
         }
     }
 
@@ -767,9 +753,9 @@ private class FakeYouTubeClientImpl(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): NetworkResponse<List<YouTubePlaylistItem>> {
+    ): List<PlaylistItemJson> {
         logD { "fetchPlaylistItems: $id, $maxResult" }
-        return NetworkResponse.create(playlistItem!!.invoke(id))
+        return playlistItem!!.invoke(id)
     }
 }
 
