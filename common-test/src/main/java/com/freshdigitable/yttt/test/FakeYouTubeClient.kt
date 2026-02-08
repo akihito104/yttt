@@ -397,24 +397,22 @@ private fun channelJson(items: List<ChannelItemJson>): YouTubeResponseJson = You
 
 class ChannelItemJson(
     override val id: YouTubeChannel.Id,
-    override val title: String = "channel_$id",
-    private val playlistId: String? = null,
+    override val title: String = "channel_${id.value}",
+    val playlistId: String? = null,
     val hasSnippet: Boolean,
     val hasContentDetail: Boolean,
 ) : Json(), YouTubeChannelTitle {
-    constructor(id: YouTubeChannel.Id, part: Set<String>) : this(
-        id = id,
-        hasSnippet = part.contains("snippet"),
-        hasContentDetail = part.contains("contentDetails"),
-    )
+    companion object {
+        fun createSnippet(id: YouTubeChannel.Id): ChannelItemJson =
+            ChannelItemJson(id = id, hasSnippet = true, hasContentDetail = false)
 
-    constructor(channel: YouTubeChannelDetail, part: Set<String>) : this(
-        id = channel.id,
-        title = channel.title,
-        playlistId = channel.uploadedPlayList!!.value,
-        hasSnippet = part.contains("snippet"),
-        hasContentDetail = part.contains("contentDetails"),
-    )
+        fun createRelatedPlaylist(idNum: Int): ChannelItemJson = ChannelItemJson(
+            id = YouTubeChannel.Id("channel_$idNum"),
+            playlistId = "playlist_channel_$idNum",
+            hasSnippet = false,
+            hasContentDetail = true,
+        )
+    }
 
     private val json: Json
         get() = Obj(

@@ -7,7 +7,7 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
+import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
@@ -631,13 +631,13 @@ internal inline fun <reified T> Result<T>.shouldBeFailureOfYouTubeException(stat
 private fun FakeYouTubeClientModule.Companion.setup(
     subscriptionCount: Int,
     itemsPerPlaylist: Int,
-    videoFactory: (Int, YouTubeChannelDetail) -> VideoJson = ::videoJson,
+    videoFactory: (Int, YouTubeChannelTitle) -> VideoJson = ::videoJson,
 ): FakeYouTubeClientImpl =
     FakeYouTubeClientImpl().apply { setup(subscriptionCount, itemsPerPlaylist, videoFactory) }
 
 internal fun videoJson(
     id: Int,
-    channel: YouTubeChannel,
+    channel: YouTubeChannelTitle,
     liveBroadcastContent: YouTubeVideo.BroadcastType = YouTubeVideo.BroadcastType.UPCOMING,
     scheduleStartDateTime: Instant = Instant.EPOCH,
     actualStartDateTime: Instant = Instant.EPOCH,
@@ -655,7 +655,7 @@ private class FakeYouTubeClientImpl(
     var playlistItem: ((YouTubePlaylist.Id) -> List<PlaylistItemJson>)? = null,
     var video: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
 ) : FakeYouTubeClient {
-    var channelDetail: List<YouTubeChannelDetail> = emptyList()
+    var channelDetail: List<ChannelItemJson> = emptyList()
     var videos: List<VideoJson> = emptyList()
     var subsTable: List<Pair<String?, List<SubscriptionItemJson>>> = emptyList()
         private set
@@ -664,17 +664,17 @@ private class FakeYouTubeClientImpl(
         fun FakeYouTubeClientImpl.setup(
             subscriptionCount: Int,
             itemsPerPlaylist: Int,
-            videoFactory: (Int, YouTubeChannelDetail) -> VideoJson,
+            videoFactory: (Int, YouTubeChannelTitle) -> VideoJson,
         ) {
             logD { "setup:$subscriptionCount,$itemsPerPlaylist,$videoFactory" }
-            channelDetail = (1..subscriptionCount).map { FakeYouTubeClient.channelDetail(id = it) }
+            channelDetail = (1..subscriptionCount).map { ChannelItemJson.createRelatedPlaylist(it) }
                 .sortedBy { it.title.lowercase() }
             update(itemsPerPlaylist, videoFactory)
         }
 
         fun FakeYouTubeClientImpl.update(
             itemsPerPlaylist: Int,
-            videoFactory: (Int, YouTubeChannelDetail) -> VideoJson,
+            videoFactory: (Int, YouTubeChannelTitle) -> VideoJson,
         ) {
             val chunked = channelDetail.chunked(50)
             subsTable = chunked.mapIndexed { i, c ->
@@ -694,15 +694,15 @@ private class FakeYouTubeClientImpl(
             val vTable = v.groupBy { it.channel.id }
             videos = v
             val pi = channelDetail.associate { c ->
-                val playlistId = c.uploadedPlayList!!
+                val playlistId = c.playlistId!!
                 val vt = vTable[c.id]!!
                 playlistId to {
                     vt.mapIndexed { i, v ->
-                        PlaylistItemJson("playlistItem_${c.id.value}_$i", playlistId, v.id.value)
+                        PlaylistItemJson("playlistItem_${c.id.value}_$i", YouTubePlaylist.Id(playlistId), v.id.value)
                     }
                 }
             }
-            playlistItem = { pi[it]!!() }
+            playlistItem = { pi[it.value]!!() }
         }
     }
 
@@ -713,7 +713,7 @@ private class FakeYouTubeClientImpl(
 
     val channelDefault: (Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson> = { (id, part) ->
         val table = channelDetail.associateBy { it.id }
-        id.mapNotNull { i -> table[i]?.let { ChannelItemJson(channel = it, part = part) } }
+        id.mapNotNull { i -> table[i] }
     }
 
     override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {

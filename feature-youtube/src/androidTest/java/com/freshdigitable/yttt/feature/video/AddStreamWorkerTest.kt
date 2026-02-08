@@ -8,12 +8,12 @@ import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.feature.timetable.videoJson
 import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
-import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.MockServerRule
@@ -78,20 +78,18 @@ class AddStreamWorkerTest {
     @Test
     fun validUrl_stateIsSucceeded() = testScope.runTest {
         // setup
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val channelDetail = ChannelItemJson.createSnippet(YouTubeChannel.Id("channel_1"))
         val video = videoJson(1, channelDetail)
         server.setClient(
             videoList = caller.wrap(expected = 1) { listOf(video) },
-            channelList = caller.wrap(expected = 1) { (ids, part) ->
-                val details = listOf(channelDetail)
-                check(details.map { it.id }.toSet() == ids)
-                details.map { ChannelItemJson(it, part) }
+            channelList = caller.wrap(expected = 1) { (ids, _) ->
+                check(setOf(channelDetail.id) == ids)
+                listOf(channelDetail)
             },
         )
         hiltRule.inject()
         initTestWorkManager()
-        val data =
-            AddStreamUseCase.Input.create("https://youtube.com/live/${video.id}".toUri())!!
+        val data = AddStreamUseCase.Input.create("https://youtube.com/live/${video.id}".toUri())!!
         val context = InstrumentationRegistry.getInstrumentation().context
         // exercise
         val actual = AddStreamWorker.enqueue(context, data)
@@ -108,14 +106,13 @@ class AddStreamWorkerTest {
     @Test
     fun validUrlForFreeChat_stateIsSucceeded() = testScope.runTest {
         // setup
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val channelDetail = ChannelItemJson.createSnippet(YouTubeChannel.Id("channel_1"))
         val video = videoJson(1, channelDetail)
         server.setClient(
             videoList = caller.wrap(expected = 1) { listOf(video) },
-            channelList = caller.wrap(expected = 1) { (ids, part) ->
-                val details = listOf(channelDetail)
-                check(details.map { it.id }.toSet() == ids)
-                details.map { ChannelItemJson(it, part) }
+            channelList = caller.wrap(expected = 1) { (ids, _) ->
+                check(setOf(channelDetail.id) == ids)
+                listOf(channelDetail)
             },
         )
         hiltRule.inject()

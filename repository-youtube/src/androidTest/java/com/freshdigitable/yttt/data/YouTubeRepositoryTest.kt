@@ -81,8 +81,8 @@ class YouTubeRepositoryTest {
                 )
                 listOf(video)
             },
-            channelList = recorder.wrap(expected = 1) { (id, part) ->
-                id.map { ChannelItemJson(id = it, part = part) }
+            channelList = recorder.wrap(expected = 1) { (id, _) ->
+                id.map { ChannelItemJson.createSnippet(id = it) }
             },
         )
         hiltRule.inject()
