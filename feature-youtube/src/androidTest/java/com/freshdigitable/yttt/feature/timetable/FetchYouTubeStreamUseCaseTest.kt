@@ -105,15 +105,13 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientImpl(
-                    subscription = { token ->
-                        if (token == null) {
-                            subscriptionJson(eTag = "empty_etag", pageToken = null, size = 0)
-                        } else {
-                            throw AssertionError()
-                        }
-                    },
-                ),
+                subscription = { token ->
+                    if (token == null) {
+                        subscriptionJson(eTag = "empty_etag", pageToken = null, size = 0)
+                    } else {
+                        throw AssertionError()
+                    }
+                },
             )
             hiltRule.inject()
             // exercise
@@ -131,9 +129,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                FakeYouTubeClientImpl(
-                    subscription = { _ -> throw YouTubeException.internalServerError() },
-                ),
+                subscription = { throw YouTubeException.internalServerError() },
             )
             hiltRule.inject()
             // exercise
@@ -176,7 +172,7 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
                 FakeYouTubeClientModule.setup(10, 2).apply {
-                    channel = { _, _ -> throw YouTubeException.internalServerError() }
+                    channel = { throw YouTubeException.internalServerError() }
                 },
             )
             hiltRule.inject()
@@ -290,10 +286,10 @@ class FetchYouTubeStreamUseCaseTest {
             server.setClient(
                 FakeYouTubeClientModule.setup(100, 2).apply {
                     var page = 0
-                    this.channel = { id, part ->
+                    this.channel = { (id, part) ->
                         if (page == 0) {
                             page++
-                            channelDefault(id, part)
+                            channelDefault(id to part)
                         } else {
                             throw YouTubeException.internalServerError()
                         }
@@ -655,7 +651,7 @@ internal fun videoJson(
 
 private class FakeYouTubeClientImpl(
     var subscription: ((String?) -> YouTubeResponseJson)? = null,
-    var channel: ((Set<YouTubeChannel.Id>, Set<String>) -> List<ChannelItemJson>)? = null,
+    var channel: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson>)? = null,
     var playlistItem: ((YouTubePlaylist.Id) -> List<PlaylistItemJson>)? = null,
     var video: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
 ) : FakeYouTubeClient {
@@ -715,7 +711,7 @@ private class FakeYouTubeClientImpl(
         return subscription!!.invoke(nextPageToken)
     }
 
-    val channelDefault: (Set<YouTubeChannel.Id>, Set<String>) -> List<ChannelItemJson> = { id, part ->
+    val channelDefault: (Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson> = { (id, part) ->
         val table = channelDetail.associateBy { it.id }
         id.mapNotNull { i -> table[i]?.let { ChannelItemJson(channel = it, part = part) } }
     }
@@ -723,7 +719,7 @@ private class FakeYouTubeClientImpl(
     override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {
         logD { "fetchChannels: $ids, $part" }
         val channel = this.channel ?: channelDefault
-        return channel(ids, part)
+        return channel(ids to part)
     }
 
     val videoDefault: (Set<YouTubeVideo.Id>) -> List<VideoJson> = { id ->

@@ -189,6 +189,32 @@ class MockServerRule : TestWatcher() {
         YouTubeModule.rootUrl = server.url("").toUrl().toString()
     }
 
+    fun setClient(
+        videoList: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
+        channelList: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson>)? = null,
+        playlist: ((Set<YouTubePlaylist.Id>) -> List<PlaylistJson>)? = null,
+        playlistItems: ((Pair<YouTubePlaylist.Id, String?>) -> List<PlaylistItemJson>)? = null,
+        subscription: ((String?) -> YouTubeResponseJson)? = null,
+    ) {
+        setClient(
+            object : FakeYouTubeClient {
+                override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> = videoList!!(ids)
+                override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> =
+                    channelList!!(ids to part)
+
+                override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<PlaylistJson> = playlist!!(ids)
+                override fun fetchPlaylistItems(
+                    id: YouTubePlaylist.Id,
+                    maxResult: Long,
+                    eTag: String?,
+                ): List<PlaylistItemJson> = playlistItems!!(id to eTag)
+
+                override fun fetchSubscription(nextPageToken: String?, order: String): YouTubeResponseJson =
+                    subscription!!(nextPageToken)
+            },
+        )
+    }
+
     fun setClient(client: FakeYouTubeClient) {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse = runCatching {
@@ -338,9 +364,7 @@ class VideoJson(
                 "channelId" to channel.id.value,
                 "title" to "title${id.value}",
                 "description" to "description",
-                "thumbnails" to Obj(
-                    "standard" to Obj("url" to "<url is here>", "width" to 480, "height" to 360),
-                ),
+                "thumbnails" to thumbnails,
                 "channelTitle" to channel.title,
                 "tags" to Arr(emptyList()),
                 "categoryId" to "categoryid${id.value}",
@@ -406,13 +430,7 @@ class ChannelItemJson(
             "description" to "description",
             "customUrl" to "",
             "publishedAt" to "1970-01-01T00:00:00Z",
-            "thumbnails" to Obj(
-                "medium" to Obj(
-                    "url" to "<url is here>",
-                    "width" to 240,
-                    "height" to 240,
-                ),
-            ),
+            "thumbnails" to icon,
             "defaultLanguage" to "ja",
             "localized" to Obj(
                 "title" to title,
@@ -448,13 +466,7 @@ class PlaylistJson(val id: String, val title: String = "playlist_$id") : Json() 
                 "channelId" to "channel_id",
                 "title" to title,
                 "description" to "description",
-                "thumbnails" to Obj(
-                    "standard" to Obj(
-                        "url" to "<url is here>",
-                        "width" to 480,
-                        "height" to 320,
-                    ),
-                ),
+                "thumbnails" to thumbnails,
                 "channelTitle" to "channeltitle",
                 "defaultLanguage" to "ja",
                 "localized" to Obj(
@@ -488,9 +500,9 @@ class PlaylistItemJson(
             "id" to id,
             "contentDetails" to Obj(
                 "videoId" to videoId,
-                "startAt" to "",
-                "endAt" to "",
-                "note" to "",
+                "startAt" to null,
+                "endAt" to null,
+                "note" to null,
                 "videoPublishedAt" to "$publishedAt",
             ),
         )
@@ -533,13 +545,7 @@ class SubscriptionItemJson(val id: String, val channelId: String, val channelTit
                     "channelId" to channelId,
                 ),
                 "channelId" to channelId,
-                "thumbnails" to Obj(
-                    "medium" to Obj(
-                        "url" to "<url is here>",
-                        "width" to 240,
-                        "height" to 240,
-                    ),
-                ),
+                "thumbnails" to icon,
             ),
         )
 
@@ -553,6 +559,21 @@ sealed class Json {
             reset()
             digest(toByteArray()).toHexString()
         }
+
+        val icon = Obj(
+            "medium" to Obj(
+                "url" to "<url is here>",
+                "width" to 240,
+                "height" to 240,
+            ),
+        )
+        val thumbnails = Obj(
+            "standard" to Obj(
+                "url" to "<url is here>",
+                "width" to 480,
+                "height" to 320,
+            ),
+        )
     }
 
     class Obj(val map: Map<String, Any>) : Json() {

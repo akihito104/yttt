@@ -8,11 +8,8 @@ import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
-import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.feature.timetable.videoJson
-import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
@@ -22,7 +19,6 @@ import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.freshdigitable.yttt.test.VideoJson
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -85,14 +81,12 @@ class AddStreamWorkerTest {
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         val video = videoJson(1, channelDetail)
         server.setClient(
-            FakeYouTubeClientImpl(
-                videoList = caller.wrap(expected = 1) { listOf(video) },
-                channelList = caller.wrap(expected = 1) { ids ->
-                    val details = listOf(channelDetail)
-                    check(details.map { it.id }.toSet() == ids)
-                    return@wrap { part -> details.map { ChannelItemJson(it, part) } }
-                },
-            ),
+            videoList = caller.wrap(expected = 1) { listOf(video) },
+            channelList = caller.wrap(expected = 1) { (ids, part) ->
+                val details = listOf(channelDetail)
+                check(details.map { it.id }.toSet() == ids)
+                details.map { ChannelItemJson(it, part) }
+            },
         )
         hiltRule.inject()
         initTestWorkManager()
@@ -117,14 +111,12 @@ class AddStreamWorkerTest {
         val channelDetail = FakeYouTubeClient.channelDetail(1)
         val video = videoJson(1, channelDetail)
         server.setClient(
-            FakeYouTubeClientImpl(
-                videoList = caller.wrap(expected = 1) { listOf(video) },
-                channelList = caller.wrap(expected = 1) { ids ->
-                    val details = listOf(channelDetail)
-                    check(details.map { it.id }.toSet() == ids)
-                    return@wrap { part -> details.map { ChannelItemJson(it, part) } }
-                },
-            ),
+            videoList = caller.wrap(expected = 1) { listOf(video) },
+            channelList = caller.wrap(expected = 1) { (ids, part) ->
+                val details = listOf(channelDetail)
+                check(details.map { it.id }.toSet() == ids)
+                details.map { ChannelItemJson(it, part) }
+            },
         )
         hiltRule.inject()
         initTestWorkManager()
@@ -147,21 +139,6 @@ class AddStreamWorkerTest {
             config,
             WorkManagerTestInitHelper.ExecutorsMode.PRESERVE_EXECUTORS,
         )
-    }
-}
-
-class FakeYouTubeClientImpl(
-    private val videoList: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
-    private val channelList: ((Set<YouTubeChannel.Id>) -> ((Set<String>) -> List<ChannelItemJson>))? = null,
-) : FakeYouTubeClient {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> {
-        logD { "fetchVideoList: $ids" }
-        return videoList!!.invoke(ids)
-    }
-
-    override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {
-        logD { "fetchChannels: $ids, $part" }
-        return channelList!!.invoke(ids)(part)
     }
 }
 
