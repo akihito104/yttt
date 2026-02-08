@@ -2,7 +2,6 @@ package com.freshdigitable.yttt.di
 
 import android.content.Context
 import android.content.Intent
-import androidx.annotation.VisibleForTesting
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.YouTubeSubscriptionPagerFactory
 import com.freshdigitable.yttt.data.model.DateTimeProvider
@@ -33,6 +32,7 @@ import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoMap
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import java.io.InputStream
 import javax.inject.Singleton
 
@@ -89,10 +89,9 @@ interface GoogleAccountModule {
     }
 }
 
-@VisibleForTesting
 @Module
 @InstallIn(SingletonComponent::class)
-interface YouTubeRemoteDataSourceModule {
+internal interface YouTubeRemoteDataSourceModule {
     companion object {
         @Provides
         @Singleton
@@ -118,44 +117,49 @@ internal class HttpTransportOkHttp(
     override fun buildRequest(
         method: String,
         url: String,
-    ): LowLevelHttpRequest {
-        val okHttp = this.okHttp
-        return object : LowLevelHttpRequest() {
-            private val requestBuilder = Request.Builder()
-                .url(url)
-                .method(method, null)
+    ): LowLevelHttpRequest = LowLevelHttpRequestImpl(method, url, this.okHttp)
 
-            override fun addHeader(name: String, value: String) {
-                requestBuilder.header(name, value)
+    private class LowLevelHttpRequestImpl(
+        method: String,
+        url: String,
+        private val okHttp: OkHttpClient,
+    ) : LowLevelHttpRequest() {
+        private val requestBuilder = Request.Builder()
+            .url(url)
+            .method(method, null)
+
+        override fun addHeader(name: String, value: String) {
+            requestBuilder.header(name, value)
+        }
+
+        override fun execute(): LowLevelHttpResponse {
+            val request = requestBuilder.build()
+            val response = okHttp.newCall(request).execute()
+            return LowLevelHttpResponseImpl(response)
+        }
+    }
+
+    private class LowLevelHttpResponseImpl(private val response: Response) : LowLevelHttpResponse() {
+        override fun getContent(): InputStream = response.body.byteStream()
+        override fun getContentEncoding(): String? = response.header("Content-Encoding")
+        override fun getContentLength(): Long = response.body.contentLength()
+        override fun getContentType(): String? = response.body.contentType()?.toString()
+        override fun getStatusLine(): String? {
+            val line = response.headers.value(0)
+            return if (line.startsWith("HTTP/1.")) {
+                line
+            } else {
+                null
             }
+        }
 
-            override fun execute(): LowLevelHttpResponse {
-                val request = requestBuilder.build()
-                val response = okHttp.newCall(request).execute()
-                return object : LowLevelHttpResponse() {
-                    override fun getContent(): InputStream = response.body.byteStream()
-                    override fun getContentEncoding(): String? = response.header("Content-Encoding")
-                    override fun getContentLength(): Long = response.body.contentLength()
-                    override fun getContentType(): String? = response.body.contentType()?.toString()
-                    override fun getStatusLine(): String? {
-                        val line = response.headers.value(0)
-                        return if (line.startsWith("HTTP/1.")) {
-                            line
-                        } else {
-                            null
-                        }
-                    }
-
-                    override fun getStatusCode(): Int = response.code
-                    override fun getReasonPhrase(): String = response.message
-                    override fun getHeaderCount(): Int = response.headers.size
-                    override fun getHeaderName(index: Int): String = response.headers.name(index)
-                    override fun getHeaderValue(index: Int): String = response.headers.value(index)
-                    override fun disconnect() {
-                        response.close()
-                    }
-                }
-            }
+        override fun getStatusCode(): Int = response.code
+        override fun getReasonPhrase(): String = response.message
+        override fun getHeaderCount(): Int = response.headers.size
+        override fun getHeaderName(index: Int): String = response.headers.name(index)
+        override fun getHeaderValue(index: Int): String = response.headers.value(index)
+        override fun disconnect() {
+            response.close()
         }
     }
 }
