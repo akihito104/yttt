@@ -38,4 +38,5 @@ dependencies {
         exclude(group = "org.apache.httpcomponents")
     }
     implementation("com.squareup.okhttp3:mockwebserver3:${libs.versions.okhttp.get()}")
+    implementation(libs.okhttp.logging.interceptor)
 }

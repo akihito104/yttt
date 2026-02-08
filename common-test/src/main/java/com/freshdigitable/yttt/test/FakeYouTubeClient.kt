@@ -13,6 +13,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.GoogleAccountModule
+import com.freshdigitable.yttt.di.OkHttpModule
 import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.test.FakeYouTubeClient.Companion.currentDate
 import com.freshdigitable.yttt.test.Json.Companion.sha1
@@ -26,6 +27,7 @@ import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.RecordedRequest
 import okhttp3.internal.closeQuietly
+import okhttp3.logging.HttpLoggingInterceptor
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.math.BigInteger
@@ -182,6 +184,7 @@ class MockServerRule : TestWatcher() {
 
     private val server = MockWebServer()
     override fun starting(description: Description) {
+        OkHttpModule.logLevel = HttpLoggingInterceptor.Level.NONE
         server.start()
         YouTubeModule.rootUrl = server.url("").toUrl().toString()
     }
