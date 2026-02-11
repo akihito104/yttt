@@ -193,12 +193,11 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
                 FakeYouTubeClientModule.setup(10, 2).apply {
-                    val base = playlistItem!!
                     playlistItem = { id ->
                         if (id.value.contains("1")) {
                             throw YouTubeException.internalServerError()
                         } else {
-                            base.invoke(id)
+                            defaultPlaylistItem(id)
                         }
                     }
                 },
@@ -217,12 +216,11 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
                 FakeYouTubeClientModule.setup(10, 2).apply {
-                    val base = playlistItem!!
                     playlistItem = { id ->
                         if (id.value.contains("1")) {
                             throw YouTubeException.notFound()
                         } else {
-                            base.invoke(id)
+                            defaultPlaylistItem(id)
                         }
                     }
                 },
@@ -245,7 +243,7 @@ class FetchYouTubeStreamUseCaseTest {
                         if (id.any { it.value.contains("1") }) {
                             throw YouTubeException.internalServerError()
                         } else {
-                            videoDefault.invoke(id)
+                            defaultVideo.invoke(id)
                         }
                     }
                 },
@@ -285,14 +283,9 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
                 FakeYouTubeClientModule.setup(100, 2).apply {
-                    var page = 0
-                    this.channel = { (id, part) ->
-                        if (page == 0) {
-                            page++
-                            channelDefault(id to part)
-                        } else {
-                            throw YouTubeException.internalServerError()
-                        }
+                    this.channel = {
+                        this.channel = { throw YouTubeException.internalServerError() }
+                        defaultChannel(it)
                     }
                 },
             )
@@ -398,12 +391,11 @@ class FetchYouTubeStreamUseCaseTest {
             fakeClient.setup(10, 3) { i, c ->
                 videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
-            val base = fakeClient.playlistItem!!
             fakeClient.playlistItem = { id ->
                 if (id.value.contains("1")) {
                     throw YouTubeException.notModified()
                 } else {
-                    base.invoke(id)
+                    fakeClient.defaultPlaylistItem(id)
                 }
             }
             // exercise
@@ -469,8 +461,8 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun firstPageIsNotModified() = testScope.runTest {
             // setup
-            fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 50 }
             FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 50 }
             fakeClient.update(3) { i, c ->
                 videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
@@ -495,8 +487,8 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun firstAndSecondPagesAreNotModified() = testScope.runTest {
             // setup
-            fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
             FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
             fakeClient.update(3) { i, c ->
                 videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
@@ -521,18 +513,16 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun failedToFetchLastPage_returnFailure() = testScope.runTest {
             // setup
-            fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
             FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
             fakeClient.update(3) { i, c ->
                 videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
-            val s = checkNotNull(fakeClient.subscription)
             fakeClient.subscription = { t ->
-                val index = fakeClient.subsTable.indexOfFirst { it.first == t }
-                if (index == fakeClient.subsTable.lastIndex) {
+                if (fakeClient.subsFactory.last().first == t) {
                     throw YouTubeException.internalServerError()
                 } else {
-                    s(t)
+                    fakeClient.defaultSubscription(t)
                 }
             }
             server.isLogging = true
@@ -624,8 +614,21 @@ private class FakeYouTubeClientImpl(
     var video: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
 ) : FakeYouTubeClient {
     var channelDetail: List<ChannelItemJson> = emptyList()
+        set(value) {
+            val v = value.sortedBy { it.title.lowercase() }
+            val chunked = v.chunked(50)
+            subsFactory = chunked.mapIndexed { i, c ->
+                val tokenKey = if (i == 0) null else "token$i"
+                val sub = c.map { SubscriptionItemJson("s_${it.id.value}", it.id.value, it.title) }
+                tokenKey to sub
+            }
+            field = v
+        }
+    var subsFactory: List<Pair<String?, List<SubscriptionItemJson>>> = emptyList()
+        private set
     var videos: List<VideoJson> = emptyList()
-    var subsTable: List<Pair<String?, List<SubscriptionItemJson>>> = emptyList()
+        private set
+    var playlistItemTable: Map<String, List<PlaylistItemJson>> = emptyMap()
         private set
 
     companion object {
@@ -636,7 +639,6 @@ private class FakeYouTubeClientImpl(
         ) {
             logD { "setup:$subscriptionCount,$itemsPerPlaylist,$videoFactory" }
             channelDetail = (1..subscriptionCount).map { ChannelItemJson.createRelatedPlaylist(it) }
-                .sortedBy { it.title.lowercase() }
             update(itemsPerPlaylist, videoFactory)
         }
 
@@ -644,53 +646,42 @@ private class FakeYouTubeClientImpl(
             itemsPerPlaylist: Int,
             videoFactory: (Int, YouTubeChannelTitle) -> VideoJson,
         ) {
-            val chunked = channelDetail.chunked(50)
-            subsTable = chunked.mapIndexed { i, c ->
-                val sub = c.map { SubscriptionItemJson("s_${it.id.value}", it.id.value, it.title) }
-                val tokenKey = if (i == 0) null else "token$i"
-                tokenKey to sub
-            }
-            subscription = { token ->
-                val index = subsTable.indexOfFirst { it.first == token }
-                val sub = subsTable[index].second
-                val nextPageToken = subsTable.getOrNull(index + 1)?.first
-                subscriptionJson(pageToken = nextPageToken, items = sub)
-            }
-            val v = channelDetail.flatMap { c ->
-                (1..itemsPerPlaylist).map { videoFactory(it, c) }
-            }
-            val vTable = v.groupBy { it.channel.id }
-            videos = v
-            val pi = channelDetail.associate { c ->
+            val vTable = channelDetail.associateWith { c -> (1..itemsPerPlaylist).map { videoFactory(it, c) } }
+            videos = vTable.values.flatten()
+            playlistItemTable = vTable.map { (c, vt) ->
                 val playlistId = c.playlistId!!
-                val vt = vTable[c.id]!!
-                playlistId to {
-                    vt.mapIndexed { i, v ->
-                        PlaylistItemJson("playlistItem_${c.id.value}_$i", YouTubePlaylist.Id(playlistId), v.id.value)
-                    }
+                playlistId to vt.mapIndexed { i, v ->
+                    PlaylistItemJson("playlistItem_${c.id.value}_$i", YouTubePlaylist.Id(playlistId), v.id.value)
                 }
-            }
-            playlistItem = { pi[it.value]!!() }
+            }.toMap()
         }
+    }
+
+    val defaultSubscription: (String?) -> YouTubeResponseJson = { token ->
+        val index = subsFactory.indexOfFirst { it.first == token }
+        val sub = subsFactory[index].second
+        val nextPageToken = subsFactory.getOrNull(index + 1)?.first
+        subscriptionJson(pageToken = nextPageToken, items = sub)
     }
 
     override fun fetchSubscription(nextPageToken: String?, order: String): YouTubeResponseJson {
         logD { "fetchSubscription: $nextPageToken, $order" }
-        return subscription!!.invoke(nextPageToken)
+        val fetcher = subscription ?: defaultSubscription
+        return fetcher(nextPageToken)
     }
 
-    val channelDefault: (Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson> = { (id, part) ->
+    val defaultChannel: (Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson> = { (id, part) ->
         val table = channelDetail.associateBy { it.id }
         id.mapNotNull { i -> table[i] }
     }
 
     override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {
         logD { "fetchChannels: $ids, $part" }
-        val channel = this.channel ?: channelDefault
-        return channel(ids to part)
+        val fetcher = this.channel ?: defaultChannel
+        return fetcher(ids to part)
     }
 
-    val videoDefault: (Set<YouTubeVideo.Id>) -> List<VideoJson> = { id ->
+    val defaultVideo: (Set<YouTubeVideo.Id>) -> List<VideoJson> = { id ->
         val v = videos.associateBy { it.id }
         id.mapNotNull { v[it] }
     }
@@ -698,8 +689,12 @@ private class FakeYouTubeClientImpl(
     override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> {
         logD { "fetchVideoList: $ids" }
         check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-        val video = this.video ?: videoDefault
-        return video(ids)
+        val fetcher = this.video ?: defaultVideo
+        return fetcher(ids)
+    }
+
+    val defaultPlaylistItem: (YouTubePlaylist.Id) -> List<PlaylistItemJson> = { id ->
+        playlistItemTable[id.value]!!
     }
 
     override fun fetchPlaylistItems(
@@ -708,7 +703,8 @@ private class FakeYouTubeClientImpl(
         eTag: String?,
     ): List<PlaylistItemJson> {
         logD { "fetchPlaylistItems: $id, $maxResult" }
-        return playlistItem!!.invoke(id)
+        val fetcher = playlistItem ?: defaultPlaylistItem
+        return fetcher(id)
     }
 }
 
