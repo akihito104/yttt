@@ -332,13 +332,9 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun videoFromNewPlaylistItem_has1Subscription_fetch2PagesOfSubscription_returns200Videos() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = {
-                    fakeClient.setup(100, 2) { i, c ->
-                        videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
-                    }
-                }
-                instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.setup(100, 2) { i, c ->
+                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
             // exercise
             val actual = sut.invoke()
@@ -356,13 +352,9 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun subscriptionIsRemoved_returns18VideosAnd9Subscriptions() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = {
-                    fakeClient.setup(9, 2) { i, c ->
-                        videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
-                    }
-                }
-                instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.setup(9, 2) { i, c ->
+                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
             // exercise
             val actual = sut.invoke()
@@ -379,18 +371,14 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun videoFromNewPlaylistItem_update10Subscription() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = {
-                    fakeClient.setup(10, 3) { i, c ->
-                        videoJson(
-                            i,
-                            c,
-                            YouTubeVideo.BroadcastType.LIVE,
-                            actualStartDateTime = current - Duration.ofHours(2),
-                        )
-                    }
-                }
-                instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.setup(10, 3) { i, c ->
+                videoJson(
+                    i,
+                    c,
+                    YouTubeVideo.BroadcastType.LIVE,
+                    actualStartDateTime = current - Duration.ofHours(2),
+                )
             }
             // exercise
             val actual = sut.invoke()
@@ -406,21 +394,17 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun playlistItemIsNotModified_returnAsSuccess() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = {
-                    fakeClient.setup(10, 3) { i, c ->
-                        videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
-                    }
-                    val base = fakeClient.playlistItem!!
-                    fakeClient.playlistItem = { id ->
-                        if (id.value.contains("1")) {
-                            throw YouTubeException.notModified()
-                        } else {
-                            base.invoke(id)
-                        }
-                    }
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.setup(10, 3) { i, c ->
+                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+            }
+            val base = fakeClient.playlistItem!!
+            fakeClient.playlistItem = { id ->
+                if (id.value.contains("1")) {
+                    throw YouTubeException.notModified()
+                } else {
+                    base.invoke(id)
                 }
-                instant = current + Duration.ofHours(3)
             }
             // exercise
             val actual = sut.invoke()
@@ -460,13 +444,9 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun allPageIsNotModified() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = {
-                    fakeClient.update(3) { i, c ->
-                        videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
-                    }
-                }
-                instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.update(3) { i, c ->
+                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
             server.isLogging = true
             // exercise
@@ -490,13 +470,9 @@ class FetchYouTubeStreamUseCaseTest {
         fun firstPageIsNotModified() = testScope.runTest {
             // setup
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 50 }
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = {
-                    fakeClient.update(3) { i, c ->
-                        videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
-                    }
-                }
-                instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.update(3) { i, c ->
+                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
             server.isLogging = true
             // exercise
@@ -520,13 +496,9 @@ class FetchYouTubeStreamUseCaseTest {
         fun firstAndSecondPagesAreNotModified() = testScope.runTest {
             // setup
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = {
-                    fakeClient.update(3) { i, c ->
-                        videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
-                    }
-                }
-                instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.update(3) { i, c ->
+                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
             server.isLogging = true
             // exercise
@@ -550,13 +522,9 @@ class FetchYouTubeStreamUseCaseTest {
         fun failedToFetchLastPage_returnFailure() = testScope.runTest {
             // setup
             fakeClient.channelDetail = fakeClient.channelDetail.filterIndexed { i, _ -> i != 100 }
-            FakeDateTimeProviderModule.apply {
-                onTimeAdvanced = {
-                    fakeClient.update(3) { i, c ->
-                        videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
-                    }
-                }
-                instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            fakeClient.update(3) { i, c ->
+                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
             }
             val s = checkNotNull(fakeClient.subscription)
             fakeClient.subscription = { t ->
