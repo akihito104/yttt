@@ -219,7 +219,7 @@ class YouTubeRepositoryTest {
                 ids.map { PlaylistJson(it.value) }
             },
             playlistItems = recorder.wrap(expected = 1) { (ids, _) ->
-                listOf(PlaylistItemJson("0", ids))
+                listOf(PlaylistItemJson("0", ids.value))
             },
         )
         hiltRule.inject()

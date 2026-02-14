@@ -619,7 +619,7 @@ private class FakeYouTubeClientImpl(
             val chunked = v.chunked(50)
             subsFactory = chunked.mapIndexed { i, c ->
                 val tokenKey = if (i == 0) null else "token$i"
-                val sub = c.map { SubscriptionItemJson("s_${it.id.value}", it.id.value, it.title) }
+                val sub = c.map { createSubscriptionJson(it) }
                 tokenKey to sub
             }
             field = v
@@ -632,6 +632,18 @@ private class FakeYouTubeClientImpl(
         private set
 
     companion object {
+        private val subsTable = mutableMapOf<YouTubeChannel.Id, SubscriptionItemJson>()
+        private fun createSubscriptionJson(c: ChannelItemJson): SubscriptionItemJson =
+            subsTable[c.id] ?: SubscriptionItemJson("s_${c.id.value}", c.id.value, c.title)
+                .also { subsTable[c.id] = it }
+
+        private val playlistItemTable = mutableMapOf<String, PlaylistItemJson>()
+        private fun createPlaylistItemJson(v: VideoJson, i: Int, playlistId: String): PlaylistItemJson {
+            val id = "playlistItem_${v.id.value}_$i"
+            return playlistItemTable[id] ?: PlaylistItemJson(id, playlistId, v.id.value)
+                .also { playlistItemTable[id] = it }
+        }
+
         fun FakeYouTubeClientImpl.setup(
             subscriptionCount: Int,
             itemsPerPlaylist: Int,
@@ -650,9 +662,7 @@ private class FakeYouTubeClientImpl(
             videos = vTable.values.flatten()
             playlistItemTable = vTable.map { (c, vt) ->
                 val playlistId = c.playlistId!!
-                playlistId to vt.mapIndexed { i, v ->
-                    PlaylistItemJson("playlistItem_${c.id.value}_$i", YouTubePlaylist.Id(playlistId), v.id.value)
-                }
+                playlistId to vt.mapIndexed { i, v -> createPlaylistItemJson(v, i, playlistId) }
             }.toMap()
         }
     }

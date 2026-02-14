@@ -15,7 +15,6 @@ import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.GoogleAccountModule
 import com.freshdigitable.yttt.di.OkHttpModule
 import com.freshdigitable.yttt.di.YouTubeModule
-import com.freshdigitable.yttt.test.FakeYouTubeClient.Companion.currentDate
 import com.freshdigitable.yttt.test.Json.Companion.sha1
 import com.google.api.client.http.HttpRequestInitializer
 import dagger.Module
@@ -77,10 +76,6 @@ interface FakeYouTubeClient {
     fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> = throw NotImplementedError()
 
     companion object {
-        val currentDate: String
-            get() = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZoneId.of("GMT"))
-                .format(FakeDateTimeProviderModule.instant)
-
         fun channelTitle(id: Int = 1): YouTubeChannelTitle = object : YouTubeChannelTitle {
             override val id: YouTubeChannel.Id get() = YouTubeChannel.Id("channel_$id")
             override val title: String get() = "channel_$id"
@@ -180,6 +175,10 @@ fun YouTubeException.Companion.internalServerError(
 class MockServerRule : TestWatcher() {
     companion object {
         const val PATH_SUBSCRIPTION = "/youtube/v3/subscriptions"
+        private val ZONE_ID_GMT: ZoneId = ZoneId.of("GMT")
+        private val currentDate: String
+            get() = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZONE_ID_GMT)
+                .format(FakeDateTimeProviderModule.instant)
     }
 
     private val server = MockWebServer()
@@ -487,25 +486,23 @@ private fun playlistItemJson(items: List<PlaylistItemJson>): Json = YouTubeRespo
 
 class PlaylistItemJson(
     val id: String,
-    val playlistId: YouTubePlaylist.Id,
-    val videoId: String = "video_${id}_${playlistId.value}",
-    val publishedAt: Instant = Instant.EPOCH,
+    val playlistId: String,
+    val videoId: String = "video_${id}_$playlistId",
 ) : Json() {
-    private val json: Json
-        get() = Obj(
-            "kind" to "youtube#playlistItem",
-            "etag" to "etag",
-            "id" to id,
-            "contentDetails" to Obj(
-                "videoId" to videoId,
-                "startAt" to null,
-                "endAt" to null,
-                "note" to null,
-                "videoPublishedAt" to "$publishedAt",
-            ),
-        )
+    private val json: String = Obj(
+        "kind" to "youtube#playlistItem",
+        "etag" to "etag",
+        "id" to id,
+        "contentDetails" to Obj(
+            "videoId" to videoId,
+            "startAt" to null,
+            "endAt" to null,
+            "note" to null,
+            "videoPublishedAt" to "1970-01-01T00:00:00.000Z",
+        ),
+    ).toString()
 
-    override fun toString(): String = json.toString()
+    override fun toString(): String = json
 }
 
 fun subscriptionJson(
