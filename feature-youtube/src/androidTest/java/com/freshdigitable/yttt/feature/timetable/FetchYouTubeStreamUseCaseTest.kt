@@ -9,6 +9,7 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery.Order
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.LiveDataPagingSource
@@ -105,7 +106,8 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                subscription = { token ->
+                subscription = { token, order ->
+                    check(order == Order.ALPHABETICAL)
                     if (token == null) {
                         subscriptionJson(eTag = "empty_etag", pageToken = null, size = 0)
                     } else {
@@ -129,7 +131,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                subscription = { throw YouTubeException.internalServerError() },
+                subscription = { _, _ -> throw YouTubeException.internalServerError() },
             )
             hiltRule.inject()
             // exercise
@@ -544,7 +546,7 @@ class FetchYouTubeStreamUseCaseTest {
         }
     }
 
-    abstract class Base() {
+    abstract class Base {
         @get:Rule(order = 0)
         val hiltRule = HiltAndroidRule(this)
 
@@ -674,8 +676,9 @@ private class FakeYouTubeClientImpl(
         subscriptionJson(pageToken = nextPageToken, items = sub)
     }
 
-    override fun fetchSubscription(nextPageToken: String?, order: String): YouTubeResponseJson {
+    override fun fetchSubscription(nextPageToken: String?, order: Order): YouTubeResponseJson {
         logD { "fetchSubscription: $nextPageToken, $order" }
+        check(order == Order.ALPHABETICAL)
         val fetcher = subscription ?: defaultSubscription
         return fetcher(nextPageToken)
     }

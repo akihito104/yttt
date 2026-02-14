@@ -23,8 +23,11 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeChannelTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import com.freshdigitable.yttt.data.source.local.fixture.YouTubeDatabaseTestRule
 import com.freshdigitable.yttt.data.source.local.fixture.findAllArchivedVideos
-import com.freshdigitable.yttt.test.FakeYouTubeClient
+import com.freshdigitable.yttt.test.channelDetail
 import com.freshdigitable.yttt.test.fromRemote
+import com.freshdigitable.yttt.test.playlist
+import com.freshdigitable.yttt.test.playlistItem
+import com.freshdigitable.yttt.test.playlistItemDetail
 import io.kotest.assertions.asClue
 import io.kotest.assertions.assertSoftly
 import io.kotest.inspectors.forAll
@@ -111,7 +114,7 @@ class YouTubeLocalDataSourceTest {
             // setup
             val id = YouTubePlaylist.Id("test")
             val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(id),
+                playlist = updatablePlaylist(id),
                 items = emptyList<YouTubePlaylistItemDetail>()
                     .toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
             )
@@ -126,7 +129,7 @@ class YouTubeLocalDataSourceTest {
         val videoId = YouTubeVideo.Id("video")
         private val channel = channelTable()
         val items = listOf(
-            FakeYouTubeClient.playlistItemDetail(
+            playlistItemDetail(
                 id = YouTubePlaylistItem.Id("playlist"),
                 playlistId = playlistId,
                 videoId = videoId,
@@ -135,7 +138,7 @@ class YouTubeLocalDataSourceTest {
         )
         val channels = items.map { (it.channel as YouTubeChannel) }.distinctBy { it.id }
         val updatable = YouTubePlaylistWithItem.newPlaylist(
-            playlist = playlist(playlistId),
+            playlist = updatablePlaylist(playlistId),
             items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
         )
 
@@ -175,9 +178,9 @@ class YouTubeLocalDataSourceTest {
             extendedSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
             // exercise
             val u = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = updatablePlaylist(playlistId),
                 items = listOf(
-                    FakeYouTubeClient.playlistItemDetail(
+                    playlistItemDetail(
                         id = YouTubePlaylistItem.Id("playlist_1"),
                         playlistId = playlistId,
                         channel = channelTable(),
@@ -197,7 +200,7 @@ class YouTubeLocalDataSourceTest {
         private val empty = YouTubePlaylist.Id("empty")
         private val items = mapOf(
             simple to listOf(
-                FakeYouTubeClient.playlistItem(
+                playlistItem(
                     id = YouTubePlaylistItem.Id("playlist"),
                     playlistId = simple,
                     videoId = YouTubeVideo.Id("video"),
@@ -207,7 +210,7 @@ class YouTubeLocalDataSourceTest {
             empty to emptyList(),
         ).map { (playlistId, items) ->
             playlistId to YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = updatablePlaylist(playlistId),
                 items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
             )
         }.toMap()
@@ -242,7 +245,7 @@ class YouTubeLocalDataSourceTest {
         fun simple_addNewItems_returns2Items() = rule.runWithScope {
             // setup
             val newItems = listOf(
-                FakeYouTubeClient.playlistItemDetail(
+                playlistItemDetail(
                     id = YouTubePlaylistItem.Id("item2"),
                     playlistId = simple,
                     videoId = YouTubeVideo.Id("video_item2"),
@@ -291,7 +294,7 @@ class YouTubeLocalDataSourceTest {
         fun setup() = rule.runWithScope {
             val playlistId = YouTubePlaylist.Id("playlist")
             val items = videosInPlaylist.map {
-                FakeYouTubeClient.playlistItemDetail(
+                playlistItemDetail(
                     id = YouTubePlaylistItem.Id(it.item.id.value),
                     playlistId = playlistId,
                     videoId = it.item.id,
@@ -299,7 +302,7 @@ class YouTubeLocalDataSourceTest {
                 )
             }
             val updatable = YouTubePlaylistWithItem.newPlaylist(
-                playlist = playlist(playlistId),
+                playlist = updatablePlaylist(playlistId),
                 items = items.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
             )
             extendedSource.updatePlaylistWithItems(updatable.item, updatable.cacheControl)
@@ -348,7 +351,7 @@ class YouTubeLocalDataSourceTest {
     }
 
     class WhenSubscriptionIsRemoved : Base() {
-        private val allDomainChannels = (1..3).map { FakeYouTubeClient.channelDetail(it) }
+        private val allDomainChannels = (1..3).map { channelDetail(it) }
         private val subscriptions = allDomainChannels.mapIndexed { i, ch ->
             object :
                 YouTubeSubscriptionRelevanceOrdered,
@@ -379,7 +382,7 @@ class YouTubeLocalDataSourceTest {
                 }
                 val uploadPlaylistId = YouTubePlaylist.Id("pl_${domainChannel.id.value}")
                 val playlistItems = videosForThisChannel.mapIndexed { _, ytVideo ->
-                    FakeYouTubeClient.playlistItemDetail(
+                    playlistItemDetail(
                         id = YouTubePlaylistItem.Id("pi_${uploadPlaylistId.value}_${ytVideo.item.id.value}"),
                         playlistId = uploadPlaylistId,
                         channel = domainChannel,
@@ -387,7 +390,7 @@ class YouTubeLocalDataSourceTest {
                     )
                 }
                 val playlistWithItems = YouTubePlaylistWithItem.newPlaylist(
-                    playlist = playlist(uploadPlaylistId),
+                    playlist = updatablePlaylist(uploadPlaylistId),
                     items = playlistItems.toUpdatable(),
                 )
 
@@ -647,11 +650,10 @@ private fun channelTable(
     iconUrl: String = "",
 ): YouTubeChannelTable = YouTubeChannelTable(id, title, iconUrl)
 
-private fun playlist(
+private fun updatablePlaylist(
     playlistId: YouTubePlaylist.Id,
     fetchedAt: Instant = Instant.EPOCH,
-): Updatable<YouTubePlaylist> = FakeYouTubeClient.playlist(playlistId)
-    .toUpdatable(cacheControl = CacheControl.fromRemote(fetchedAt))
+): Updatable<YouTubePlaylist> = playlist(playlistId).toUpdatable(cacheControl = CacheControl.fromRemote(fetchedAt))
 
 private fun subscription(
     id: String,

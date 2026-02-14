@@ -4,11 +4,9 @@ import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
 import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
-import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
+import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
@@ -29,7 +27,6 @@ import okhttp3.internal.closeQuietly
 import okhttp3.logging.HttpLoggingInterceptor
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
-import java.math.BigInteger
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
@@ -59,7 +56,7 @@ interface FakeYouTubeClientModule {
 }
 
 interface FakeYouTubeClient {
-    fun fetchSubscription(nextPageToken: String? = null, order: String): YouTubeResponseJson =
+    fun fetchSubscription(nextPageToken: String? = null, order: YouTubeSubscriptionQuery.Order): YouTubeResponseJson =
         throw NotImplementedError()
 
     fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> =
@@ -74,88 +71,10 @@ interface FakeYouTubeClient {
     ): List<PlaylistItemJson> = throw NotImplementedError()
 
     fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> = throw NotImplementedError()
-
-    companion object {
-        fun channelTitle(id: Int = 1): YouTubeChannelTitle = object : YouTubeChannelTitle {
-            override val id: YouTubeChannel.Id get() = YouTubeChannel.Id("channel_$id")
-            override val title: String get() = "channel_$id"
-        }
-
-        fun channelDetail(
-            id: Int = 1,
-            idValue: String = "channel_$id",
-        ): YouTubeChannelDetail = object : YouTubeChannelDetail {
-            override val id: YouTubeChannel.Id get() = YouTubeChannel.Id(idValue)
-            override val uploadedPlayList: YouTubePlaylist.Id
-                get() = YouTubePlaylist.Id("playlist_${this.id.value}")
-            override val title: String get() = "channel_$idValue"
-            override val iconUrl: String get() = "<url is here>"
-            override val bannerUrl: String get() = ""
-            override val subscriberCount: BigInteger get() = BigInteger.ONE
-            override val isSubscriberHidden: Boolean get() = false
-            override val videoCount: BigInteger get() = BigInteger.ONE
-            override val viewsCount: BigInteger get() = BigInteger.ONE
-            override val publishedAt: Instant get() = Instant.EPOCH
-            override val customUrl: String get() = ""
-            override val keywords: Collection<String> get() = emptyList()
-            override val description: String get() = ""
-        }
-
-        fun playlist(id: YouTubePlaylist.Id): YouTubePlaylist = object : YouTubePlaylist {
-            override val id: YouTubePlaylist.Id get() = id
-            override val title: String get() = "playlist_${id.value}"
-            override val thumbnailUrl: String get() = ""
-        }
-
-        fun playlistItem(
-            id: YouTubePlaylistItem.Id,
-            playlistId: YouTubePlaylist.Id,
-            videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id.value}_${playlistId.value}"),
-            publishedAt: Instant = Instant.EPOCH,
-        ): YouTubePlaylistItem = object : YouTubePlaylistItem {
-            override val id: YouTubePlaylistItem.Id get() = id
-            override val playlistId: YouTubePlaylist.Id get() = playlistId
-            override val videoId: YouTubeVideo.Id get() = videoId
-            override val publishedAt: Instant get() = publishedAt
-        }
-
-        fun playlistItemDetail(
-            id: YouTubePlaylistItem.Id,
-            playlistId: YouTubePlaylist.Id,
-            channel: YouTubeChannelTitle = object : YouTubeChannelTitle {
-                override val id: YouTubeChannel.Id get() = YouTubeChannel.Id("channel_0")
-                override val title: String get() = "Channel"
-            },
-            videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id.value}_${playlistId.value}"),
-            publishedAt: Instant = Instant.EPOCH,
-        ): YouTubePlaylistItemDetail = YouTubePlaylistItemDetailEntity(
-            id = id,
-            playlistId = playlistId,
-            title = "title",
-            channel = channel,
-            thumbnailUrl = "",
-            videoId = videoId,
-            description = "",
-            videoOwnerChannelId = null,
-            publishedAt = publishedAt,
-        )
-    }
 }
 
 fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
     CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
-
-private data class YouTubePlaylistItemDetailEntity(
-    override val id: YouTubePlaylistItem.Id,
-    override val playlistId: YouTubePlaylist.Id,
-    override val title: String,
-    override val channel: YouTubeChannelTitle,
-    override val thumbnailUrl: String,
-    override val videoId: YouTubeVideo.Id,
-    override val description: String,
-    override val videoOwnerChannelId: YouTubeChannel.Id?,
-    override val publishedAt: Instant,
-) : YouTubePlaylistItemDetail
 
 fun YouTubeException.Companion.notModified(
     throwable: Throwable? = null,
@@ -193,7 +112,7 @@ class MockServerRule : TestWatcher() {
         channelList: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson>)? = null,
         playlist: ((Set<YouTubePlaylist.Id>) -> List<PlaylistJson>)? = null,
         playlistItems: ((Pair<YouTubePlaylist.Id, String?>) -> List<PlaylistItemJson>)? = null,
-        subscription: ((String?) -> YouTubeResponseJson)? = null,
+        subscription: ((String?, YouTubeSubscriptionQuery.Order) -> YouTubeResponseJson)? = null,
     ) {
         setClient(
             object : FakeYouTubeClient {
@@ -208,8 +127,10 @@ class MockServerRule : TestWatcher() {
                     eTag: String?,
                 ): List<PlaylistItemJson> = playlistItems!!(id to eTag)
 
-                override fun fetchSubscription(nextPageToken: String?, order: String): YouTubeResponseJson =
-                    subscription!!(nextPageToken)
+                override fun fetchSubscription(
+                    nextPageToken: String?,
+                    order: YouTubeSubscriptionQuery.Order,
+                ): YouTubeResponseJson = subscription!!(nextPageToken, order)
             },
         )
     }
@@ -252,7 +173,8 @@ class MockServerRule : TestWatcher() {
                         val eTag = request.headers["If-None-Match"]
                         val pageToken = request.url.queryParameter("pageToken")
                         val order = requireNotNull(request.url.queryParameter("order"))
-                        val res = client.fetchSubscription(nextPageToken = pageToken, order = order)
+                        val o = YouTubeSubscriptionQuery.Order.valueOf(order.uppercase())
+                        val res = client.fetchSubscription(nextPageToken = pageToken, order = o)
                         if (res.eTag == eTag) {
                             throw YouTubeException.notModified()
                         } else {
@@ -325,7 +247,8 @@ private fun videoJson(items: List<VideoJson>): Json = YouTubeResponseJson(
 
 class VideoJson(
     val id: YouTubeVideo.Id,
-    val channel: YouTubeChannelTitle,
+    val channelId: YouTubeChannel.Id,
+    val channelTitle: String,
     val liveBroadcastContent: YouTubeVideo.BroadcastType = YouTubeVideo.BroadcastType.UPCOMING,
     val scheduledStartDateTime: Instant? = null,
     val actualStartDateTime: Instant? = null,
@@ -333,7 +256,8 @@ class VideoJson(
 ) : Json() {
     constructor(video: YouTubeVideo) : this(
         video.id,
-        video.channel,
+        video.channel.id,
+        video.channel.title,
         video.liveBroadcastContent,
         video.scheduledStartDateTime,
         video.actualStartDateTime,
@@ -349,7 +273,7 @@ class VideoJson(
         actualEndDateTime: Instant? = null,
     ) : this(
         YouTubeVideo.Id("${channel.id.value}-video_$idNum"),
-        channel, liveBroadcastContent,
+        channel.id, channel.title, liveBroadcastContent,
         scheduledStartDateTime, actualStartDateTime, actualEndDateTime,
     )
 
@@ -360,11 +284,11 @@ class VideoJson(
             "id" to id.value,
             "snippet" to Obj(
                 "publishedAt" to null,
-                "channelId" to channel.id.value,
+                "channelId" to channelId.value,
                 "title" to "title${id.value}",
                 "description" to "description",
                 "thumbnails" to thumbnails,
-                "channelTitle" to channel.title,
+                "channelTitle" to channelTitle,
                 "tags" to Arr(emptyList()),
                 "categoryId" to "categoryid${id.value}",
                 "liveBroadcastContent" to liveBroadcastContent.name.lowercase(),

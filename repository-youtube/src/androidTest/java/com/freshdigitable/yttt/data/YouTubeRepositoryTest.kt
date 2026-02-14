@@ -15,7 +15,6 @@ import com.freshdigitable.yttt.data.source.remote.YouTubeVideoRemote
 import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
-import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.MockServerRule
@@ -24,10 +23,13 @@ import com.freshdigitable.yttt.test.PlaylistJson
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.VideoJson
+import com.freshdigitable.yttt.test.channelDetail
 import com.freshdigitable.yttt.test.fromRemote
 import com.freshdigitable.yttt.test.internalServerError
 import com.freshdigitable.yttt.test.notFound
 import com.freshdigitable.yttt.test.notModified
+import com.freshdigitable.yttt.test.playlist
+import com.freshdigitable.yttt.test.playlistItem
 import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.model.Thumbnail
 import com.google.api.services.youtube.model.ThumbnailDetails
@@ -71,18 +73,19 @@ class YouTubeRepositoryTest {
     fun fetchVideoList_itemFromRemoteHasIconUrl() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = Instant.EPOCH
-        val channelDetail = FakeYouTubeClient.channelTitle(1)
+        val channel = ChannelItemJson.createSnippet(id = YouTubeChannel.Id("channel_1"))
         server.setClient(
             videoList = recorder.wrap(expected = 1) {
                 val video = VideoJson(
                     idNum = 1,
-                    channel = channelDetail,
+                    channel = channel,
                     scheduledStartDateTime = Instant.parse("2022-01-01T00:00:00Z"),
                 )
                 listOf(video)
             },
             channelList = recorder.wrap(expected = 1) { (id, _) ->
-                id.map { ChannelItemJson.createSnippet(id = it) }
+                check(setOf(channel.id) == id)
+                listOf(channel)
             },
         )
         hiltRule.inject()
@@ -107,7 +110,7 @@ class YouTubeRepositoryTest {
     fun fetchVideoList_itemFromCacheHasIconUrl() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(999)
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val channelDetail = channelDetail(1)
         val video = video(1, channelDetail)
         hiltRule.inject()
         localSource.addChannelDetailList(
@@ -136,7 +139,7 @@ class YouTubeRepositoryTest {
     fun fetchVideoList_videoFromRemoteAndChannelFromCache() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val channelDetail = channelDetail(1)
         server.setClient(
             videoList = recorder.wrap(expected = 1) {
                 val video = VideoJson(1, channelDetail, scheduledStartDateTime = Instant.parse("2022-01-01T00:00:00Z"))
@@ -163,15 +166,18 @@ class YouTubeRepositoryTest {
     fun fetchVideoList_videoFromRemoteAndChannelGetsException_returnsFailure() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
-        val channelDetail = FakeYouTubeClient.channelTitle(1)
+        val channel = YouTubeChannel.Id("channel_1")
+        val videoId = YouTubeVideo.Id("${channel.value}_video_1")
         server.setClient(
-            videoList = recorder.wrap(expected = 1) { listOf(VideoJson(1, channelDetail)) },
+            videoList = recorder.wrap(expected = 1) {
+                listOf(VideoJson(videoId, channel, "title_${channel.value}"))
+            },
             channelList = recorder.wrap(expected = 1) { throw YouTubeException.internalServerError() },
         )
         hiltRule.inject()
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1) + Duration.ofDays(1)
         // exercise
-        val actual = sut.fetchVideoList(setOf(YouTubeVideo.Id("1")))
+        val actual = sut.fetchVideoList(setOf(videoId))
         // verify
         actual shouldBeFailure {
             it.shouldBeInstanceOf<YouTubeException>()
@@ -182,7 +188,7 @@ class YouTubeRepositoryTest {
     fun fetchVideoList_updatedItemHasIconUrl() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
+        val channelDetail = channelDetail(1)
         val video = video(1, channelDetail)
         server.setClient(
             videoList = recorder.wrap(expected = 1) { listOf(VideoJson(video)) },
@@ -261,12 +267,12 @@ class YouTubeRepositoryTest {
         )
         hiltRule.inject()
         val playlistId = YouTubePlaylist.Id("0")
-        val channel = FakeYouTubeClient.channelDetail(1)
+        val channel = channelDetail(1)
         localSource.addChannelDetailList(listOf(channel.toUpdatable()))
-        val item = FakeYouTubeClient.playlistItem(YouTubePlaylistItem.Id("0"), playlistId)
+        val item = playlistItem(YouTubePlaylistItem.Id("0"), playlistId)
         extendedSource.updatePlaylistWithItems(
             object : YouTubePlaylistWithItems {
-                override val playlist: YouTubePlaylist get() = FakeYouTubeClient.playlist(playlistId)
+                override val playlist: YouTubePlaylist get() = playlist(playlistId)
                 override val items: List<YouTubePlaylistItem> get() = listOf(item)
                 override val eTag: String get() = "valid_eTag"
             },
