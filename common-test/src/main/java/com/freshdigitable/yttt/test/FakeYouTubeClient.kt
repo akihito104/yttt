@@ -13,7 +13,9 @@ import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.GoogleAccountModule
 import com.freshdigitable.yttt.di.OkHttpModule
 import com.freshdigitable.yttt.di.YouTubeModule
+import com.freshdigitable.yttt.test.Json.Companion.icon
 import com.freshdigitable.yttt.test.Json.Companion.sha1
+import com.freshdigitable.yttt.test.Json.Companion.thumbnails
 import com.google.api.client.http.HttpRequestInitializer
 import dagger.Module
 import dagger.Provides
@@ -142,30 +144,26 @@ class MockServerRule : TestWatcher() {
                     "/youtube/v3/videos" -> {
                         val id = request.url.queryParameterValues("id")
                             .mapNotNull { i -> i?.let { YouTubeVideo.Id(it) } }
-                        val items = client.fetchVideoList(id.toSet())
-                        videoJson(items)
+                        client.fetchVideoList(id.toSet()).responseJson()
                     }
 
                     "/youtube/v3/channels" -> {
                         val id = requireNotNull(request.url.queryParameterValues("id"))
                             .mapNotNull { i -> i?.let { YouTubeChannel.Id(it) } }.toSet()
                         val part = request.url.queryParameterValues("part").filterNotNull().toSet()
-                        val res = client.fetchChannels(id, part)
-                        channelJson(res)
+                        client.fetchChannels(id, part).responseJson()
                     }
 
                     "/youtube/v3/playlists" -> {
                         val id = requireNotNull(request.url.queryParameter("id"))
-                        val res = client.fetchPlaylist(setOf(YouTubePlaylist.Id(id)))
-                        playlistJson(res)
+                        client.fetchPlaylist(setOf(YouTubePlaylist.Id(id))).responseJson()
                     }
 
                     "/youtube/v3/playlistItems" -> {
                         val id = requireNotNull(request.url.queryParameter("playlistId"))
                         val maxResult = requireNotNull(request.url.queryParameter("maxResults")).toLong()
                         val eTag = request.headers["If-None-Match"]
-                        val res = client.fetchPlaylistItems(YouTubePlaylist.Id(id), maxResult, eTag)
-                        playlistItemJson(res)
+                        client.fetchPlaylistItems(YouTubePlaylist.Id(id), maxResult, eTag).responseJson()
                     }
 
                     PATH_SUBSCRIPTION -> {
@@ -225,23 +223,40 @@ class YouTubeResponseJson(
     private val prevPageToken: String? = null,
     private val totalResults: Int = 1,
     private val items: List<Json>,
-) : Json() {
-    override fun toString(): String = Obj(
-        "kind" to kind,
-        "etag" to eTag,
-        "nextPageToken" to nextPageToken,
-        "prevPageToken" to prevPageToken,
-        "pageInfo" to Obj(
-            "totalResults" to totalResults,
-            "resultsPerPage" to items.size,
-        ),
-        "items" to Arr(items),
-    ).toString()
+) : Json {
+    override fun toString(): String = Json.obj {
+        this["kind"] = kind
+        this["etag"] = eTag
+        this["nextPageToken"] = nextPageToken
+        this["prevPageToken"] = prevPageToken
+        this["pageInfo"] = Json.obj {
+            this["totalResults"] = totalResults
+            this["resultsPerPage"] = items.size
+        }
+        this["items"] = Json.Arr(items)
+    }.toString()
 }
 
-private fun videoJson(items: List<VideoJson>): Json = YouTubeResponseJson(
-    kind = "youtube#videoListResponse",
-    eTag = "etag",
+private inline fun <reified T : Json> List<T>.responseJson(): YouTubeResponseJson {
+    val kind = when (T::class) {
+        VideoJson::class -> "youtube#videoListResponse"
+        ChannelItemJson::class -> "youtube#channelListResponse"
+        PlaylistJson::class -> "youtube#playlistListResponse"
+        PlaylistItemJson::class -> "youtube#playlistItemListResponse"
+        SubscriptionItemJson::class -> "youtube#subscriptionListResponse"
+        else -> error("unsupported: ${T::class}")
+    }
+    return YouTubeResponseJson(kind = kind, items = this)
+}
+
+fun subscriptionJson(
+    eTag: String? = null,
+    pageToken: String?,
+    items: List<SubscriptionItemJson>,
+): YouTubeResponseJson = YouTubeResponseJson(
+    kind = "youtube#subscriptionListResponse",
+    eTag = eTag ?: items.joinToString(",") { it.key }.sha1(),
+    nextPageToken = pageToken,
     items = items,
 )
 
@@ -253,7 +268,7 @@ class VideoJson(
     val scheduledStartDateTime: Instant? = null,
     val actualStartDateTime: Instant? = null,
     val actualEndDateTime: Instant? = null,
-) : Json() {
+) : Json {
     constructor(video: YouTubeVideo) : this(
         video.id,
         video.channel.id,
@@ -278,45 +293,39 @@ class VideoJson(
     )
 
     val json: Json
-        get() = Obj(
-            "kind" to "youtube#video",
-            "etag" to "etag",
-            "id" to id.value,
-            "snippet" to Obj(
-                "publishedAt" to null,
-                "channelId" to channelId.value,
-                "title" to "title${id.value}",
-                "description" to "description",
-                "thumbnails" to thumbnails,
-                "channelTitle" to channelTitle,
-                "tags" to Arr(emptyList()),
-                "categoryId" to "categoryid${id.value}",
-                "liveBroadcastContent" to liveBroadcastContent.name.lowercase(),
-                "defaultLanguage" to "ja",
-                "localized" to Obj(
-                    "title" to "title${id.value}",
-                    "description" to "description",
-                ),
-                "defaultAudioLanguage" to "ja",
-            ),
-            "liveStreamingDetails" to Obj(
-                "actualStartTime" to actualStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
-                "actualEndTime" to actualEndDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
-                "scheduledStartTime" to scheduledStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) },
-                "scheduledEndTime" to null,
-                "concurrentViewers" to "100",
-                "activeLiveChatId" to "livechatid${id.value}",
-            ),
-        )
+        get() = Json.obj {
+            this["kind"] = "youtube#video"
+            this["etag"] = "etag"
+            this["id"] = id.value
+            this["snippet"] = Json.obj {
+                this["publishedAt"] = null
+                this["channelId"] = channelId.value
+                this["title"] = "title${id.value}"
+                this["description"] = "description"
+                this["thumbnails"] = thumbnails
+                this["channelTitle"] = channelTitle
+                this["tags"] = Json.Arr(emptyList())
+                this["categoryId"] = "categoryid${id.value}"
+                this["liveBroadcastContent"] = liveBroadcastContent.name.lowercase()
+                this["defaultLanguage"] = "ja"
+                this["localized"] = Json.obj {
+                    this["title"] = "title${id.value}"
+                    this["description"] = "description"
+                }
+                this["defaultAudioLanguage"] = "ja"
+            }
+            this["liveStreamingDetails"] = Json.obj {
+                this["actualStartTime"] = actualStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) }
+                this["actualEndTime"] = actualEndDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) }
+                this["scheduledStartTime"] = scheduledStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) }
+                this["scheduledEndTime"] = null
+                this["concurrentViewers"] = "100"
+                this["activeLiveChatId"] = "livechatid${id.value}"
+            }
+        }
 
     override fun toString(): String = json.toString()
 }
-
-private fun channelJson(items: List<ChannelItemJson>): YouTubeResponseJson = YouTubeResponseJson(
-    kind = "youtube#channelListResponse",
-    eTag = "etag",
-    items = items,
-)
 
 class ChannelItemJson(
     override val id: YouTubeChannel.Id,
@@ -324,7 +333,7 @@ class ChannelItemJson(
     val playlistId: String? = null,
     val hasSnippet: Boolean,
     val hasContentDetail: Boolean,
-) : Json(), YouTubeChannelTitle {
+) : Json, YouTubeChannelTitle {
     companion object {
         fun createSnippet(id: YouTubeChannel.Id): ChannelItemJson =
             ChannelItemJson(id = id, hasSnippet = true, hasContentDetail = false)
@@ -338,140 +347,112 @@ class ChannelItemJson(
     }
 
     private val json: Json
-        get() = Obj(
-            "kind" to "youtube#channel",
-            "etag" to "etag",
-            "id" to id.value,
-            "snippet" to if (hasSnippet) snippet else null,
-            "contentDetails" to if (hasContentDetail) contentDetail else null,
-        )
+        get() = Json.obj {
+            this["kind"] = "youtube#channel"
+            this["etag"] = "etag"
+            this["id"] = id.value
+            this["snippet"] = if (hasSnippet) snippet else null
+            this["contentDetails"] = if (hasContentDetail) contentDetail else null
+        }
     private val snippet: Json
-        get() = Obj(
-            "title" to title,
-            "description" to "description",
-            "customUrl" to "",
-            "publishedAt" to "1970-01-01T00:00:00Z",
-            "thumbnails" to icon,
-            "defaultLanguage" to "ja",
-            "localized" to Obj(
-                "title" to title,
-                "description" to "description",
-            ),
-            "country" to "jp",
-        )
+        get() = Json.obj {
+            this["title"] = title
+            this["description"] = "description"
+            this["customUrl"] = ""
+            this["publishedAt"] = "1970-01-01T00:00:00Z"
+            this["thumbnails"] = icon
+            this["defaultLanguage"] = "ja"
+            this["localized"] = Json.obj {
+                this["title"] = title
+                this["description"] = "description"
+            }
+            this["country"] = "jp"
+        }
     private val contentDetail: Json
-        get() = Obj(
-            "relatedPlaylists" to Obj(
-                "likes" to "",
-                "favorites" to "",
-                "uploads" to (playlistId ?: "playlist_${id.value}"),
-            ),
-        )
+        get() = Json.obj {
+            this["relatedPlaylists"] = Json.obj {
+                this["likes"] = ""
+                this["favorites"] = ""
+                this["uploads"] = playlistId ?: "playlist_${id.value}"
+            }
+        }
 
     override fun toString(): String = json.toString()
 }
 
-private fun playlistJson(items: List<PlaylistJson>): Json = YouTubeResponseJson(
-    kind = "youtube#playlistListResponse",
-    items = items,
-)
-
-class PlaylistJson(val id: String, val title: String = "playlist_$id") : Json() {
+class PlaylistJson(val id: String, val title: String = "playlist_$id") : Json {
     private val json: Json
-        get() = Obj(
-            "kind" to "youtube#playlist",
-            "etag" to "etag",
-            "id" to id,
-            "snippet" to Obj(
-                "publishedAt" to "1970-01-01T00:00:00Z",
-                "channelId" to "channel_id",
-                "title" to title,
-                "description" to "description",
-                "thumbnails" to thumbnails,
-                "channelTitle" to "channeltitle",
-                "defaultLanguage" to "ja",
-                "localized" to Obj(
-                    "title" to title,
-                    "description" to "description",
-                ),
-            ),
-            "contentDetails" to Obj(
-                "itemCount" to 10,
-            ),
-        )
+        get() = Json.obj {
+            this["kind"] = "youtube#playlist"
+            this["etag"] = "etag"
+            this["id"] = id
+            this["snippet"] = Json.obj {
+                this["publishedAt"] = "1970-01-01T00:00:00Z"
+                this["channelId"] = "channel_id"
+                this["title"] = title
+                this["description"] = "description"
+                this["thumbnails"] = thumbnails
+                this["channelTitle"] = "channeltitle"
+                this["defaultLanguage"] = "ja"
+                this["localized"] = Json.obj {
+                    this["title"] = title
+                    this["description"] = "description"
+                }
+            }
+            this["contentDetails"] = Json.obj {
+                this["itemCount"] = 10
+            }
+        }
 
     override fun toString(): String = json.toString()
 }
-
-private fun playlistItemJson(items: List<PlaylistItemJson>): Json = YouTubeResponseJson(
-    kind = "youtube#playlistItemListResponse",
-    items = items,
-)
 
 class PlaylistItemJson(
     val id: String,
     val playlistId: String,
     val videoId: String = "video_${id}_$playlistId",
-) : Json() {
-    private val json: String = Obj(
-        "kind" to "youtube#playlistItem",
-        "etag" to "etag",
-        "id" to id,
-        "contentDetails" to Obj(
-            "videoId" to videoId,
-            "startAt" to null,
-            "endAt" to null,
-            "note" to null,
-            "videoPublishedAt" to "1970-01-01T00:00:00.000Z",
-        ),
-    ).toString()
+) : Json {
+    private val json: String = Json.obj {
+        this["kind"] = "youtube#playlistItem"
+        this["etag"] = "etag"
+        this["id"] = id
+        this["contentDetails"] = Json.obj {
+            this["videoId"] = videoId
+            this["startAt"] = null
+            this["endAt"] = null
+            this["note"] = null
+            this["videoPublishedAt"] = "1970-01-01T00:00:00.000Z"
+        }
+    }.toString()
 
     override fun toString(): String = json
 }
 
-fun subscriptionJson(
-    eTag: String? = null,
-    pageToken: String?,
-    size: Int,
-    factory: (Int) -> SubscriptionItemJson = { throw NotImplementedError() },
-): YouTubeResponseJson = subscriptionJson(eTag, pageToken, (0 until size).map(factory))
-
-fun subscriptionJson(
-    eTag: String? = null,
-    pageToken: String?,
-    items: List<SubscriptionItemJson>,
-): YouTubeResponseJson = YouTubeResponseJson(
-    kind = "youtube#subscriptionListResponse",
-    eTag = eTag ?: items.joinToString(",") { it.key }.sha1(),
-    nextPageToken = pageToken,
-    items = items,
-)
-
-class SubscriptionItemJson(val id: String, val channelId: String, val channelTitle: String) : Json() {
+class SubscriptionItemJson(val id: String, val channelId: String, val channelTitle: String) : Json {
     val key: String = listOf(id, channelId, channelTitle).joinToString(",") { it }
     private val json
-        get() = Obj(
-            "kind" to "youtube#subscription",
-            "etag" to key.sha1(),
-            "id" to id,
-            "snippet" to Obj(
-                "publishedAt" to "1970-01-01T00:00:00Z",
-                "channelTitle" to channelTitle,
-                "title" to channelTitle,
-                "description" to "description",
-                "resourceId" to Obj(
-                    "kind" to "string",
-                    "channelId" to channelId,
-                ),
-                "channelId" to channelId,
-                "thumbnails" to icon,
-            ),
-        )
+        get() = Json.obj {
+            this["kind"] = "youtube#subscription"
+            this["etag"] = key.sha1()
+            this["id"] = id
+            this["snippet"] = Json.obj {
+                this["publishedAt"] = "1970-01-01T00:00:00Z"
+                this["channelTitle"] = channelTitle
+                this["title"] = channelTitle
+                this["description"] = "description"
+                this["resourceId"] = Json.obj {
+                    this["kind"] = "string"
+                    this["channelId"] = channelId
+                }
+                this["channelId"] = channelId
+                this["thumbnails"] = icon
+            }
+        }
 
     override fun toString(): String = json.toString()
 }
 
-sealed class Json {
+sealed interface Json {
     companion object {
         private val md = MessageDigest.getInstance("SHA-1")
         fun String.sha1(): String = md.run {
@@ -479,51 +460,64 @@ sealed class Json {
             digest(toByteArray()).toHexString()
         }
 
-        val icon = Obj(
-            "medium" to Obj(
-                "url" to "<url is here>",
-                "width" to 240,
-                "height" to 240,
-            ),
-        )
-        val thumbnails = Obj(
-            "standard" to Obj(
-                "url" to "<url is here>",
-                "width" to 480,
-                "height" to 320,
-            ),
-        )
+        fun obj(body: Base.() -> Unit): Obj {
+            val map = Base()
+            body(map)
+            return Obj(map.map)
+        }
+
+        val icon = obj {
+            this["medium"] = obj {
+                this["url"] = "<url is here>"
+                this["width"] = 240
+                this["height"] = 240
+            }
+        }
+        val thumbnails = obj {
+            this["standard"] = obj {
+                this["url"] = "<url is here>"
+                this["width"] = 480
+                this["height"] = 320
+            }
+        }
     }
 
-    class Obj(val map: Map<String, Any>) : Json() {
-        constructor(vararg pairs: Pair<String, Any?>) : this(
-            pairs.filter { it.second != null }.associate {
-                it.first to when (val v = it.second) {
-                    is String -> Str(v)
-                    is Number -> Num(v)
-                    is Boolean -> Bool(v)
-                    is Json -> v
-                    else -> throw AssertionError()
-                }
-            },
-        )
+    @JvmInline
+    value class Base(val map: MutableMap<String, Any> = mutableMapOf()) : Json {
+        operator fun set(key: String, value: Any?) {
+            when (value) {
+                null -> return
+                is String -> map[key] = Str(value)
+                is Number -> map[key] = Num(value)
+                is Boolean -> map[key] = Bool(value)
+                is Json -> map[key] = value
+                else -> throw AssertionError()
+            }
+        }
+    }
 
+    @JvmInline
+    value class Obj(val map: Map<String, Any>) : Json {
         override fun toString(): String = map.entries.joinToString(",", "{", "}") { "\"${it.key}\":${it.value}" }
     }
 
-    class Arr(val list: List<Json>) : Json() {
+    @JvmInline
+    value class Arr(val list: List<Json>) : Json {
         override fun toString(): String = list.joinToString(",", "[", "]")
     }
 
-    class Str(val str: String) : Json() {
+    @JvmInline
+    value class Str(val str: String) : Json {
         override fun toString(): String = "\"$str\""
     }
 
-    class Num(val num: Number) : Json() {
+    @JvmInline
+    value class Num(val num: Number) : Json {
         override fun toString(): String = "$num"
     }
 
-    class Bool(val bool: Boolean) : Json() {
+    @JvmInline
+    value class Bool(val bool: Boolean) : Json {
         override fun toString(): String = "$bool"
     }
 }

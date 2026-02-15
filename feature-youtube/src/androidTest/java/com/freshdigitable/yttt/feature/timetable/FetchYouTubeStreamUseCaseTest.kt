@@ -109,7 +109,7 @@ class FetchYouTubeStreamUseCaseTest {
                 subscription = { token, order ->
                     check(order == Order.ALPHABETICAL)
                     if (token == null) {
-                        subscriptionJson(eTag = "empty_etag", pageToken = null, size = 0)
+                        subscriptionJson(eTag = "empty_etag", pageToken = null, items = emptyList())
                     } else {
                         throw AssertionError()
                     }
