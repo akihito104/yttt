@@ -23,11 +23,9 @@ import com.freshdigitable.yttt.test.PlaylistJson
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.VideoJson
+import com.freshdigitable.yttt.test.YouTubeErrorJson
 import com.freshdigitable.yttt.test.channelDetail
 import com.freshdigitable.yttt.test.fromRemote
-import com.freshdigitable.yttt.test.internalServerError
-import com.freshdigitable.yttt.test.notFound
-import com.freshdigitable.yttt.test.notModified
 import com.freshdigitable.yttt.test.playlist
 import com.freshdigitable.yttt.test.playlistItem
 import com.google.api.client.util.DateTime
@@ -172,7 +170,7 @@ class YouTubeRepositoryTest {
             videoList = recorder.wrap(expected = 1) {
                 listOf(VideoJson(videoId, channel, "title_${channel.value}"))
             },
-            channelList = recorder.wrap(expected = 1) { throw YouTubeException.internalServerError() },
+            channelListRes = recorder.wrap(expected = 1) { YouTubeErrorJson.internalServerError() },
         )
         hiltRule.inject()
         FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1) + Duration.ofDays(1)
@@ -244,7 +242,7 @@ class YouTubeRepositoryTest {
         val current = Instant.ofEpochMilli(1000)
         FakeDateTimeProviderModule.instant = current
         server.setClient(
-            playlistItems = recorder.wrap(expected = 1) { throw YouTubeException.notFound() },
+            playlistItemsRes = recorder.wrap(expected = 1) { YouTubeErrorJson.notFound() },
         )
         hiltRule.inject()
         // exercise
@@ -263,7 +261,7 @@ class YouTubeRepositoryTest {
         val current = Instant.ofEpochMilli(1000)
         FakeDateTimeProviderModule.instant = current
         server.setClient(
-            playlistItems = recorder.wrap(expected = 1) { throw YouTubeException.notModified() },
+            playlistItemsRes = recorder.wrap(expected = 1) { YouTubeErrorJson.notModified() },
         )
         hiltRule.inject()
         val playlistId = YouTubePlaylist.Id("0")

@@ -16,9 +16,10 @@ import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.SubscriptionItemJson
+import com.freshdigitable.yttt.test.SubscriptionItemJson.Companion.eTag
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
+import com.freshdigitable.yttt.test.responseJson
 import com.freshdigitable.yttt.test.shouldBeSuccess
-import com.freshdigitable.yttt.test.subscriptionJson
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -125,7 +126,7 @@ class YouTubeRemoteMediatorTest {
         server.setClient(
             subscription = { _, o ->
                 check(o == Order.RELEVANCE)
-                subscriptionJson(pageToken = null, items = emptyList())
+                emptyList<SubscriptionItemJson>().responseJson(pageToken = null)
             },
         )
         // exercise
@@ -148,7 +149,7 @@ class YouTubeRemoteMediatorTest {
         server.setClient(
             subscription = { _, o ->
                 check(o == Order.RELEVANCE)
-                subscriptionJson(pageToken = null, items = subs)
+                subs.responseJson(pageToken = null, eTag = subs.eTag())
             },
         )
         // exercise
@@ -167,7 +168,7 @@ class YouTubeRemoteMediatorTest {
         server.setClient(
             subscription = { _, o ->
                 check(o == Order.RELEVANCE)
-                subscriptionJson(pageToken = null, items = subs)
+                subs.responseJson(pageToken = null, eTag = subs.eTag())
             },
         )
         // exercise

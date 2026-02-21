@@ -9,7 +9,6 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
-import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.di.GoogleAccountModule
 import com.freshdigitable.yttt.di.OkHttpModule
 import com.freshdigitable.yttt.di.YouTubeModule
@@ -58,11 +57,10 @@ interface FakeYouTubeClientModule {
 }
 
 interface FakeYouTubeClient {
-    fun fetchSubscription(nextPageToken: String? = null, order: YouTubeSubscriptionQuery.Order): YouTubeResponseJson =
+    fun fetchSubscription(nextPageToken: String? = null, order: YouTubeSubscriptionQuery.Order): ResponseJson =
         throw NotImplementedError()
 
-    fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> =
-        throw NotImplementedError()
+    fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): ResponseJson = throw NotImplementedError()
 
     fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<PlaylistJson> = throw NotImplementedError()
 
@@ -70,28 +68,13 @@ interface FakeYouTubeClient {
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): List<PlaylistItemJson> = throw NotImplementedError()
+    ): ResponseJson = throw NotImplementedError()
 
-    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> = throw NotImplementedError()
+    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): ResponseJson = throw NotImplementedError()
 }
 
 fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
     CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
-
-fun YouTubeException.Companion.notModified(
-    throwable: Throwable? = null,
-    cacheControl: CacheControl = CacheControl.EMPTY,
-): YouTubeException = YouTubeException(304, "Not Modified", throwable, cacheControl)
-
-fun YouTubeException.Companion.notFound(
-    throwable: Throwable? = null,
-    cacheControl: CacheControl = CacheControl.EMPTY,
-): YouTubeException = YouTubeException(404, "Not Found", throwable, cacheControl)
-
-fun YouTubeException.Companion.internalServerError(
-    throwable: Throwable? = null,
-    cacheControl: CacheControl = CacheControl.EMPTY,
-): YouTubeException = YouTubeException(500, "Internal Server Error", throwable, cacheControl)
 
 class MockServerRule : TestWatcher() {
     companion object {
@@ -112,46 +95,48 @@ class MockServerRule : TestWatcher() {
     fun setClient(
         videoList: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
         channelList: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson>)? = null,
+        channelListRes: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> ResponseJson)? = null,
         playlist: ((Set<YouTubePlaylist.Id>) -> List<PlaylistJson>)? = null,
         playlistItems: ((Pair<YouTubePlaylist.Id, String?>) -> List<PlaylistItemJson>)? = null,
-        subscription: ((String?, YouTubeSubscriptionQuery.Order) -> YouTubeResponseJson)? = null,
+        playlistItemsRes: ((Pair<YouTubePlaylist.Id, String?>) -> ResponseJson)? = null,
+        subscription: ((String?, YouTubeSubscriptionQuery.Order) -> ResponseJson)? = null,
     ) {
         setClient(
             object : FakeYouTubeClient {
-                override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> = videoList!!(ids)
-                override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> =
-                    channelList!!(ids to part)
+                override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): ResponseJson = videoList!!(ids).responseJson()
+                override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): ResponseJson =
+                    channelList?.invoke(ids to part)?.responseJson() ?: channelListRes!!(ids to part)
 
                 override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<PlaylistJson> = playlist!!(ids)
                 override fun fetchPlaylistItems(
                     id: YouTubePlaylist.Id,
                     maxResult: Long,
                     eTag: String?,
-                ): List<PlaylistItemJson> = playlistItems!!(id to eTag)
+                ): ResponseJson = playlistItems?.invoke(id to eTag)?.responseJson() ?: playlistItemsRes!!(id to eTag)
 
                 override fun fetchSubscription(
                     nextPageToken: String?,
                     order: YouTubeSubscriptionQuery.Order,
-                ): YouTubeResponseJson = subscription!!(nextPageToken, order)
+                ): ResponseJson = subscription!!(nextPageToken, order)
             },
         )
     }
 
     fun setClient(client: FakeYouTubeClient) {
         server.dispatcher = object : Dispatcher() {
-            override fun dispatch(request: RecordedRequest): MockResponse = runCatching {
-                when (val path = request.url.encodedPath) {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                val res = when (val path = request.url.encodedPath) {
                     "/youtube/v3/videos" -> {
                         val id = request.url.queryParameterValues("id")
                             .mapNotNull { i -> i?.let { YouTubeVideo.Id(it) } }
-                        client.fetchVideoList(id.toSet()).responseJson()
+                        client.fetchVideoList(id.toSet())
                     }
 
                     "/youtube/v3/channels" -> {
                         val id = requireNotNull(request.url.queryParameterValues("id"))
                             .mapNotNull { i -> i?.let { YouTubeChannel.Id(it) } }.toSet()
                         val part = request.url.queryParameterValues("part").filterNotNull().toSet()
-                        client.fetchChannels(id, part).responseJson()
+                        client.fetchChannels(id, part)
                     }
 
                     "/youtube/v3/playlists" -> {
@@ -163,7 +148,7 @@ class MockServerRule : TestWatcher() {
                         val id = requireNotNull(request.url.queryParameter("playlistId"))
                         val maxResult = requireNotNull(request.url.queryParameter("maxResults")).toLong()
                         val eTag = request.headers["If-None-Match"]
-                        client.fetchPlaylistItems(YouTubePlaylist.Id(id), maxResult, eTag).responseJson()
+                        client.fetchPlaylistItems(YouTubePlaylist.Id(id), maxResult, eTag)
                     }
 
                     PATH_SUBSCRIPTION -> {
@@ -173,47 +158,55 @@ class MockServerRule : TestWatcher() {
                         val order = requireNotNull(request.url.queryParameter("order"))
                         val o = YouTubeSubscriptionQuery.Order.valueOf(order.uppercase())
                         val res = client.fetchSubscription(nextPageToken = pageToken, order = o)
-                        if (res.eTag == eTag) {
-                            throw YouTubeException.notModified()
+                        if (res is YouTubeResponseJson && res.eTag == eTag) {
+                            YouTubeErrorJson.notModified()
                         } else {
                             res
                         }
                     }
 
                     else -> throw AssertionError("unexpected path: $path")
+                }.also {
+                    if (isLogging) reqRes.add(request to it)
                 }
-            }.also {
-                if (isLogging) reqRes.add(request to it)
-            }.fold(
-                onSuccess = {
-                    MockResponse.Builder()
-                        .code(200)
-                        .addHeader("Content-Type", "application/json")
-                        .addHeader("date", currentDate)
-                        .body(it.toString())
-                        .build()
-                },
-                onFailure = {
-                    val code = (it as? YouTubeException)?.statusCode ?: 500
-                    MockResponse.Builder()
-                        .code(code)
-                        .addHeader("date", currentDate)
-                        .body(it.message.toString())
-                        .build()
-                },
-            )
+                return MockResponse.Builder()
+                    .code(res.statusCode)
+                    .addHeader("Content-Type", "application/json")
+                    .addHeader("date", currentDate)
+                    .body(res.toString())
+                    .build()
+            }
         }
     }
 
     var isLogging: Boolean = false
-    private val reqRes: MutableList<Pair<RecordedRequest, Result<Json>>> = mutableListOf()
-    fun findRecordedResponse(path: String): List<Pair<String, Result<Json>>> {
+    private val reqRes: MutableList<Pair<RecordedRequest, ResponseJson>> = mutableListOf()
+    fun findRecordedResponse(path: String): List<Pair<String, ResponseJson>> {
         return reqRes.filter { it.first.url.encodedPath == path }.map { it.first.url.encodedPath to it.second }
     }
 
     override fun finished(description: Description) {
         server.closeQuietly()
     }
+}
+
+interface ResponseJson : Json {
+    val statusCode: Int get() = 200
+}
+
+inline fun <reified T : Json> List<T>.responseJson(
+    eTag: String? = null,
+    pageToken: String? = null,
+): YouTubeResponseJson {
+    val kind = when (T::class) {
+        VideoJson::class -> "youtube#videoListResponse"
+        ChannelItemJson::class -> "youtube#channelListResponse"
+        PlaylistJson::class -> "youtube#playlistListResponse"
+        PlaylistItemJson::class -> "youtube#playlistItemListResponse"
+        SubscriptionItemJson::class -> "youtube#subscriptionListResponse"
+        else -> error("unsupported: ${T::class}")
+    }
+    return YouTubeResponseJson(kind = kind, eTag = eTag ?: "eTag", nextPageToken = pageToken, items = this)
 }
 
 class YouTubeResponseJson(
@@ -223,7 +216,7 @@ class YouTubeResponseJson(
     private val prevPageToken: String? = null,
     private val totalResults: Int = 1,
     private val items: List<Json>,
-) : Json {
+) : ResponseJson {
     override fun toString(): String = Json.obj {
         this["kind"] = kind
         this["etag"] = eTag
@@ -233,32 +226,33 @@ class YouTubeResponseJson(
             this["totalResults"] = totalResults
             this["resultsPerPage"] = items.size
         }
-        this["items"] = Json.Arr(items)
+        this["items"] = items
     }.toString()
 }
 
-private inline fun <reified T : Json> List<T>.responseJson(): YouTubeResponseJson {
-    val kind = when (T::class) {
-        VideoJson::class -> "youtube#videoListResponse"
-        ChannelItemJson::class -> "youtube#channelListResponse"
-        PlaylistJson::class -> "youtube#playlistListResponse"
-        PlaylistItemJson::class -> "youtube#playlistItemListResponse"
-        SubscriptionItemJson::class -> "youtube#subscriptionListResponse"
-        else -> error("unsupported: ${T::class}")
+class YouTubeErrorJson(override val statusCode: Int, private val message: String = "error") : ResponseJson {
+    companion object {
+        fun notFound(): YouTubeErrorJson = YouTubeErrorJson(404, "Not Found")
+        fun notModified(): YouTubeErrorJson = YouTubeErrorJson(304, "Not Modified")
+        fun internalServerError(): YouTubeErrorJson = YouTubeErrorJson(500, "Internal Server Error")
     }
-    return YouTubeResponseJson(kind = kind, items = this)
-}
 
-fun subscriptionJson(
-    eTag: String? = null,
-    pageToken: String?,
-    items: List<SubscriptionItemJson>,
-): YouTubeResponseJson = YouTubeResponseJson(
-    kind = "youtube#subscriptionListResponse",
-    eTag = eTag ?: items.joinToString(",") { it.key }.sha1(),
-    nextPageToken = pageToken,
-    items = items,
-)
+    override fun toString(): String = Json.obj {
+        this["error"] = Json.obj {
+            this["errors"] = listOf(
+                Json.obj {
+                    this["domain"] = "global"
+                    this["reason"] = "invalidParameter"
+                    this["message"] = "Invalid string value: 'asdf'. Allowed values: [mostpopular]"
+                    this["locationType"] = "parameter"
+                    this["location"] = "chart"
+                },
+            )
+            this["code"] = statusCode
+            this["message"] = message
+        }
+    }.toString()
+}
 
 class VideoJson(
     val id: YouTubeVideo.Id,
@@ -304,7 +298,7 @@ class VideoJson(
                 this["description"] = "description"
                 this["thumbnails"] = thumbnails
                 this["channelTitle"] = channelTitle
-                this["tags"] = Json.Arr(emptyList())
+                this["tags"] = emptyList<String>()
                 this["categoryId"] = "categoryid${id.value}"
                 this["liveBroadcastContent"] = liveBroadcastContent.name.lowercase()
                 this["defaultLanguage"] = "ja"
@@ -429,6 +423,10 @@ class PlaylistItemJson(
 }
 
 class SubscriptionItemJson(val id: String, val channelId: String, val channelTitle: String) : Json {
+    companion object {
+        fun List<SubscriptionItemJson>.eTag(): String = joinToString(",") { it.key }.sha1()
+    }
+
     val key: String = listOf(id, channelId, channelTitle).joinToString(",") { it }
     private val json
         get() = Json.obj {
@@ -490,6 +488,7 @@ sealed interface Json {
                 is String -> map[key] = Str(value)
                 is Number -> map[key] = Num(value)
                 is Boolean -> map[key] = Bool(value)
+                is Collection<*> -> map[key] = Arr(value.filterIsInstance<Json>())
                 is Json -> map[key] = value
                 else -> throw AssertionError()
             }

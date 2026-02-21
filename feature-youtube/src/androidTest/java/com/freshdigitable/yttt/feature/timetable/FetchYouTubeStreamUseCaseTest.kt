@@ -29,15 +29,15 @@ import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.PlaylistItemJson
+import com.freshdigitable.yttt.test.ResponseJson
 import com.freshdigitable.yttt.test.SubscriptionItemJson
+import com.freshdigitable.yttt.test.SubscriptionItemJson.Companion.eTag
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.VideoJson
+import com.freshdigitable.yttt.test.YouTubeErrorJson
 import com.freshdigitable.yttt.test.YouTubeResponseJson
-import com.freshdigitable.yttt.test.internalServerError
-import com.freshdigitable.yttt.test.notFound
-import com.freshdigitable.yttt.test.notModified
-import com.freshdigitable.yttt.test.subscriptionJson
+import com.freshdigitable.yttt.test.responseJson
 import com.freshdigitable.yttt.test.testWithRefresh
 import com.freshdigitable.yttt.test.toTestPager
 import dagger.Binds
@@ -109,7 +109,7 @@ class FetchYouTubeStreamUseCaseTest {
                 subscription = { token, order ->
                     check(order == Order.ALPHABETICAL)
                     if (token == null) {
-                        subscriptionJson(eTag = "empty_etag", pageToken = null, items = emptyList())
+                        emptyList<SubscriptionItemJson>().responseJson(eTag = "empty_etag", pageToken = null)
                     } else {
                         throw AssertionError()
                     }
@@ -131,7 +131,7 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
-                subscription = { _, _ -> throw YouTubeException.internalServerError() },
+                subscription = { _, _ -> YouTubeErrorJson.internalServerError() },
             )
             hiltRule.inject()
             // exercise
@@ -174,7 +174,7 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             server.setClient(
                 FakeYouTubeClientModule.setup(10, 2).apply {
-                    channel = { throw YouTubeException.internalServerError() }
+                    channel = { YouTubeErrorJson.internalServerError() }
                 },
             )
             hiltRule.inject()
@@ -197,9 +197,9 @@ class FetchYouTubeStreamUseCaseTest {
                 FakeYouTubeClientModule.setup(10, 2).apply {
                     playlistItem = { id ->
                         if (id.value.contains("1")) {
-                            throw YouTubeException.internalServerError()
+                            YouTubeErrorJson.internalServerError()
                         } else {
-                            defaultPlaylistItem(id)
+                            defaultPlaylistItem(id).responseJson()
                         }
                     }
                 },
@@ -220,9 +220,9 @@ class FetchYouTubeStreamUseCaseTest {
                 FakeYouTubeClientModule.setup(10, 2).apply {
                     playlistItem = { id ->
                         if (id.value.contains("1")) {
-                            throw YouTubeException.notFound()
+                            YouTubeErrorJson.notFound()
                         } else {
-                            defaultPlaylistItem(id)
+                            defaultPlaylistItem(id).responseJson()
                         }
                     }
                 },
@@ -243,9 +243,9 @@ class FetchYouTubeStreamUseCaseTest {
                 FakeYouTubeClientModule.setup(10, 2).apply {
                     video = { id ->
                         if (id.any { it.value.contains("1") }) {
-                            throw YouTubeException.internalServerError()
+                            YouTubeErrorJson.internalServerError()
                         } else {
-                            defaultVideo.invoke(id)
+                            defaultVideo.invoke(id).responseJson()
                         }
                     }
                 },
@@ -286,8 +286,8 @@ class FetchYouTubeStreamUseCaseTest {
             server.setClient(
                 FakeYouTubeClientModule.setup(100, 2).apply {
                     this.channel = {
-                        this.channel = { throw YouTubeException.internalServerError() }
-                        defaultChannel(it)
+                        this.channel = { YouTubeErrorJson.internalServerError() }
+                        defaultChannel(it).responseJson()
                     }
                 },
             )
@@ -395,9 +395,9 @@ class FetchYouTubeStreamUseCaseTest {
             }
             fakeClient.playlistItem = { id ->
                 if (id.value.contains("1")) {
-                    throw YouTubeException.notModified()
+                    YouTubeErrorJson.notModified()
                 } else {
-                    fakeClient.defaultPlaylistItem(id)
+                    fakeClient.defaultPlaylistItem(id).responseJson()
                 }
             }
             // exercise
@@ -482,8 +482,8 @@ class FetchYouTubeStreamUseCaseTest {
             val networkRes = server.findRecordedResponse(MockServerRule.PATH_SUBSCRIPTION).map { it.second }
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
-            networkRes[1].shouldBeSuccess()
-            networkRes[2].shouldBeSuccess()
+            networkRes[1].statusCode shouldBe 200
+            networkRes[2].statusCode shouldBe 200
         }
 
         @Test
@@ -509,7 +509,7 @@ class FetchYouTubeStreamUseCaseTest {
             networkRes shouldHaveSize 3
             networkRes[0].shouldBeFailureOfYouTubeException(statusCode = 304)
             networkRes[1].shouldBeFailureOfYouTubeException(statusCode = 304)
-            networkRes[2].shouldBeSuccess()
+            networkRes[2].statusCode shouldBe 200
         }
 
         @Test
@@ -522,7 +522,7 @@ class FetchYouTubeStreamUseCaseTest {
             }
             fakeClient.subscription = { t ->
                 if (fakeClient.subsFactory.last().first == t) {
-                    throw YouTubeException.internalServerError()
+                    YouTubeErrorJson.internalServerError()
                 } else {
                     fakeClient.defaultSubscription(t)
                 }
@@ -588,6 +588,10 @@ internal inline fun <reified T> Result<T>.shouldBeFailureOfYouTubeException(stat
     shouldBeFailure<YouTubeException>().should { it.statusCode shouldBe statusCode }
 }
 
+internal fun ResponseJson.shouldBeFailureOfYouTubeException(statusCode: Int) {
+    should { (it as YouTubeErrorJson).statusCode shouldBe statusCode }
+}
+
 private fun FakeYouTubeClientModule.Companion.setup(
     subscriptionCount: Int,
     itemsPerPlaylist: Int,
@@ -610,10 +614,10 @@ internal fun videoJson(
 )
 
 private class FakeYouTubeClientImpl(
-    var subscription: ((String?) -> YouTubeResponseJson)? = null,
-    var channel: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson>)? = null,
-    var playlistItem: ((YouTubePlaylist.Id) -> List<PlaylistItemJson>)? = null,
-    var video: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
+    var subscription: ((String?) -> ResponseJson)? = null,
+    var channel: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> ResponseJson)? = null,
+    var playlistItem: ((YouTubePlaylist.Id) -> ResponseJson)? = null,
+    var video: ((Set<YouTubeVideo.Id>) -> ResponseJson)? = null,
 ) : FakeYouTubeClient {
     var channelDetail: List<ChannelItemJson> = emptyList()
         set(value) {
@@ -673,10 +677,10 @@ private class FakeYouTubeClientImpl(
         val index = subsFactory.indexOfFirst { it.first == token }
         val sub = subsFactory[index].second
         val nextPageToken = subsFactory.getOrNull(index + 1)?.first
-        subscriptionJson(pageToken = nextPageToken, items = sub)
+        sub.responseJson(pageToken = nextPageToken, eTag = sub.eTag())
     }
 
-    override fun fetchSubscription(nextPageToken: String?, order: Order): YouTubeResponseJson {
+    override fun fetchSubscription(nextPageToken: String?, order: Order): ResponseJson {
         logD { "fetchSubscription: $nextPageToken, $order" }
         check(order == Order.ALPHABETICAL)
         val fetcher = subscription ?: defaultSubscription
@@ -688,10 +692,9 @@ private class FakeYouTubeClientImpl(
         id.mapNotNull { i -> table[i] }
     }
 
-    override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): List<ChannelItemJson> {
+    override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): ResponseJson {
         logD { "fetchChannels: $ids, $part" }
-        val fetcher = this.channel ?: defaultChannel
-        return fetcher(ids to part)
+        return channel?.invoke(ids to part) ?: defaultChannel(ids to part).responseJson()
     }
 
     val defaultVideo: (Set<YouTubeVideo.Id>) -> List<VideoJson> = { id ->
@@ -699,11 +702,10 @@ private class FakeYouTubeClientImpl(
         id.mapNotNull { v[it] }
     }
 
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): List<VideoJson> {
+    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): ResponseJson {
         logD { "fetchVideoList: $ids" }
         check(ids.size <= 50) { "exceeds upper limit: ${ids.size}" }
-        val fetcher = this.video ?: defaultVideo
-        return fetcher(ids)
+        return video?.invoke(ids) ?: defaultVideo(ids).responseJson()
     }
 
     val defaultPlaylistItem: (YouTubePlaylist.Id) -> List<PlaylistItemJson> = { id ->
@@ -714,10 +716,9 @@ private class FakeYouTubeClientImpl(
         id: YouTubePlaylist.Id,
         maxResult: Long,
         eTag: String?,
-    ): List<PlaylistItemJson> {
+    ): ResponseJson {
         logD { "fetchPlaylistItems: $id, $maxResult" }
-        val fetcher = playlistItem ?: defaultPlaylistItem
-        return fetcher(id)
+        return playlistItem?.invoke(id) ?: defaultPlaylistItem(id).responseJson()
     }
 }
 
