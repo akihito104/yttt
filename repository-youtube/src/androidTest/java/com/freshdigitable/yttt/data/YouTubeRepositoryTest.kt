@@ -12,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.remote.YouTubeException
 import com.freshdigitable.yttt.data.source.remote.YouTubeVideoRemote
+import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
@@ -28,6 +29,7 @@ import com.freshdigitable.yttt.test.channelDetail
 import com.freshdigitable.yttt.test.fromRemote
 import com.freshdigitable.yttt.test.playlist
 import com.freshdigitable.yttt.test.playlistItem
+import com.freshdigitable.yttt.test.setClient
 import com.google.api.client.util.DateTime
 import com.google.api.services.youtube.model.Thumbnail
 import com.google.api.services.youtube.model.ThumbnailDetails
@@ -62,7 +64,7 @@ class YouTubeRepositoryTest {
     val recorder = CallerVerifier()
 
     @get:Rule(order = 3)
-    val server = MockServerRule()
+    val server = MockServerRule { YouTubeModule.rootUrl = it.toString() }
 
     @Inject
     lateinit var sut: YouTubeRepository
@@ -261,7 +263,7 @@ class YouTubeRepositoryTest {
         val current = Instant.ofEpochMilli(1000)
         FakeDateTimeProviderModule.instant = current
         server.setClient(
-            playlistItemsRes = recorder.wrap(expected = 1) { YouTubeErrorJson.notModified() },
+            playlistItemsRes = recorder.wrap(expected = 1) { YouTubeErrorJson.notModified },
         )
         hiltRule.inject()
         val playlistId = YouTubePlaylist.Id("0")

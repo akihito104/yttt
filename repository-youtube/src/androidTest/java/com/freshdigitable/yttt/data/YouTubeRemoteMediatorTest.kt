@@ -13,12 +13,14 @@ import com.freshdigitable.yttt.data.source.AccountRepository
 import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
 import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
+import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.SubscriptionItemJson
 import com.freshdigitable.yttt.test.SubscriptionItemJson.Companion.eTag
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.responseJson
+import com.freshdigitable.yttt.test.setClient
 import com.freshdigitable.yttt.test.shouldBeSuccess
 import dagger.Binds
 import dagger.Module
@@ -58,7 +60,7 @@ class YouTubeRemoteMediatorTest {
     val testScope = TestCoroutineScopeRule()
 
     @get:Rule(order = 2)
-    val server = MockServerRule()
+    val server = MockServerRule { YouTubeModule.rootUrl = it.toString() }
 
     @Before
     fun setup() {
