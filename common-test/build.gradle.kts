@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":data-local-room"))
     implementation(project(":repository-youtube"))
+    implementation(project(":repository-twitch"))
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.junit)
     implementation(libs.androidx.test.runner)

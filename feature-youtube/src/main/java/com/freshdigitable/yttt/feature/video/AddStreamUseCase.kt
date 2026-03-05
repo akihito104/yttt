@@ -19,16 +19,14 @@ class AddStreamUseCase @Inject constructor(
             .onSuccess { repository.addVideo(it) }
             .map { it.first().item }
 
-    class Input private constructor(
+    class Input internal constructor(
         val id: YouTubeVideo.Id,
         val isFreeChat: Boolean = false,
     ) {
-        constructor(id: String, isFreeChat: Boolean = false) : this(YouTubeVideo.Id(id), isFreeChat)
-
         companion object {
             fun create(uri: Uri, isFreeChat: Boolean = false): Input? {
                 if (uri.isYouTubeUri) {
-                    return Input(uri.pathSegments[1], isFreeChat)
+                    return Input(YouTubeVideo.Id(uri.pathSegments[1]), isFreeChat)
                 }
                 return null
             }

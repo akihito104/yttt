@@ -15,6 +15,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.freshdigitable.yttt.LauncherOption
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.startLauncherActivity
 import dagger.assisted.Assisted
@@ -59,7 +60,7 @@ internal class AddStreamWorker @AssistedInject constructor(
         private fun AddStreamUseCase.Input.Companion.fromWorkerData(data: Data): AddStreamUseCase.Input? {
             val id = data.getString(KEY_ID) ?: return null
             val isFreeChat = data.getBoolean(KEY_FREE_CHAT, false)
-            return AddStreamUseCase.Input(id = id, isFreeChat = isFreeChat)
+            return AddStreamUseCase.Input(id = YouTubeVideo.Id(id), isFreeChat = isFreeChat)
         }
     }
 }

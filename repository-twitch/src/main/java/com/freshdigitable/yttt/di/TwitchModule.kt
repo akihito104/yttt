@@ -44,7 +44,7 @@ internal interface TwitchModule {
                 .addInterceptor(interceptor)
                 .build()
             return Retrofit.Builder()
-                .baseUrl(TwitchHelixService.BASE_URL)
+                .baseUrl(TwitchHelixClientModule.baseUrl ?: TwitchHelixService.BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .addConverterFactory(IdConverterFactory())
                 .client(client)
@@ -55,6 +55,12 @@ internal interface TwitchModule {
         @Singleton
         fun provideTwitchHelixService(retrofit: Retrofit): TwitchHelixService =
             retrofit.create(TwitchHelixService::class.java)
+
+        @Singleton
+        @Provides
+        internal fun provideTwitchHelixClient(service: TwitchHelixService): TwitchHelixClient =
+            TwitchHelixClient.create(service)
+
     }
 }
 
@@ -62,10 +68,7 @@ internal interface TwitchModule {
 @InstallIn(SingletonComponent::class)
 interface TwitchHelixClientModule {
     companion object {
-        @Singleton
-        @Provides
-        internal fun provideTwitchHelixClient(service: TwitchHelixService): TwitchHelixClient =
-            TwitchHelixClient.create(service)
+        var baseUrl: String? = null
     }
 
     @Binds

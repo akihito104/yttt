@@ -19,7 +19,7 @@ sealed interface Json {
                 is Boolean -> map[key] = Bool(value)
                 is Collection<*> -> map[key] = Arr(value.filterIsInstance<Json>())
                 is Json -> map[key] = value
-                else -> throw AssertionError()
+                else -> throw AssertionError("unknown type: $value")
             }
         }
     }
