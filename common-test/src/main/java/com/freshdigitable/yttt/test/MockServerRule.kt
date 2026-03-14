@@ -1,6 +1,8 @@
 package com.freshdigitable.yttt.test
 
 import com.freshdigitable.yttt.di.OkHttpModule
+import com.freshdigitable.yttt.logD
+import com.freshdigitable.yttt.test.TestDispatcher.ExpectedResponse
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -29,10 +31,10 @@ class MockServerRule(private val onServerStart: (URL) -> Unit) : TestWatcher() {
         onServerStart(serverUrl)
     }
 
-
     fun setClient(dispatcher: TestDispatcher) {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
+                logD { "dispatch: ${request.url}" }
                 val req = RequestImpl(request)
                 val res = dispatcher.dispatch(req).also {
                     if (isLogging) reqRes.add(request to it)
@@ -59,21 +61,51 @@ class MockServerRule(private val onServerStart: (URL) -> Unit) : TestWatcher() {
 }
 
 interface TestDispatcher {
+    fun add(vararg res: ExpectedResponse) {}
     fun dispatch(request: Request): ResponseJson
+
     interface Request {
         val encodedPath: String
+        val encodedQuery: String?
         fun queryParam(key: String): String?
         fun queryParams(key: String): List<String?>
         fun header(key: String): String?
     }
 
-    companion object
+    interface ExpectedResponse : ResponseJson {
+        val encodedPath: String
+        val encodedQuery: String?
+        val body: String get() = toString()
+
+        companion object
+    }
+
+    companion object {
+        fun create(): TestDispatcher = TestDispatcherImpl()
+    }
 }
 
 @JvmInline
 private value class RequestImpl(private val request: RecordedRequest) : TestDispatcher.Request {
     override val encodedPath: String get() = request.url.encodedPath
+    override val encodedQuery: String? get() = request.url.encodedQuery
     override fun queryParam(key: String): String? = request.url.queryParameter(key)
     override fun queryParams(key: String): List<String?> = request.url.queryParameterValues(key)
     override fun header(key: String): String? = request.headers[key]
+}
+
+private class TestDispatcherImpl : TestDispatcher {
+    companion object {
+        private val ExpectedResponse.key: String get() = encodedQuery?.let { "$encodedPath?$it" } ?: encodedPath
+        private val TestDispatcher.Request.key: String get() = encodedQuery?.let { "$encodedPath?$it" } ?: encodedPath
+    }
+
+    private val expectedResponse = mutableMapOf<String, ExpectedResponse>()
+
+    override fun add(vararg res: ExpectedResponse) {
+        expectedResponse.putAll(res.map { it.key to it })
+    }
+
+    override fun dispatch(request: TestDispatcher.Request): ResponseJson = expectedResponse[request.key]
+        ?: throw AssertionError("unexpected path: ${request.encodedPath}, query: ${request.encodedQuery}, table: ${expectedResponse.keys}")
 }

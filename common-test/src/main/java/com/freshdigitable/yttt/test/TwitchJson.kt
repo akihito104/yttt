@@ -16,12 +16,9 @@ class TwitchUserJson(
         this["display_name"] = displayName
         this["type"] = ""
         this["broadcaster_type"] = "partner"
-        this["description"] =
-            "Supporting third-party developers building Twitch integrations from chatbots to game integrations."
-        this["profile_image_url"] =
-            "https://static-cdn.jtvnw.net/jtv_user_pictures/8a6381c7-d0c0-4576-b179-38bd5ce1d6af-profile_image-300x300.png"
-        this["offline_image_url"] =
-            "https://static-cdn.jtvnw.net/jtv_user_pictures/3f13ab61-ec78-4fe6-8481-8682cb3b0ac2-channel_offline_image-1920x1080.png"
+        this["description"] = "description is here."
+        this["profile_image_url"] = "https://<url-is-here>/jtv_user_pictures/profile_image-300x300.png"
+        this["offline_image_url"] = "https://<url-is-here>/jtv_user_pictures/channel_offline_image-1920x1080.png"
         this["view_count"] = 5980557
         this["email"] = "not-real@email.com"
         this["created_at"] = "2016-12-14T20:32:28Z"
@@ -50,11 +47,11 @@ class TwitchFollowedStreamJson(
         this["game_id"] = game.id.value
         this["game_name"] = game.name
         this["type"] = "live"
-        this["title"] = "AWS Howdy Partner! Y'all welcome ExtraHop to the show!"
+        this["title"] = "stream title"
         this["viewer_count"] = 20
         this["started_at"] = "2021-03-31T20:57:26Z"
         this["language"] = "en"
-        this["thumbnail_url"] = "https://<url-is-here>/live_user_aws-{width}x{height}.jpg"
+        this["thumbnail_url"] = "https://<url-is-here>/live_user-{width}x{height}.jpg"
         this["tag_ids"] = emptyList<String>()
         this["tags"] = listOf("English")
     }.toString()
@@ -69,7 +66,7 @@ class TwitchScheduleJson(
         this["id"] = id
         this["start_time"] = startTime.toString()
         this["end_time"] = "2021-07-01T19:00:00Z"
-        this["title"] = "TwitchDev Monthly Update // July 1, 2021"
+        this["title"] = "stream schedule title"
         this["canceled_until"] = null
         this["category"] = game
         this["is_recurring"] = false
@@ -78,7 +75,7 @@ class TwitchScheduleJson(
 
 class TwitchChannelScheduleJson(
     private val schedules: List<TwitchScheduleJson>,
-    private val broadcaster: TwitchUser,
+    val broadcaster: TwitchUser,
     private val vacation: TwitchChannelSchedule.Vacation? = null,
 ) : ResponseJson {
     override fun toString(): String = Json.obj {
@@ -105,18 +102,6 @@ class TwitchGameJson(
         this["box_art_url"] = artUrlBase
         this["igdb_id"] = igdbId
     }.toString()
-}
-
-inline fun <reified T : Json> List<T>.twitchResponse(
-    total: Int? = null,
-    cursor: String? = null,
-): ResponseJson = when (T::class) {
-    TwitchUserJson::class -> TwitchResponseJson(this)
-    TwitchFollowingJson::class -> TwitchPaginationResponseJson(this, total ?: size, cursor)
-    TwitchFollowedStreamJson::class -> TwitchPaginationResponseJson(this, total ?: size, cursor)
-    TwitchGameJson::class -> TwitchResponseJson(this)
-    TwitchChannelScheduleJson::class -> TwitchPaginationResponseJson(this, null, cursor)
-    else -> throw AssertionError("Unknown type: ${T::class}")
 }
 
 class TwitchResponseJson(
@@ -153,3 +138,66 @@ class TwitchErrorJson private constructor(
 
     override fun toString(): String = message
 }
+
+private const val HELIX_USERS = "/helix/users"
+private const val HELIX_CHANNELS_FOLLOWED = "/helix/channels/followed"
+private const val HELIX_STREAMS_FOLLOWED = "/helix/streams/followed"
+private const val HELIX_GAMES = "/helix/games"
+private const val HELIX_SCHEDULE = "/helix/schedule"
+
+fun TestDispatcher.ExpectedResponse.Companion.twitchMe(
+    me: TwitchUserJson? = null,
+    json: ResponseJson? = null,
+): TestDispatcher.ExpectedResponse =
+    json?.let { twitchUsers(json = json) } ?: twitchUsers(users = listOf(requireNotNull(me)), query = null)
+
+fun TestDispatcher.ExpectedResponse.Companion.twitchUsers(
+    users: List<TwitchUserJson>? = null,
+    query: List<TwitchUser.Id>? = users?.map { it.id },
+    json: ResponseJson? = null,
+): TestDispatcher.ExpectedResponse = create(
+    HELIX_USERS,
+    query?.joinToString(separator = "&") { "id=${it.value}" },
+    json ?: TwitchResponseJson(requireNotNull(users)),
+)
+
+fun TestDispatcher.ExpectedResponse.Companion.twitchChannelsFollowed(
+    total: Int? = null,
+    cursor: String? = null,
+    meId: TwitchUser.Id,
+    users: List<TwitchFollowingJson>? = null,
+    json: ResponseJson? = null,
+): TestDispatcher.ExpectedResponse = create(
+    HELIX_CHANNELS_FOLLOWED,
+    "user_id=${meId.value}&first=100",
+    json ?: TwitchPaginationResponseJson(requireNotNull(users), total ?: users.size, cursor),
+)
+
+fun TestDispatcher.ExpectedResponse.Companion.twitchStreamsFollowed(
+    total: Int? = null,
+    cursor: String? = null,
+    meId: TwitchUser.Id,
+    data: List<TwitchFollowedStreamJson>? = null,
+    json: ResponseJson? = null,
+): TestDispatcher.ExpectedResponse = create(
+    HELIX_STREAMS_FOLLOWED,
+    "user_id=${meId.value}",
+    json ?: TwitchPaginationResponseJson(requireNotNull(data), total ?: data.size, cursor),
+)
+
+fun TestDispatcher.ExpectedResponse.Companion.twitchGame(
+    data: List<TwitchGameJson>? = null,
+    query: List<TwitchCategory.Id>? = data?.map { it.id },
+    json: ResponseJson? = null,
+): TestDispatcher.ExpectedResponse = create(
+    HELIX_GAMES,
+    requireNotNull(query).joinToString(separator = "&") { "id=${it.value}" },
+    json ?: TwitchResponseJson(requireNotNull(data)),
+)
+
+fun TestDispatcher.ExpectedResponse.Companion.twitchChannelSchedule(
+    data: TwitchChannelScheduleJson? = null,
+    userId: TwitchUser.Id? = data?.broadcaster?.id,
+    json: ResponseJson? = null,
+): TestDispatcher.ExpectedResponse =
+    create(HELIX_SCHEDULE, "broadcaster_id=${requireNotNull(userId).value}&first=10", json ?: requireNotNull(data))

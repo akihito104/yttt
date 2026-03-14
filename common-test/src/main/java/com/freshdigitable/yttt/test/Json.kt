@@ -53,3 +53,15 @@ sealed interface Json {
 interface ResponseJson : Json {
     val statusCode: Int get() = 200
 }
+
+fun TestDispatcher.ExpectedResponse.Companion.create(
+    path: String,
+    query: String? = null,
+    json: ResponseJson,
+): TestDispatcher.ExpectedResponse = object : TestDispatcher.ExpectedResponse {
+    override val encodedPath: String get() = path
+    override val encodedQuery: String? get() = query
+    override val statusCode: Int get() = json.statusCode
+    override val body: String get() = json.toString()
+    override fun toString(): String = body
+}

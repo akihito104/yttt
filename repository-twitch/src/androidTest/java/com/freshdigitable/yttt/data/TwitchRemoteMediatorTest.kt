@@ -36,7 +36,8 @@ import com.freshdigitable.yttt.test.TwitchUserJson
 import com.freshdigitable.yttt.test.fromRemote
 import com.freshdigitable.yttt.test.shouldBeError
 import com.freshdigitable.yttt.test.shouldBeSuccess
-import com.freshdigitable.yttt.test.twitchResponse
+import com.freshdigitable.yttt.test.twitchChannelsFollowed
+import com.freshdigitable.yttt.test.twitchUsers
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.collections.shouldHaveSize
@@ -74,7 +75,7 @@ class TwitchRemoteMediatorTest {
     private val followings =
         TwitchFollowings.create(authUser.id, broadcaster, CacheControl.create(fetchedAt, maxAge))
 
-    private val dispatcher = TestDispatcherImpl(authUser.id)
+    private val dispatcher = TestDispatcher.create()
 
     @get:Rule(order = 2)
     val testScope = TestCoroutineScopeRule(
@@ -83,7 +84,7 @@ class TwitchRemoteMediatorTest {
             extendedSource.deleteAllTables()
 
             FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(100)
-            server.setClient(dispatcher.dispatcher)
+            server.setClient(dispatcher)
             localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
             val stream = broadcaster.take(10).map { stream(it) }
             val streams = object : TwitchStreams.Updated {
@@ -110,10 +111,7 @@ class TwitchRemoteMediatorTest {
     fun firstTimeToLoadSubscriptionPage() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
-        dispatcher.userDetail = { ids ->
-            check(ids.toSet() == broadcaster.take(60).map { it.id }.toSet())
-            broadcaster.map { TwitchUserJson(it.id) }.twitchResponse()
-        }
+        dispatcher.add(broadcaster.take(60).toUserJson())
         // exercise
         val actual = sut.flow.asSnapshot()
         advanceUntilIdle()
@@ -126,13 +124,10 @@ class TwitchRemoteMediatorTest {
     fun firstTimeToLoadSubscriptionPage_needsRefresh() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        dispatcher.following = {
-            broadcaster.map { TwitchFollowingJson(it) }.twitchResponse()
-        }
-        dispatcher.userDetail = { ids ->
-            check(ids.toSet() == broadcaster.map { it.id }.toSet())
-            broadcaster.map { TwitchUserJson(it.id) }.twitchResponse()
-        }
+        dispatcher.add(
+            broadcaster.toFollowingJson(authUser.id),
+            broadcaster.toUserJson(),
+        )
         // exercise
         val actual = sut.flow.asSnapshot()
         // verify
@@ -144,10 +139,10 @@ class TwitchRemoteMediatorTest {
     fun firstTimeToLoadSubscriptionPage_scrollToLastItem() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
-        dispatcher.userDetail = { ids ->
-            check(ids.toSet() == broadcaster.take(60).map { it.id }.toSet())
-            broadcaster.map { TwitchUserJson(it.id) }.twitchResponse()
-        }
+        dispatcher.add(
+            broadcaster.take(60).toUserJson(),
+            broadcaster.takeLast(40).toUserJson(),
+        )
         // exercise
         val actual = sut.flow.asSnapshot {
             appendScrollWhile { it.channel.id.value != "user99" } // footer
@@ -165,7 +160,7 @@ class TwitchRemoteMediatorTest {
     fun failedToGetFollowingsAtRefresh_returnsError() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        dispatcher.following = { TwitchErrorJson.internalError() }
+        dispatcher.add(broadcaster.toFollowingJson(authUser.id, TwitchErrorJson.internalError()))
         // exercise
         val actual = remoteMediator.load(
             LoadType.REFRESH,
@@ -180,13 +175,10 @@ class TwitchRemoteMediatorTest {
     fun failedToGetUserDetailAtRefresh_returnsSuccess() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        dispatcher.apply {
-            following = { broadcaster.map { TwitchFollowingJson(it) }.twitchResponse() }
-            userDetail = { ids ->
-                check(ids.toSet() == broadcaster.map { it.id }.toSet())
-                TwitchErrorJson.internalError()
-            }
-        }
+        dispatcher.add(
+            broadcaster.toFollowingJson(authUser.id),
+            broadcaster.toUserJson(TwitchErrorJson.internalError()),
+        )
         // exercise
         val actual = remoteMediator.load(
             LoadType.REFRESH,
@@ -201,12 +193,13 @@ class TwitchRemoteMediatorTest {
     fun failedToGetFollowingsAtPrepend_returnsSuccess() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
-        dispatcher.userDetail = { TwitchErrorJson.internalError() }
+        val b = broadcaster.take(60)
+        dispatcher.add(b.toUserJson(TwitchErrorJson.internalError()))
         // exercise
         val actual = remoteMediator.load(
             LoadType.PREPEND,
             PagingState(
-                listOf(liveSubscriptionPage(broadcaster.take(60).map { liveSubscription(it) })),
+                listOf(liveSubscriptionPage(b.map { liveSubscription(it) })),
                 null,
                 PagingConfig(20),
                 0,
@@ -272,31 +265,20 @@ class TwitchRemoteMediatorTest {
     }
 }
 
-private class TestDispatcherImpl(
-    private val authUserId: TwitchUser.Id,
-    var userDetail: ((List<TwitchUser.Id>) -> ResponseJson)? = null,
-    var following: (() -> ResponseJson)? = null,
-) {
-    val dispatcher = object : TestDispatcher {
-        override fun dispatch(request: TestDispatcher.Request): ResponseJson {
-            return when (request.encodedPath) {
-                "/helix/users" -> {
-                    val ids = request.queryParams("id").filterNotNull().map { TwitchUser.Id(it) }
-                    check(ids.size <= 100)
-                    userDetail!!(ids)
-                }
+private fun List<Broadcaster>.toUserJson(body: ResponseJson? = null): TestDispatcher.ExpectedResponse =
+    TestDispatcher.ExpectedResponse.twitchUsers(
+        users = map { TwitchUserJson(it.id, it.loginName, it.displayName) },
+        json = body,
+    )
 
-                "/helix/channels/followed" -> {
-                    check(request.queryParam("user_id") == authUserId.value)
-                    check(request.queryParam("first")!!.toInt() <= 100)
-                    following!!()
-                }
-
-                else -> throw AssertionError("unexpected path: ${request.encodedPath}")
-            }
-        }
-    }
-}
+private fun List<Broadcaster>.toFollowingJson(
+    authUserId: TwitchUser.Id,
+    body: ResponseJson? = null,
+): TestDispatcher.ExpectedResponse = TestDispatcher.ExpectedResponse.twitchChannelsFollowed(
+    meId = authUserId,
+    users = map { TwitchFollowingJson(it) },
+    json = body,
+)
 
 interface FakeDateTimeProviderModuleImpl : FakeDateTimeProviderModule
 interface TestCoroutineScopeModuleImpl : TestCoroutineScopeModule

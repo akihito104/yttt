@@ -15,10 +15,10 @@ import com.freshdigitable.yttt.test.AppTraceVerifier
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
 import com.freshdigitable.yttt.test.MockServerRule
-import com.freshdigitable.yttt.test.ResponseJson
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.TestDispatcher
+import com.freshdigitable.yttt.test.TestDispatcher.ExpectedResponse
 import com.freshdigitable.yttt.test.TwitchChannelScheduleJson
 import com.freshdigitable.yttt.test.TwitchErrorJson
 import com.freshdigitable.yttt.test.TwitchFollowedStreamJson
@@ -27,7 +27,12 @@ import com.freshdigitable.yttt.test.TwitchGameJson
 import com.freshdigitable.yttt.test.TwitchScheduleJson
 import com.freshdigitable.yttt.test.TwitchUserJson
 import com.freshdigitable.yttt.test.testWithRefresh
-import com.freshdigitable.yttt.test.twitchResponse
+import com.freshdigitable.yttt.test.twitchChannelSchedule
+import com.freshdigitable.yttt.test.twitchChannelsFollowed
+import com.freshdigitable.yttt.test.twitchGame
+import com.freshdigitable.yttt.test.twitchMe
+import com.freshdigitable.yttt.test.twitchStreamsFollowed
+import com.freshdigitable.yttt.test.twitchUsers
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -88,7 +93,7 @@ class FetchTwitchStreamUseCaseTest {
             // setup
             traceRule.isTraceable = false
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.meResponse = { TwitchErrorJson.badRequest() }
+            testDispatcher.add(ExpectedResponse.twitchMe(json = TwitchErrorJson.badRequest()))
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -103,11 +108,11 @@ class FetchTwitchStreamUseCaseTest {
         fun noFollowing_returnAsSuccess() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { emptyList<TwitchFollowedStreamJson>().twitchResponse() }
-                followingsResponse = { emptyList<TwitchFollowingJson>().twitchResponse() }
-            }
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = emptyList()),
+            )
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -122,11 +127,11 @@ class FetchTwitchStreamUseCaseTest {
         fun failedToGetFollowing_returnFailure() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { emptyList<TwitchFollowedStreamJson>().twitchResponse() }
-                followingsResponse = { TwitchErrorJson.badRequest() }
-            }
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, json = TwitchErrorJson.badRequest()),
+            )
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -141,15 +146,15 @@ class FetchTwitchStreamUseCaseTest {
         fun has1FollowingWithStream_returnAsSuccess() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                val userDetail = userDetail("10")
-                val category = category("1")
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { listOf(stream("1", category, userDetail)).twitchResponse() }
-                followingsResponse = { listOf(broadcaster(userDetail)).twitchResponse() }
-                scheduleResponse = { TwitchErrorJson.notFound() }
-                userResponse = { listOf(userDetail).twitchResponse() }
-            }
+            val userDetail = userDetail("10")
+            val category = category("1")
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = listOf(stream("1", category, userDetail))),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
+                ExpectedResponse.twitchChannelSchedule(userId = userDetail.id, json = TwitchErrorJson.notFound()),
+                ExpectedResponse.twitchUsers(listOf(userDetail)),
+            )
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -164,21 +169,22 @@ class FetchTwitchStreamUseCaseTest {
         fun has1FollowingWithSchedule_returnAsSuccess() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                val userDetail = userDetail("10")
-                val category = category("1")
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { emptyList<TwitchFollowedStreamJson>().twitchResponse() }
-                followingsResponse = { listOf(broadcaster(userDetail)).twitchResponse() }
-                scheduleResponse = {
-                    schedule(
+            val userDetail = userDetail("10")
+            val category = category("1")
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
+                ExpectedResponse.twitchChannelSchedule(
+                    data = schedule(
                         streamSchedule = listOf(streamSchedule("1", category)),
                         broadcaster = broadcaster(userDetail),
-                    )
-                }
-                categoryResponse = { listOf(category).twitchResponse() }
-                userResponse = { listOf(userDetail).twitchResponse() }
-            }            // exercise
+                    ),
+                ),
+                ExpectedResponse.twitchGame(listOf(category)),
+                ExpectedResponse.twitchUsers(listOf(userDetail)),
+            )
+            // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
             // verify
@@ -192,20 +198,22 @@ class FetchTwitchStreamUseCaseTest {
         fun has1FollowingWithSchedule_failedToGetCategory_returnAsSuccess() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                val userDetail = userDetail("10")
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { emptyList<TwitchFollowedStreamJson>().twitchResponse() }
-                followingsResponse = { listOf(broadcaster(userDetail)).twitchResponse() }
-                scheduleResponse = {
-                    schedule(
-                        streamSchedule = listOf(streamSchedule("1", category("1"))),
+            val userDetail = userDetail("10")
+            val category = category("1")
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
+                ExpectedResponse.twitchChannelSchedule(
+                    userId = userDetail.id,
+                    data = schedule(
+                        streamSchedule = listOf(streamSchedule("1", category)),
                         broadcaster = broadcaster(userDetail),
-                    )
-                }
-                categoryResponse = { TwitchErrorJson.badRequest() }
-                userResponse = { listOf(userDetail).twitchResponse() }
-            }
+                    ),
+                ),
+                ExpectedResponse.twitchGame(query = listOf(category.id), json = TwitchErrorJson.badRequest()),
+                ExpectedResponse.twitchUsers(users = listOf(userDetail)),
+            )
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -220,14 +228,14 @@ class FetchTwitchStreamUseCaseTest {
         fun has1FollowingWithSchedule_failedToGetSchedule_returnAsFailure() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                val userDetail = userDetail("10")
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { emptyList<TwitchFollowedStreamJson>().twitchResponse() }
-                followingsResponse = { listOf(broadcaster(userDetail)).twitchResponse() }
-                scheduleResponse = { TwitchErrorJson.badRequest() }
-                userResponse = { listOf(userDetail).twitchResponse() }
-            }
+            val userDetail = userDetail("10")
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
+                ExpectedResponse.twitchChannelSchedule(userId = userDetail.id, json = TwitchErrorJson.badRequest()),
+                ExpectedResponse.twitchUsers(users = listOf(userDetail)),
+            )
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -242,15 +250,15 @@ class FetchTwitchStreamUseCaseTest {
         fun failedToGetUserDetail_returnAsFailure() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                val userDetail = userDetail("10")
-                val category = category("1")
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { listOf(stream("1", category, userDetail)).twitchResponse() }
-                followingsResponse = { listOf(broadcaster(userDetail)).twitchResponse() }
-                scheduleResponse = { TwitchErrorJson.notFound() }
-                userResponse = { TwitchErrorJson.badRequest() }
-            }
+            val userDetail = userDetail("10")
+            val category = category("1")
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = listOf(stream("1", category, userDetail))),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
+                ExpectedResponse.twitchChannelSchedule(userId = userDetail.id, json = TwitchErrorJson.notFound()),
+                ExpectedResponse.twitchUsers(query = listOf(userDetail.id), json = TwitchErrorJson.badRequest()),
+            )
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -265,14 +273,14 @@ class FetchTwitchStreamUseCaseTest {
         fun failedToGetStreams_returnAsFailure() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                val userDetail = userDetail("10")
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { TwitchErrorJson.badRequest() }
-                followingsResponse = { listOf(broadcaster(userDetail)).twitchResponse() }
-                scheduleResponse = { TwitchErrorJson.notFound() }
-                userResponse = { listOf(userDetail).twitchResponse() }
-            }
+            val userDetail = userDetail("10")
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(meId = me.id, json = TwitchErrorJson.badRequest()),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
+                ExpectedResponse.twitchChannelSchedule(userId = userDetail.id, json = TwitchErrorJson.notFound()),
+                ExpectedResponse.twitchUsers(users = listOf(userDetail)),
+            )
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -297,14 +305,18 @@ class FetchTwitchStreamUseCaseTest {
             super.setup()
             val followings = listOf(streamUser, scheduleUser).map { broadcaster(it) }
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.apply {
-                meResponse = { listOf(me).twitchResponse() }
-                streamResponse = { listOf(stream("1", category("2"), streamUser)).twitchResponse() }
-                categoryResponse = { listOf(category).twitchResponse() }
-                followingsResponse = { followings.twitchResponse() }
-                scheduleResponse = { schedule(listOf(streamSchedule), broadcaster(scheduleUser)) }
-                userResponse = { listOf(streamUser, scheduleUser).twitchResponse() }
-            }
+            testDispatcher.add(
+                ExpectedResponse.twitchMe(me),
+                ExpectedResponse.twitchStreamsFollowed(
+                    meId = me.id,
+                    data = listOf(stream("1", category("2"), streamUser)),
+                ),
+                ExpectedResponse.twitchGame(data = listOf(category)),
+                ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = followings),
+                ExpectedResponse.twitchChannelSchedule(schedule(listOf(streamSchedule), broadcaster(scheduleUser))),
+                ExpectedResponse.twitchChannelSchedule(schedule(emptyList(), broadcaster(streamUser))),
+                ExpectedResponse.twitchUsers(listOf(streamUser, scheduleUser)),
+            )
             FakeDateTimeProviderModule.instant = current
         }
 
@@ -341,11 +353,7 @@ class FetchTwitchStreamUseCaseTest {
             initialLoad()
             val now = current + Duration.ofMinutes(10)
             FakeDateTimeProviderModule.instant = now
-            testDispatcher.apply {
-                streamResponse = { emptyList<TwitchFollowedStreamJson>().twitchResponse() }
-                meResponse = null
-                categoryResponse = null
-            }
+            testDispatcher.add(ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()))
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -360,11 +368,10 @@ class FetchTwitchStreamUseCaseTest {
             // setup
             initialLoad()
             FakeDateTimeProviderModule.instant = streamSchedule.startTime + Duration.ofHours(7)
-            testDispatcher.apply {
-                meResponse = null
-                categoryResponse = null
-                scheduleResponse = { TwitchErrorJson.notFound() }
-            }
+            testDispatcher.add(
+                ExpectedResponse.twitchChannelSchedule(userId = scheduleUser.id, json = TwitchErrorJson.notFound()),
+                ExpectedResponse.twitchUsers(listOf(streamUser)),
+            )
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -387,7 +394,7 @@ class FetchTwitchStreamUseCaseTest {
 
         @get:Rule(order = 3)
         val server = MockServerRule { TwitchHelixClientModule.baseUrl = it.toString() }
-        val testDispatcher = TwitchTestDispatcher(authUserId = me.id)
+        val testDispatcher = TestDispatcher.create()
 
         @Inject
         internal lateinit var sut: FetchTwitchStreamUseCase
@@ -439,48 +446,6 @@ private fun schedule(
     broadcaster: TwitchFollowingJson,
     vacation: TwitchChannelSchedule.Vacation? = null,
 ): TwitchChannelScheduleJson = TwitchChannelScheduleJson(streamSchedule, broadcaster, vacation)
-
-class TwitchTestDispatcher(
-    private val authUserId: TwitchUser.Id,
-    var meResponse: (() -> ResponseJson)? = null,
-    var followingsResponse: (() -> ResponseJson)? = null,
-    var scheduleResponse: ((TwitchUser.Id) -> ResponseJson)? = null,
-    var streamResponse: (() -> ResponseJson)? = null,
-    var categoryResponse: (() -> ResponseJson)? = null,
-    var userResponse: (() -> ResponseJson)? = null,
-) : TestDispatcher {
-    override fun dispatch(request: TestDispatcher.Request): ResponseJson {
-        return when (request.encodedPath) {
-            "/helix/users" -> {
-                val ids = request.queryParams("id").filterNotNull()
-                if (ids.isEmpty()) meResponse!!() else userResponse!!()
-            }
-
-            "/helix/channels/followed" -> {
-                val userId = requireNotNull(request.queryParam("user_id"))
-                check(authUserId.value == userId)
-                followingsResponse!!()
-            }
-
-            "/helix/streams/followed" -> {
-                val userId = requireNotNull(request.queryParam("user_id"))
-                check(authUserId.value == userId)
-                streamResponse!!()
-            }
-
-            "/helix/schedule" -> {
-                val userId = requireNotNull(request.queryParam("broadcaster_id"))
-                scheduleResponse!!(TwitchUser.Id(userId))
-            }
-
-            "/helix/games" -> {
-                categoryResponse!!()
-            }
-
-            else -> throw IllegalArgumentException("Unknown path: ${request.encodedPath}")
-        }
-    }
-}
 
 @Module
 @TestInstallIn(

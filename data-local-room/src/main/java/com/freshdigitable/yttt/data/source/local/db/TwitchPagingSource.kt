@@ -54,7 +54,7 @@ data class TwitchLiveSubscription(
             value = "SELECT b.follower_user_id, u.id AS channel_id, b.followed_at, u.display_name AS channel_name," +
                 " ud.profile_image_url AS channel_icon FROM twitch_broadcaster AS b " +
                 "INNER JOIN twitch_user AS u ON b.user_id = u.id " +
-                "LEFT OUTER JOIN twitch_user_detail AS ud ON ud.user_id = u.id"
+                "LEFT OUTER JOIN twitch_user_detail AS ud ON ud.user_id = u.id",
         )
         fun getTwitchLiveSubscriptionPagingSource(): PagingSource<Int, TwitchLiveSubscription>
     }

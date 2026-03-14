@@ -55,7 +55,7 @@ internal class TwitchRemoteMediator @Inject constructor(
             }
 
             LoadType.PREPEND, LoadType.APPEND -> {
-                val items: List<TwitchUser.Id> = state.pages.map { it.data }.flatten()
+                val items: List<TwitchUser.Id> = state.pages.flatMap { it.data }
                     .filter { it.channel.iconUrl.isEmpty() }
                     .map { it.channel.id.mapTo() }
                 repository.findUsersById(items.toSet())
