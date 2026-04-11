@@ -62,6 +62,8 @@ import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoDetailTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoExpireTable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoIdConverter
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.asExecutor
 
 @Database(
     entities = [
@@ -176,6 +178,7 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
             context: Context,
             name: String = DATABASE_NAME,
             platforms: Collection<LivePlatform>,
+            coroutineDispatcher: CoroutineDispatcher,
         ): AppDatabase = Room.databaseBuilder(context, AppDatabase::class.java, name)
             .addMigrations(
                 MIGRATION_13_14,
@@ -184,6 +187,8 @@ internal abstract class AppDatabase : RoomDatabase(), TwitchDaoProviders, YouTub
                 MIGRATION_23_24,
                 MIGRATION_25_26,
             )
+            .setQueryExecutor(coroutineDispatcher.asExecutor())
+            .setTransactionExecutor(coroutineDispatcher.asExecutor())
             .addTypeConverter(LivePlatformConverter(platforms))
             .build()
     }
