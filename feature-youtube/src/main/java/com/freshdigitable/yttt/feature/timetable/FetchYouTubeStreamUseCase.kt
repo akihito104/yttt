@@ -90,7 +90,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             }.toList()
         if (subscriptions.all { it.isSuccess }) {
             val s = subscriptions.map { it.getOrThrow() }
-            val subIds = s.map { it.item }.flatten().map { it.subscriptionId }.toSet()
+            val subIds = s.flatMap { it.item }.map { it.subscriptionId }.toSet()
             val queries = s.mapNotNull { it.updatedQuery }
             liveRepository.syncSubscriptionList(subIds, queries)
         }
@@ -167,7 +167,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun AppTrace.fetchVideos(
         batch: List<VideoUpdateBatch>,
     ): Result<List<Updatable<YouTubeVideoExtended>>> {
-        val videoIds = batch.map { it.videoIds }.flatten()
+        val videoIds = batch.flatMap { it.videoIds }
         return liveRepository.fetchVideoList(videoIds.toSet())
             .onFailure { logE(throwable = it) { "ids: $videoIds" } }
             .onSuccess { video ->

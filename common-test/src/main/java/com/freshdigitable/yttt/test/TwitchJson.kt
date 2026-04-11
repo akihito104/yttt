@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.test
 import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
+import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
 import java.time.Instant
 
 class TwitchUserJson(
@@ -145,59 +146,59 @@ private const val HELIX_STREAMS_FOLLOWED = "/helix/streams/followed"
 private const val HELIX_GAMES = "/helix/games"
 private const val HELIX_SCHEDULE = "/helix/schedule"
 
-fun TestDispatcher.ExpectedResponse.Companion.twitchMe(
+fun ExpectedResponse.Companion.twitchMe(
     me: TwitchUserJson? = null,
     json: ResponseJson? = null,
-): TestDispatcher.ExpectedResponse =
+): ExpectedResponse =
     json?.let { twitchUsers(json = json) } ?: twitchUsers(users = listOf(requireNotNull(me)), query = null)
 
-fun TestDispatcher.ExpectedResponse.Companion.twitchUsers(
+fun ExpectedResponse.Companion.twitchUsers(
     users: List<TwitchUserJson>? = null,
     query: List<TwitchUser.Id>? = users?.map { it.id },
     json: ResponseJson? = null,
-): TestDispatcher.ExpectedResponse = create(
+): ExpectedResponse = create(
     HELIX_USERS,
     query?.joinToString(separator = "&") { "id=${it.value}" },
     json ?: TwitchResponseJson(requireNotNull(users)),
 )
 
-fun TestDispatcher.ExpectedResponse.Companion.twitchChannelsFollowed(
+fun ExpectedResponse.Companion.twitchChannelsFollowed(
     total: Int? = null,
     cursor: String? = null,
     meId: TwitchUser.Id,
     users: List<TwitchFollowingJson>? = null,
     json: ResponseJson? = null,
-): TestDispatcher.ExpectedResponse = create(
+): ExpectedResponse = create(
     HELIX_CHANNELS_FOLLOWED,
     "user_id=${meId.value}&first=100",
     json ?: TwitchPaginationResponseJson(requireNotNull(users), total ?: users.size, cursor),
 )
 
-fun TestDispatcher.ExpectedResponse.Companion.twitchStreamsFollowed(
+fun ExpectedResponse.Companion.twitchStreamsFollowed(
     total: Int? = null,
     cursor: String? = null,
     meId: TwitchUser.Id,
     data: List<TwitchFollowedStreamJson>? = null,
     json: ResponseJson? = null,
-): TestDispatcher.ExpectedResponse = create(
+): ExpectedResponse = create(
     HELIX_STREAMS_FOLLOWED,
     "user_id=${meId.value}",
     json ?: TwitchPaginationResponseJson(requireNotNull(data), total ?: data.size, cursor),
 )
 
-fun TestDispatcher.ExpectedResponse.Companion.twitchGame(
+fun ExpectedResponse.Companion.twitchGame(
     data: List<TwitchGameJson>? = null,
     query: List<TwitchCategory.Id>? = data?.map { it.id },
     json: ResponseJson? = null,
-): TestDispatcher.ExpectedResponse = create(
+): ExpectedResponse = create(
     HELIX_GAMES,
     requireNotNull(query).joinToString(separator = "&") { "id=${it.value}" },
     json ?: TwitchResponseJson(requireNotNull(data)),
 )
 
-fun TestDispatcher.ExpectedResponse.Companion.twitchChannelSchedule(
+fun ExpectedResponse.Companion.twitchChannelSchedule(
     data: TwitchChannelScheduleJson? = null,
     userId: TwitchUser.Id? = data?.broadcaster?.id,
     json: ResponseJson? = null,
-): TestDispatcher.ExpectedResponse =
+): ExpectedResponse =
     create(HELIX_SCHEDULE, "broadcaster_id=${requireNotNull(userId).value}&first=10", json ?: requireNotNull(data))

@@ -6,12 +6,19 @@ import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
+import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
+import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.text
 import com.freshdigitable.yttt.di.GoogleAccountModule
-import com.freshdigitable.yttt.test.FakeYouTubeClient.Companion.PATH_SUBSCRIPTION
+import com.freshdigitable.yttt.test.ChannelItemJson.Companion.toQueryString
+import com.freshdigitable.yttt.test.ChannelItemJson.Companion.wrapResponseJson
 import com.freshdigitable.yttt.test.Json.Companion.obj
+import com.freshdigitable.yttt.test.PlaylistItemJson.Companion.eTag
+import com.freshdigitable.yttt.test.SubscriptionItemJson.Companion.eTag
+import com.freshdigitable.yttt.test.VideoJson.Companion.toQueryString
+import com.freshdigitable.yttt.test.VideoJson.Companion.wrapResponseJson
 import com.google.api.client.http.HttpRequestInitializer
 import dagger.Module
 import dagger.Provides
@@ -44,128 +51,65 @@ interface FakeYouTubeClientModule {
     }
 }
 
-fun MockServerRule.setClient(
-    videoList: ((Set<YouTubeVideo.Id>) -> List<VideoJson>)? = null,
-    channelList: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> List<ChannelItemJson>)? = null,
-    channelListRes: ((Pair<Set<YouTubeChannel.Id>, Set<String>>) -> ResponseJson)? = null,
-    playlist: ((Set<YouTubePlaylist.Id>) -> List<PlaylistJson>)? = null,
-    playlistItems: ((Pair<YouTubePlaylist.Id, String?>) -> List<PlaylistItemJson>)? = null,
-    playlistItemsRes: ((Pair<YouTubePlaylist.Id, String?>) -> ResponseJson)? = null,
-    subscription: ((String?, YouTubeSubscriptionQuery.Order) -> ResponseJson)? = null,
-) {
-    val client = object : FakeYouTubeClient {
-        override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): ResponseJson = videoList!!(ids).responseJson()
-        override fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): ResponseJson =
-            channelList?.invoke(ids to part)?.responseJson() ?: channelListRes!!(ids to part)
+private const val PATH_VIDEOS = "/youtube/v3/videos"
+private const val PATH_CHANNELS = "/youtube/v3/channels"
+private const val PATH_PLAYLISTS = "/youtube/v3/playlists"
+private const val PATH_PLAYLIST_ITEMS = "/youtube/v3/playlistItems"
+const val PATH_SUBSCRIPTION = "/youtube/v3/subscriptions"
 
-        override fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<PlaylistJson> = playlist!!(ids)
-        override fun fetchPlaylistItems(
-            id: YouTubePlaylist.Id,
-            maxResult: Long,
-            eTag: String?,
-        ): ResponseJson = playlistItems?.invoke(id to eTag)?.responseJson() ?: playlistItemsRes!!(id to eTag)
+class YouTubeMockServerDispatcher : MockServerDispatcher {
+    private val responseTable = mutableMapOf<MockServerDispatcher.RequestKey, MockServerDispatcher.ExpectedResponse>()
+    private val responseItemTable =
+        mutableMapOf<MockServerDispatcher.RequestKey, MockServerDispatcher.ExpectedResponse>()
 
-        override fun fetchSubscription(
-            nextPageToken: String?,
-            order: YouTubeSubscriptionQuery.Order,
-        ): ResponseJson = subscription!!(nextPageToken, order)
+    override fun add(vararg res: MockServerDispatcher.ExpectedResponse) {
+        responseTable.putAll(res.map { it.key to it })
     }
-    setClient(client)
-}
 
-fun MockServerRule.setClient(client: FakeYouTubeClient) {
-    val dispatcher = object : TestDispatcher {
-        override fun dispatch(request: TestDispatcher.Request): ResponseJson {
-            return when (val path = request.encodedPath) {
-                "/youtube/v3/videos" -> {
-                    val id = request.queryParams("id")
-                        .mapNotNull { i -> i?.let { YouTubeVideo.Id(it) } }
-                    client.fetchVideoList(id.toSet())
-                }
+    fun addAsItem(vararg item: MockServerDispatcher.ExpectedResponse) {
+        responseItemTable.putAll(item.map { it.key to it })
+    }
 
-                "/youtube/v3/channels" -> {
-                    val id = requireNotNull(request.queryParams("id"))
-                        .mapNotNull { i -> i?.let { YouTubeChannel.Id(it) } }.toSet()
-                    val part = request.queryParams("part").filterNotNull().toSet()
-                    client.fetchChannels(id, part)
-                }
+    private fun getResponseItem(key: MockServerDispatcher.RequestKey): MockServerDispatcher.ExpectedResponse =
+        responseItemTable.remove(key) ?: throw AssertionError("unexpected: $key, table: $responseItemTable")
 
-                "/youtube/v3/playlists" -> {
-                    val id = requireNotNull(request.queryParam("id"))
-                    client.fetchPlaylist(setOf(YouTubePlaylist.Id(id))).responseJson()
-                }
-
-                "/youtube/v3/playlistItems" -> {
-                    val id = requireNotNull(request.queryParam("playlistId"))
-                    val maxResult = requireNotNull(request.queryParam("maxResults")).toLong()
-                    val eTag = request.header("If-None-Match")
-                    val res = client.fetchPlaylistItems(YouTubePlaylist.Id(id), maxResult, eTag)
-                    if (res is YouTubeResponseJson && res.eTag == eTag) {
-                        YouTubeErrorJson.notModified
-                    } else {
-                        res
-                    }
-                }
-
-                PATH_SUBSCRIPTION -> {
-                    check(request.queryParam("mine").toBoolean())
-                    val eTag = request.header("If-None-Match")
-                    val pageToken = request.queryParam("pageToken")
-                    val order = requireNotNull(request.queryParam("order"))
-                    val o = YouTubeSubscriptionQuery.Order.valueOf(order.uppercase())
-                    val res = client.fetchSubscription(nextPageToken = pageToken, order = o)
-                    if (res is YouTubeResponseJson && res.eTag == eTag) {
-                        YouTubeErrorJson.notModified
-                    } else {
-                        res
-                    }
-                }
-
-                else -> throw AssertionError("unexpected path: $path")
+    override fun dispatch(request: MockServerDispatcher.Request): ResponseJson {
+        val res = responseTable.remove(request.key)
+        return res ?: when (request.key.encodedPath) {
+            PATH_CHANNELS -> {
+                val part = request.queryParam("part") ?: throw AssertionError()
+                val json = request.queryParams("id").asSequence()
+                    .filterNotNull().map { YouTubeChannel.Id(it) }
+                    .map { listOf(it).toQueryString(part) }
+                    .map { request.key.copy(encodedQuery = it) }
+                    .map(::getResponseItem)
+                    .toList()
+                YouTubeResponseJson(
+                    kind = ChannelItemJson.KIND_CHANNEL_LIST_RESPONSE,
+                    items = json,
+                )
             }
+
+            PATH_VIDEOS -> {
+                val json = request.queryParams("id").asSequence()
+                    .filterNotNull().map { YouTubeVideo.Id(it) }
+                    .map { listOf(it).toQueryString() }
+                    .map { request.key.copy(encodedQuery = it) }
+                    .map(::getResponseItem)
+                    .toList()
+                YouTubeResponseJson(
+                    kind = VideoJson.KIND_VIDEO_LIST_RESPONSE,
+                    items = json,
+                )
+            }
+
+            else -> throw AssertionError("unexpected: $request, table: $responseTable, itemTable: $responseItemTable")
         }
     }
-    setClient(dispatcher)
-}
-
-interface FakeYouTubeClient {
-    companion object {
-        const val PATH_SUBSCRIPTION = "/youtube/v3/subscriptions"
-    }
-
-    fun fetchSubscription(nextPageToken: String? = null, order: YouTubeSubscriptionQuery.Order): ResponseJson =
-        throw NotImplementedError()
-
-    fun fetchChannels(ids: Set<YouTubeChannel.Id>, part: Set<String>): ResponseJson = throw NotImplementedError()
-
-    fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): List<PlaylistJson> = throw NotImplementedError()
-
-    fun fetchPlaylistItems(
-        id: YouTubePlaylist.Id,
-        maxResult: Long,
-        eTag: String?,
-    ): ResponseJson = throw NotImplementedError()
-
-    fun fetchVideoList(ids: Set<YouTubeVideo.Id>): ResponseJson = throw NotImplementedError()
 }
 
 fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
     CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
-
-inline fun <reified T : Json> List<T>.responseJson(
-    eTag: String? = null,
-    pageToken: String? = null,
-): YouTubeResponseJson {
-    val kind = when (T::class) {
-        VideoJson::class -> "youtube#videoListResponse"
-        ChannelItemJson::class -> "youtube#channelListResponse"
-        PlaylistJson::class -> "youtube#playlistListResponse"
-        PlaylistItemJson::class -> "youtube#playlistItemListResponse"
-        SubscriptionItemJson::class -> "youtube#subscriptionListResponse"
-        else -> error("unsupported: ${T::class}")
-    }
-    return YouTubeResponseJson(kind = kind, eTag = eTag ?: "eTag", nextPageToken = pageToken, items = this)
-}
 
 class YouTubeResponseJson(
     private val kind: String,
@@ -277,12 +221,43 @@ class VideoJson(
         }
 
     override fun toString(): String = json.toString()
+
+    companion object {
+        fun List<YouTubeVideo.Id>.toQueryString() = joinToString("&") { "id=${it.value}" } +
+            "&maxResults=$size&part=snippet&part=liveStreamingDetails"
+
+        fun VideoJson.toExpectedResponse(): MockServerDispatcher.ExpectedResponse =
+            object : MockServerDispatcher.ExpectedResponse {
+                override val key: MockServerDispatcher.RequestKey
+                    get() = MockServerDispatcher.RequestKey(
+                        encodedPath = PATH_VIDEOS,
+                        encodedQuery = listOf(this@toExpectedResponse.id).toQueryString(),
+                    )
+                override val body: String get() = this@toExpectedResponse.toString()
+                override fun toString(): String = body
+            }
+
+        internal const val KIND_VIDEO_LIST_RESPONSE = "youtube#videoListResponse"
+        fun List<VideoJson>.wrapResponseJson(): YouTubeResponseJson = YouTubeResponseJson(
+            kind = KIND_VIDEO_LIST_RESPONSE,
+            items = this,
+        )
+    }
+}
+
+fun MockServerDispatcher.ExpectedResponse.Companion.youtubeVideo(
+    items: List<VideoJson> = emptyList(),
+    query: List<YouTubeVideo.Id> = items.map { it.id },
+    json: ResponseJson? = null,
+): MockServerDispatcher.ExpectedResponse {
+    check(query.isNotEmpty())
+    return create(path = PATH_VIDEOS, query = query.toQueryString(), json = json ?: items.wrapResponseJson())
 }
 
 class ChannelItemJson(
     override val id: YouTubeChannel.Id,
     override val title: String = "channel_${id.value}",
-    val playlistId: String? = null,
+    val playlistId: YouTubePlaylist.Id? = null,
     val hasSnippet: Boolean,
     val hasContentDetail: Boolean,
 ) : Json, YouTubeChannelTitle {
@@ -292,9 +267,35 @@ class ChannelItemJson(
 
         fun createRelatedPlaylist(idNum: Int): ChannelItemJson = ChannelItemJson(
             id = YouTubeChannel.Id("channel_$idNum"),
-            playlistId = "playlist_channel_$idNum",
+            playlistId = YouTubePlaylist.Id("playlist_channel_$idNum"),
             hasSnippet = false,
             hasContentDetail = true,
+        )
+
+        fun Collection<YouTubeChannel.Id>.toQueryString(detail: Boolean): String {
+            val part = if (detail) "contentDetails" else "snippet"
+            return toQueryString(part)
+        }
+
+        fun Collection<YouTubeChannel.Id>.toQueryString(part: String): String =
+            joinToString("&") { "id=${it.value}" } + "&maxResults=$size&part=$part"
+
+        fun ChannelItemJson.toExpectedResponse(
+            detail: Boolean,
+        ): MockServerDispatcher.ExpectedResponse = object : MockServerDispatcher.ExpectedResponse {
+            override val key: MockServerDispatcher.RequestKey
+                get() = MockServerDispatcher.RequestKey(
+                    encodedPath = PATH_CHANNELS,
+                    encodedQuery = listOf(this@toExpectedResponse.id).toQueryString(detail),
+                )
+            override val body: String get() = this@toExpectedResponse.toString()
+            override fun toString(): String = body
+        }
+
+        internal const val KIND_CHANNEL_LIST_RESPONSE = "youtube#channelListResponse"
+        fun Collection<ChannelItemJson>.wrapResponseJson(): YouTubeResponseJson = YouTubeResponseJson(
+            kind = KIND_CHANNEL_LIST_RESPONSE,
+            items = this.toList(),
         )
     }
 
@@ -325,19 +326,29 @@ class ChannelItemJson(
             this["relatedPlaylists"] = obj {
                 this["likes"] = ""
                 this["favorites"] = ""
-                this["uploads"] = playlistId ?: "playlist_${id.value}"
+                this["uploads"] = playlistId?.value ?: "playlist_${id.value}"
             }
         }
 
     override fun toString(): String = json.toString()
 }
 
-class PlaylistJson(val id: String, val title: String = "playlist_$id") : Json {
+fun MockServerDispatcher.ExpectedResponse.Companion.youtubeChannel(
+    items: List<ChannelItemJson> = emptyList(),
+    query: List<YouTubeChannel.Id> = items.map { it.id },
+    detail: Boolean = false,
+    json: ResponseJson? = null,
+): MockServerDispatcher.ExpectedResponse {
+    check(query.isNotEmpty())
+    return create(path = PATH_CHANNELS, query = query.toQueryString(detail), json = json ?: items.wrapResponseJson())
+}
+
+class PlaylistJson(val id: YouTubePlaylist.Id, val title: String = "playlist_$id") : Json {
     private val json: Json
         get() = obj {
             this["kind"] = "youtube#playlist"
             this["etag"] = "etag"
-            this["id"] = id
+            this["id"] = id.value
             this["snippet"] = obj {
                 this["publishedAt"] = "1970-01-01T00:00:00Z"
                 this["channelId"] = "channel_id"
@@ -359,22 +370,34 @@ class PlaylistJson(val id: String, val title: String = "playlist_$id") : Json {
     override fun toString(): String = json.toString()
 }
 
+fun MockServerDispatcher.ExpectedResponse.Companion.youtubePlaylist(
+    items: List<PlaylistJson>,
+    query: List<YouTubePlaylist.Id> = items.map { it.id },
+): MockServerDispatcher.ExpectedResponse {
+    val q = query.joinToString("&") { "id=${it.value}" } + "&maxResults=${query.size}&part=snippet&part=contentDetails"
+    val j = YouTubeResponseJson(
+        kind = "youtube#playlistListResponse",
+        items = items,
+    )
+    return create(path = PATH_PLAYLISTS, query = q, json = j)
+}
+
 class PlaylistItemJson(
-    val id: String,
-    val playlistId: String,
-    val videoId: String = "video_${id}_$playlistId",
+    val id: YouTubePlaylistItem.Id,
+    val playlistId: YouTubePlaylist.Id,
+    val videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id}_$playlistId"),
 ) : Json {
     companion object {
         fun List<PlaylistItemJson>.eTag(): String = joinToString(",") { it.key }.sha1()
     }
 
-    val key: String = listOf(id, playlistId, videoId).joinToString { it }
+    val key: String = listOf(id, playlistId, videoId).joinToString { it.value }
     private val json: String = obj {
         this["kind"] = "youtube#playlistItem"
         this["etag"] = "etag"
-        this["id"] = id
+        this["id"] = id.value
         this["contentDetails"] = obj {
-            this["videoId"] = videoId
+            this["videoId"] = videoId.value
             this["startAt"] = null
             this["endAt"] = null
             this["note"] = null
@@ -383,6 +406,23 @@ class PlaylistItemJson(
     }.toString()
 
     override fun toString(): String = json
+}
+
+fun MockServerDispatcher.ExpectedResponse.Companion.youtubePlaylistItem(
+    items: List<PlaylistItemJson> = emptyList(),
+    eTag: String? = null,
+    query: YouTubePlaylist.Id? = null,
+    json: ResponseJson? = null,
+): MockServerDispatcher.ExpectedResponse {
+    val playlistIds = items.map { it.playlistId }.toSet()
+    check(playlistIds.size == 1 || query != null) { "playlistIds: $playlistIds" }
+    val q = "maxResults=10&part=contentDetails&playlistId=${query?.value ?: playlistIds.first().value}"
+    val j = json ?: YouTubeResponseJson(
+        kind = "youtube#playlistItemListResponse",
+        eTag = items.eTag(),
+        items = items,
+    )
+    return create(path = PATH_PLAYLIST_ITEMS, eTag = eTag, query = q, json = j)
 }
 
 class SubscriptionItemJson(val id: String, val channelId: String, val channelTitle: String) : Json {
@@ -411,6 +451,25 @@ class SubscriptionItemJson(val id: String, val channelId: String, val channelTit
         }
 
     override fun toString(): String = json.toString()
+}
+
+fun MockServerDispatcher.ExpectedResponse.Companion.youtubeSubscription(
+    eTag: String? = null,
+    token: String? = null,
+    order: YouTubeSubscriptionQuery.Order,
+    nextPageToken: String? = null,
+    items: List<SubscriptionItemJson> = emptyList(),
+    json: ResponseJson? = null,
+): MockServerDispatcher.ExpectedResponse {
+    val pageToken = token?.let { "&pageToken=$it" } ?: ""
+    val query = "maxResults=50&mine=true&order=${order.text}$pageToken&part=snippet"
+    val j = json ?: YouTubeResponseJson(
+        kind = "youtube#subscriptionListResponse",
+        eTag = items.eTag(),
+        nextPageToken = nextPageToken,
+        items = items,
+    )
+    return create(path = PATH_SUBSCRIPTION, eTag = eTag, query = query, json = j)
 }
 
 private val md = MessageDigest.getInstance("SHA-1")

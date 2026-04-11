@@ -12,15 +12,16 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.feature.timetable.videoJson
-import com.freshdigitable.yttt.test.CallerVerifier
 import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.freshdigitable.yttt.test.setClient
+import com.freshdigitable.yttt.test.youtubeChannel
+import com.freshdigitable.yttt.test.youtubeVideo
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -44,9 +45,6 @@ class AddStreamWorkerTest {
     val testScope = TestCoroutineScopeRule()
 
     @get:Rule(order = 2)
-    val caller = CallerVerifier()
-
-    @get:Rule(order = 3)
     val server = MockServerRule { YouTubeModule.rootUrl = it.toString() }
 
     @Inject
@@ -82,16 +80,13 @@ class AddStreamWorkerTest {
         // setup
         val channelDetail = ChannelItemJson.createSnippet(YouTubeChannel.Id("channel_1"))
         val video = videoJson(1, channelDetail)
-        server.setClient(
-            videoList = caller.wrap(expected = 1) { listOf(video) },
-            channelList = caller.wrap(expected = 1) { (ids, _) ->
-                check(setOf(channelDetail.id) == ids)
-                listOf(channelDetail)
-            },
+        server.addResponses(
+            ExpectedResponse.youtubeVideo(listOf(video)),
+            ExpectedResponse.youtubeChannel(listOf(channelDetail)),
         )
         hiltRule.inject()
         initTestWorkManager()
-        val data = AddStreamUseCase.Input.create("https://youtube.com/live/${video.id}".toUri())!!
+        val data = AddStreamUseCase.Input.create("https://youtube.com/live/${video.id.value}".toUri())!!
         val context = InstrumentationRegistry.getInstrumentation().context
         // exercise
         val actual = AddStreamWorker.enqueue(context, data)
@@ -110,16 +105,13 @@ class AddStreamWorkerTest {
         // setup
         val channelDetail = ChannelItemJson.createSnippet(YouTubeChannel.Id("channel_1"))
         val video = videoJson(1, channelDetail)
-        server.setClient(
-            videoList = caller.wrap(expected = 1) { listOf(video) },
-            channelList = caller.wrap(expected = 1) { (ids, _) ->
-                check(setOf(channelDetail.id) == ids)
-                listOf(channelDetail)
-            },
+        server.addResponses(
+            ExpectedResponse.youtubeVideo(listOf(video)),
+            ExpectedResponse.youtubeChannel(listOf(channelDetail)),
         )
         hiltRule.inject()
         initTestWorkManager()
-        val uri = "https://youtube.com/live/${video.id}".toUri()
+        val uri = "https://youtube.com/live/${video.id.value}".toUri()
         val data = AddStreamUseCase.Input.create(uri, true)!!
         val context = InstrumentationRegistry.getInstrumentation().context
         // exercise

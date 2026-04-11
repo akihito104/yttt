@@ -15,13 +15,12 @@ import com.freshdigitable.yttt.di.LivePlatformKey
 import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
 import com.freshdigitable.yttt.di.YouTubeModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
+import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.SubscriptionItemJson
-import com.freshdigitable.yttt.test.SubscriptionItemJson.Companion.eTag
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.freshdigitable.yttt.test.responseJson
-import com.freshdigitable.yttt.test.setClient
 import com.freshdigitable.yttt.test.shouldBeSuccess
+import com.freshdigitable.yttt.test.youtubeSubscription
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -125,11 +124,8 @@ class YouTubeRemoteMediatorTest {
         FakeAccountRepositoryModule.account = "account"
         val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")
         FakeDateTimeProviderModule.instant = fetchedAt
-        server.setClient(
-            subscription = { _, o ->
-                check(o == Order.RELEVANCE)
-                emptyList<SubscriptionItemJson>().responseJson(pageToken = null)
-            },
+        server.addResponses(
+            ExpectedResponse.youtubeSubscription(order = Order.RELEVANCE, items = emptyList()),
         )
         // exercise
         val actual = remoteMediator.load(
@@ -148,11 +144,8 @@ class YouTubeRemoteMediatorTest {
         val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")
         FakeDateTimeProviderModule.instant = fetchedAt
         val subs = (0..<20).map { "channel_$it" }.map { SubscriptionItemJson("s_$it", it, "title_") }
-        server.setClient(
-            subscription = { _, o ->
-                check(o == Order.RELEVANCE)
-                subs.responseJson(pageToken = null, eTag = subs.eTag())
-            },
+        server.addResponses(
+            ExpectedResponse.youtubeSubscription(order = Order.RELEVANCE, items = subs),
         )
         // exercise
         val actual = pagerFactory.create(PagingConfig(20)).flow.asSnapshot()
@@ -166,12 +159,12 @@ class YouTubeRemoteMediatorTest {
         // setup
         FakeAccountRepositoryModule.account = "account"
         FakeDateTimeProviderModule.instant = Instant.parse("2025-08-01T13:20:00Z")
-        val subs = (0..<20).map { "channel_$it" }.map { SubscriptionItemJson("s_$it", it, "title_") }
-        server.setClient(
-            subscription = { _, o ->
-                check(o == Order.RELEVANCE)
-                subs.responseJson(pageToken = null, eTag = subs.eTag())
-            },
+        val channels = (0..<20).map { "channel_$it" }
+        val subs = channels.map { SubscriptionItemJson("s_$it", it, "title_") }
+        val subsInAlphabetical = channels.sorted().map { SubscriptionItemJson("s_$it", it, "title_") }
+        server.addResponses(
+            ExpectedResponse.youtubeSubscription(order = Order.RELEVANCE, items = subs),
+            ExpectedResponse.youtubeSubscription(order = Order.ALPHABETICAL, items = subsInAlphabetical),
         )
         // exercise
         repository.fetchPagedSubscription(
@@ -184,7 +177,7 @@ class YouTubeRemoteMediatorTest {
         ).onSuccess {
             repository.syncSubscriptionList(it.item.map { i -> i.id }.toSet(), emptyList())
             repository.subscriptionsFetchedAt = it.cacheControl.fetchedAt!!
-        }
+        }.getOrThrow()
         val fetchedAt = Instant.parse("2025-08-01T14:02:00Z")
         FakeDateTimeProviderModule.instant = fetchedAt
         val actual = pagerFactory.create(PagingConfig(20)).flow.asSnapshot()

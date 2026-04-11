@@ -14,11 +14,10 @@ import com.freshdigitable.yttt.di.TwitchHelixClientModule
 import com.freshdigitable.yttt.test.AppTraceVerifier
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.freshdigitable.yttt.test.TestDispatcher
-import com.freshdigitable.yttt.test.TestDispatcher.ExpectedResponse
 import com.freshdigitable.yttt.test.TwitchChannelScheduleJson
 import com.freshdigitable.yttt.test.TwitchErrorJson
 import com.freshdigitable.yttt.test.TwitchFollowedStreamJson

@@ -25,11 +25,11 @@ import com.freshdigitable.yttt.data.source.remote.TwitchUserDetailRemote
 import com.freshdigitable.yttt.di.TwitchHelixClientModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
 import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.ResponseJson
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.freshdigitable.yttt.test.TestDispatcher
 import com.freshdigitable.yttt.test.TwitchErrorJson
 import com.freshdigitable.yttt.test.TwitchFollowingJson
 import com.freshdigitable.yttt.test.TwitchUserJson
@@ -75,8 +75,6 @@ class TwitchRemoteMediatorTest {
     private val followings =
         TwitchFollowings.create(authUser.id, broadcaster, CacheControl.create(fetchedAt, maxAge))
 
-    private val dispatcher = TestDispatcher.create()
-
     @get:Rule(order = 2)
     val testScope = TestCoroutineScopeRule(
         setup = {
@@ -84,7 +82,6 @@ class TwitchRemoteMediatorTest {
             extendedSource.deleteAllTables()
 
             FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(100)
-            server.setClient(dispatcher)
             localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
             val stream = broadcaster.take(10).map { stream(it) }
             val streams = object : TwitchStreams.Updated {
@@ -111,7 +108,7 @@ class TwitchRemoteMediatorTest {
     fun firstTimeToLoadSubscriptionPage() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
-        dispatcher.add(broadcaster.take(60).toUserJson())
+        server.addResponses(broadcaster.take(60).toUserJson())
         // exercise
         val actual = sut.flow.asSnapshot()
         advanceUntilIdle()
@@ -124,7 +121,7 @@ class TwitchRemoteMediatorTest {
     fun firstTimeToLoadSubscriptionPage_needsRefresh() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        dispatcher.add(
+        server.addResponses(
             broadcaster.toFollowingJson(authUser.id),
             broadcaster.toUserJson(),
         )
@@ -139,7 +136,7 @@ class TwitchRemoteMediatorTest {
     fun firstTimeToLoadSubscriptionPage_scrollToLastItem() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
-        dispatcher.add(
+        server.addResponses(
             broadcaster.take(60).toUserJson(),
             broadcaster.takeLast(40).toUserJson(),
         )
@@ -160,7 +157,7 @@ class TwitchRemoteMediatorTest {
     fun failedToGetFollowingsAtRefresh_returnsError() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        dispatcher.add(broadcaster.toFollowingJson(authUser.id, TwitchErrorJson.internalError()))
+        server.addResponses(broadcaster.toFollowingJson(authUser.id, TwitchErrorJson.internalError()))
         // exercise
         val actual = remoteMediator.load(
             LoadType.REFRESH,
@@ -175,7 +172,7 @@ class TwitchRemoteMediatorTest {
     fun failedToGetUserDetailAtRefresh_returnsSuccess() = testScope.runTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt
-        dispatcher.add(
+        server.addResponses(
             broadcaster.toFollowingJson(authUser.id),
             broadcaster.toUserJson(TwitchErrorJson.internalError()),
         )
@@ -194,7 +191,7 @@ class TwitchRemoteMediatorTest {
         // setup
         FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
         val b = broadcaster.take(60)
-        dispatcher.add(b.toUserJson(TwitchErrorJson.internalError()))
+        server.addResponses(b.toUserJson(TwitchErrorJson.internalError()))
         // exercise
         val actual = remoteMediator.load(
             LoadType.PREPEND,
@@ -265,8 +262,8 @@ class TwitchRemoteMediatorTest {
     }
 }
 
-private fun List<Broadcaster>.toUserJson(body: ResponseJson? = null): TestDispatcher.ExpectedResponse =
-    TestDispatcher.ExpectedResponse.twitchUsers(
+private fun List<Broadcaster>.toUserJson(body: ResponseJson? = null): ExpectedResponse =
+    ExpectedResponse.twitchUsers(
         users = map { TwitchUserJson(it.id, it.loginName, it.displayName) },
         json = body,
     )
@@ -274,7 +271,7 @@ private fun List<Broadcaster>.toUserJson(body: ResponseJson? = null): TestDispat
 private fun List<Broadcaster>.toFollowingJson(
     authUserId: TwitchUser.Id,
     body: ResponseJson? = null,
-): TestDispatcher.ExpectedResponse = TestDispatcher.ExpectedResponse.twitchChannelsFollowed(
+): ExpectedResponse = ExpectedResponse.twitchChannelsFollowed(
     meId = authUserId,
     users = map { TwitchFollowingJson(it) },
     json = body,
