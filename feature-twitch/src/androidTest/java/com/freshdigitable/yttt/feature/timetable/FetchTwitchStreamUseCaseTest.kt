@@ -92,7 +92,7 @@ class FetchTwitchStreamUseCaseTest {
             // setup
             traceRule.isTraceable = false
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.add(ExpectedResponse.twitchMe(json = TwitchErrorJson.badRequest()))
+            server.addResponses(ExpectedResponse.twitchMe(json = TwitchErrorJson.badRequest()))
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -107,7 +107,7 @@ class FetchTwitchStreamUseCaseTest {
         fun noFollowing_returnAsSuccess() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.add(
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
                 ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = emptyList()),
@@ -126,7 +126,7 @@ class FetchTwitchStreamUseCaseTest {
         fun failedToGetFollowing_returnFailure() = testScope.runTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.add(
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
                 ExpectedResponse.twitchChannelsFollowed(meId = me.id, json = TwitchErrorJson.badRequest()),
@@ -147,7 +147,7 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.hasAccount = true
             val userDetail = userDetail("10")
             val category = category("1")
-            testDispatcher.add(
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = listOf(stream("1", category, userDetail))),
                 ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
@@ -170,7 +170,7 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.hasAccount = true
             val userDetail = userDetail("10")
             val category = category("1")
-            testDispatcher.add(
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
                 ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
@@ -199,7 +199,7 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.hasAccount = true
             val userDetail = userDetail("10")
             val category = category("1")
-            testDispatcher.add(
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
                 ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
@@ -228,7 +228,7 @@ class FetchTwitchStreamUseCaseTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
             val userDetail = userDetail("10")
-            testDispatcher.add(
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()),
                 ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
@@ -251,7 +251,7 @@ class FetchTwitchStreamUseCaseTest {
             FakeTwitchHelixClient.hasAccount = true
             val userDetail = userDetail("10")
             val category = category("1")
-            testDispatcher.add(
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = listOf(stream("1", category, userDetail))),
                 ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
@@ -273,7 +273,7 @@ class FetchTwitchStreamUseCaseTest {
             // setup
             FakeTwitchHelixClient.hasAccount = true
             val userDetail = userDetail("10")
-            testDispatcher.add(
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(meId = me.id, json = TwitchErrorJson.badRequest()),
                 ExpectedResponse.twitchChannelsFollowed(meId = me.id, users = listOf(broadcaster(userDetail))),
@@ -302,9 +302,14 @@ class FetchTwitchStreamUseCaseTest {
         @Before
         override fun setup(): Unit = runBlocking {
             super.setup()
-            val followings = listOf(streamUser, scheduleUser).map { broadcaster(it) }
             FakeTwitchHelixClient.hasAccount = true
-            testDispatcher.add(
+            FakeDateTimeProviderModule.instant = current
+            loadResponses()
+        }
+
+        private fun loadResponses() {
+            val followings = listOf(streamUser, scheduleUser).map { broadcaster(it) }
+            server.addResponses(
                 ExpectedResponse.twitchMe(me),
                 ExpectedResponse.twitchStreamsFollowed(
                     meId = me.id,
@@ -316,7 +321,6 @@ class FetchTwitchStreamUseCaseTest {
                 ExpectedResponse.twitchChannelSchedule(schedule(emptyList(), broadcaster(streamUser))),
                 ExpectedResponse.twitchUsers(listOf(streamUser, scheduleUser)),
             )
-            FakeDateTimeProviderModule.instant = current
         }
 
         @After
@@ -337,6 +341,7 @@ class FetchTwitchStreamUseCaseTest {
             // setup
             initialLoad()
             FakeDateTimeProviderModule.instant = current + Duration.ofMinutes(3)
+            loadResponses()
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -352,7 +357,8 @@ class FetchTwitchStreamUseCaseTest {
             initialLoad()
             val now = current + Duration.ofMinutes(10)
             FakeDateTimeProviderModule.instant = now
-            testDispatcher.add(ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()))
+            loadResponses()
+            server.addResponses(ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()))
             // exercise
             val actual = sut.invoke()
             advanceUntilIdle()
@@ -367,7 +373,8 @@ class FetchTwitchStreamUseCaseTest {
             // setup
             initialLoad()
             FakeDateTimeProviderModule.instant = streamSchedule.startTime + Duration.ofHours(7)
-            testDispatcher.add(
+            loadResponses()
+            server.addResponses(
                 ExpectedResponse.twitchChannelSchedule(userId = scheduleUser.id, json = TwitchErrorJson.notFound()),
                 ExpectedResponse.twitchUsers(listOf(streamUser)),
             )
@@ -393,7 +400,6 @@ class FetchTwitchStreamUseCaseTest {
 
         @get:Rule(order = 3)
         val server = MockServerRule { TwitchHelixClientModule.baseUrl = it.toString() }
-        val testDispatcher = TestDispatcher.create()
 
         @Inject
         internal lateinit var sut: FetchTwitchStreamUseCase
@@ -414,7 +420,6 @@ class FetchTwitchStreamUseCaseTest {
         open fun setup() = runBlocking {
             hilt.inject()
             extendedSource.deleteAllTables()
-            server.setClient(testDispatcher)
         }
     }
 }
