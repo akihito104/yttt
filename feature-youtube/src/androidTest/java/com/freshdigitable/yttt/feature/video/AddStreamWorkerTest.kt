@@ -8,23 +8,20 @@ import androidx.work.Configuration
 import androidx.work.WorkInfo
 import androidx.work.testing.SynchronousExecutor
 import androidx.work.testing.WorkManagerTestInitHelper
-import com.freshdigitable.yttt.data.model.CacheControl
-import com.freshdigitable.yttt.data.model.Updatable
-import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
 import com.freshdigitable.yttt.data.model.YouTubeChannel
-import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import com.freshdigitable.yttt.feature.timetable.video
-import com.freshdigitable.yttt.logD
-import com.freshdigitable.yttt.test.CallerVerifier
+import com.freshdigitable.yttt.di.YouTubeModule
+import com.freshdigitable.yttt.feature.timetable.videoJson
+import com.freshdigitable.yttt.test.ChannelItemJson
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
-import com.freshdigitable.yttt.test.FakeYouTubeClient
 import com.freshdigitable.yttt.test.FakeYouTubeClientModule
 import com.freshdigitable.yttt.test.InMemoryDbModule
+import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
+import com.freshdigitable.yttt.test.MockServerRule
 import com.freshdigitable.yttt.test.TestCoroutineScopeModule
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
-import com.freshdigitable.yttt.test.fromRemote
+import com.freshdigitable.yttt.test.youtubeChannel
+import com.freshdigitable.yttt.test.youtubeVideo
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -48,7 +45,7 @@ class AddStreamWorkerTest {
     val testScope = TestCoroutineScopeRule()
 
     @get:Rule(order = 2)
-    val caller = CallerVerifier()
+    val server = MockServerRule { YouTubeModule.rootUrl = it.toString() }
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -81,20 +78,15 @@ class AddStreamWorkerTest {
     @Test
     fun validUrl_stateIsSucceeded() = testScope.runTest {
         // setup
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
-        val video = video(1, channelDetail)
-        FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-            videoList = caller.wrap(expected = 1) {
-                listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-            },
-            channelList = caller.wrap(expected = 1) {
-                listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-            },
+        val channelDetail = ChannelItemJson.createSnippet(YouTubeChannel.Id("channel_1"))
+        val video = videoJson(1, channelDetail)
+        server.addResponses(
+            ExpectedResponse.youtubeVideo(listOf(video)),
+            ExpectedResponse.youtubeChannel(listOf(channelDetail)),
         )
         hiltRule.inject()
         initTestWorkManager()
-        val data =
-            AddStreamUseCase.Input.create("https://youtube.com/live/${video.id.value}".toUri())!!
+        val data = AddStreamUseCase.Input.create("https://youtube.com/live/${video.id.value}".toUri())!!
         val context = InstrumentationRegistry.getInstrumentation().context
         // exercise
         val actual = AddStreamWorker.enqueue(context, data)
@@ -106,23 +98,16 @@ class AddStreamWorkerTest {
     }
 
     @Inject
-    lateinit var localSource: YouTubeDataSource.Local
-
-    @Inject
     lateinit var extendedSource: YouTubeDataSource.Extended
 
     @Test
     fun validUrlForFreeChat_stateIsSucceeded() = testScope.runTest {
         // setup
-        val channelDetail = FakeYouTubeClient.channelDetail(1)
-        val video = video(1, channelDetail)
-        FakeYouTubeClientModule.client = FakeYouTubeClientImpl(
-            videoList = caller.wrap(expected = 1) {
-                listOf(video).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-            },
-            channelList = caller.wrap(expected = 1) {
-                listOf(channelDetail).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
-            },
+        val channelDetail = ChannelItemJson.createSnippet(YouTubeChannel.Id("channel_1"))
+        val video = videoJson(1, channelDetail)
+        server.addResponses(
+            ExpectedResponse.youtubeVideo(listOf(video)),
+            ExpectedResponse.youtubeChannel(listOf(channelDetail)),
         )
         hiltRule.inject()
         initTestWorkManager()
@@ -145,21 +130,6 @@ class AddStreamWorkerTest {
             config,
             WorkManagerTestInitHelper.ExecutorsMode.PRESERVE_EXECUTORS,
         )
-    }
-}
-
-class FakeYouTubeClientImpl(
-    private val videoList: ((Set<YouTubeVideo.Id>) -> Updatable<List<YouTubeVideo>>)? = null,
-    private val channelList: ((Set<YouTubeChannel.Id>) -> Updatable<List<YouTubeChannel>>)? = null,
-) : FakeYouTubeClient() {
-    override fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>> {
-        logD { "fetchVideoList: $ids" }
-        return NetworkResponse.create(videoList!!.invoke(ids))
-    }
-
-    override fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>> {
-        logD { "fetchChannelList: $ids" }
-        return NetworkResponse.create(channelList!!.invoke(ids))
     }
 }
 

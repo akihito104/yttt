@@ -16,7 +16,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":data-local-room"))
     implementation(project(":repository-youtube"))
+    implementation(project(":repository-twitch"))
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.junit)
     implementation(libs.androidx.test.runner)
@@ -34,4 +35,9 @@ dependencies {
     implementation(libs.kotest.assertions.core)
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.paging.testing)
+    implementation(libs.google.api.client.android) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation(libs.mockwebserver3)
+    implementation(libs.okhttp.logging.interceptor)
 }

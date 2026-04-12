@@ -15,11 +15,11 @@ class CallerVerifier : Verifier() {
     }
 
     override fun verify() {
-        recorder.forAll {
-            it.actual should Matcher { value ->
+        recorder.forAll { r ->
+            r.actual should Matcher {
                 MatcherResult(
-                    it.actual == it.expected,
-                    { "expected($it) calls ${it.expected} but was ${it.actual}" },
+                    r.actual == r.expected,
+                    { "expected($r) calls ${r.expected} but was ${r.actual}" },
                     { throw NotImplementedError() },
                 )
             }

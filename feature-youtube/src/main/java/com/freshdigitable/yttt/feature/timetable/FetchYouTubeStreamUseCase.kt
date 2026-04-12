@@ -90,7 +90,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
             }.toList()
         if (subscriptions.all { it.isSuccess }) {
             val s = subscriptions.map { it.getOrThrow() }
-            val subIds = s.map { it.item }.flatten().map { it.subscriptionId }.toSet()
+            val subIds = s.flatMap { it.item }.map { it.subscriptionId }.toSet()
             val queries = s.mapNotNull { it.updatedQuery }
             liveRepository.syncSubscriptionList(subIds, queries)
         }
@@ -167,7 +167,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     private suspend fun AppTrace.fetchVideos(
         batch: List<VideoUpdateBatch>,
     ): Result<List<Updatable<YouTubeVideoExtended>>> {
-        val videoIds = batch.map { it.videoIds }.flatten()
+        val videoIds = batch.flatMap { it.videoIds }
         return liveRepository.fetchVideoList(videoIds.toSet())
             .onFailure { logE(throwable = it) { "ids: $videoIds" } }
             .onSuccess { video ->
@@ -252,7 +252,7 @@ internal fun YouTubeRepository.fetchAllSubscription(
             }
             emit(s)
             summary = s.getOrThrow()
-        } while (summary.nextPageToken != null)
+        } while (summary.hasNextToken)
         if (summary.fetchedAt != null) {
             subscriptionsFetchedAt = summary.fetchedAt
         }
@@ -269,7 +269,7 @@ internal class SubscriptionSummaryTask(
 ) : YouTubeSubscriptionQuery {
     override val nextPageToken: String? get() = token ?: query?.nextPageToken
     override val eTag: String? get() = query?.eTag
-    val hasNextToken: Boolean get() = nextPageToken != null
+    val hasNextToken: Boolean get() = !nextPageToken.isNullOrEmpty()
 }
 
 typealias VideoUpdateBatch = Pair<List<YouTubeVideo.Id>, Updatable<YouTubePlaylistWithItems>?>

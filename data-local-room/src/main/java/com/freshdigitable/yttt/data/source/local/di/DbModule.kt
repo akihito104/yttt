@@ -31,6 +31,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineDispatcher
 import org.jetbrains.annotations.VisibleForTesting
 import javax.inject.Singleton
 
@@ -43,8 +44,9 @@ internal object DbModule {
         @ApplicationContext context: Context,
         flag: DbFlagModule.Flag? = null,
         platforms: ClassMap<LivePlatform, LivePlatform>,
+        coroutineDispatcher: CoroutineDispatcher,
     ): AppDatabase = if (flag == null) {
-        AppDatabase.create(context, platforms = platforms.values)
+        AppDatabase.create(context, platforms = platforms.values, coroutineDispatcher = coroutineDispatcher)
     } else {
         AppDatabase.createInMemory(context, platforms.values)
     }
@@ -60,10 +62,12 @@ object DbFlagModule {
     internal val provideFlag: Flag? get() = null
 }
 
-private fun AppDatabase.Companion.createInMemory(context: Context, platforms: Collection<LivePlatform>) =
-    Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
-        .addTypeConverter(LivePlatformConverter(platforms))
-        .build()
+private fun AppDatabase.Companion.createInMemory(
+    context: Context,
+    platforms: Collection<LivePlatform>,
+) = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
+    .addTypeConverter(LivePlatformConverter(platforms))
+    .build()
 
 @Module
 @InstallIn(SingletonComponent::class)

@@ -10,13 +10,15 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-internal object OkHttpModule {
+object OkHttpModule {
+    var logLevel: HttpLoggingInterceptor.Level = HttpLoggingInterceptor.Level.BODY
+
     @Provides
     @Singleton
     fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder()
         .addInterceptor(
             HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
+                level = logLevel
             },
         )
         .build()
