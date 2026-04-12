@@ -38,6 +38,6 @@ dependencies {
     implementation(libs.google.api.client.android) {
         exclude(group = "org.apache.httpcomponents")
     }
-    implementation("com.squareup.okhttp3:mockwebserver3:${libs.versions.okhttp.get()}")
+    implementation(libs.mockwebserver3)
     implementation(libs.okhttp.logging.interceptor)
 }
