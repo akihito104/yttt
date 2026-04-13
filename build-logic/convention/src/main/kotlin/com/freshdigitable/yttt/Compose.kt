@@ -4,7 +4,7 @@ import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.dependencies
 
-fun Project.configureCompose(commonExtension: CommonExtension<*, *, *, *, *, *>) {
+fun Project.configureCompose(commonExtension: CommonExtension) {
     pluginManager.applyComposeCompiler()
 
     commonExtension.apply {

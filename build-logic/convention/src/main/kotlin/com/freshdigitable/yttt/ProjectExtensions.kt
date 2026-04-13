@@ -13,7 +13,6 @@ import java.util.Optional
 
 fun PluginManager.applyAndroidApplication() = apply("com.android.application")
 fun PluginManager.applyAndroidLibrary() = apply("com.android.library")
-fun PluginManager.applyKotlinAndroid() = apply("org.jetbrains.kotlin.android")
 fun PluginManager.applyComposeCompiler() = apply("org.jetbrains.kotlin.plugin.compose")
 fun PluginManager.applyKsp() = apply("com.google.devtools.ksp")
 fun PluginManager.applyHiltAndroid() = apply("dagger.hilt.android.plugin")

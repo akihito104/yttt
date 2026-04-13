@@ -1,7 +1,6 @@
 import com.android.build.api.dsl.LibraryExtension
 import com.freshdigitable.yttt.applyAndroidLibrary
 import com.freshdigitable.yttt.applyDetekt
-import com.freshdigitable.yttt.applyKotlinAndroid
 import com.freshdigitable.yttt.configureAndroidSdk
 import com.freshdigitable.yttt.configureCompose
 import com.freshdigitable.yttt.configureDesugaring
@@ -23,7 +22,6 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         with(pluginManager) {
             applyAndroidLibrary()
-            applyKotlinAndroid()
             apply("yttt.testing")
         }
         extensions.configure<LibraryExtension> {
