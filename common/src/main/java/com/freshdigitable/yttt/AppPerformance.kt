@@ -76,14 +76,14 @@ interface AppTrace {
         private val metrics = ConcurrentHashMap<String, Long>()
         private val counter = ConcurrentHashMap<String, AtomicLong>()
         override fun start() {
-            Logger.i(name) { "start: " }
+            Logger.i(tag = name) { "start: " }
             time = System.currentTimeMillis()
         }
 
         override fun stop() {
             val elapsed = System.currentTimeMillis() - time
             val res = (metrics + counter.map { it.key to it.value.get() }).toSortedMap()
-            Logger.i(name) { "end: $elapsed [ms]\n$res" }
+            Logger.i(tag = name) { "end: $elapsed [ms]\n$res" }
             metrics.clear()
             counter.clear()
         }
