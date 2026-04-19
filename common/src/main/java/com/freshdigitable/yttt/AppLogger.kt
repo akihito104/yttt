@@ -7,7 +7,7 @@ fun Any.logV(
     throwable: Throwable? = null,
     message: () -> String,
 ) {
-    Logger.v(tag, throwable, message = message)
+    Logger.v(throwable = throwable, tag = tag, message = message)
 }
 
 fun Any.logD(
@@ -15,7 +15,7 @@ fun Any.logD(
     throwable: Throwable? = null,
     message: () -> String,
 ) {
-    Logger.d(tag, throwable, message = message)
+    Logger.d(throwable = throwable, tag = tag, message = message)
 }
 
 fun Any.logI(
@@ -31,7 +31,7 @@ fun Any.logW(
     throwable: Throwable? = null,
     message: () -> String,
 ) {
-    Logger.w(tag, throwable, message = message)
+    Logger.w(throwable = throwable, tag = tag, message = message)
 }
 
 fun Any.logE(
@@ -39,12 +39,12 @@ fun Any.logE(
     throwable: Throwable? = null,
     message: () -> String,
 ) {
-    Logger.e(tag, throwable, message)
+    Logger.e(throwable = throwable, tag = tag, message = message)
 }
 
 object AppLogger {
     fun i(tag: String, throwable: Throwable? = null, message: () -> String) {
-        Logger.i(tag, throwable, message = message)
+        Logger.i(throwable = throwable, tag = tag, message = message)
     }
 }
 

@@ -28,24 +28,22 @@ inline fun <reified T : KotlinBaseExtension> Project.configureKotlin() = configu
     }
 }
 
-fun Project.configureDesugaring(commonExtension: CommonExtension<*, *, *, *, *, *>) =
-    commonExtension.apply {
-        compileOptions.isCoreLibraryDesugaringEnabled = true
-        packaging {
-            resources.excludes.add("META-INF/INDEX.LIST")
-        }
-        dependencies {
-            add("coreLibraryDesugaring", libs.findLibrary("desugarJdkLibs").get())
-        }
+fun Project.configureDesugaring(commonExtension: CommonExtension) = commonExtension.apply {
+    compileOptions.isCoreLibraryDesugaringEnabled = true
+    packaging.apply {
+        resources.excludes.add("META-INF/INDEX.LIST")
     }
+    dependencies {
+        add("coreLibraryDesugaring", libs.findLibrary("desugarJdkLibs").get())
+    }
+}
 
-fun Project.configureKotest(commonExtension: CommonExtension<*, *, *, *, *, *>) =
-    commonExtension.apply {
-        testOptions.unitTests.all {
-            it.useJUnitPlatform()
-        }
-        dependencies {
-            testImplementation(libs.findLibrary("kotest-runner-junit5"))
-            testImplementation(libs.findLibrary("kotest-assertions-core"))
-        }
+fun Project.configureKotest(commonExtension: CommonExtension) = commonExtension.apply {
+    testOptions.unitTests.all {
+        it.useJUnitPlatform()
     }
+    dependencies {
+        testImplementation(libs.findLibrary("kotest-runner-junit5"))
+        testImplementation(libs.findLibrary("kotest-assertions-core"))
+    }
+}

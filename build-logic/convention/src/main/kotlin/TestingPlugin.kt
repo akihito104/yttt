@@ -1,6 +1,6 @@
+import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.dsl.CommonExtension
 import com.android.build.api.dsl.LibraryExtension
-import com.android.build.gradle.internal.dsl.BaseAppModuleExtension
 import com.freshdigitable.yttt.androidTestUtil
 import com.freshdigitable.yttt.libs
 import org.gradle.api.Plugin
@@ -30,7 +30,7 @@ class TestingPlugin : Plugin<Project> {
                 }
                 subprojectsWithJacoco.forEach { s -> // fixme: off orchestrator to avoid error
                     if (s.pluginManager.hasPlugin("com.android.application")) {
-                        s.configure<BaseAppModuleExtension> {
+                        s.configure<ApplicationExtension> {
                             s.configureOrchestrator(this, isEnabled = false)
                         }
                     } else if (s.pluginManager.hasPlugin("com.android.library")) {
@@ -98,7 +98,7 @@ class TestingPlugin : Plugin<Project> {
 
         private fun Project.configureTest(isOrchestratorEnabled: Boolean = true) {
             if (pluginManager.hasPlugin("com.android.application")) {
-                configure<BaseAppModuleExtension> {
+                configure<ApplicationExtension> {
                     configureCoverage(this)
                     configureOrchestrator(this, isEnabled = isOrchestratorEnabled)
                 }
@@ -111,11 +111,11 @@ class TestingPlugin : Plugin<Project> {
         }
 
         private fun Project.configureCoverage(
-            commonExtension: CommonExtension<*, *, *, *, *, *>,
+            commonExtension: CommonExtension,
         ) = with(commonExtension) {
             val hasUnitTest = sourceSets.getByName("test").java.directories.any { hasSourceFile(it) }
             val hasAndroidTest = sourceSets.getByName("androidTest").java.directories.any { hasSourceFile(it) }
-            buildTypes {
+            buildTypes.apply {
                 getByName("debug") {
                     enableUnitTestCoverage = hasUnitTest
                     enableAndroidTestCoverage = hasAndroidTest
@@ -127,10 +127,10 @@ class TestingPlugin : Plugin<Project> {
             .any { it.name.endsWith(".kt") || it.name.endsWith(".java") }
 
         private fun Project.configureOrchestrator(
-            commonExtension: CommonExtension<*, *, *, *, *, *>,
+            commonExtension: CommonExtension,
             isEnabled: Boolean = true,
         ) = with(commonExtension) {
-            defaultConfig {
+            defaultConfig.apply {
                 val args = if (isEnabled) {
                     mapOf(
                         "clearPackageData" to "true",
@@ -142,7 +142,7 @@ class TestingPlugin : Plugin<Project> {
                 }
                 testInstrumentationRunnerArguments.putAll(args)
             }
-            testOptions {
+            testOptions.apply {
                 execution = if (isEnabled) "ANDROIDX_TEST_ORCHESTRATOR" else "HOST"
             }
             dependencies {

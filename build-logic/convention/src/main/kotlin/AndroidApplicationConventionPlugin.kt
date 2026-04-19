@@ -1,6 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
 import com.freshdigitable.yttt.applyAndroidApplication
-import com.freshdigitable.yttt.applyKotlinAndroid
 import com.freshdigitable.yttt.configureAndroidSdk
 import com.freshdigitable.yttt.configureCompose
 import com.freshdigitable.yttt.configureDesugaring
@@ -14,7 +13,6 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
         with(pluginManager) {
             applyAndroidApplication()
-            applyKotlinAndroid()
             apply("yttt.testing")
         }
 

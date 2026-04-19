@@ -7,7 +7,7 @@ import androidx.work.Configuration
 import com.freshdigitable.yttt.compose.ImageLoaderViewSetup
 import com.freshdigitable.yttt.compose.OssLicenseNavigationQualifier
 import com.freshdigitable.yttt.compose.navigation.NavActivity
-import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
+import com.google.android.gms.oss.licenses.v2.OssLicensesMenuActivity
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
