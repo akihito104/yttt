@@ -160,6 +160,19 @@ internal data class YouTubeVideoDb(
                 "WHERE broadcast_content IS NOT NULL AND v.video_id IN (:ids)",
         )
         suspend fun findVideosById(ids: Collection<YouTubeVideo.Id>): List<UpdatableYouTubeVideoDb>
+
+        @Query(
+            "SELECT v.*, c.id AS c_id, c.icon AS c_icon, c.title AS c_title, f.is_free_chat AS is_free_chat," +
+                " e.fetched_at AS fetched_at, e.max_age AS max_age, video.broadcast_content AS broadcast_content," +
+                " 1 AS is_pinned FROM video_detail AS v " +
+                "INNER JOIN video ON video.id = v.video_id " +
+                "LEFT OUTER JOIN video_expire AS e ON e.video_id = v.video_id " +
+                "INNER JOIN channel AS c ON c.id = v.channel_id " +
+                "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
+                "INNER JOIN yt_pinned AS p ON v.video_id = p.video_id " +
+                "WHERE f.is_free_chat IS 1",
+        )
+        suspend fun findAllPinnedVideos(): List<UpdatableYouTubeVideoDb>
     }
 }
 
@@ -289,6 +302,7 @@ internal interface YouTubeVideoDao :
     YouTubeVideoDetailTable.Dao,
     FreeChatTable.Dao,
     YouTubePinnedVideoTable.Dao {
+    suspend fun findAllPinnedVideoList(): List<Updatable<YouTubeVideoExtended>>
     suspend fun addVideoEntities(videos: Collection<Updatable<YouTubeVideoExtended>>)
     suspend fun insertOrIgnoreVideoEntities(videos: Collection<YouTubeVideo.Id>)
     suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
@@ -311,6 +325,9 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
     YouTubeVideoDetailTable.Dao by db.youTubeVideoDetailDao,
     FreeChatTable.Dao by db.youTubeFreeChatDao,
     YouTubePinnedVideoTable.Dao by db.youTubePinnedVideoDao {
+    override suspend fun findAllPinnedVideoList(): List<Updatable<YouTubeVideoExtended>> =
+        findAllPinnedVideos()
+
     override suspend fun addVideoEntities(
         videos: Collection<Updatable<YouTubeVideoExtended>>,
     ) = db.withTransaction {

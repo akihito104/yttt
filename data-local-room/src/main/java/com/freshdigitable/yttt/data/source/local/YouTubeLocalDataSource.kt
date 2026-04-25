@@ -154,6 +154,9 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
             ioScope.asResult { dao.fetchByIdBatch(ids) { findVideosById(it) }.flatten() }
         }
 
+    override suspend fun fetchAllPinnedVideoList(): Result<List<Updatable<YouTubeVideoExtended>>> =
+        ioScope.asResult { dao.findAllPinnedVideoList() }
+
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         dao.addFreeChatItemEntities(ids, true, YouTubeVideo.MAX_AGE_FREE_CHAT)
     }

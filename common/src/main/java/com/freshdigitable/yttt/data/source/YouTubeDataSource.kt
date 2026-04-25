@@ -86,6 +86,7 @@ interface YouTubeVideoDataSource {
     interface Local : YouTubeVideoDataSource
     interface Extended {
         suspend fun fetchVideoList(ids: Set<YouTubeVideo.Id>): Result<List<Updatable<YouTubeVideoExtended>>>
+        suspend fun fetchAllPinnedVideoList(): Result<List<Updatable<YouTubeVideoExtended>>>
         suspend fun fetchUpdatableVideoIds(current: Instant): List<YouTubeVideo.Id>
         suspend fun addVideo(video: Collection<Updatable<YouTubeVideoExtended>>)
         suspend fun updateWithVideos(
