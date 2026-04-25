@@ -31,6 +31,7 @@ import coil3.ImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
+import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import dagger.hilt.android.EntryPointAccessors
 
@@ -106,7 +107,8 @@ class YtttWidget : GlanceAppWidget() {
             .data(url)
             .build()
         val result = loader.execute(request)
-        return (result as? SuccessResult)?.image?.toBitmap()
+        val bitmap = (result as? SuccessResult)?.image?.toBitmap()
+        return bitmap?.let { ImageLoadableView.cropLetterbox(it) }
     }
 
     companion object {
