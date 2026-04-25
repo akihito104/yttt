@@ -170,7 +170,8 @@ internal data class YouTubeVideoDb(
                 "INNER JOIN channel AS c ON c.id = v.channel_id " +
                 "LEFT OUTER JOIN free_chat AS f ON v.video_id = f.video_id " +
                 "INNER JOIN yt_pinned AS p ON v.video_id = p.video_id " +
-                "WHERE f.is_free_chat IS 1",
+                "WHERE f.is_free_chat IS 1 " +
+                "ORDER BY v.video_id ASC",
         )
         suspend fun findAllPinnedVideos(): List<UpdatableYouTubeVideoDb>
     }
