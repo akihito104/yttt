@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.widget
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -11,6 +12,7 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
+import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
@@ -37,6 +39,7 @@ import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
 import com.freshdigitable.yttt.compose.ImageLoadableView
+import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.lib.R
@@ -46,35 +49,24 @@ class YtttWidget : GlanceAppWidget() {
     override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val entryPoint = EntryPointAccessors.fromApplication(
-            context,
-            YtttWidgetEntryPoint::class.java,
-        )
-        val fetchPinnedVideo = entryPoint.fetchPinnedVideoUseCase()
+        val fetchPinnedVideo = context.widgetEntryPoint().fetchPinnedVideoUseCase()
         val pinned = fetchPinnedVideo().getOrDefault(emptyList())
-        val prefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
-        val videoId = prefs[videoIdKey]
+        val videoId = context.getCurrentVideoId(id)
 
-        val video = if (pinned.isNotEmpty()) {
-            val current = pinned.firstOrNull { it.id.value == videoId }
-            if (current != null) {
-                current
-            } else {
-                val next = pinned.firstOrNull { it.id.value > (videoId ?: "") }
-                next ?: pinned.first()
-            }
-        } else null
-
+        val video = if (pinned.isEmpty()) {
+            null
+        } else {
+            videoId?.let { pinned.findById(it) ?: pinned.getNextById(it) } ?: pinned.first()
+        }
         val bitmap = video?.let { loadBitmap(context, it.thumbnailUrl) }
 
         provideContent {
-            MyContent(pinned, video, bitmap)
+            MyContent(video, bitmap)
         }
     }
 
     @Composable
     private fun MyContent(
-        pinned: List<YouTubeVideoExtended>,
         video: YouTubeVideoExtended?,
         bitmap: Bitmap?,
     ) {
@@ -82,7 +74,7 @@ class YtttWidget : GlanceAppWidget() {
             modifier = GlanceModifier.fillMaxSize().padding(8.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
-            if ((pinned.isEmpty()) || (video == null)) {
+            if (video == null) {
                 Text(text = "No pinned videos")
             } else {
                 Box(
@@ -109,23 +101,13 @@ class YtttWidget : GlanceAppWidget() {
                     CaretButton(
                         iconRes = R.drawable.chevron_left,
                         contentDescription = "Previous",
-                        action = actionRunCallback<SwitchAction>(
-                            parameters = actionParametersOf(
-                                SwitchAction.videoIdKey to video.id.value,
-                                SwitchAction.directionKey to "prev",
-                            ),
-                        ),
+                        action = SwitchAction.create(video.id, SwitchAction.Direction.prev),
                     )
                     Spacer(modifier = GlanceModifier.defaultWeight())
                     CaretButton(
                         iconRes = R.drawable.chevron_right,
                         contentDescription = "Next",
-                        action = actionRunCallback<SwitchAction>(
-                            parameters = actionParametersOf(
-                                SwitchAction.videoIdKey to video.id.value,
-                                SwitchAction.directionKey to "next",
-                            ),
-                        ),
+                        action = SwitchAction.create(video.id, SwitchAction.Direction.next),
                     )
                 }
             }
@@ -134,9 +116,9 @@ class YtttWidget : GlanceAppWidget() {
 
     @Composable
     private fun CaretButton(
-        iconRes: Int,
+        @DrawableRes iconRes: Int,
         contentDescription: String,
-        action: androidx.glance.action.Action,
+        action: Action,
     ) {
         Box(
             modifier = GlanceModifier.size(48.dp),
@@ -166,48 +148,72 @@ class YtttWidget : GlanceAppWidget() {
     }
 
     companion object {
-        internal val videoIdKey = stringPreferencesKey("pinned_video_id")
+        private val videoIdKey = stringPreferencesKey("pinned_video_id")
+
+        private suspend fun Context.getCurrentVideoId(glanceId: GlanceId): String? {
+            val prefs = getAppWidgetState(this, PreferencesGlanceStateDefinition, glanceId)
+            return prefs[videoIdKey]
+        }
+
+        internal suspend fun update(context: Context, glanceId: GlanceId, videoId: YouTubeVideo.Id) {
+            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                prefs.toMutablePreferences()
+                    .apply { this[videoIdKey] = videoId.value }
+            }
+            YtttWidget().update(context, glanceId)
+        }
     }
 }
 
-class SwitchAction : ActionCallback {
+internal class SwitchAction : ActionCallback {
     override suspend fun onAction(
         context: Context,
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
-        val currentVideoId = parameters[videoIdKey]
-        val direction = parameters[directionKey]
-        val entryPoint = EntryPointAccessors.fromApplication(
-            context,
-            YtttWidgetEntryPoint::class.java,
-        )
-        val fetchPinnedVideo = entryPoint.fetchPinnedVideoUseCase()
+        val currentVideoId = requireNotNull(parameters[videoIdKey])
+        val direction = requireNotNull(parameters[directionKey])
+        val fetchPinnedVideo = context.widgetEntryPoint().fetchPinnedVideoUseCase()
         val pinned = fetchPinnedVideo().getOrDefault(emptyList())
-        if (pinned.isEmpty()) return
-
-        val nextVideo = if (currentVideoId != null) {
-            if (direction == "prev") {
-                val prev = pinned.lastOrNull { it.id.value < currentVideoId }
-                prev ?: pinned.last()
-            } else {
-                val next = pinned.firstOrNull { it.id.value > currentVideoId }
-                next ?: pinned.first()
-            }
+        if (pinned.isEmpty()) {
+            return
+        }
+        val nextVideo = if (direction == Direction.prev.value) {
+            pinned.getPrevById(currentVideoId)
         } else {
-            pinned.first()
+            pinned.getNextById(currentVideoId)
         }
+        YtttWidget.update(context, glanceId, nextVideo.id)
+    }
 
-        updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-            prefs.toMutablePreferences().apply {
-                this[YtttWidget.videoIdKey] = nextVideo.id.value
-            }
+    @JvmInline
+    internal value class Direction private constructor(val value: String) {
+        companion object {
+            val next: Direction = Direction("next")
+            val prev: Direction = Direction("prev")
         }
-        YtttWidget().update(context, glanceId)
     }
 
     companion object {
-        internal val videoIdKey = ActionParameters.Key<String>("pinned_video_id")
-        internal val directionKey = ActionParameters.Key<String>("direction")
+        private val videoIdKey = ActionParameters.Key<String>("pinned_video_id")
+        private val directionKey = ActionParameters.Key<String>("direction")
+        internal fun create(videoId: YouTubeVideo.Id, direction: Direction): Action = actionRunCallback<SwitchAction>(
+            actionParametersOf(
+                videoIdKey to videoId.value,
+                directionKey to direction.value,
+            ),
+        )
     }
 }
+
+private fun Context.widgetEntryPoint(): YtttWidgetEntryPoint =
+    EntryPointAccessors.fromApplication(this, YtttWidgetEntryPoint::class.java)
+
+private fun List<YouTubeVideoExtended>.findById(videoId: String): YouTubeVideoExtended? =
+    this.firstOrNull { it.id.value == videoId }
+
+private fun List<YouTubeVideoExtended>.getNextById(videoId: String): YouTubeVideoExtended =
+    this.firstOrNull { it.id.value > videoId } ?: this.first()
+
+private fun List<YouTubeVideoExtended>.getPrevById(videoId: String): YouTubeVideoExtended =
+    this.lastOrNull { it.id.value < videoId } ?: this.last()
