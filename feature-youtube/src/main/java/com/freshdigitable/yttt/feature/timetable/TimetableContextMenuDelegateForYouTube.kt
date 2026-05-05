@@ -1,16 +1,21 @@
 package com.freshdigitable.yttt.feature.timetable
 
+import android.content.Context
+import androidx.glance.appwidget.updateAll
 import com.freshdigitable.yttt.LaunchAppWithUrlUseCase
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
+import com.freshdigitable.yttt.widget.YtttWidget
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 internal class TimetableContextMenuDelegateForYouTube @Inject constructor(
     private val extendedSource: YouTubeDataSource.Extended,
     private val launchApp: LaunchAppWithUrlUseCase,
+    @param:ApplicationContext private val context: Context,
 ) : TimetableContextMenuSelector {
     override suspend fun setupMenuItems(videoId: LiveVideo.Id): ContextMenuSelector<TimetableMenuItem> {
         val youtubeId = videoId.mapTo<YouTubeVideo.Id>()
@@ -35,8 +40,15 @@ internal class TimetableContextMenuDelegateForYouTube @Inject constructor(
                     TimetableMenuItem.ADD_FREE_CHAT -> extendedSource.addFreeChatItems(setOf(video.id))
                     TimetableMenuItem.REMOVE_FREE_CHAT -> extendedSource.removeFreeChatItems(setOf(video.id))
                     TimetableMenuItem.LAUNCH_LIVE -> launchApp(video.url)
-                    TimetableMenuItem.PIN_TO_TOP -> extendedSource.addPinnedVideo(video.id)
-                    TimetableMenuItem.UNPIN -> extendedSource.removePinnedVideo(video.id)
+                    TimetableMenuItem.PIN_TO_TOP -> {
+                        extendedSource.addPinnedVideo(video.id)
+                        YtttWidget().updateAll(context)
+                    }
+
+                    TimetableMenuItem.UNPIN -> {
+                        extendedSource.removePinnedVideo(video.id)
+                        YtttWidget().updateAll(context)
+                    }
                 }
             }
         }

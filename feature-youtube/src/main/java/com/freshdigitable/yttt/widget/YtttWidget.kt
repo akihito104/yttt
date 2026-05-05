@@ -42,7 +42,7 @@ import com.freshdigitable.yttt.compose.ImageLoadableView
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.lib.R
+import com.freshdigitable.yttt.feature.timetable.youtube.R
 import dagger.hilt.android.EntryPointAccessors
 
 class YtttWidget : GlanceAppWidget() {
@@ -58,10 +58,12 @@ class YtttWidget : GlanceAppWidget() {
         } else {
             videoId?.let { pinned.findById(it) ?: pinned.getNextById(it) } ?: pinned.first()
         }
+        val prevVideoId = videoId?.let { pinned.getPrevById(it) }?.id
+        val nextVideoId = videoId?.let { pinned.getNextById(it) }?.id
         val bitmap = video?.let { loadBitmap(context, it.thumbnailUrl) }
 
         provideContent {
-            MyContent(video, bitmap)
+            MyContent(video, bitmap, prevVideoId, nextVideoId)
         }
     }
 
@@ -69,6 +71,8 @@ class YtttWidget : GlanceAppWidget() {
     private fun MyContent(
         video: YouTubeVideoExtended?,
         bitmap: Bitmap?,
+        prevVideoId: YouTubeVideo.Id?,
+        nextVideoId: YouTubeVideo.Id?,
     ) {
         Box(
             modifier = GlanceModifier.fillMaxSize().padding(8.dp),
@@ -98,17 +102,21 @@ class YtttWidget : GlanceAppWidget() {
                     modifier = GlanceModifier.fillMaxSize(),
                     verticalAlignment = Alignment.Bottom,
                 ) {
-                    CaretButton(
-                        iconRes = R.drawable.chevron_left,
-                        contentDescription = "Previous",
-                        action = SwitchAction.create(video.id, SwitchAction.Direction.prev),
-                    )
+                    if (prevVideoId != null) {
+                        CaretButton(
+                            iconRes = R.drawable.chevron_right,
+                            contentDescription = "Previous",
+                            action = SwitchAction.create(prevVideoId),
+                        )
+                    }
                     Spacer(modifier = GlanceModifier.defaultWeight())
-                    CaretButton(
-                        iconRes = R.drawable.chevron_right,
-                        contentDescription = "Next",
-                        action = SwitchAction.create(video.id, SwitchAction.Direction.next),
-                    )
+                    if (nextVideoId != null) {
+                        CaretButton(
+                            iconRes = R.drawable.chevron_right,
+                            contentDescription = "Next",
+                            action = SwitchAction.create(nextVideoId),
+                        )
+                    }
                 }
             }
         }
@@ -155,10 +163,10 @@ class YtttWidget : GlanceAppWidget() {
             return prefs[videoIdKey]
         }
 
-        internal suspend fun update(context: Context, glanceId: GlanceId, videoId: YouTubeVideo.Id) {
+        internal suspend fun update(context: Context, glanceId: GlanceId, videoId: String) {
             updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
                 prefs.toMutablePreferences()
-                    .apply { this[videoIdKey] = videoId.value }
+                    .apply { this[videoIdKey] = videoId }
             }
             YtttWidget().update(context, glanceId)
         }
@@ -171,37 +179,14 @@ internal class SwitchAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters,
     ) {
-        val currentVideoId = requireNotNull(parameters[videoIdKey])
-        val direction = requireNotNull(parameters[directionKey])
-        val fetchPinnedVideo = context.widgetEntryPoint().fetchPinnedVideoUseCase()
-        val pinned = fetchPinnedVideo().getOrDefault(emptyList())
-        if (pinned.isEmpty()) {
-            return
-        }
-        val nextVideo = if (direction == Direction.prev.value) {
-            pinned.getPrevById(currentVideoId)
-        } else {
-            pinned.getNextById(currentVideoId)
-        }
-        YtttWidget.update(context, glanceId, nextVideo.id)
-    }
-
-    @JvmInline
-    internal value class Direction private constructor(val value: String) {
-        companion object {
-            val next: Direction = Direction("next")
-            val prev: Direction = Direction("prev")
-        }
+        val nextVideoId = requireNotNull(parameters[videoIdKey])
+        YtttWidget.update(context, glanceId, nextVideoId)
     }
 
     companion object {
         private val videoIdKey = ActionParameters.Key<String>("pinned_video_id")
-        private val directionKey = ActionParameters.Key<String>("direction")
-        internal fun create(videoId: YouTubeVideo.Id, direction: Direction): Action = actionRunCallback<SwitchAction>(
-            actionParametersOf(
-                videoIdKey to videoId.value,
-                directionKey to direction.value,
-            ),
+        internal fun create(videoId: YouTubeVideo.Id): Action = actionRunCallback<SwitchAction>(
+            actionParametersOf(videoIdKey to videoId.value),
         )
     }
 }
