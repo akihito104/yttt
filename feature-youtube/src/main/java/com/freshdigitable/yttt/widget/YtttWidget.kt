@@ -117,7 +117,7 @@ class YtttWidget : GlanceAppWidget() {
                 ) {
                     if (prevVideoId != null) {
                         CaretButton(
-                            iconRes = R.drawable.chevron_right,
+                            iconRes = R.drawable.chevron_left,
                             contentDescription = "Previous",
                             action = SwitchAction.create(prevVideoId),
                         )
