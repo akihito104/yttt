@@ -18,6 +18,7 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable.Dao.Companion.SQL_FIND_ALL_ARCHIVED_VIDEOS
+import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
 import java.time.Duration
 import java.time.Instant
@@ -173,7 +174,7 @@ internal data class YouTubeVideoDb(
                 "WHERE f.is_free_chat IS 1 " +
                 "ORDER BY v.video_id ASC",
         )
-        suspend fun findAllPinnedVideos(): List<UpdatableYouTubeVideoDb>
+        fun findAllPinnedVideos(): Flow<List<UpdatableYouTubeVideoDb>>
     }
 }
 
@@ -303,7 +304,7 @@ internal interface YouTubeVideoDao :
     YouTubeVideoDetailTable.Dao,
     FreeChatTable.Dao,
     YouTubePinnedVideoTable.Dao {
-    suspend fun findAllPinnedVideoList(): List<Updatable<YouTubeVideoExtended>>
+    fun findAllPinnedVideoList(): Flow<List<Updatable<YouTubeVideoExtended>>>
     suspend fun addVideoEntities(videos: Collection<Updatable<YouTubeVideoExtended>>)
     suspend fun insertOrIgnoreVideoEntities(videos: Collection<YouTubeVideo.Id>)
     suspend fun removeVideoEntities(videoIds: Collection<YouTubeVideo.Id>)
@@ -326,8 +327,7 @@ internal class YouTubeVideoDaoImpl @Inject constructor(
     YouTubeVideoDetailTable.Dao by db.youTubeVideoDetailDao,
     FreeChatTable.Dao by db.youTubeFreeChatDao,
     YouTubePinnedVideoTable.Dao by db.youTubePinnedVideoDao {
-    override suspend fun findAllPinnedVideoList(): List<Updatable<YouTubeVideoExtended>> =
-        findAllPinnedVideos()
+    override fun findAllPinnedVideoList(): Flow<List<Updatable<YouTubeVideoExtended>>> = findAllPinnedVideos()
 
     override suspend fun addVideoEntities(
         videos: Collection<Updatable<YouTubeVideoExtended>>,

@@ -5,8 +5,12 @@ import android.content.Intent
 import android.graphics.Bitmap
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -17,11 +21,11 @@ import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -44,25 +48,34 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.feature.timetable.youtube.R
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 class YtttWidget : GlanceAppWidget() {
-    override val stateDefinition: GlanceStateDefinition<*> = PreferencesGlanceStateDefinition
+    override val stateDefinition: StorableStateDefinition = StorableStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val videoId = context.getCurrentVideoId(id, stateDefinition)
         val fetchPinnedVideo = context.widgetEntryPoint().fetchPinnedVideoUseCase()
-        val pinned = fetchPinnedVideo().getOrDefault(emptyList())
-        val videoId = context.getCurrentVideoId(id)
-
-        val video = if (pinned.isEmpty()) {
-            null
-        } else {
-            videoId?.let { pinned.findById(it) ?: pinned.getNextById(it) } ?: pinned.first()
+        val pinned = fetchPinnedVideo()
+        val pinnedItem = videoId.combine(pinned) { v, p ->
+            if (p.isEmpty()) {
+                null
+            } else {
+                v?.let { p.findById(it) ?: p.getNextById(it) } ?: p.first()
+            }
         }
-        val prevVideoId = videoId?.let { pinned.getPrevById(it) }?.id
-        val nextVideoId = videoId?.let { pinned.getNextById(it) }?.id
-        val bitmap = video?.let { loadBitmap(context, it.thumbnailUrl) }
+        val image = pinnedItem.map { v -> v?.let { loadBitmap(context, it.thumbnailUrl) } }
+        val prevItem = videoId.combine(pinned) { v, p -> v?.let { p.getPrevById(it).id } }
+        val nextItem = videoId.combine(pinned) { v, p -> v?.let { p.getNextById(it).id } }
 
         provideContent {
+            val video by pinnedItem.collectAsState(null)
+            val bitmap by image.collectAsState(null)
+            val prevVideoId by prevItem.collectAsState(null)
+            val nextVideoId by nextItem.collectAsState(null)
             MyContent(video, bitmap, prevVideoId, nextVideoId)
         }
     }
@@ -158,9 +171,13 @@ class YtttWidget : GlanceAppWidget() {
     companion object {
         private val videoIdKey = stringPreferencesKey("pinned_video_id")
 
-        private suspend fun Context.getCurrentVideoId(glanceId: GlanceId): String? {
-            val prefs = getAppWidgetState(this, PreferencesGlanceStateDefinition, glanceId)
-            return prefs[videoIdKey]
+        private suspend fun Context.getCurrentVideoId(
+            glanceId: GlanceId,
+            stateDef: StorableStateDefinition,
+        ): Flow<String?> {
+            val appWidgetId = GlanceAppWidgetManager(this).getAppWidgetId(glanceId)
+            return stateDef.getDataStore(this, "appWidget-$appWidgetId")
+                .data.map { it[videoIdKey] }.distinctUntilChanged()
         }
 
         internal suspend fun update(context: Context, glanceId: GlanceId, videoId: String) {
@@ -169,6 +186,15 @@ class YtttWidget : GlanceAppWidget() {
                     .apply { this[videoIdKey] = videoId }
             }
             YtttWidget().update(context, glanceId)
+        }
+    }
+}
+
+object StorableStateDefinition : GlanceStateDefinition<Preferences> by PreferencesGlanceStateDefinition {
+    private val stores = mutableMapOf<String, DataStore<Preferences>>()
+    override suspend fun getDataStore(context: Context, fileKey: String): DataStore<Preferences> {
+        return stores.getOrPut(fileKey) {
+            PreferencesGlanceStateDefinition.getDataStore(context, fileKey)
         }
     }
 }

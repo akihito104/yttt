@@ -28,6 +28,7 @@ import com.freshdigitable.yttt.data.source.YouTubePlaylistDataSource
 import com.freshdigitable.yttt.data.source.YouTubeSubscriptionDataSource
 import com.freshdigitable.yttt.data.source.YouTubeVideoDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
+import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -154,8 +155,7 @@ internal class YouTubeVideoLocalDataSource @Inject constructor(
             ioScope.asResult { dao.fetchByIdBatch(ids) { findVideosById(it) }.flatten() }
         }
 
-    override suspend fun fetchAllPinnedVideoList(): Result<List<Updatable<YouTubeVideoExtended>>> =
-        ioScope.asResult { dao.findAllPinnedVideoList() }
+    override fun fetchAllPinnedVideoList(): Flow<List<Updatable<YouTubeVideoExtended>>> = dao.findAllPinnedVideoList()
 
     override suspend fun addFreeChatItems(ids: Set<YouTubeVideo.Id>) {
         dao.addFreeChatItemEntities(ids, true, YouTubeVideo.MAX_AGE_FREE_CHAT)
