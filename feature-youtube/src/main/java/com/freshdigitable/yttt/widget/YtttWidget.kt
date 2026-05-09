@@ -47,35 +47,32 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.url
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.feature.timetable.youtube.R
+import com.freshdigitable.yttt.feature.video.FetchPinnedVideoUseCase
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 
 class YtttWidget : GlanceAppWidget() {
     override val stateDefinition: StorableStateDefinition = StorableStateDefinition
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val videoId = context.getCurrentVideoId(id, stateDefinition)
-        val fetchPinnedVideo = context.widgetEntryPoint().fetchPinnedVideoUseCase()
-        val pinned = fetchPinnedVideo()
-        val pinnedItem = videoId.combine(pinned) { v, p ->
-            if (p.isEmpty()) {
-                null
-            } else {
-                v?.let { p.findById(it) ?: p.getNextById(it) } ?: p.first()
-            }
+        val stateFactory = context.widgetEntryPoint().stateFactory()
+        val state = stateFactory.create(stateDefinition.flowVideoId(context, id)) {
+            stateDefinition.updateVideoId(context, id, it.value)
         }
-        val image = pinnedItem.map { v -> v?.let { loadBitmap(context, it.thumbnailUrl) } }
-        val prevItem = videoId.combine(pinned) { v, p -> v?.let { p.getPrevById(it).id } }
-        val nextItem = videoId.combine(pinned) { v, p -> v?.let { p.getNextById(it).id } }
+        val image = state.pinnedItem.map { v -> v?.let { loadBitmap(context, it.thumbnailUrl) } }
 
         provideContent {
-            val video by pinnedItem.collectAsState(null)
+            val video by state.pinnedItem.collectAsState(null)
             val bitmap by image.collectAsState(null)
-            val prevVideoId by prevItem.collectAsState(null)
-            val nextVideoId by nextItem.collectAsState(null)
+            val prevVideoId by state.prevItem.collectAsState(null)
+            val nextVideoId by state.nextItem.collectAsState(null)
             MyContent(video, bitmap, prevVideoId, nextVideoId)
         }
     }
@@ -169,22 +166,8 @@ class YtttWidget : GlanceAppWidget() {
     }
 
     companion object {
-        private val videoIdKey = stringPreferencesKey("pinned_video_id")
-
-        private suspend fun Context.getCurrentVideoId(
-            glanceId: GlanceId,
-            stateDef: StorableStateDefinition,
-        ): Flow<String?> {
-            val appWidgetId = GlanceAppWidgetManager(this).getAppWidgetId(glanceId)
-            return stateDef.getDataStore(this, "appWidget-$appWidgetId")
-                .data.map { it[videoIdKey] }.distinctUntilChanged()
-        }
-
         internal suspend fun update(context: Context, glanceId: GlanceId, videoId: String) {
-            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                prefs.toMutablePreferences()
-                    .apply { this[videoIdKey] = videoId }
-            }
+            StorableStateDefinition.updateVideoId(context, glanceId, videoId)
             YtttWidget().update(context, glanceId)
         }
     }
@@ -195,6 +178,20 @@ object StorableStateDefinition : GlanceStateDefinition<Preferences> by Preferenc
     override suspend fun getDataStore(context: Context, fileKey: String): DataStore<Preferences> {
         return stores.getOrPut(fileKey) {
             PreferencesGlanceStateDefinition.getDataStore(context, fileKey)
+        }
+    }
+
+    private val videoIdKey = stringPreferencesKey("pinned_video_id")
+    internal suspend fun flowVideoId(context: Context, glanceId: GlanceId): Flow<String?> {
+        val appWidgetId = GlanceAppWidgetManager(context).getAppWidgetId(glanceId)
+        return getDataStore(context, "appWidget-$appWidgetId")
+            .data.map { it[videoIdKey] }.distinctUntilChanged()
+    }
+
+    internal suspend fun updateVideoId(context: Context, glanceId: GlanceId, videoId: String) {
+        updateAppWidgetState(context, this, glanceId) { prefs ->
+            prefs.toMutablePreferences()
+                .apply { this[videoIdKey] = videoId }
         }
     }
 }
@@ -210,7 +207,7 @@ internal class SwitchAction : ActionCallback {
     }
 
     companion object {
-        private val videoIdKey = ActionParameters.Key<String>("pinned_video_id")
+        private val videoIdKey = ActionParameters.Key<String>("video_id")
         internal fun create(videoId: YouTubeVideo.Id): Action = actionRunCallback<SwitchAction>(
             actionParametersOf(videoIdKey to videoId.value),
         )
@@ -220,11 +217,43 @@ internal class SwitchAction : ActionCallback {
 private fun Context.widgetEntryPoint(): YtttWidgetEntryPoint =
     EntryPointAccessors.fromApplication(this, YtttWidgetEntryPoint::class.java)
 
-private fun List<YouTubeVideoExtended>.findById(videoId: String): YouTubeVideoExtended? =
-    this.firstOrNull { it.id.value == videoId }
+internal class YtttState @AssistedInject constructor(
+    @Assisted private val videoId: Flow<String?>,
+    @Assisted private val initialUpdateVideoIdIfNeed: suspend (YouTubeVideo.Id) -> Unit,
+    fetchPinnedVideo: FetchPinnedVideoUseCase,
+) {
+    private val pinned = fetchPinnedVideo()
+    val pinnedItem = videoId.combine(pinned) { v, p ->
+        if (p.isEmpty()) {
+            null
+        } else {
+            v?.let { p.findById(it) ?: p.getNextById(it) }
+                ?: p.first().also { initialUpdateVideoIdIfNeed(it.id) }
+        }
+    }
+    val prevItem = videoId.combine(pinned.filter { it.isNotEmpty() }) { v, p ->
+        v?.let { p.getPrevById(it) } ?: p.firstOrNull()
+    }.map { it?.id }
+    val nextItem = videoId.combine(pinned.filter { it.isNotEmpty() }) { v, p ->
+        v?.let { p.getNextById(it) } ?: p.firstOrNull()
+    }.map { it?.id }
 
-private fun List<YouTubeVideoExtended>.getNextById(videoId: String): YouTubeVideoExtended =
-    this.firstOrNull { it.id.value > videoId } ?: this.first()
+    companion object {
+        private fun List<YouTubeVideoExtended>.findById(videoId: String): YouTubeVideoExtended? =
+            this.firstOrNull { it.id.value == videoId }
 
-private fun List<YouTubeVideoExtended>.getPrevById(videoId: String): YouTubeVideoExtended =
-    this.lastOrNull { it.id.value < videoId } ?: this.last()
+        private fun List<YouTubeVideoExtended>.getNextById(videoId: String): YouTubeVideoExtended =
+            this.firstOrNull { it.id.value > videoId } ?: this.first()
+
+        private fun List<YouTubeVideoExtended>.getPrevById(videoId: String): YouTubeVideoExtended =
+            this.lastOrNull { it.id.value < videoId } ?: this.last()
+    }
+
+    @AssistedFactory
+    interface Factory {
+        fun create(
+            videoId: Flow<String?>,
+            initialUpdateVideoIdIfNeed: suspend (YouTubeVideo.Id) -> Unit,
+        ): YtttState
+    }
+}
