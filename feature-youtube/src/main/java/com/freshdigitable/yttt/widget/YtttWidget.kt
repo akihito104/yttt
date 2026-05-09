@@ -38,7 +38,7 @@ import androidx.glance.layout.size
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.Text
-import coil3.ImageLoader
+import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
@@ -155,7 +155,7 @@ class YtttWidget : GlanceAppWidget() {
     }
 
     private suspend fun loadBitmap(context: Context, url: String): Bitmap? {
-        val loader = ImageLoader(context)
+        val loader = SingletonImageLoader.get(context)
         val request = ImageRequest.Builder(context)
             .data(url)
             .build()
