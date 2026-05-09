@@ -55,7 +55,6 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 
 class YtttWidget : GlanceAppWidget() {
@@ -231,12 +230,20 @@ internal class YtttState @AssistedInject constructor(
                 ?: p.first().also { initialUpdateVideoIdIfNeed(it.id) }
         }
     }
-    val prevItem = videoId.combine(pinned.filter { it.isNotEmpty() }) { v, p ->
-        v?.let { p.getPrevById(it) } ?: p.firstOrNull()
-    }.map { it?.id }
-    val nextItem = videoId.combine(pinned.filter { it.isNotEmpty() }) { v, p ->
-        v?.let { p.getNextById(it) } ?: p.firstOrNull()
-    }.map { it?.id }
+    val prevItem = pinnedItem.combine(pinned) { c, p ->
+        if (c == null || p.size <= 1) null
+        else {
+            val prev = p.getPrevById(c.id.value)
+            if (prev.id == c.id) null else prev.id
+        }
+    }
+    val nextItem = pinnedItem.combine(pinned) { c, p ->
+        if (c == null || p.size <= 1) null
+        else {
+            val next = p.getNextById(c.id.value)
+            if (next.id == c.id) null else next.id
+        }
+    }
 
     companion object {
         private fun List<YouTubeVideoExtended>.findById(videoId: String): YouTubeVideoExtended? =
