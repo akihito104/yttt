@@ -195,6 +195,15 @@ object ImageLoadableView {
         }
     }
 
+    fun cropLetterbox(input: Bitmap): Bitmap {
+        val width = input.width
+        val height = input.height
+        val targetHeight = (width / THUMBNAIL_ASPECT_RATIO).toInt()
+        if (height <= targetHeight) return input
+        val dy = (height - targetHeight) / 2
+        return Bitmap.createBitmap(input, 0, dy, width, targetHeight)
+    }
+
     interface Delegate {
         @Composable
         fun Thumbnail(
