@@ -1,7 +1,7 @@
 [versions]
-androidGradlePlugin = "9.1.1"
+androidGradlePlugin = "9.2.1"
 desugarJdkLib = "2.1.5"
-androidTools = "32.1.1"
+androidTools = "32.2.1"
 kotlin = "2.3.20"
 ksp = "2.3.4" # https://github.com/google/ksp/releases
 kotlinxCoroutinesCore = "1.10.2" # https://github.com/Kotlin/kotlinx.coroutines/releases
