@@ -15,7 +15,8 @@ interface YouTubeChannelTitle : YouTubeChannelBase {
 interface YouTubeChannel : YouTubeChannelTitle {
     val iconUrl: String
 
-    data class Id(override val value: String) : YouTubeId
+    @JvmInline
+    value class Id(override val value: String) : YouTubeId
 }
 
 data class YouTubeChannelEntity(
@@ -59,7 +60,8 @@ interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {
 
     override fun compareTo(other: YouTubeChannelSection): Int = (position - other.position).toInt()
 
-    data class Id(override val value: String) : YouTubeId
+    @JvmInline
+    value class Id(override val value: String) : YouTubeId
 
     enum class Type {
         // has content
@@ -73,10 +75,11 @@ interface YouTubeChannelSection : Comparable<YouTubeChannelSection> {
     }
 
     sealed interface Content<T> {
-        data class Playlist(override val item: List<YouTubePlaylist.Id>) :
-            Content<YouTubePlaylist.Id>
+        @JvmInline
+        value class Playlist(override val item: List<YouTubePlaylist.Id>) : Content<YouTubePlaylist.Id>
 
-        data class Channels(override val item: List<YouTubeChannel.Id>) : Content<YouTubeChannel.Id>
+        @JvmInline
+        value class Channels(override val item: List<YouTubeChannel.Id>) : Content<YouTubeChannel.Id>
 
         val item: List<T>
     }

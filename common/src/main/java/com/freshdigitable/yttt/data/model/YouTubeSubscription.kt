@@ -8,7 +8,8 @@ interface YouTubeSubscription {
     val subscribeSince: Instant
     val channel: YouTubeChannel
 
-    data class Id(override val value: String) : YouTubeId
+    @JvmInline
+    value class Id(override val value: String) : YouTubeId
 }
 
 interface YouTubeSubscriptionRelevanceOrdered : YouTubeSubscription {

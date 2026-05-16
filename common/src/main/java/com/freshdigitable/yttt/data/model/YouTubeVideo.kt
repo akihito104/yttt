@@ -33,7 +33,8 @@ interface YouTubeVideo {
     fun isNowOnAir(): Boolean = liveBroadcastContent == BroadcastType.LIVE
     fun isUpcoming(): Boolean = liveBroadcastContent == BroadcastType.UPCOMING
 
-    data class Id(override val value: String) : YouTubeId
+    @JvmInline
+    value class Id(override val value: String) : YouTubeId
 
     enum class BroadcastType { LIVE, UPCOMING, NONE, }
 

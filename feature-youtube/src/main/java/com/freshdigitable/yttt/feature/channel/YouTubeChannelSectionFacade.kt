@@ -182,4 +182,5 @@ internal data class MultipleChannel(
     override val size: Int get() = item.size
 }
 
-internal data class EmptySection(override val section: YouTubeChannelSection) : ChannelSectionItem
+@JvmInline
+internal value class EmptySection(override val section: YouTubeChannelSection) : ChannelSectionItem

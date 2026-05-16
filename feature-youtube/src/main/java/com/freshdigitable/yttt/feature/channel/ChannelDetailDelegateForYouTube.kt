@@ -149,7 +149,8 @@ internal interface YouTubeChannelDetailPagerContent : ChannelDetailDelegate.Page
     val activities: Flow<List<YouTubeChannelLog>>
     val debug: Flow<Map<DebugId, String>>
 
-    data class DebugId(override val value: String) : YouTubeId
+    @JvmInline
+    value class DebugId(override val value: String) : YouTubeId
 }
 
 internal data class LiveChannelDetailYouTube(

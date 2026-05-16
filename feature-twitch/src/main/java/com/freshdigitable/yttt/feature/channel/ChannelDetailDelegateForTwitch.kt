@@ -91,7 +91,8 @@ internal interface TwitchChannelDetailPagerContent : ChannelDetailDelegate.Pager
     val vod: Flow<List<TwitchVideoDetail>>
     val debug: Flow<Map<DebugId, String>>
 
-    data class DebugId(override val value: String) : TwitchId
+    @JvmInline
+    value class DebugId(override val value: String) : TwitchId
 }
 
 internal data class LiveChannelDetailTwitch(

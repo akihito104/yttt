@@ -16,7 +16,9 @@ interface TwitchVideo<T : TwitchVideo.TwitchVideoId> {
     val language: String
 
     interface TwitchVideoId : TwitchId
-    data class Id(override val value: String) : TwitchVideoId
+
+    @JvmInline
+    value class Id(override val value: String) : TwitchVideoId
 
     fun getThumbnailUrl(width: Int = 640, height: Int = 360): String =
         thumbnailUrlBase.replace("{width}", "$width").replace("{height}", "$height")
@@ -54,7 +56,8 @@ interface TwitchStream : TwitchVideo<TwitchStream.Id> {
     override val url: String
         get() = "https://twitch.tv/${user.loginName}"
 
-    data class Id(override val value: String) : TwitchVideo.TwitchVideoId
+    @JvmInline
+    value class Id(override val value: String) : TwitchVideo.TwitchVideoId
 }
 
 interface TwitchChannelSchedule {
@@ -71,7 +74,8 @@ interface TwitchChannelSchedule {
         val category: TwitchCategory?
         val isRecurring: Boolean
 
-        data class Id(override val value: String) : TwitchVideo.TwitchVideoId
+        @JvmInline
+        value class Id(override val value: String) : TwitchVideo.TwitchVideoId
     }
 
     interface Vacation {
@@ -90,7 +94,8 @@ interface TwitchCategory {
     val artUrlBase: String? get() = null
     val igdbId: String? get() = null
 
-    data class Id(override val value: String) : TwitchId
+    @JvmInline
+    value class Id(override val value: String) : TwitchId
 }
 
 interface TwitchStreams {

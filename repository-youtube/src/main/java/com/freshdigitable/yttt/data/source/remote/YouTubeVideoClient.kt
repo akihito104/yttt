@@ -28,7 +28,8 @@ internal class YouTubeVideoClientImpl(private val youtube: YouTube) : YouTubeVid
 }
 
 @VisibleForTesting
-internal class YouTubeVideoRemote(
+@JvmInline
+internal value class YouTubeVideoRemote(
     private val video: Video,
 ) : YouTubeVideo {
     private val liveStreamingDetails: VideoLiveStreamingDetails? get() = video.liveStreamingDetails
