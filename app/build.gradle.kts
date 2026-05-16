@@ -30,6 +30,7 @@ android {
             matchingFallbacks += listOf("release")
             isDebuggable = false
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -37,10 +38,10 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
 
-    hilt {
-        enableAggregatingTask = true
-    }
+hilt {
+    enableAggregatingTask = true
 }
 
 dependencies {

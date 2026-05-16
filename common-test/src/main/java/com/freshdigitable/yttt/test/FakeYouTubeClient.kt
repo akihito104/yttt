@@ -184,8 +184,12 @@ class VideoJson(
         actualEndDateTime: Instant? = null,
     ) : this(
         YouTubeVideo.Id("${channel.id.value}-video_$idNum"),
-        channel.id, channel.title, liveBroadcastContent,
-        scheduledStartDateTime, actualStartDateTime, actualEndDateTime,
+        channel.id,
+        channel.title,
+        liveBroadcastContent,
+        scheduledStartDateTime,
+        actualStartDateTime,
+        actualEndDateTime,
     )
 
     val json: Json
