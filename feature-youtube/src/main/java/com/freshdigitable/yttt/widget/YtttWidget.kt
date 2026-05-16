@@ -231,15 +231,17 @@ internal class YtttState @AssistedInject constructor(
         }
     }
     val prevItem = pinnedItem.combine(pinned) { c, p ->
-        if (c == null || p.size <= 1) null
-        else {
+        if (c == null || p.size <= 1) {
+            null
+        } else {
             val prev = p.getPrevById(c.id.value)
             if (prev.id == c.id) null else prev.id
         }
     }
     val nextItem = pinnedItem.combine(pinned) { c, p ->
-        if (c == null || p.size <= 1) null
-        else {
+        if (c == null || p.size <= 1) {
+            null
+        } else {
             val next = p.getNextById(c.id.value)
             if (next.id == c.id) null else next.id
         }

@@ -60,7 +60,6 @@ internal interface TwitchModule {
         @Provides
         internal fun provideTwitchHelixClient(service: TwitchHelixService): TwitchHelixClient =
             TwitchHelixClient.create(service)
-
     }
 }
 
