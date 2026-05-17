@@ -12,7 +12,8 @@ interface TwitchUser {
     val loginName: String
     val displayName: String
 
-    data class Id(override val value: String) : TwitchId
+    @JvmInline
+    value class Id(override val value: String) : TwitchId
 }
 
 interface TwitchUserDetail : TwitchUser {

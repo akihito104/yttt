@@ -30,7 +30,8 @@ internal class YouTubeSubscriptionClientImpl(private val youtube: YouTube) : You
         }
 }
 
-private class YouTubeSubscriptionRemote(
+@JvmInline
+private value class YouTubeSubscriptionRemote(
     private val subscription: Subscription,
 ) : YouTubeSubscription {
     override val id: YouTubeSubscription.Id get() = YouTubeSubscription.Id(subscription.id)

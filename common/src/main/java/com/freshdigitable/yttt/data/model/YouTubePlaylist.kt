@@ -7,7 +7,8 @@ interface YouTubePlaylist {
     val title: String
     val thumbnailUrl: String
 
-    data class Id(override val value: String) : YouTubeId
+    @JvmInline
+    value class Id(override val value: String) : YouTubeId
 }
 
 interface YouTubePlaylistItem {
@@ -16,7 +17,8 @@ interface YouTubePlaylistItem {
     val videoId: YouTubeVideo.Id
     val publishedAt: Instant
 
-    data class Id(override val value: String) : YouTubeId
+    @JvmInline
+    value class Id(override val value: String) : YouTubeId
 }
 
 interface YouTubePlaylistItemDetail : YouTubePlaylistItem {

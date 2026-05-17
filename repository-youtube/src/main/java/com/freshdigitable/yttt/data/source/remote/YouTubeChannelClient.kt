@@ -48,7 +48,8 @@ internal class YouTubeChannelClientImpl(private val youtube: YouTube) : YouTubeC
     }
 }
 
-private class YouTubeChannelRemote(
+@JvmInline
+private value class YouTubeChannelRemote(
     private val channel: Channel,
 ) : YouTubeChannel {
     override val id: YouTubeChannel.Id get() = YouTubeChannel.Id(channel.id)
@@ -67,7 +68,8 @@ private class YouTubeChannelRemote(
     }
 }
 
-private class YouTubeChannelRelatedPlaylistRemote(
+@JvmInline
+private value class YouTubeChannelRelatedPlaylistRemote(
     private val channel: Channel,
 ) : YouTubeChannelRelatedPlaylist {
     override val id: YouTubeChannel.Id get() = YouTubeChannel.Id(channel.id)

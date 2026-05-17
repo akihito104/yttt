@@ -11,5 +11,6 @@ interface YouTubeChannelLog {
     val title: String
     val type: String
 
-    data class Id(override val value: String) : YouTubeId
+    @JvmInline
+    value class Id(override val value: String) : YouTubeId
 }
