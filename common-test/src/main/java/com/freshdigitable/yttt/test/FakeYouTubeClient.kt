@@ -24,9 +24,8 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
+import kotlinx.datetime.Instant
 import java.security.MessageDigest
-import java.time.Instant
-import java.time.format.DateTimeFormatter
 import javax.inject.Singleton
 
 @Module
@@ -215,9 +214,9 @@ class VideoJson(
                 this["defaultAudioLanguage"] = "ja"
             }
             this["liveStreamingDetails"] = obj {
-                this["actualStartTime"] = actualStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) }
-                this["actualEndTime"] = actualEndDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) }
-                this["scheduledStartTime"] = scheduledStartDateTime?.let { DateTimeFormatter.ISO_INSTANT.format(it) }
+                this["actualStartTime"] = actualStartDateTime?.toString()
+                this["actualEndTime"] = actualEndDateTime?.toString()
+                this["scheduledStartTime"] = scheduledStartDateTime?.toString()
                 this["scheduledEndTime"] = null
                 this["concurrentViewers"] = "100"
                 this["activeLiveChatId"] = "livechatid${id.value}"

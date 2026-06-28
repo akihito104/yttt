@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 interface YouTubeSubscriptionSummary {
     val subscriptionId: YouTubeSubscription.Id

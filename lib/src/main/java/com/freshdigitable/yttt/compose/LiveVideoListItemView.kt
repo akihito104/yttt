@@ -37,14 +37,15 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimetableItem
 import com.freshdigitable.yttt.lib.R
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 @Composable
 fun LiveVideoListItemView(
@@ -202,8 +203,9 @@ private fun LiveVideoListItemViewPreview(
 private fun LiveVideoHeaderViewPreview() {
     AppTheme {
         LiveVideoHeaderView(
-            label = LocalDateTime.now(ZoneId.systemDefault())
-                .truncatedTo(ChronoUnit.DAYS).format(DATE_WEEKDAY.toPattern()),
+            label = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+                .let { kotlinx.datetime.LocalDateTime(it.year, it.monthNumber, it.dayOfMonth, 0, 0) }
+                .toLocalFormattedText(DATE_WEEKDAY.toPattern()),
         )
     }
 }
@@ -224,7 +226,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             channelTitle: String = "channel title",
         ): LiveVideo = LiveVideoUpcomingEntity(
             title = title,
-            dateTime = Instant.now(),
+            dateTime = Clock.System.now(),
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
@@ -240,7 +242,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             isPinned: Boolean = false,
         ): LiveVideo = LiveVideoUpcomingEntity(
             title = title,
-            dateTime = Instant.now(),
+            dateTime = Clock.System.now(),
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
@@ -256,7 +258,7 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
         override val id: LiveVideo.Id,
         override val channel: LiveChannel,
         override val title: String,
-        override val dateTime: Instant = Instant.EPOCH,
+        override val dateTime: Instant = Instant.fromEpochMilliseconds(0),
         override val thumbnailUrl: String = "",
         override val isPinned: Boolean? = null,
     ) : LiveVideo

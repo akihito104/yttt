@@ -6,9 +6,9 @@ import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
 import java.math.BigInteger
-import java.time.Instant
-import java.time.ZoneId
 
 class LiveChannelDetailYouTubeTest : ShouldSpec(
     {
@@ -32,7 +32,7 @@ class LiveChannelDetailYouTubeTest : ShouldSpec(
                         every { videoCount } returns BigInteger.valueOf(param.videoCount.first)
                         every { viewsCount } returns BigInteger.valueOf(param.viewsCount.first)
                     },
-                    zoneId = ZoneId.of("Asia/Tokyo"),
+                    timeZone = TimeZone.of("Asia/Tokyo"),
                 )
                 val actual = sut.statsText
                 actual shouldBe "@channel・" +
@@ -57,7 +57,7 @@ class LiveChannelDetailYouTubeTest : ShouldSpec(
                         every { videoCount } returns BigInteger.valueOf(param.videoCount.first)
                         every { viewsCount } returns BigInteger.valueOf(param.viewsCount.first)
                     },
-                    zoneId = ZoneId.of("Asia/Tokyo"),
+                    timeZone = TimeZone.of("Asia/Tokyo"),
                 )
                 val actual = sut.statsText
                 actual shouldBe "@channel・Videos:${param.videoCount.second}・Views:${param.viewsCount.second}・" +

@@ -8,9 +8,10 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
 import com.freshdigitable.yttt.data.model.YouTubeVideo
+import kotlinx.datetime.Instant
 import java.math.BigInteger
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 internal abstract class Converter<S, O>(
     private val serialize: (O) -> S,
@@ -24,13 +25,13 @@ internal abstract class Converter<S, O>(
 }
 
 internal class InstantConverter : Converter<Long, Instant>(
-    serialize = { it.toEpochMilli() },
-    createObject = { Instant.ofEpochMilli(it) },
+    serialize = { it.toEpochMilliseconds() },
+    createObject = { Instant.fromEpochMilliseconds(it) },
 )
 
 internal class DurationConverter : Converter<Long, Duration>(
-    serialize = { it.toMillis() },
-    createObject = { Duration.ofMillis(it) }
+    serialize = { it.inWholeMilliseconds },
+    createObject = { it.milliseconds },
 )
 
 internal abstract class IdConverter<E : IdBase>(createObject: (String) -> E) :
@@ -40,7 +41,7 @@ internal class YouTubeChannelIdConverter :
     IdConverter<YouTubeChannel.Id>(createObject = { YouTubeChannel.Id(it) })
 
 internal class YouTubeSubscriptionIdConverter : IdConverter<YouTubeSubscription.Id>(
-    createObject = { YouTubeSubscription.Id(it) }
+    createObject = { YouTubeSubscription.Id(it) },
 )
 
 internal class YouTubeVideoIdConverter :
@@ -57,7 +58,7 @@ internal class YouTubePlaylistItemIdConverter :
 
 internal class BigIntegerConverter : Converter<Long, BigInteger>(
     serialize = { it.toLong() },
-    createObject = { BigInteger.valueOf(it) }
+    createObject = { BigInteger.valueOf(it) },
 )
 
 internal class YouTubeVideoBroadcastType : Converter<String?, YouTubeVideo.BroadcastType?>(

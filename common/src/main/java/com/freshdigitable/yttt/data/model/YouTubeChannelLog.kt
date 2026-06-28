@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 interface YouTubeChannelLog {
     val id: Id

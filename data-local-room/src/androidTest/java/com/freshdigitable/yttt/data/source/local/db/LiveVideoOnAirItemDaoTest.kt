@@ -26,7 +26,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 @RunWith(Enclosed::class)
 class LiveVideoOnAirItemDaoTest {
@@ -41,7 +41,7 @@ class LiveVideoOnAirItemDaoTest {
             userDetail(id = "broadcaster-1"),
         )
         private val broadcasters = users.map { broadcaster(it) }
-        private val cacheControl = CacheControl.fromRemote(Instant.EPOCH)
+        private val cacheControl = CacheControl.fromRemote(Instant.fromEpochMilliseconds(0))
     }
 
     class Init {
@@ -95,7 +95,7 @@ class LiveVideoOnAirItemDaoTest {
                         stream(
                             id = "stream_id-0-0",
                             userDetail = users[0],
-                            startedAt = Instant.ofEpochMilli(1000),
+                            startedAt = Instant.fromEpochMilliseconds(1000),
                             thumbnailUrlBase = "https://example.com/category-1/img={width}x{height}",
                         ),
                     ),
@@ -138,12 +138,12 @@ class LiveVideoOnAirItemDaoTest {
                     YouTubeVideoEntity.liveStreaming(
                         id = "video-0-0",
                         channel = channels[0],
-                        scheduledStartDateTime = Instant.ofEpochMilli(2000),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(2000),
                     ),
                     YouTubeVideoEntity.liveStreaming(
                         id = "video-0-1",
                         channel = channels[1],
-                        scheduledStartDateTime = Instant.ofEpochMilli(1000),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(1000),
                     ),
                 )
                 dao.addVideoEntities(videos)
@@ -163,13 +163,13 @@ class LiveVideoOnAirItemDaoTest {
                     YouTubeVideoEntity.liveStreaming(
                         id = "video-0-0",
                         channel = channels[0],
-                        scheduledStartDateTime = Instant.ofEpochMilli(1000),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(1000),
                         title = "title1",
                     ),
                     YouTubeVideoEntity.liveStreaming(
                         id = "video-0-1",
                         channel = channels[1],
-                        scheduledStartDateTime = Instant.ofEpochMilli(1000),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(1000),
                         title = "title0",
                     ),
                 )
@@ -189,8 +189,8 @@ class LiveVideoOnAirItemDaoTest {
                 val stream = TwitchStreams.create(
                     followerId = me.id,
                     streams = listOf(
-                        stream(id = "stream_id-0-0", userDetail = users[0], startedAt = Instant.ofEpochMilli(1000)),
-                        stream(id = "stream_id-1-0", userDetail = users[1], startedAt = Instant.ofEpochMilli(2000)),
+                        stream(id = "stream_id-0-0", userDetail = users[0], startedAt = Instant.fromEpochMilliseconds(1000)),
+                        stream(id = "stream_id-1-0", userDetail = users[1], startedAt = Instant.fromEpochMilliseconds(2000)),
                     ),
                     cacheControl = cacheControl,
                 )
@@ -213,13 +213,13 @@ class LiveVideoOnAirItemDaoTest {
                         stream(
                             id = "stream_id-0-0",
                             userDetail = users[0],
-                            startedAt = Instant.ofEpochMilli(1000),
+                            startedAt = Instant.fromEpochMilliseconds(1000),
                             title = "title1",
                         ),
                         stream(
                             id = "stream_id-1-0",
                             userDetail = users[1],
-                            startedAt = Instant.ofEpochMilli(1000),
+                            startedAt = Instant.fromEpochMilliseconds(1000),
                             title = "title0",
                         ),
                     ),
@@ -242,7 +242,7 @@ class LiveVideoOnAirItemDaoTest {
                     YouTubeVideoEntity.liveStreaming(
                         id = "video-0-0",
                         channel = channels[0],
-                        scheduledStartDateTime = Instant.ofEpochMilli(2000),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(2000),
                     ),
                 )
                 dao.addVideoEntities(videos)
@@ -254,7 +254,7 @@ class LiveVideoOnAirItemDaoTest {
                         stream(
                             id = "stream_id-0-0",
                             userDetail = users[0],
-                            startedAt = Instant.ofEpochMilli(1000),
+                            startedAt = Instant.fromEpochMilliseconds(1000),
                         ),
                     ),
                     cacheControl = cacheControl,
@@ -276,7 +276,7 @@ class LiveVideoOnAirItemDaoTest {
                     YouTubeVideoEntity.liveStreaming(
                         id = "video-0-0",
                         channel = channels[0],
-                        scheduledStartDateTime = Instant.ofEpochMilli(1000),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(1000),
                         title = "title1",
                     ),
                 )
@@ -289,7 +289,7 @@ class LiveVideoOnAirItemDaoTest {
                         stream(
                             id = "stream_id-0-0",
                             userDetail = users[0],
-                            startedAt = Instant.ofEpochMilli(1000),
+                            startedAt = Instant.fromEpochMilliseconds(1000),
                             title = "title0",
                         ),
                     ),
@@ -321,7 +321,7 @@ internal fun stream(
     category: TwitchCategory = category("category_id"),
     thumbnailUrlBase: String = "<url is here>",
     userDetail: TwitchUserDetail,
-    startedAt: Instant = Instant.EPOCH,
+    startedAt: Instant = Instant.fromEpochMilliseconds(0),
     title: String = "",
 ): TwitchStream = object : TwitchStream {
     override val id: TwitchStream.Id get() = TwitchStream.Id(id)

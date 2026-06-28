@@ -7,9 +7,9 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import java.time.Duration
-import java.time.Instant
+import kotlinx.datetime.Instant
 import javax.inject.Singleton
+import kotlin.time.Duration
 
 @Module
 @TestInstallIn(
@@ -38,4 +38,4 @@ interface FakeDateTimeProviderModule {
     }
 }
 
-fun CacheControl.Companion.zero(): CacheControl = CacheControl.create(Instant.EPOCH, Duration.ZERO)
+fun CacheControl.Companion.zero(): CacheControl = CacheControl.create(Instant.fromEpochMilliseconds(0), Duration.ZERO)

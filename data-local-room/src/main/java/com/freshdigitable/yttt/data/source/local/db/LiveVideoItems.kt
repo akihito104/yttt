@@ -17,7 +17,7 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.AppDatabase
-import java.time.Instant
+import kotlinx.datetime.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.reflect.KClass

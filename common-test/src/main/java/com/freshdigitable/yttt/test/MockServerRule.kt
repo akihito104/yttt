@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.test
 import com.freshdigitable.yttt.di.OkHttpModule
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
+import kotlinx.datetime.toJavaInstant
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -23,7 +24,7 @@ class MockServerRule(
         private val ZONE_ID_GMT: ZoneId = ZoneId.of("GMT")
         private val currentDate: String
             get() = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZONE_ID_GMT)
-                .format(FakeDateTimeProviderModule.instant)
+                .format(FakeDateTimeProviderModule.instant?.toJavaInstant())
     }
 
     fun addResponses(vararg res: ExpectedResponse) {

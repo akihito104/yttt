@@ -3,8 +3,8 @@ package com.freshdigitable.yttt.data.model
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.checkUpdatableBy
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
-import java.time.Duration
-import java.time.Instant
+import kotlinx.datetime.Instant
+import kotlin.time.Duration
 
 interface Updatable<T> {
     val item: T
@@ -14,7 +14,7 @@ interface Updatable<T> {
     companion object {
         fun <T> create(item: T, cacheControl: CacheControl): Updatable<T> = Impl(item, cacheControl)
         fun <T> T.toUpdatable(
-            fetchedAt: Instant? = Instant.EPOCH,
+            fetchedAt: Instant? = Instant.fromEpochMilliseconds(0),
             maxAge: Duration? = Duration.ZERO,
         ): Updatable<T> = this.toUpdatable(CacheControl.create(fetchedAt, maxAge))
 
@@ -49,7 +49,8 @@ interface CacheControl {
 
         fun CacheControl.isUpdatable(current: Instant): Boolean {
             val f = fetchedAt ?: return true
-            return if (maxAge != null) f + maxAge <= current else true
+            val m = maxAge
+            return if (m != null) f + m <= current else true
         }
 
         fun CacheControl.isFresh(current: Instant): Boolean = !isUpdatable(current)

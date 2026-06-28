@@ -22,9 +22,11 @@ import com.google.api.services.youtube.model.ChannelSection
 import com.google.api.services.youtube.model.ChannelSectionListResponse
 import com.google.api.services.youtube.model.ChannelSectionSnippet
 import com.google.api.services.youtube.model.ThumbnailDetails
-import java.time.Duration
-import java.time.Instant
+import kotlinx.datetime.Instant
+import kotlinx.datetime.toKotlinInstant
 import java.time.format.DateTimeFormatter
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 interface YouTubeClient : YouTubeSubscriptionClient, YouTubeChannelClient, YouTubePlaylistClient, YouTubeVideoClient {
     fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>>
@@ -38,7 +40,7 @@ interface YouTubeClient : YouTubeSubscriptionClient, YouTubeChannelClient, YouTu
     companion object {
         fun create(youtube: YouTube): YouTubeClient = YouTubeClientImpl(youtube)
 
-        val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(5)
+        val MAX_AGE_DEFAULT: Duration = 5.minutes
         const val PART_SNIPPET = "snippet"
         const val PART_CONTENT_DETAILS = "contentDetails"
         const val PART_LIVE_STREAMING_DETAILS = "liveStreamingDetails"
@@ -64,7 +66,7 @@ class YouTubeException(
 
 typealias ResponseFactory<R, T> = (R, CacheControl) -> NetworkResponse<T>
 
-internal fun DateTime.toInstant(): Instant = Instant.ofEpochMilli(value)
+internal fun DateTime.toInstant(): Instant = Instant.fromEpochMilliseconds(value)
 
 /**
  * maxres: 720p, standard: 640x480, high: 480x360, medium: 240x180, default: 120x90.
@@ -128,12 +130,14 @@ internal class YouTubeClientImpl(private val youtube: YouTube) :
         ): NetworkResponse<T> = try {
             val req = request()
             val res = req.executeUnparsed()
-            val date = DateTimeFormatter.RFC_1123_DATE_TIME.parse(res.headers.date)
+            val date =
+                java.time.Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(res.headers.date)).toKotlinInstant()
             val parseAs = res.parseAs(req.responseClass)
-            factory(parseAs, CacheControl.create(Instant.from(date), MAX_AGE_DEFAULT))
+            factory(parseAs, CacheControl.create(date, MAX_AGE_DEFAULT))
         } catch (e: HttpResponseException) {
-            val date = DateTimeFormatter.RFC_1123_DATE_TIME.parse(e.headers.date)
-            val cacheControl = CacheControl.create(Instant.from(date), MAX_AGE_DEFAULT)
+            val date =
+                java.time.Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(e.headers.date)).toKotlinInstant()
+            val cacheControl = CacheControl.create(date, MAX_AGE_DEFAULT)
             throw YouTubeException(e.statusCode, e.statusMessage, e, cacheControl)
         }
     }
@@ -145,7 +149,7 @@ private data class YouTubeChannelLogEntity(
     override val id: YouTubeChannelLog.Id
         get() = YouTubeChannelLog.Id(activity.id)
     override val dateTime: Instant
-        get() = Instant.ofEpochMilli(activity.snippet.publishedAt.value)
+        get() = Instant.fromEpochMilliseconds(activity.snippet.publishedAt.value)
     override val videoId: YouTubeVideo.Id?
         get() = activity.contentDetails.upload?.let { YouTubeVideo.Id(it.videoId) }
     override val channelId: YouTubeChannel.Id

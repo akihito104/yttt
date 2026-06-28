@@ -29,7 +29,7 @@ import com.freshdigitable.yttt.data.source.YouTubeSubscriptionDataSource
 import com.freshdigitable.yttt.data.source.YouTubeVideoDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import kotlinx.coroutines.flow.Flow
-import java.time.Instant
+import kotlinx.datetime.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -206,8 +206,8 @@ internal class YouTubeSubscriptionLocalDataSource @Inject constructor(
     private val dao: YouTubeDao,
     private val ioScope: IoScope,
 ) : YouTubeSubscriptionDataSource.Local, YouTubeSubscriptionDataSource.Extended {
-    override var subscriptionsFetchedAt: Instant = Instant.EPOCH
-    override var subscriptionsRelevanceOrderedFetchedAt: Instant = Instant.EPOCH
+    override var subscriptionsFetchedAt: Instant = Instant.fromEpochMilliseconds(0)
+    override var subscriptionsRelevanceOrderedFetchedAt: Instant = Instant.fromEpochMilliseconds(0)
     override suspend fun fetchSubscriptionIds(): Set<YouTubeSubscription.Id> = dao.fetchAllSubscriptionIds().toSet()
 
     override suspend fun findSubscriptionSummaries(

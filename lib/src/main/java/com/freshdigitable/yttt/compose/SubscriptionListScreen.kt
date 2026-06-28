@@ -35,7 +35,7 @@ import com.freshdigitable.yttt.feature.subscription.SubscriptionListViewModel
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 @Composable
 fun SubscriptionListScreen(
@@ -132,7 +132,7 @@ private fun SubscriptionListContentPreview() {
                         platform = YouTube,
                     ),
                     order = 0,
-                    subscribeSince = Instant.EPOCH,
+                    subscribeSince = Instant.fromEpochMilliseconds(0),
                 )
             },
             sourceLoadStates = LoadStates(

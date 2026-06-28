@@ -15,7 +15,7 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import java.time.Instant
+import kotlinx.datetime.Instant
 import javax.inject.Inject
 
 @Entity(

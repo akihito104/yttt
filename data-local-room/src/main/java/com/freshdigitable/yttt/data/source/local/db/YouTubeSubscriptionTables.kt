@@ -17,7 +17,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionRelevanceOrdered
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import java.time.Instant
+import kotlinx.datetime.Instant
 import javax.inject.Inject
 
 @Entity(

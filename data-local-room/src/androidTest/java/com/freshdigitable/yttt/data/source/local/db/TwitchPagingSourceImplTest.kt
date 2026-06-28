@@ -8,17 +8,18 @@ import com.freshdigitable.yttt.data.source.local.userDetail
 import com.freshdigitable.yttt.test.zero
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Instant
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 class TwitchPagingSourceImplTest {
     private companion object {
         private val me = userDetail(id = "user_me")
-        private val fetchedAt = Instant.EPOCH
-        private val maxAge = Duration.ofMinutes(5)
+        private val fetchedAt = Instant.fromEpochMilliseconds(0)
+        private val maxAge = 5.minutes
         private val followings =
             TwitchFollowings.create(me.id, emptyList(), CacheControl.create(fetchedAt, maxAge))
     }
@@ -37,7 +38,7 @@ class TwitchPagingSourceImplTest {
     @Test
     internal fun isUpdatable_returnsFalse() = runTest {
         // setup
-        val current = (fetchedAt + maxAge).minusMillis(1)
+        val current = (fetchedAt + maxAge) - 1.milliseconds
         // exercise
         val actual = sut.isUpdatable(current)
         // verify

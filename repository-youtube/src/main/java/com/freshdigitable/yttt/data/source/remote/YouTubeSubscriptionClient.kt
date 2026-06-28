@@ -11,7 +11,7 @@ import com.google.api.client.http.HttpHeaders
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.SubscriptionListResponse
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 interface YouTubeSubscriptionClient {
     fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>>
@@ -35,7 +35,7 @@ private value class YouTubeSubscriptionRemote(
     private val subscription: Subscription,
 ) : YouTubeSubscription {
     override val id: YouTubeSubscription.Id get() = YouTubeSubscription.Id(subscription.id)
-    override val subscribeSince: Instant get() = Instant.ofEpochMilli(subscription.snippet.publishedAt.value)
+    override val subscribeSince: Instant get() = Instant.fromEpochMilliseconds(subscription.snippet.publishedAt.value)
     override val channel: YouTubeChannel
         get() = YouTubeChannelEntity(
             id = YouTubeChannel.Id(subscription.snippet.resourceId.channelId),

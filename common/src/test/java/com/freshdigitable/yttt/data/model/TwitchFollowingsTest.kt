@@ -7,114 +7,116 @@ import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldBeNull
-import java.time.Instant
+import kotlinx.datetime.Instant
 
-class TwitchFollowingsTest : ShouldSpec({
-    val me = TwitchUser.Id("me")
+class TwitchFollowingsTest : ShouldSpec(
+    {
+        val me = TwitchUser.Id("me")
 
-    context("fundamental") {
-        should("create_maxAgeIsDefaultValue") {
-            // exercise
-            val sut = TwitchFollowings.create(me, emptyList(), null)
-            // verify
-            sut.cacheControl.fetchedAt.shouldBeNull()
-            sut.cacheControl.maxAge.shouldBeNull()
-        }
-    }
-
-    context("new list has no removed item") {
-        data class UpdateHasNoRemovedItemTestParam(
-            val old: Collection<Int>,
-            val new: Collection<Int>,
-        )
-        withData(
-            mapOf(
-                "both empty" to UpdateHasNoRemovedItemTestParam(
-                    old = emptyList(),
-                    new = emptyList()
-                ),
-                "new following is added" to UpdateHasNoRemovedItemTestParam(
-                    old = emptyList(),
-                    new = listOf(0)
-                ),
-                "not updated" to UpdateHasNoRemovedItemTestParam(
-                    old = listOf(0, 1, 2),
-                    new = listOf(0, 1, 2),
-                ),
-            ),
-        ) { (old, new) ->
-            // setup
-            val sut = followings(me, old.broadcasters(), 99)
-                .update(followings(me, new.broadcasters(), 100))
-            // exercise
-            val actual = (sut.item as? TwitchFollowings.Updated)?.removed
-            // verify
-            actual.shouldBeEmpty()
-        }
-    }
-
-    context("new list has removed item") {
-        data class UpdateHasRemovedItemsTestParam(
-            val old: Collection<Int>,
-            val new: Collection<Int>,
-            val expectedIndexOfOld: Collection<Int>,
-        ) {
-            val oldBroadcasters: List<TwitchBroadcaster> = old.broadcasters()
-            val expected: List<TwitchUser.Id> = expectedIndexOfOld.map { oldBroadcasters[it].id }
-        }
-        withData(
-            mapOf(
-                "unfollowed" to UpdateHasRemovedItemsTestParam(
-                    old = listOf(0),
-                    new = emptyList(),
-                    expectedIndexOfOld = listOf(0),
-                ),
-                "unfollowed id=1, and followed id=3" to UpdateHasRemovedItemsTestParam(
-                    old = listOf(0, 1, 2),
-                    new = listOf(0, 2, 3),
-                    expectedIndexOfOld = listOf(1),
-                ),
-                "unfollowed id=1,3" to UpdateHasRemovedItemsTestParam(
-                    old = listOf(0, 1, 2, 3),
-                    new = listOf(0, 2),
-                    expectedIndexOfOld = listOf(1, 3),
-                ),
-                "unfollowed id=0,1,2, and followed id=3,4,5" to UpdateHasRemovedItemsTestParam(
-                    old = listOf(0, 1, 2),
-                    new = listOf(3, 4, 5),
-                    expectedIndexOfOld = listOf(0, 1, 2),
-                ),
-            ),
-        ) { param ->
-            // setup
-            val sut = followings(me, param.oldBroadcasters, 99)
-                .update(followings(me, param.new.broadcasters(), 100))
-            // exercise
-            val actual = (sut.item as? TwitchFollowings.Updated)?.removed
-            // verify
-            actual?.shouldContainExactlyInAnyOrder(param.expected)
-        }
-    }
-
-    context("throw on updating") {
-        should("new list is not newer than older then throw IllegalArgumentException") {
-            shouldThrow<IllegalArgumentException> {
-                followings(me, emptyList(), 100)
-                    .update(followings(me, emptyList(), 99))
+        context("fundamental") {
+            should("create_maxAgeIsDefaultValue") {
+                // exercise
+                val sut = TwitchFollowings.create(me, emptyList(), null)
+                // verify
+                sut.cacheControl.fetchedAt.shouldBeNull()
+                sut.cacheControl.maxAge.shouldBeNull()
             }
         }
 
-        should("follower is not same then throw  IllegalArgumentException") {
-            // setup
-            val others = TwitchUser.Id("me2")
-            // exercise & verify
-            shouldThrow<IllegalArgumentException> {
-                followings(me, emptyList(), 99)
-                    .update(followings(others, emptyList(), 100))
+        context("new list has no removed item") {
+            data class UpdateHasNoRemovedItemTestParam(
+                val old: Collection<Int>,
+                val new: Collection<Int>,
+            )
+            withData(
+                mapOf(
+                    "both empty" to UpdateHasNoRemovedItemTestParam(
+                        old = emptyList(),
+                        new = emptyList(),
+                    ),
+                    "new following is added" to UpdateHasNoRemovedItemTestParam(
+                        old = emptyList(),
+                        new = listOf(0),
+                    ),
+                    "not updated" to UpdateHasNoRemovedItemTestParam(
+                        old = listOf(0, 1, 2),
+                        new = listOf(0, 1, 2),
+                    ),
+                ),
+            ) { (old, new) ->
+                // setup
+                val sut = followings(me, old.broadcasters(), 99)
+                    .update(followings(me, new.broadcasters(), 100))
+                // exercise
+                val actual = (sut.item as? TwitchFollowings.Updated)?.removed
+                // verify
+                actual.shouldBeEmpty()
             }
         }
-    }
-})
+
+        context("new list has removed item") {
+            data class UpdateHasRemovedItemsTestParam(
+                val old: Collection<Int>,
+                val new: Collection<Int>,
+                val expectedIndexOfOld: Collection<Int>,
+            ) {
+                val oldBroadcasters: List<TwitchBroadcaster> = old.broadcasters()
+                val expected: List<TwitchUser.Id> = expectedIndexOfOld.map { oldBroadcasters[it].id }
+            }
+            withData(
+                mapOf(
+                    "unfollowed" to UpdateHasRemovedItemsTestParam(
+                        old = listOf(0),
+                        new = emptyList(),
+                        expectedIndexOfOld = listOf(0),
+                    ),
+                    "unfollowed id=1, and followed id=3" to UpdateHasRemovedItemsTestParam(
+                        old = listOf(0, 1, 2),
+                        new = listOf(0, 2, 3),
+                        expectedIndexOfOld = listOf(1),
+                    ),
+                    "unfollowed id=1,3" to UpdateHasRemovedItemsTestParam(
+                        old = listOf(0, 1, 2, 3),
+                        new = listOf(0, 2),
+                        expectedIndexOfOld = listOf(1, 3),
+                    ),
+                    "unfollowed id=0,1,2, and followed id=3,4,5" to UpdateHasRemovedItemsTestParam(
+                        old = listOf(0, 1, 2),
+                        new = listOf(3, 4, 5),
+                        expectedIndexOfOld = listOf(0, 1, 2),
+                    ),
+                ),
+            ) { param ->
+                // setup
+                val sut = followings(me, param.oldBroadcasters, 99)
+                    .update(followings(me, param.new.broadcasters(), 100))
+                // exercise
+                val actual = (sut.item as? TwitchFollowings.Updated)?.removed
+                // verify
+                actual?.shouldContainExactlyInAnyOrder(param.expected)
+            }
+        }
+
+        context("throw on updating") {
+            should("new list is not newer than older then throw IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    followings(me, emptyList(), 100)
+                        .update(followings(me, emptyList(), 99))
+                }
+            }
+
+            should("follower is not same then throw  IllegalArgumentException") {
+                // setup
+                val others = TwitchUser.Id("me2")
+                // exercise & verify
+                shouldThrow<IllegalArgumentException> {
+                    followings(me, emptyList(), 99)
+                        .update(followings(others, emptyList(), 100))
+                }
+            }
+        }
+    },
+)
 
 private fun followings(
     me: TwitchUser.Id,
@@ -123,7 +125,7 @@ private fun followings(
 ): Updatable<TwitchFollowings> = TwitchFollowings.create(
     me,
     followings,
-    CacheControl.create(Instant.ofEpochMilli(fetchedAtMillis), null),
+    CacheControl.create(Instant.fromEpochMilliseconds(fetchedAtMillis), null),
 )
 
 private fun Collection<Int>.broadcasters(): List<TwitchBroadcaster> =
@@ -131,7 +133,7 @@ private fun Collection<Int>.broadcasters(): List<TwitchBroadcaster> =
 
 private fun broadcaster(
     id: String,
-    followedAt: Instant = Instant.EPOCH,
+    followedAt: Instant = Instant.fromEpochMilliseconds(0),
 ): TwitchBroadcaster = object : TwitchBroadcaster {
     override val id: TwitchUser.Id get() = TwitchUser.Id(id)
     override val loginName: String get() = id

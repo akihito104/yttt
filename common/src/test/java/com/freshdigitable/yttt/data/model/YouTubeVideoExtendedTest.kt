@@ -6,9 +6,9 @@ import com.freshdigitable.yttt.test.fromRemote
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
+import kotlinx.datetime.Instant
 import java.math.BigInteger
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
 
 class YouTubeVideoExtendedTest : ShouldSpec(
     {
@@ -16,14 +16,14 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             val old = YouTubeVideoImpl(
                 id = YouTubeVideo.Id("video"),
                 title = "video",
-                scheduledStartDateTime = Instant.ofEpochSecond(1000),
+                scheduledStartDateTime = Instant.fromEpochSeconds(1000),
                 liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
             )
-            val oldEx = old.extended(false).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+            val oldEx = old.extended(false).toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
 
             should("init_freeChatIsFalse") {
                 // setup
-                val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(null)
                 // verify
@@ -33,7 +33,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("notUpdated_returnsFalse") {
                 // setup
                 val current = old.copy()
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -43,7 +43,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("changedTitleToFreeChat_returnsTrue") {
                 // setup
                 val current = old.copy(title = "free chat")
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -55,7 +55,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
                 val current = old.copy(
                     title = "free chat",
                     liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
-                ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -65,7 +65,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("changedTitle_freeChatIsFalse") {
                 // setup
                 val current = old.copy(title = "changed title")
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -76,7 +76,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
                 // setup
                 val current = old.copy(title = "changed title")
                     .extended(true, old.channel)
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -89,14 +89,14 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             val old = YouTubeVideoImpl(
                 id = YouTubeVideo.Id("video"),
                 title = "video",
-                scheduledStartDateTime = Instant.ofEpochSecond(1000),
+                scheduledStartDateTime = Instant.fromEpochSeconds(1000),
                 liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
             )
-            val oldEx = old.extended(false).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+            val oldEx = old.extended(false).toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
 
             should("init_thumbnailIsNotUpdatable") {
                 // setup
-                val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(null)
                 // verify
@@ -106,7 +106,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("notUpdated_returnsFalse") {
                 // setup
                 val current = old.copy()
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -116,11 +116,11 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("notUpdatedButFreeChat_returnsTrue") {
                 // setup
                 val current = old.copy().toUpdatable<YouTubeVideo>(
-                    fetchedAt = Instant.EPOCH + YouTubeVideo.MAX_AGE_FREE_CHAT,
+                    fetchedAt = Instant.fromEpochMilliseconds(0) + YouTubeVideo.MAX_AGE_FREE_CHAT,
                     maxAge = Duration.ZERO,
                 )
                 val oldAsFreeChat =
-                    old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                         .extend(old = null, isFreeChat = true)
                 // exercise
                 val actual = current.extend(oldAsFreeChat, isFreeChat = true)
@@ -131,7 +131,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("liveIsArchived_returnsFalse") {
                 // setup
                 val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -143,7 +143,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
                 val current = old.copy(
                     liveBroadcastContent = YouTubeVideo.BroadcastType.NONE,
                     title = "changed title",
-                ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -153,7 +153,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("liveIsStarted_returnsTrue") {
                 // setup
                 val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE)
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -163,7 +163,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("titleIsChanged_returnsTrue") {
                 // setup
                 val current = old.copy(title = "changed title")
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -174,7 +174,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
                 // setup
                 val current = old.copy(title = "changed title")
                     .extended(channel = old.channel, isFreeChat = true)
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -187,14 +187,14 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             val old = YouTubeVideoImpl(
                 id = YouTubeVideo.Id("video"),
                 title = "free chat",
-                scheduledStartDateTime = Instant.ofEpochSecond(1000),
+                scheduledStartDateTime = Instant.fromEpochSeconds(1000),
                 liveBroadcastContent = YouTubeVideo.BroadcastType.UPCOMING,
             )
-            val oldEx = old.extended(true).toUpdatable(CacheControl.fromRemote(Instant.EPOCH))
+            val oldEx = old.extended(true).toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
 
             should("init_returnsTrue") {
                 // setup
-                val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                val current = old.toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(null)
                 // verify
@@ -204,7 +204,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("notUpdated_returnsTrue") {
                 // setup
                 val current = old.copy()
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -214,7 +214,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("changeTitle_returnsFalse") {
                 // setup
                 val current = old.copy(title = "changed title")
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -226,7 +226,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
                 val current = old.copy(
                     title = "recycle free chat",
                     liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE,
-                ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                ).toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -236,7 +236,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("changeToLiveStream_returnsFalse") {
                 // setup
                 val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.LIVE)
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -246,7 +246,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
             should("changeToArchived_returnsFalse") {
                 // setup
                 val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify
@@ -257,7 +257,7 @@ class YouTubeVideoExtendedTest : ShouldSpec(
                 // setup
                 val current = old.copy(liveBroadcastContent = YouTubeVideo.BroadcastType.NONE)
                     .extended(isFreeChat = false, channel = old.channel)
-                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.EPOCH))
+                    .toUpdatable<YouTubeVideo>(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))
                 // exercise
                 val actual = current.extend(oldEx)
                 // verify

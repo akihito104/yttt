@@ -13,15 +13,15 @@ import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
 import java.math.BigInteger
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
 import java.util.Locale
+import kotlin.time.Duration.Companion.hours
 
 class LiveVideoDetailItemTest : ShouldSpec(
     {
-        val commonZoneId = ZoneId.of("Asia/Tokyo")
+        val commonTimeZone = TimeZone.of("Asia/Tokyo")
         val commonLocale = Locale.JAPAN
 
         context("statsText") {
@@ -78,7 +78,7 @@ class LiveVideoDetailItemTest : ShouldSpec(
                 // setup
                 val sut = DetailItem(
                     LiveVideoDetailImpl(param),
-                    TimeAdjustment(Duration.ofHours(param.extraHourOfDay), commonZoneId, commonLocale),
+                    TimeAdjustment(param.extraHourOfDay.hours, commonTimeZone, commonLocale),
                 )
                 // exercise
                 val actual = sut.statsText()

@@ -21,8 +21,8 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
+import kotlinx.datetime.Instant
 import java.math.BigInteger
-import java.time.Instant
 import javax.inject.Inject
 
 @Entity(tableName = "channel")

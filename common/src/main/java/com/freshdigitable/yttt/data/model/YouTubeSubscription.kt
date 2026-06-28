@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 interface YouTubeSubscription {
     val id: Id

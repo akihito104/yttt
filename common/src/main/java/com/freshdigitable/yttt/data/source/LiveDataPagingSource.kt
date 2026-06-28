@@ -2,7 +2,7 @@ package com.freshdigitable.yttt.data.source
 
 import androidx.paging.PagingSource
 import com.freshdigitable.yttt.data.model.LiveVideo
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 interface LiveDataPagingSource {
     val onAir: PagingSource<Int, out LiveVideo>

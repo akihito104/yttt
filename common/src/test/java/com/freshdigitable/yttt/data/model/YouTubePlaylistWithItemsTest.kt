@@ -13,9 +13,12 @@ import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
-import java.time.Duration
-import java.time.Instant
+import kotlinx.datetime.Instant
 import kotlin.math.pow
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 
 class YouTubePlaylistWithItemsTest : ShouldSpec(
     {
@@ -26,9 +29,9 @@ class YouTubePlaylistWithItemsTest : ShouldSpec(
                 // setup
                 // exercise
                 val actual = YouTubePlaylistWithItem.newPlaylist(
-                    playlist = updatablePlaylist(playlistId, Instant.EPOCH),
+                    playlist = updatablePlaylist(playlistId, Instant.fromEpochMilliseconds(0)),
                     items = emptyList<YouTubePlaylistItemDetail>()
-                        .toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
+                        .toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0))),
                 )
                 // verify
                 actual.cacheControl.maxAge shouldBe MAX_AGE_MAX
@@ -43,8 +46,8 @@ class YouTubePlaylistWithItemsTest : ShouldSpec(
                 )
                 // exercise
                 val actual = YouTubePlaylistWithItem.newPlaylist(
-                    playlist = updatablePlaylist(playlistId, Instant.EPOCH),
-                    items = listOf(playlistItem).toUpdatable(CacheControl.fromRemote(Instant.EPOCH)),
+                    playlist = updatablePlaylist(playlistId, Instant.fromEpochMilliseconds(0)),
+                    items = listOf(playlistItem).toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0))),
                 )
                 // verify
                 actual.cacheControl.maxAge shouldBe MAX_AGE_DEFAULT
@@ -105,7 +108,7 @@ class YouTubePlaylistWithItemsTest : ShouldSpec(
 
         context("maxAge of playlist") {
             val playlistId = YouTubePlaylist.Id("playlist")
-            val latestModified = Instant.ofEpochMilli(20000)
+            val latestModified = Instant.fromEpochMilliseconds(20000)
             val items = listOf(
                 playlistItem(
                     playlistId = playlistId,
@@ -115,7 +118,7 @@ class YouTubePlaylistWithItemsTest : ShouldSpec(
                 playlistItem(
                     playlistId = playlistId,
                     itemId = YouTubePlaylistItem.Id("item_id_01"),
-                    publishedAt = Instant.ofEpochMilli(15000),
+                    publishedAt = Instant.fromEpochMilliseconds(15000),
                 ),
             )
             val currentPlaylistWithItems = playlistWithItems(playlistId, items)
@@ -124,15 +127,15 @@ class YouTubePlaylistWithItemsTest : ShouldSpec(
             withData(
                 nameFn = { "${it.duration.note} from latest item: maxAge=${it.expected.note}" },
                 TestData(
-                    Duration.ofDays(1).minusMillis(1).noted("within a day"),
+                    (1.days - 1.milliseconds).noted("within a day"),
                     MAX_AGE_DEFAULT.noted("default"),
                 ),
                 TestData(
-                    Duration.ofDays(1).noted("after a day"),
-                    MAX_AGE_DEFAULT.multipliedBy(2).noted("default * 2"),
+                    1.days.noted("after a day"),
+                    (MAX_AGE_DEFAULT * 2).noted("default * 2"),
                 ),
-                TestData(Duration.ofDays(7).noted("after a week"), MAX_AGE_MAX.noted("max duration")),
-                TestData(Duration.ofDays(30).noted("after 30 days"), MAX_AGE_MAX.noted("max duration")),
+                TestData(7.days.noted("after a week"), MAX_AGE_MAX.noted("max duration")),
+                TestData(30.days.noted("after 30 days"), MAX_AGE_MAX.noted("max duration")),
             ) { (duration, expected) ->
                 // setup
                 val newItems = items.toUpdatable(fetchedAt = latestModified + duration.value)
@@ -143,7 +146,7 @@ class YouTubePlaylistWithItemsTest : ShouldSpec(
             }
 
             context("updated latest item after 3 hours") {
-                val updatedLatest = latestModified + Duration.ofHours(3)
+                val updatedLatest = latestModified + 3.hours
                 val newItems = items.associateBy { it.id }.toMutableMap().apply {
                     val latest = items.maxBy { it.publishedAt }
                     this[latest.id] = playlistItem(
@@ -157,14 +160,12 @@ class YouTubePlaylistWithItemsTest : ShouldSpec(
                     (1L..7L).flatMap {
                         listOf(
                             TestData(
-                                Duration.ofDays(it).minusMillis(it).noted("within $it day"),
-                                MAX_AGE_DEFAULT.multipliedBy(2.0.pow(n = it.toInt() - 1).toLong())
-                                    .noted("default * $it"),
+                                (it.days - it.milliseconds).noted("within $it day"),
+                                (MAX_AGE_DEFAULT * 2.0.pow(n = it.toInt() - 1)).noted("default * $it"),
                             ),
                             TestData(
-                                Duration.ofDays(it).noted("after $it day"),
-                                MAX_AGE_DEFAULT.multipliedBy(2.0.pow(n = it.toInt()).toLong())
-                                    .noted("default * $it"),
+                                it.days.noted("after $it day"),
+                                (MAX_AGE_DEFAULT * 2.0.pow(n = it.toInt())).noted("default * $it"),
                             ),
                         )
                     },
@@ -182,7 +183,7 @@ class YouTubePlaylistWithItemsTest : ShouldSpec(
 
 private fun updatablePlaylist(
     playlistId: YouTubePlaylist.Id,
-    fetchedAt: Instant = Instant.EPOCH,
+    fetchedAt: Instant = Instant.fromEpochMilliseconds(0),
 ): Updatable<YouTubePlaylist> = playlist(playlistId).toUpdatable(CacheControl.fromRemote(fetchedAt))
 
 private fun playlistWithItems(
@@ -197,7 +198,7 @@ private fun playlistWithItems(
 private fun playlistItem(
     playlistId: YouTubePlaylist.Id,
     itemId: YouTubePlaylistItem.Id,
-    publishedAt: Instant = Instant.EPOCH,
+    publishedAt: Instant = Instant.fromEpochMilliseconds(0),
 ): YouTubePlaylistItemDetail = playlistItemDetail(
     playlistId = playlistId,
     id = itemId,

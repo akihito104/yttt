@@ -32,11 +32,11 @@ import dagger.multibindings.IntoMap
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.Instant
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 

@@ -17,7 +17,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import java.time.Instant
+import kotlinx.datetime.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,7 +51,7 @@ data class YouTubeLiveSubscription(
                 "c.id AS channel_id, c.title AS channel_title, c.icon AS channel_icon FROM subscription AS s " +
                 "INNER JOIN channel AS c ON c.id = s.channel_id " +
                 "INNER JOIN subscription_relevance_order AS o ON s.id = o.subscription_id " +
-                "ORDER BY subs_order ASC"
+                "ORDER BY subs_order ASC",
         )
         fun getSubscriptionPagingSource(): PagingSource<Int, YouTubeLiveSubscription>
     }

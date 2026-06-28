@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
 
 internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     private val repository: TwitchRepository,
@@ -97,19 +97,19 @@ internal interface TwitchChannelDetailPagerContent : ChannelDetailDelegate.Pager
 
 internal data class LiveChannelDetailTwitch(
     private val detail: TwitchUserDetail,
-    private val zoneId: ZoneId = ZoneId.systemDefault(),
+    private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ) : LiveChannelDetailBody {
     override val id: LiveChannel.Id get() = detail.id.mapTo()
-    override val statsText: String get() = detail.statsText(zoneId)
+    override val statsText: String get() = detail.statsText(timeZone)
     override val title: String get() = detail.displayName
     override val iconUrl: String get() = detail.profileImageUrl
     override val platform: LivePlatform get() = Twitch
     override val bannerUrl: String? get() = null
 
     companion object {
-        private fun TwitchUserDetail.statsText(zoneId: ZoneId): String = listOf(
+        private fun TwitchUserDetail.statsText(timeZone: TimeZone): String = listOf(
             loginName,
-            "Published:${createdAt.toLocalFormattedText(formatter = DATE.toPattern(), zoneId = zoneId)}",
+            "Published:${createdAt.toLocalFormattedText(formatter = DATE.toPattern(), timeZone = timeZone)}",
         ).joinToString(LiveChannelDetailBody.STATS_SEPARATOR)
     }
 }

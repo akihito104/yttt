@@ -30,8 +30,9 @@ import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.video.DetailItem
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import java.math.BigInteger
-import java.time.Instant
 
 @Composable
 fun VideoDetailScreen(
@@ -137,7 +138,7 @@ private fun VideoDetailComposePreview() {
             override val title: AnnotatableString = AnnotatableString.create("title") { emptyList() }
             override val description: AnnotatableString =
                 AnnotatableString.create("description\nhttps://example.com") { emptyList() }
-            override val dateTime: Instant? = Instant.now()
+            override val dateTime: Instant = Clock.System.now()
             override val viewerCount: BigInteger? = BigInteger.valueOf(100)
             override val contentType: TimetablePage = TimetablePage.Upcoming
         },

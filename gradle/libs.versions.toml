@@ -1,6 +1,7 @@
 [versions]
 androidGradlePlugin = "9.2.1"
 desugarJdkLib = "2.1.5"
+kotlinx-datetime = "0.6.0"
 androidTools = "32.2.1"
 kotlin = "2.3.21"
 ksp = "2.3.4" # https://github.com/google/ksp/releases
@@ -112,6 +113,7 @@ kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref 
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlin-metadata = { module = "org.jetbrains.kotlin:kotlin-metadata-jvm", version.ref = "kotlin" }
 mockwebserver3 = { module = "com.squareup.okhttp3:mockwebserver3", version.ref = "mockwebserver3" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }

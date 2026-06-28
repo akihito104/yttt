@@ -6,14 +6,14 @@ import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldContainInOrder
+import kotlinx.datetime.Instant
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
 
 class LiveLocalPagingSourceTest {
     @get:Rule
     internal val rule = LiveDataSourceTestRule()
-    private val current = Instant.EPOCH
+    private val current = Instant.fromEpochMilliseconds(0)
 
     @Test
     fun watchAllUnfinished_returnEmpty() = rule.runWithScope {

@@ -29,6 +29,7 @@ android {
 
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
+    api(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kermit)
     implementation(libs.androidx.paging.runtime)

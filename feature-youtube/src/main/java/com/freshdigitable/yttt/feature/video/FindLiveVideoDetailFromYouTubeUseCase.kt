@@ -13,8 +13,8 @@ import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.mapTo
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.logE
+import kotlinx.datetime.Instant
 import java.math.BigInteger
-import java.time.Instant
 import javax.inject.Inject
 
 internal class FindLiveVideoDetailFromYouTubeUseCase @Inject constructor(

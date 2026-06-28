@@ -16,8 +16,8 @@ import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.di.LivePlatformQualifier
 import com.freshdigitable.yttt.logD
-import java.time.Duration
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.hours
 
 @OptIn(ExperimentalPagingApi::class)
 internal class YouTubeRemoteMediator @Inject constructor(
@@ -26,7 +26,7 @@ internal class YouTubeRemoteMediator @Inject constructor(
     private val dateTimeProvider: DateTimeProvider,
 ) : RemoteMediator<Int, LiveSubscription>() {
     companion object {
-        private val MAX_AGE_SUBSCRIPTION = Duration.ofHours(2)
+        private val MAX_AGE_SUBSCRIPTION = 2.hours
         private val YouTubeDataSource.Extended.subscriptionsOrderedCacheControl: CacheControl
             get() = CacheControl.create(
                 subscriptionsRelevanceOrderedFetchedAt,

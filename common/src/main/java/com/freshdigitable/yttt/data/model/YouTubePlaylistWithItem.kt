@@ -2,9 +2,10 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import java.time.Duration
-import java.time.Instant
+import kotlinx.datetime.Instant
 import kotlin.math.pow
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 
 interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
     val playlist: YouTubePlaylist
@@ -36,8 +37,8 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
                     .overrideMaxAge(if (items.item.isEmpty()) MAX_AGE_MAX else MAX_AGE_DEFAULT),
             )
 
-        internal val MAX_AGE_MAX: Duration = Duration.ofDays(1)
-        val MAX_AGE_DEFAULT: Duration = MAX_AGE_MAX.dividedBy(2.0.pow(n = DAYS_OF_WEEK).toLong())
+        internal val MAX_AGE_MAX: Duration = 1.days
+        val MAX_AGE_DEFAULT: Duration = MAX_AGE_MAX / 2.0.pow(n = DAYS_OF_WEEK)
     }
 
     private class ForUpdate<T : YouTubePlaylistItem>(
@@ -64,9 +65,9 @@ interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
             companion object {
                 fun maxAgeForNotModified(items: List<YouTubePlaylistItem>, fetchedAt: Instant): Duration {
                     val latest = items.maxOf { it.publishedAt }
-                    val inactionDays = Duration.between(latest, fetchedAt).toDays().coerceIn(0L..DAYS_OF_WEEK)
+                    val inactionDays = (fetchedAt - latest).inWholeDays.coerceIn(0L..DAYS_OF_WEEK.toLong())
                     val pow = 2.0.pow(inactionDays.toDouble())
-                    return MAX_AGE_DEFAULT.multipliedBy(pow.toLong())
+                    return MAX_AGE_DEFAULT * pow
                 }
             }
 

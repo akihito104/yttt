@@ -15,13 +15,13 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import kotlinx.datetime.Instant
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
 
 @RunWith(Enclosed::class)
 class YouTubeVideoTablesTest {
@@ -55,7 +55,7 @@ class YouTubeVideoTablesTest {
             val expire = listOf(simple, freechat).map {
                 YouTubeVideoExpireTable(
                     videoId = it,
-                    cacheControl = CacheControlDb(Instant.ofEpochMilli(100), Duration.ZERO),
+                    cacheControl = CacheControlDb(Instant.fromEpochMilliseconds(100), Duration.ZERO),
                 )
             }
             dao.addChannelEntities(listOf(channel))
@@ -77,7 +77,7 @@ class YouTubeVideoTablesTest {
             val target = simple
             // exercise
             val actual = dao.findVideosById(listOf(target))
-                .filter { it.isFresh(Instant.ofEpochMilli(99)) }
+                .filter { it.isFresh(Instant.fromEpochMilliseconds(99)) }
             // verify
             actual.size shouldBe 1
             actual.first().item.id shouldBe target
@@ -89,7 +89,7 @@ class YouTubeVideoTablesTest {
             val target = simple
             // exercise
             val actual = dao.findVideosById(listOf(target))
-                .filter { it.isFresh(Instant.ofEpochMilli(100)) }
+                .filter { it.isFresh(Instant.fromEpochMilliseconds(100)) }
             // verify
             actual.size shouldBe 0
         }
@@ -100,7 +100,7 @@ class YouTubeVideoTablesTest {
             val target = freechat
             // exercise
             val actual = dao.findVideosById(listOf(target))
-                .filter { it.isFresh(Instant.ofEpochMilli(99)) }
+                .filter { it.isFresh(Instant.fromEpochMilliseconds(99)) }
             // verify
             actual.size shouldBe 1
             actual.first().item.asClue {
@@ -139,7 +139,7 @@ class YouTubeVideoTablesTest {
         @Test
         fun fetchUpdatableVideoIds_found2Items() = dbRule.runWithScope {
             // exercise
-            val actual = dao.fetchUpdatableVideoIds(Instant.EPOCH)
+            val actual = dao.fetchUpdatableVideoIds(Instant.fromEpochMilliseconds(0))
             // verify
             actual.shouldContainAll(hasNoType, hasNoExpire)
         }
@@ -164,7 +164,7 @@ class YouTubeVideoTablesTest {
             // verify
             database.findAllArchivedVideos().shouldContainExactlyInAnyOrder(videoIds)
             dao.findVideosById(videoIds).shouldBeEmpty()
-            dao.fetchUpdatableVideoIds(Instant.EPOCH).shouldBeEmpty()
+            dao.fetchUpdatableVideoIds(Instant.fromEpochMilliseconds(0)).shouldBeEmpty()
         }
 
         @Test
@@ -180,20 +180,20 @@ class YouTubeVideoTablesTest {
                     YouTubeVideoEntity.liveStreaming(
                         id = live.value,
                         channel = channel,
-                        scheduledStartDateTime = Instant.ofEpochMilli(10),
-                        actualStartDateTime = Instant.ofEpochMilli(14),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(10),
+                        actualStartDateTime = Instant.fromEpochMilliseconds(14),
                     ),
                     YouTubeVideoEntity.upcomingStream(
                         id = upcoming.value,
                         channel = channel,
-                        scheduledStartDateTime = Instant.ofEpochMilli(30),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(30),
                     ),
                     YouTubeVideoEntity.archivedStream(
                         id = "test_archived",
                         channel = channel,
-                        scheduledStartDateTime = Instant.ofEpochMilli(50),
-                        actualStartDateTime = Instant.ofEpochMilli(51),
-                        actualEndDateTime = Instant.ofEpochMilli(70),
+                        scheduledStartDateTime = Instant.fromEpochMilliseconds(50),
+                        actualStartDateTime = Instant.fromEpochMilliseconds(51),
+                        actualEndDateTime = Instant.fromEpochMilliseconds(70),
                     ),
                     YouTubeVideoEntity.uploadedVideo(
                         id = "test_shorts",
@@ -206,7 +206,7 @@ class YouTubeVideoTablesTest {
             liveSource.pagingSource.onAir.testWithRefresh {
                 data.map { it.id.value }.shouldContainExactlyInAnyOrder(live.value)
             }
-            liveSource.pagingSource.upcoming(Instant.EPOCH).testWithRefresh {
+            liveSource.pagingSource.upcoming(Instant.fromEpochMilliseconds(0)).testWithRefresh {
                 data.map { it.id.value }.shouldContainExactlyInAnyOrder(upcoming.value, simple.value)
             }
             liveSource.pagingSource.freeChat.testWithRefresh {

@@ -26,10 +26,11 @@ import com.freshdigitable.yttt.data.source.ImageDataSource
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.YouTubeDataSource
 import com.freshdigitable.yttt.data.source.recoverFromNotModified
-import java.time.Instant
-import java.time.Period
+import kotlinx.datetime.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.seconds
 
 @Singleton
 class YouTubeRepository @Inject constructor(
@@ -68,7 +69,7 @@ class YouTubeRepository @Inject constructor(
                 return cacheRes
             }
             val cache = cacheRes.getOrNull()?.firstOrNull()
-            cache?.dateTime?.plusSeconds(1) ?: (dateTimeProvider.now() - ACTIVITY_MAX_PERIOD)
+            cache?.dateTime?.plus(1.seconds) ?: (dateTimeProvider.now() - 7.days)
         }
         return remoteSource.fetchLiveChannelLogs(channelId, pa, maxResult).onSuccess {
             localSource.addChannelLogs(it)
@@ -175,7 +176,6 @@ class YouTubeRepository @Inject constructor(
     }
 
     companion object {
-        private val ACTIVITY_MAX_PERIOD = Period.ofDays(7)
         private fun Updatable<YouTubeVideoExtended>?.hasIconUrl(): Boolean =
             this?.item?.channel?.iconUrl?.isNotEmpty() == true
     }
