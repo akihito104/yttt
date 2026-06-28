@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.supervisorScope
 import java.time.Duration
 import java.time.Instant
 import javax.inject.Inject
@@ -59,7 +60,13 @@ internal class TimetableTabViewModel @AssistedInject constructor(
                 _isLoading.postValue(true)
                 current.value = dateTimeProvider.now()
                 AppPerformance.trace("loadList") {
-                    val tasks = fetchStreamTasks.map { async { it() } }.awaitAll()
+                    val tasks = supervisorScope {
+                        fetchStreamTasks.map { task ->
+                            async {
+                                runCatching { task() }.getOrElse { Result.failure(it) }
+                            }
+                        }.awaitAll()
+                    }
                     if (tasks.isNotEmpty() && tasks.all { it.isSuccess }) {
                         settingRepository.lastUpdateDatetime = dateTimeProvider.now()
                     } else {
