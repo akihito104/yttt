@@ -1,7 +1,7 @@
 package com.freshdigitable.yttt.data.model
 
-import kotlinx.datetime.Instant
 import kotlin.reflect.KClass
+import kotlin.time.Instant
 
 interface LiveSubscription : Comparable<LiveSubscription> {
     val id: Id

@@ -73,7 +73,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.datetime.Instant
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -84,6 +83,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 @RunWith(Enclosed::class)
 class FetchYouTubeStreamUseCaseTest {

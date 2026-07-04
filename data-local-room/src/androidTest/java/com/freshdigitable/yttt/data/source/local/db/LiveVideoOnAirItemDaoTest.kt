@@ -26,7 +26,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 @RunWith(Enclosed::class)
 class LiveVideoOnAirItemDaoTest {
@@ -189,8 +189,16 @@ class LiveVideoOnAirItemDaoTest {
                 val stream = TwitchStreams.create(
                     followerId = me.id,
                     streams = listOf(
-                        stream(id = "stream_id-0-0", userDetail = users[0], startedAt = Instant.fromEpochMilliseconds(1000)),
-                        stream(id = "stream_id-1-0", userDetail = users[1], startedAt = Instant.fromEpochMilliseconds(2000)),
+                        stream(
+                            id = "stream_id-0-0",
+                            userDetail = users[0],
+                            startedAt = Instant.fromEpochMilliseconds(1000),
+                        ),
+                        stream(
+                            id = "stream_id-1-0",
+                            userDetail = users[1],
+                            startedAt = Instant.fromEpochMilliseconds(2000),
+                        ),
                     ),
                     cacheControl = cacheControl,
                 )

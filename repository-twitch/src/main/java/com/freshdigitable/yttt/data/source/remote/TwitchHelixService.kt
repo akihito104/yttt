@@ -9,13 +9,13 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.google.gson.annotations.SerializedName
-import kotlinx.datetime.Instant
 import retrofit2.Call
 import retrofit2.Converter
 import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.Query
 import java.lang.reflect.Type
+import kotlin.time.Instant
 
 // ## Twitch Rate Limits
 // https://dev.twitch.tv/docs/api/guide/

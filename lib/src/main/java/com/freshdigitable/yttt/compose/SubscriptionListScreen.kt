@@ -35,7 +35,7 @@ import com.freshdigitable.yttt.feature.subscription.SubscriptionListViewModel
 import com.freshdigitable.yttt.logD
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 @Composable
 fun SubscriptionListScreen(

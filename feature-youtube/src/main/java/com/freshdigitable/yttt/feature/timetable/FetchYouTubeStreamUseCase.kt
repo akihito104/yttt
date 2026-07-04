@@ -37,9 +37,9 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Instant
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 internal class FetchYouTubeStreamUseCase @Inject constructor(
     private val liveRepository: YouTubeRepository,

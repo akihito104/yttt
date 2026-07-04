@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.data.model
 
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 interface DateTimeProvider {
     fun now(): Instant

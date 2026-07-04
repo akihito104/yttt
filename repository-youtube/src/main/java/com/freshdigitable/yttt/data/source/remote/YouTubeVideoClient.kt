@@ -10,8 +10,8 @@ import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Video
 import com.google.api.services.youtube.model.VideoListResponse
 import com.google.api.services.youtube.model.VideoLiveStreamingDetails
-import kotlinx.datetime.Instant
 import java.math.BigInteger
+import kotlin.time.Instant
 
 interface YouTubeVideoClient {
     fun fetchVideoList(ids: Set<YouTubeVideo.Id>): NetworkResponse<List<YouTubeVideo>>

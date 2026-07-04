@@ -5,8 +5,8 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
+import kotlin.time.Instant
 
 class LiveChannelDetailTwitchTest : ShouldSpec(
     {

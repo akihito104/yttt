@@ -7,8 +7,8 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import kotlinx.datetime.Instant
 import java.math.BigInteger
+import kotlin.time.Instant
 
 fun channelDetail(
     id: Int = 1,

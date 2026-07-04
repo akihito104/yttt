@@ -2,10 +2,10 @@ package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import kotlinx.datetime.Instant
 import kotlin.math.pow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 interface YouTubePlaylistWithItem<T : YouTubePlaylistItem> {
     val playlist: YouTubePlaylist

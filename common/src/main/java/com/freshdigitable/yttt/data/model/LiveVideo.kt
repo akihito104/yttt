@@ -1,10 +1,10 @@
 package com.freshdigitable.yttt.data.model
 
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import java.math.BigInteger
 import kotlin.reflect.KClass
+import kotlin.time.Instant
 
 interface LiveVideoThumbnail {
     val id: LiveVideo.Id

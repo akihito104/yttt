@@ -22,11 +22,11 @@ import com.google.api.services.youtube.model.ChannelSection
 import com.google.api.services.youtube.model.ChannelSectionListResponse
 import com.google.api.services.youtube.model.ChannelSectionSnippet
 import com.google.api.services.youtube.model.ThumbnailDetails
-import kotlinx.datetime.Instant
-import kotlinx.datetime.toKotlinInstant
 import java.time.format.DateTimeFormatter
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
+import kotlin.time.toKotlinInstant
 import java.time.Instant as jtInstant
 
 interface YouTubeClient : YouTubeSubscriptionClient, YouTubeChannelClient, YouTubePlaylistClient, YouTubeVideoClient {
@@ -223,7 +223,7 @@ private data class YouTubeChannelSectionImpl(
             return when (type) {
                 YouTubeChannelSection.Type.SINGLE_PLAYLIST,
                 YouTubeChannelSection.Type.MULTIPLE_PLAYLIST,
-                    -> YouTubeChannelSection.Content.Playlist(
+                -> YouTubeChannelSection.Content.Playlist(
                     contentDetails.playlists.map { YouTubePlaylist.Id(it) },
                 )
 

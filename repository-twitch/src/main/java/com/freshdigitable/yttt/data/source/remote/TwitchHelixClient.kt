@@ -11,9 +11,9 @@ import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.NetworkResponse.Companion.map
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
-import kotlinx.datetime.toKotlinInstant
 import retrofit2.Call
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toKotlinInstant
 
 interface TwitchHelixClient {
     suspend fun getFollowing(

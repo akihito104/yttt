@@ -7,7 +7,7 @@ import io.kotest.datatest.withData
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.nulls.shouldBeNull
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 class TwitchFollowingsTest : ShouldSpec(
     {

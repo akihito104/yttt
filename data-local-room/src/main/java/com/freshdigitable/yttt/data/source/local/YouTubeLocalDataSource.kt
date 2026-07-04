@@ -29,9 +29,9 @@ import com.freshdigitable.yttt.data.source.YouTubeSubscriptionDataSource
 import com.freshdigitable.yttt.data.source.YouTubeVideoDataSource
 import com.freshdigitable.yttt.data.source.local.db.YouTubeDao
 import kotlinx.coroutines.flow.Flow
-import kotlinx.datetime.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Instant
 
 @Singleton
 internal class YouTubeLocalDataSource @Inject constructor(

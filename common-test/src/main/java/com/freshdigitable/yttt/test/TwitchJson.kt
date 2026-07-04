@@ -4,7 +4,7 @@ import com.freshdigitable.yttt.data.model.TwitchCategory
 import com.freshdigitable.yttt.data.model.TwitchChannelSchedule
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 class TwitchUserJson(
     override val id: TwitchUser.Id,

@@ -11,7 +11,7 @@ import com.google.api.client.http.HttpHeaders
 import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Subscription
 import com.google.api.services.youtube.model.SubscriptionListResponse
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 interface YouTubeSubscriptionClient {
     fun fetchSubscription(query: YouTubeSubscriptionQuery): NetworkResponse<List<YouTubeSubscription>>

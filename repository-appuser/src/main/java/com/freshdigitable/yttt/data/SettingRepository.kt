@@ -4,10 +4,10 @@ import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.datetime.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 @Singleton
 class SettingRepository @Inject constructor(

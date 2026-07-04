@@ -32,13 +32,13 @@ import dagger.multibindings.IntoMap
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.flow.Flow
-import kotlinx.datetime.Instant
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Instant
 
 @OptIn(ExperimentalPagingApi::class)
 @HiltAndroidTest

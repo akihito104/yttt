@@ -13,9 +13,9 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.datetime.Instant
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 internal interface TimetablePageDelegate {
     fun getTimetableItemPager(page: TimetablePage): (Instant) -> Flow<PagingData<TimetableItem>>

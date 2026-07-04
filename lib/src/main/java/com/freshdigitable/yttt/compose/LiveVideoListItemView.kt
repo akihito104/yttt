@@ -42,10 +42,10 @@ import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimetableItem
 import com.freshdigitable.yttt.lib.R
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 @Composable
 fun LiveVideoListItemView(

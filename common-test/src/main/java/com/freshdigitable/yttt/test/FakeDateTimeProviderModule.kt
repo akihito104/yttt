@@ -7,9 +7,9 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import kotlinx.datetime.Instant
 import javax.inject.Singleton
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 @Module
 @TestInstallIn(

@@ -5,7 +5,7 @@ import com.freshdigitable.yttt.data.model.DateFormatterPattern
 import com.freshdigitable.yttt.data.model.toLocalDateTime
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.data.model.toPattern
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 private val REGEX_LOCAL_DATETIME_TEXT = """^(.*)\s(\d{1,2}):(.*)$""".toRegex()
 private val MatchResult.date: String get() = groupValues[1]

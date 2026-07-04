@@ -30,9 +30,9 @@ import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.feature.video.DetailItem
 import com.freshdigitable.yttt.feature.video.VideoDetailViewModel
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import java.math.BigInteger
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 @Composable
 fun VideoDetailScreen(

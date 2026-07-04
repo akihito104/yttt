@@ -4,10 +4,10 @@ import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.checkUpdatableBy
 import com.freshdigitable.yttt.data.model.Updatable.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import kotlinx.datetime.Instant
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 interface TwitchUser {
     val id: Id

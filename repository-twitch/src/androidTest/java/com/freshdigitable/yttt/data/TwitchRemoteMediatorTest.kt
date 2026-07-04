@@ -44,13 +44,13 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.collections.shouldNotContain
 import kotlinx.coroutines.test.advanceUntilIdle
-import kotlinx.datetime.Instant
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 @HiltAndroidTest
 class TwitchRemoteMediatorTest {

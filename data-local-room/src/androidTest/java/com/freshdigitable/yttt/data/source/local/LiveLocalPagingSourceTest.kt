@@ -6,9 +6,9 @@ import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldContainInOrder
-import kotlinx.datetime.Instant
 import org.junit.Rule
 import org.junit.Test
+import kotlin.time.Instant
 
 class LiveLocalPagingSourceTest {
     @get:Rule

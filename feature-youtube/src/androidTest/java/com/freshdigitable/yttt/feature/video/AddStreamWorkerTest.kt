@@ -31,10 +31,10 @@ import io.kotest.matchers.shouldBe
 import jakarta.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.datetime.Instant
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import kotlin.time.Instant
 
 @HiltAndroidTest
 class AddStreamWorkerTest {

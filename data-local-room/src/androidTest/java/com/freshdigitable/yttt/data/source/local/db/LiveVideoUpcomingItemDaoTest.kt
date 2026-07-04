@@ -20,7 +20,6 @@ import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.equals.shouldBeEqual
 import io.kotest.matchers.string.shouldBeEmpty
-import kotlinx.datetime.Instant
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -29,6 +28,7 @@ import org.junit.runner.RunWith
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @RunWith(Enclosed::class)
 class LiveVideoUpcomingItemDaoTest {

@@ -3,8 +3,8 @@ package com.freshdigitable.yttt.data.model
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.checkUpdatableBy
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.isUpdatable
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
-import kotlinx.datetime.Instant
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 interface Updatable<T> {
     val item: T

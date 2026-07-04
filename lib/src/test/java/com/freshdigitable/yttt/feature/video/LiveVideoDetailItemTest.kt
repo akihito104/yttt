@@ -13,11 +13,11 @@ import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.shouldBe
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import java.math.BigInteger
 import java.util.Locale
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 class LiveVideoDetailItemTest : ShouldSpec(
     {

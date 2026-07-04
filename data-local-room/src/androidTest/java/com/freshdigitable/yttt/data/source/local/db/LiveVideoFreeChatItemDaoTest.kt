@@ -7,9 +7,9 @@ import com.freshdigitable.yttt.test.testWithRefresh
 import io.kotest.assertions.asClue
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
-import kotlinx.datetime.Instant
 import org.junit.Rule
 import org.junit.Test
+import kotlin.time.Instant
 
 class LiveVideoFreeChatItemDaoTest {
     companion object {

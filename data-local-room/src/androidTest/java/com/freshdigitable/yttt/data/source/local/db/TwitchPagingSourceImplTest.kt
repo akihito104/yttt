@@ -8,12 +8,12 @@ import com.freshdigitable.yttt.data.source.local.userDetail
 import com.freshdigitable.yttt.test.zero
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.test.runTest
-import kotlinx.datetime.Instant
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 class TwitchPagingSourceImplTest {
     private companion object {

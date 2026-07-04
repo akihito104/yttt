@@ -12,11 +12,11 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isFreeChatTitle
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isPostponedLive
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isUnscheduledLive
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedImpl.Companion.createAsFreeChat
-import kotlinx.datetime.Instant
 import java.math.BigInteger
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 interface YouTubeVideo {
     val id: Id

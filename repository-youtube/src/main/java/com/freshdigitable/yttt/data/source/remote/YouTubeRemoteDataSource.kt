@@ -30,7 +30,7 @@ import com.freshdigitable.yttt.data.source.remote.YouTubeClientWrapper.Companion
 import com.freshdigitable.yttt.data.source.remote.YouTubeClientWrapper.Companion.fetchList
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.datetime.Instant
+import kotlin.time.Instant
 
 internal class YouTubeRemoteDataSource(
     client: YouTubeClientWrapper,

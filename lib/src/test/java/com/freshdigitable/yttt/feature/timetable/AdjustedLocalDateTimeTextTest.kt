@@ -2,11 +2,11 @@ package com.freshdigitable.yttt.feature.timetable
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import java.util.Locale
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 class AdjustedLocalDateTimeTextTest : ShouldSpec(
     {

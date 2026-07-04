@@ -4,11 +4,11 @@ import androidx.compose.runtime.Immutable
 import com.freshdigitable.yttt.data.model.DATE_WEEKDAY
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.data.model.toPattern
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 @Immutable
 internal data class GroupKey(

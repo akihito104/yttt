@@ -28,9 +28,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import kotlinx.datetime.Instant
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 @HiltViewModel(assistedFactory = TimetableTabViewModel.Factory::class)
 internal class TimetableTabViewModel @AssistedInject constructor(

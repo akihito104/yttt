@@ -3,7 +3,6 @@ package com.freshdigitable.yttt.test
 import com.freshdigitable.yttt.di.OkHttpModule
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
-import kotlinx.datetime.toJavaInstant
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -15,6 +14,7 @@ import org.junit.runner.Description
 import java.net.URL
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.time.toJavaInstant
 
 class MockServerRule(
     private val mockServerDispatcher: MockServerDispatcher = MockServerDispatcher.create(),

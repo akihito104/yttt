@@ -50,12 +50,12 @@ import io.kotest.matchers.result.shouldBeSuccess
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeEmpty
 import io.kotest.matchers.types.shouldBeInstanceOf
-import kotlinx.datetime.Instant
 import org.junit.Rule
 import org.junit.Test
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 @HiltAndroidTest
 class YouTubeRepositoryTest {

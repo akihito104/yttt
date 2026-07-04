@@ -5,9 +5,9 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import javax.inject.Singleton
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 @Module
 @InstallIn(SingletonComponent::class)

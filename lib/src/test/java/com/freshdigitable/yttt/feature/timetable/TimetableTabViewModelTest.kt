@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import kotlinx.datetime.Instant
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 class TimetableTabViewModelTest : ShouldSpec(
     {

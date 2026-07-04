@@ -24,9 +24,9 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.components.SingletonComponent
 import dagger.hilt.testing.TestInstallIn
-import kotlinx.datetime.Instant
 import java.security.MessageDigest
 import javax.inject.Singleton
+import kotlin.time.Instant
 
 @Module
 @TestInstallIn(

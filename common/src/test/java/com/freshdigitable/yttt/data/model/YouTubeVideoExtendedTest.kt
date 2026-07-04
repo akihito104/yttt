@@ -6,9 +6,9 @@ import com.freshdigitable.yttt.test.fromRemote
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeSameInstanceAs
-import kotlinx.datetime.Instant
 import java.math.BigInteger
 import kotlin.time.Duration
+import kotlin.time.Instant
 
 class YouTubeVideoExtendedTest : ShouldSpec(
     {
