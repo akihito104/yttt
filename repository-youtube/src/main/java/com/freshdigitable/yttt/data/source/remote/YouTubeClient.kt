@@ -27,6 +27,7 @@ import kotlinx.datetime.toKotlinInstant
 import java.time.format.DateTimeFormatter
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import java.time.Instant as jtInstant
 
 interface YouTubeClient : YouTubeSubscriptionClient, YouTubeChannelClient, YouTubePlaylistClient, YouTubeVideoClient {
     fun fetchChannelSection(id: YouTubeChannel.Id): NetworkResponse<List<YouTubeChannelSection>>
@@ -130,13 +131,11 @@ internal class YouTubeClientImpl(private val youtube: YouTube) :
         ): NetworkResponse<T> = try {
             val req = request()
             val res = req.executeUnparsed()
-            val date =
-                java.time.Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(res.headers.date)).toKotlinInstant()
+            val date = jtInstant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(res.headers.date)).toKotlinInstant()
             val parseAs = res.parseAs(req.responseClass)
             factory(parseAs, CacheControl.create(date, MAX_AGE_DEFAULT))
         } catch (e: HttpResponseException) {
-            val date =
-                java.time.Instant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(e.headers.date)).toKotlinInstant()
+            val date = jtInstant.from(DateTimeFormatter.RFC_1123_DATE_TIME.parse(e.headers.date)).toKotlinInstant()
             val cacheControl = CacheControl.create(date, MAX_AGE_DEFAULT)
             throw YouTubeException(e.statusCode, e.statusMessage, e, cacheControl)
         }
@@ -224,7 +223,7 @@ private data class YouTubeChannelSectionImpl(
             return when (type) {
                 YouTubeChannelSection.Type.SINGLE_PLAYLIST,
                 YouTubeChannelSection.Type.MULTIPLE_PLAYLIST,
-                -> YouTubeChannelSection.Content.Playlist(
+                    -> YouTubeChannelSection.Content.Playlist(
                     contentDetails.playlists.map { YouTubePlaylist.Id(it) },
                 )
 
