@@ -167,7 +167,7 @@ internal fun streamSchedule(
 ): TwitchChannelSchedule.Stream = object : TwitchChannelSchedule.Stream {
     override val id: TwitchChannelSchedule.Stream.Id get() = TwitchChannelSchedule.Stream.Id(id)
     override val startTime: Instant get() = startTime
-    override val endTime: Instant? get() = startTime + duration
+    override val endTime: Instant get() = startTime + duration
     override val title: String get() = title
     override val canceledUntil: String? get() = null
     override val category: TwitchCategory? get() = category

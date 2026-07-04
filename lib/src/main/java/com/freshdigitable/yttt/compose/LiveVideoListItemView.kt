@@ -204,7 +204,7 @@ private fun LiveVideoHeaderViewPreview() {
     AppTheme {
         LiveVideoHeaderView(
             label = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-                .let { kotlinx.datetime.LocalDateTime(it.year, it.monthNumber, it.dayOfMonth, 0, 0) }
+                .let { kotlinx.datetime.LocalDateTime(it.year, it.month, it.day, 0, 0) }
                 .toLocalFormattedText(DATE_WEEKDAY.toPattern()),
         )
     }

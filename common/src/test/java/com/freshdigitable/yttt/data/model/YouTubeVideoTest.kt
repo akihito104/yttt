@@ -29,7 +29,8 @@ class YouTubeVideoTest : ShouldSpec(
                 scheduledStartDateTime to Duration.ZERO,
                 scheduledStartDateTime + 1.milliseconds to -(1.milliseconds),
                 scheduledStartDateTime + YouTubeVideo.MAX_AGE_LIMIT_SOON to -YouTubeVideo.MAX_AGE_LIMIT_SOON,
-                scheduledStartDateTime + YouTubeVideo.MAX_AGE_LIMIT_SOON + 1.milliseconds to YouTubeVideo.MAX_AGE_DEFAULT,
+                scheduledStartDateTime + YouTubeVideo.MAX_AGE_LIMIT_SOON + 1.milliseconds to
+                    YouTubeVideo.MAX_AGE_DEFAULT,
             ) { (fetchedAt, expected) ->
                 // exercise
                 val sut = video.toUpdatable(CacheControl.fromRemote(fetchedAt))
