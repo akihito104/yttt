@@ -1,8 +1,9 @@
 package com.freshdigitable.yttt.data.model
 
 import java.math.BigInteger
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 
 interface YouTubeChannelBase {
     val id: YouTubeChannel.Id
@@ -46,7 +47,7 @@ interface YouTubeChannelAddition {
 interface YouTubeChannelDetail :
     YouTubeChannel, YouTubeChannelAddition, YouTubeChannelRelatedPlaylist {
     companion object {
-        val MAX_AGE: Duration = Duration.ofDays(1)
+        val MAX_AGE: Duration = 1.days
     }
 }
 

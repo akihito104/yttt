@@ -79,10 +79,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 @RunWith(Enclosed::class)
 class FetchYouTubeStreamUseCaseTest {
@@ -156,7 +157,7 @@ class FetchYouTubeStreamUseCaseTest {
             livePagingSource.onAir.testWithRefresh { data.shouldBeEmpty() }
             livePagingSource.upcoming(dateTimeProvider.now()).testWithRefresh { data.shouldBeEmpty() }
             livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
-            extendedSource.subscriptionsFetchedAt shouldBe Instant.EPOCH
+            extendedSource.subscriptionsFetchedAt shouldBe Instant.fromEpochMilliseconds(0)
         }
 
         @Test
@@ -165,7 +166,7 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             testDispatcher.add(
                 *FakeYouTubeClientModule.setup(10, 2) { i, c ->
-                    videoJson(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
+                    videoJson(id = i, channel = c, scheduleStartDateTime = current + 1.days)
                 }.expectedResponses(),
             )
             hiltRule.inject()
@@ -179,7 +180,7 @@ class FetchYouTubeStreamUseCaseTest {
                 getPages().flatten() shouldHaveSize 20
             }
             livePagingSource.freeChat.testWithRefresh { data.shouldBeEmpty() }
-            extendedSource.fetchUpdatableVideoIds(current + Duration.ofHours(3)) shouldHaveSize 20
+            extendedSource.fetchUpdatableVideoIds(current + 3.hours) shouldHaveSize 20
         }
 
         @Test
@@ -291,7 +292,7 @@ class FetchYouTubeStreamUseCaseTest {
             FakeYouTubeAccountModule.account = "account"
             testDispatcher.add(
                 *FakeYouTubeClientModule.setup(100, 2) { i, c ->
-                    videoJson(id = i, channel = c, scheduleStartDateTime = current + Duration.ofDays(1))
+                    videoJson(id = i, channel = c, scheduleStartDateTime = current + 1.days)
                 }.expectedResponses(),
             )
             hiltRule.inject()
@@ -356,10 +357,10 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun videoFromNewPlaylistItem_has1Subscription_fetch2PagesOfSubscription_returns200Videos() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + 3.hours
             val oldClient = fakeClient.copy()
             fakeClient.setup(100, 2) { i, c ->
-                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                videoJson(i, c, scheduleStartDateTime = current + 1.days)
             }
             testDispatcher.add(
                 *fakeClient.expectedSubscription(oldClient.subsFactory),
@@ -385,10 +386,10 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun subscriptionIsRemoved_returns18VideosAnd9Subscriptions() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + 3.hours
             val oldClient = fakeClient.copy()
             fakeClient.setup(9, 2) { i, c ->
-                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                videoJson(i, c, scheduleStartDateTime = current + 1.days)
             }
             testDispatcher.add(
                 *fakeClient.expectedSubscription(oldClient.subsFactory),
@@ -413,14 +414,14 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun videoFromNewPlaylistItem_update10Subscription() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + 3.hours
             val oldClient = fakeClient.copy()
             fakeClient.setup(10, 3) { i, c ->
                 videoJson(
                     i,
                     c,
                     YouTubeVideo.BroadcastType.LIVE,
-                    actualStartDateTime = current - Duration.ofHours(2),
+                    actualStartDateTime = current - 2.hours,
                 )
             }
             testDispatcher.add(
@@ -442,10 +443,10 @@ class FetchYouTubeStreamUseCaseTest {
         @Test
         fun playlistItemIsNotModified_returnAsSuccess() = testScope.runTest {
             // setup
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + 3.hours
             val oldClient = fakeClient.copy()
             fakeClient.setup(10, 3) { i, c ->
-                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                videoJson(i, c, scheduleStartDateTime = current + 1.days)
             }
             testDispatcher.add(
                 *fakeClient.expectedSubscription(oldClient.subsFactory),
@@ -501,9 +502,9 @@ class FetchYouTubeStreamUseCaseTest {
         fun allPageIsNotModified() = testScope.runTest {
             // setup
             val oldClient = fakeClient.copy()
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + 3.hours
             fakeClient.update(3) { i, c ->
-                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                videoJson(i, c, scheduleStartDateTime = current + 1.days)
             }
             testDispatcher.add(
                 *fakeClient.expectedSubscription(oldClient.subsFactory),
@@ -532,11 +533,11 @@ class FetchYouTubeStreamUseCaseTest {
         fun firstPageIsNotModified() = testScope.runTest {
             // setup
             val oldClient = fakeClient.copy()
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + 3.hours
             val oldChannel = oldClient.channelDetail
             fakeClient.channelDetail = oldChannel.take(50) + oldChannel.takeLast(99)
             fakeClient.update(3) { i, c ->
-                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                videoJson(i, c, scheduleStartDateTime = current + 1.days)
             }
             testDispatcher.add(
                 *fakeClient.expectedSubscription(oldClient.subsFactory),
@@ -571,10 +572,10 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             val oldClient = fakeClient.copy()
             val oldChannel = oldClient.channelDetail
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + 3.hours
             fakeClient.channelDetail = oldChannel.take(100) + oldChannel.takeLast(49)
             fakeClient.update(3) { i, c ->
-                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                videoJson(i, c, scheduleStartDateTime = current + 1.days)
             }
             testDispatcher.add(
                 *fakeClient.expectedSubscription(oldClient.subsFactory),
@@ -609,10 +610,10 @@ class FetchYouTubeStreamUseCaseTest {
             // setup
             val oldClient = fakeClient.copy()
             val oldChannel = oldClient.channelDetail
-            FakeDateTimeProviderModule.instant = current + Duration.ofHours(3)
+            FakeDateTimeProviderModule.instant = current + 3.hours
             fakeClient.channelDetail = oldChannel.take(100) + oldChannel.takeLast(49)
             fakeClient.update(3) { i, c ->
-                videoJson(i, c, scheduleStartDateTime = current + Duration.ofDays(1))
+                videoJson(i, c, scheduleStartDateTime = current + 1.days)
             }
             val res = fakeClient.expectedSubscription(oldClient.subsFactory)
             res[res.lastIndex] = ExpectedResponse.youtubeSubscription(
@@ -712,8 +713,8 @@ internal fun videoJson(
     id: Int,
     channel: YouTubeChannelTitle,
     liveBroadcastContent: YouTubeVideo.BroadcastType = YouTubeVideo.BroadcastType.UPCOMING,
-    scheduleStartDateTime: Instant = Instant.EPOCH,
-    actualStartDateTime: Instant = Instant.EPOCH,
+    scheduleStartDateTime: Instant = Instant.fromEpochMilliseconds(0),
+    actualStartDateTime: Instant = Instant.fromEpochMilliseconds(0),
 ): VideoJson = VideoJson(
     idNum = id,
     channel = channel,

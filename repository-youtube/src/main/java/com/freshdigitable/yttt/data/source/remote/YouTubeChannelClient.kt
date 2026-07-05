@@ -11,7 +11,7 @@ import com.google.api.services.youtube.YouTube
 import com.google.api.services.youtube.model.Channel
 import com.google.api.services.youtube.model.ChannelListResponse
 import java.math.BigInteger
-import java.time.Instant
+import kotlin.time.Instant
 
 interface YouTubeChannelClient {
     fun fetchChannelList(ids: Set<YouTubeChannel.Id>): NetworkResponse<List<YouTubeChannel>>

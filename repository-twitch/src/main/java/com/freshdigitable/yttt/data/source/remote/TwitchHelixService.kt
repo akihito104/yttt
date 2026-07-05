@@ -15,7 +15,7 @@ import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.Query
 import java.lang.reflect.Type
-import java.time.Instant
+import kotlin.time.Instant
 
 // ## Twitch Rate Limits
 // https://dev.twitch.tv/docs/api/guide/

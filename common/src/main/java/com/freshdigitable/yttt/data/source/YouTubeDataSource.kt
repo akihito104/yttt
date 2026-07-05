@@ -17,7 +17,7 @@ import com.freshdigitable.yttt.data.model.YouTubeSubscriptionSummary
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import kotlinx.coroutines.flow.Flow
-import java.time.Instant
+import kotlin.time.Instant
 
 interface YouTubeDataSource :
     YouTubeChannelDataSource,

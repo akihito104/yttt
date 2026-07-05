@@ -16,7 +16,7 @@ import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import java.lang.reflect.Type
-import java.time.Instant
+import kotlin.time.Instant
 
 internal class TwitchUserDetailRemote(
     @SerializedName("id")

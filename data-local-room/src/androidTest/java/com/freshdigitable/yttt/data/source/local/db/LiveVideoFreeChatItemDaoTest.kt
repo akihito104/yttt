@@ -9,7 +9,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
+import kotlin.time.Instant
 
 class LiveVideoFreeChatItemDaoTest {
     companion object {
@@ -60,19 +60,19 @@ class LiveVideoFreeChatItemDaoTest {
             YouTubeVideoEntity.freeChat(
                 id = "freechat-1-0",
                 channel = channels[1],
-                scheduledStartDateTime = Instant.ofEpochMilli(1000),
+                scheduledStartDateTime = Instant.fromEpochMilliseconds(1000),
             ),
             YouTubeVideoEntity.freeChat(
                 id = "freechat-1-1",
                 title = "title1",
                 channel = channels[1],
-                scheduledStartDateTime = Instant.ofEpochMilli(2000),
+                scheduledStartDateTime = Instant.fromEpochMilliseconds(2000),
             ),
             YouTubeVideoEntity.freeChat(
                 id = "freechat-1-2",
                 title = "title0",
                 channel = channels[1],
-                scheduledStartDateTime = Instant.ofEpochMilli(2000),
+                scheduledStartDateTime = Instant.fromEpochMilliseconds(2000),
             ),
         )
         youtube.dao.addChannelEntities(channels)

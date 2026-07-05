@@ -20,9 +20,9 @@ import com.freshdigitable.yttt.data.source.local.TableDeletable
 import com.freshdigitable.yttt.data.source.local.db.YouTubeVideoTable.Dao.Companion.SQL_FIND_ALL_ARCHIVED_VIDEOS
 import kotlinx.coroutines.flow.Flow
 import java.math.BigInteger
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 @Entity(tableName = "video")
 internal class YouTubeVideoTable(

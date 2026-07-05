@@ -28,9 +28,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 @HiltViewModel(assistedFactory = TimetableTabViewModel.Factory::class)
 internal class TimetableTabViewModel @AssistedInject constructor(
@@ -51,7 +51,7 @@ internal class TimetableTabViewModel @AssistedInject constructor(
     val canUpdate: Boolean
         get() {
             val lastUpdateDatetime = settingRepository.lastUpdateDatetime ?: return true
-            return (lastUpdateDatetime + Duration.ofMinutes(30)) <= dateTimeProvider.now()
+            return (lastUpdateDatetime + 30.minutes) <= dateTimeProvider.now()
         }
     private val current: MutableStateFlow<Instant> = MutableStateFlow(dateTimeProvider.now())
     fun loadList() {

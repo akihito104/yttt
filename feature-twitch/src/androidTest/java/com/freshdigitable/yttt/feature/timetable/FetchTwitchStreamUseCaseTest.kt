@@ -56,10 +56,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(Enclosed::class)
@@ -69,7 +70,7 @@ class FetchTwitchStreamUseCaseTest {
         @Before
         override fun setup() {
             FakeTwitchHelixClient.clear()
-            FakeDateTimeProviderModule.instant = Instant.EPOCH
+            FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(0)
             super.setup()
         }
 
@@ -340,7 +341,7 @@ class FetchTwitchStreamUseCaseTest {
         fun hasOnAirAndUpcomingItems() = testScope.runTest {
             // setup
             initialLoad()
-            FakeDateTimeProviderModule.instant = current + Duration.ofMinutes(3)
+            FakeDateTimeProviderModule.instant = current + 3.minutes
             loadResponses()
             // exercise
             val actual = sut.invoke()
@@ -355,7 +356,7 @@ class FetchTwitchStreamUseCaseTest {
         fun onAirStreamIsFinished_onAirIsEmpty() = testScope.runTest {
             // setup
             initialLoad()
-            val now = current + Duration.ofMinutes(10)
+            val now = current + 10.minutes
             FakeDateTimeProviderModule.instant = now
             loadResponses()
             server.addResponses(ExpectedResponse.twitchStreamsFollowed(meId = me.id, data = emptyList()))
@@ -372,7 +373,7 @@ class FetchTwitchStreamUseCaseTest {
         fun upcomingPublishDeadlineIsOver_upcomingIsEmpty() = testScope.runTest {
             // setup
             initialLoad()
-            FakeDateTimeProviderModule.instant = streamSchedule.startTime + Duration.ofHours(7)
+            FakeDateTimeProviderModule.instant = streamSchedule.startTime + 7.hours
             loadResponses()
             server.addResponses(
                 ExpectedResponse.twitchChannelSchedule(userId = scheduleUser.id, json = TwitchErrorJson.notFound()),
@@ -442,7 +443,7 @@ private fun stream(
 private fun streamSchedule(
     id: String,
     category: TwitchGameJson,
-    startTime: Instant = Instant.EPOCH,
+    startTime: Instant = Instant.fromEpochMilliseconds(0),
 ): TwitchScheduleJson = TwitchScheduleJson(id, category, startTime)
 
 private fun schedule(

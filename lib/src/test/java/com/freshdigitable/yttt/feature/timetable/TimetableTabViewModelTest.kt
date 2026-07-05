@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 class TimetableTabViewModelTest : ShouldSpec(
     {
@@ -62,7 +62,7 @@ class TimetableTabViewModelTest : ShouldSpec(
                 Result.success(Unit)
             }
 
-            every { dateTimeProvider.now() } returns Instant.EPOCH
+            every { dateTimeProvider.now() } returns Instant.fromEpochMilliseconds(0)
             every { timetablePageDelegate.getTimetableItemPager(any()) } returns { flowOf(PagingData.empty()) }
             val sut = TimetableTabViewModel(
                 settingRepository,

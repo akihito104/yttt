@@ -19,9 +19,9 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Instant
 
 data class TwitchLiveSubscription(
     @ColumnInfo(name = "follower_user_id")

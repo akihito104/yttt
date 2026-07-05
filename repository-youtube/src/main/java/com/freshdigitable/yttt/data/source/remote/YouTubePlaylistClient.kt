@@ -14,7 +14,7 @@ import com.google.api.services.youtube.model.Playlist
 import com.google.api.services.youtube.model.PlaylistItem
 import com.google.api.services.youtube.model.PlaylistItemListResponse
 import com.google.api.services.youtube.model.PlaylistListResponse
-import java.time.Instant
+import kotlin.time.Instant
 
 interface YouTubePlaylistClient {
     fun fetchPlaylist(ids: Set<YouTubePlaylist.Id>): NetworkResponse<List<YouTubePlaylist>>

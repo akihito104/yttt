@@ -37,9 +37,9 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 internal class FetchYouTubeStreamUseCase @Inject constructor(
     private val liveRepository: YouTubeRepository,
@@ -205,7 +205,7 @@ internal class FetchYouTubeStreamUseCase @Inject constructor(
     }
 }
 
-private val SUBSCRIPTION_FETCH_PERIOD = Duration.ofHours(2)
+private val SUBSCRIPTION_FETCH_PERIOD = 2.hours
 internal val YouTubeRepository.subscriptionCacheControl: CacheControl
     get() = CacheControl.create(subscriptionsFetchedAt, SUBSCRIPTION_FETCH_PERIOD)
 

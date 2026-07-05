@@ -13,9 +13,9 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import java.time.Instant
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 internal interface TimetablePageDelegate {
     fun getTimetableItemPager(page: TimetablePage): (Instant) -> Flow<PagingData<TimetableItem>>
@@ -81,6 +81,6 @@ sealed interface TimetableItem {
         video: LiveVideo,
         timeAdjustment: TimeAdjustment,
     ) : Video(video, timeAdjustment) {
-        internal val key: GroupKey = GroupKey.create(dateTime, timeAdjustment.extraHourOfDay, timeAdjustment.zoneId)
+        internal val key: GroupKey = GroupKey.create(dateTime, timeAdjustment.extraHourOfDay, timeAdjustment.timeZone)
     }
 }

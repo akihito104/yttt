@@ -3,8 +3,10 @@ package com.freshdigitable.yttt.data.model
 import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.checkUpdatableBy
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 interface TwitchVideo<T : TwitchVideo.TwitchVideoId> {
     val id: T
@@ -84,7 +86,7 @@ interface TwitchChannelSchedule {
     }
 
     companion object {
-        val MAX_AGE_CHANNEL_SCHEDULE: Duration = Duration.ofDays(1)
+        val MAX_AGE_CHANNEL_SCHEDULE: Duration = 1.days
     }
 }
 
@@ -110,7 +112,7 @@ interface TwitchStreams {
         ): Updatable<TwitchStreams> = Impl(followerId, streams)
             .toUpdatable(cacheControl ?: CacheControl.EMPTY)
 
-        private val MAX_AGE_STREAM = Duration.ofMinutes(10)
+        private val MAX_AGE_STREAM = 10.minutes
 
         private fun TwitchStreams.update(new: TwitchStreams) = UpdatedImpl(this, new)
 

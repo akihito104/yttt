@@ -2,18 +2,19 @@ package com.freshdigitable.yttt.feature.timetable
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import java.time.Duration
-import java.time.Instant
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
 import java.util.Locale
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 class AdjustedLocalDateTimeTextTest : ShouldSpec(
     {
         should("JP_returnsCurrentDate") {
             // setup
             val timeAdjustment = TimeAdjustment(
-                extraHourOfDay = Duration.ofHours(2),
-                zoneId = ZoneId.of("Asia/Tokyo"),
+                extraHourOfDay = 2.hours,
+                timeZone = TimeZone.of("Asia/Tokyo"),
                 locale = Locale.JAPAN,
             )
             // exercise
@@ -25,12 +26,12 @@ class AdjustedLocalDateTimeTextTest : ShouldSpec(
         should("JP_returnsYesterdayDate") {
             // setup
             val timeAdjustment = TimeAdjustment(
-                extraHourOfDay = Duration.ofHours(2),
-                zoneId = ZoneId.of("Asia/Tokyo"),
+                extraHourOfDay = 2.hours,
+                timeZone = TimeZone.of("Asia/Tokyo"),
                 locale = Locale.JAPAN,
             )
             // exercise
-            val actual = Instant.parse("2025-01-23T02:00:00.000+09:00").minusMillis(1)
+            val actual = (Instant.parse("2025-01-23T02:00:00.000+09:00") - 1.milliseconds)
                 .toAdjustedLocalDateTimeText(timeAdjustment)
             // verify
             actual shouldBe "2025/01/22(水) 25:59"
@@ -39,8 +40,8 @@ class AdjustedLocalDateTimeTextTest : ShouldSpec(
         should("US") {
             // setup
             val timeAdjustment = TimeAdjustment(
-                extraHourOfDay = Duration.ofHours(2),
-                zoneId = ZoneId.of("America/New_York"),
+                extraHourOfDay = 2.hours,
+                timeZone = TimeZone.of("America/New_York"),
                 locale = Locale.US,
             )
             // exercise

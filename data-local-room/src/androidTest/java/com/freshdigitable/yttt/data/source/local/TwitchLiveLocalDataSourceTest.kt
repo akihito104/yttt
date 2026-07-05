@@ -19,8 +19,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 @RunWith(Enclosed::class)
 class TwitchLiveLocalDataSourceTest {
@@ -144,7 +145,7 @@ internal fun userDetail(
     override val displayName: String get() = loginName
     override val description: String get() = ""
     override val profileImageUrl: String get() = ""
-    override val createdAt: Instant get() = Instant.EPOCH
+    override val createdAt: Instant get() = Instant.fromEpochMilliseconds(0)
 }
 
 internal fun channelSchedule(
@@ -159,14 +160,14 @@ internal fun channelSchedule(
 
 internal fun streamSchedule(
     id: String,
-    startTime: Instant = Instant.EPOCH,
-    duration: Duration = Duration.ofHours(3),
+    startTime: Instant = Instant.fromEpochMilliseconds(0),
+    duration: Duration = 3.hours,
     category: TwitchCategory? = null,
     title: String = "title",
 ): TwitchChannelSchedule.Stream = object : TwitchChannelSchedule.Stream {
     override val id: TwitchChannelSchedule.Stream.Id get() = TwitchChannelSchedule.Stream.Id(id)
     override val startTime: Instant get() = startTime
-    override val endTime: Instant? get() = startTime + duration
+    override val endTime: Instant get() = startTime + duration
     override val title: String get() = title
     override val canceledUntil: String? get() = null
     override val category: TwitchCategory? get() = category
@@ -176,13 +177,13 @@ internal fun streamSchedule(
 internal fun followings(
     followerId: TwitchUser.Id,
     followings: List<TwitchBroadcaster>,
-    fetchedAt: Instant = Instant.EPOCH,
+    fetchedAt: Instant = Instant.fromEpochMilliseconds(0),
 ): Updatable<TwitchFollowings> =
     TwitchFollowings.create(followerId, followings, CacheControl.create(fetchedAt, Duration.ZERO))
 
 internal fun broadcaster(
     user: TwitchUser,
-    followedAt: Instant = Instant.EPOCH,
+    followedAt: Instant = Instant.fromEpochMilliseconds(0),
 ): TwitchBroadcaster = object : TwitchBroadcaster, TwitchUser by user {
     override val followedAt: Instant get() = followedAt
 }

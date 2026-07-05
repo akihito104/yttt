@@ -15,8 +15,8 @@ import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.Updatable
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
-import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Instant
 
 @Entity(
     tableName = "twitch_stream",

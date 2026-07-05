@@ -4,9 +4,9 @@ import androidx.paging.PagingSource
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.source.LiveDataPagingSource
 import com.freshdigitable.yttt.data.source.local.db.LiveDao
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Instant
 
 @Singleton
 internal class LiveLocalPagingSource @Inject constructor(

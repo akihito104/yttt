@@ -8,7 +8,7 @@ import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import java.math.BigInteger
-import java.time.Instant
+import kotlin.time.Instant
 
 fun channelDetail(
     id: Int = 1,
@@ -24,7 +24,7 @@ fun channelDetail(
     override val isSubscriberHidden: Boolean get() = false
     override val videoCount: BigInteger get() = BigInteger.ONE
     override val viewsCount: BigInteger get() = BigInteger.ONE
-    override val publishedAt: Instant get() = Instant.EPOCH
+    override val publishedAt: Instant get() = Instant.fromEpochMilliseconds(0)
     override val customUrl: String get() = ""
     override val keywords: Collection<String> get() = emptyList()
     override val description: String get() = ""
@@ -40,7 +40,7 @@ fun playlistItem(
     id: YouTubePlaylistItem.Id,
     playlistId: YouTubePlaylist.Id,
     videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id.value}_${playlistId.value}"),
-    publishedAt: Instant = Instant.EPOCH,
+    publishedAt: Instant = Instant.fromEpochMilliseconds(0),
 ): YouTubePlaylistItem = object : YouTubePlaylistItem {
     override val id: YouTubePlaylistItem.Id get() = id
     override val playlistId: YouTubePlaylist.Id get() = playlistId
@@ -56,7 +56,7 @@ fun playlistItemDetail(
         override val title: String get() = "Channel"
     },
     videoId: YouTubeVideo.Id = YouTubeVideo.Id("video_${id.value}_${playlistId.value}"),
-    publishedAt: Instant = Instant.EPOCH,
+    publishedAt: Instant = Instant.fromEpochMilliseconds(0),
 ): YouTubePlaylistItemDetail = YouTubePlaylistItemDetailEntity(
     id = id,
     playlistId = playlistId,

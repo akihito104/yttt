@@ -4,10 +4,10 @@ import com.freshdigitable.yttt.data.source.local.AndroidPreferencesDataStore
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 @Singleton
 class SettingRepository @Inject constructor(
@@ -15,7 +15,7 @@ class SettingRepository @Inject constructor(
 ) {
     val changeDateTime: Flow<Int?> = preferences.changeDateTime
     val timeAdjustment: Flow<TimeAdjustment> = changeDateTime.map {
-        TimeAdjustment(Duration.ofHours(((it ?: 24) - 24).toLong()))
+        TimeAdjustment(((it ?: 24) - 24).toLong().hours)
     }
 
     suspend fun putTimeToChangeDate(date: Int) {

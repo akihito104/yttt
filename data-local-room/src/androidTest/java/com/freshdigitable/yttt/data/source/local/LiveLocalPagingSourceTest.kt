@@ -8,12 +8,12 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldContainInOrder
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
+import kotlin.time.Instant
 
 class LiveLocalPagingSourceTest {
     @get:Rule
     internal val rule = LiveDataSourceTestRule()
-    private val current = Instant.EPOCH
+    private val current = Instant.fromEpochMilliseconds(0)
 
     @Test
     fun watchAllUnfinished_returnEmpty() = rule.runWithScope {

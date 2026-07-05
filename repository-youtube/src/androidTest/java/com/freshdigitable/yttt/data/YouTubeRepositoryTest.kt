@@ -52,9 +52,10 @@ import io.kotest.matchers.string.shouldNotBeEmpty
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.junit.Rule
 import org.junit.Test
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 @HiltAndroidTest
 class YouTubeRepositoryTest {
@@ -76,7 +77,7 @@ class YouTubeRepositoryTest {
     @Test
     fun fetchVideoList_itemFromRemoteHasIconUrl() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = Instant.EPOCH
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(0)
         val channel = ChannelItemJson.createSnippet(id = YouTubeChannel.Id("channel_1"))
         val video = VideoJson(
             idNum = 1,
@@ -108,19 +109,19 @@ class YouTubeRepositoryTest {
     @Test
     fun fetchVideoList_itemFromCacheHasIconUrl() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(999)
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(999)
         val channelDetail = channelDetail(1)
         val video = video(1, channelDetail)
         hiltRule.inject()
         localSource.addChannelDetailList(
-            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))),
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))),
         )
         sut.addVideo(
             listOf(
                 object : YouTubeVideoExtended, YouTubeVideo by video {
                     override val channel: YouTubeChannel get() = channelDetail
                     override val isFreeChat: Boolean get() = false
-                }.toUpdatable(Instant.ofEpochMilli(200), Duration.ofMillis(800)),
+                }.toUpdatable(Instant.fromEpochMilliseconds(200), 800.milliseconds),
             ),
         )
         // exercise
@@ -137,15 +138,15 @@ class YouTubeRepositoryTest {
     @Test
     fun fetchVideoList_videoFromRemoteAndChannelFromCache() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(0)
         val channelDetail = channelDetail(1)
         val video = VideoJson(1, channelDetail, scheduledStartDateTime = Instant.parse("2022-01-01T00:00:00Z"))
         server.addResponses(ExpectedResponse.youtubeVideo(listOf(video)))
         hiltRule.inject()
         localSource.addChannelDetailList(
-            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))),
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))),
         )
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(1000)
         // exercise
         val actual = sut.fetchVideoList(setOf(video.id))
         // verify
@@ -160,7 +161,7 @@ class YouTubeRepositoryTest {
     @Test
     fun fetchVideoList_videoFromRemoteAndChannelGetsException_returnsFailure() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(0)
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(0)
         val channel = YouTubeChannel.Id("channel_1")
         val videoId = YouTubeVideo.Id("${channel.value}_video_1")
         val video = VideoJson(videoId, channel, "title_${channel.value}")
@@ -171,7 +172,7 @@ class YouTubeRepositoryTest {
             ),
         )
         hiltRule.inject()
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1) + Duration.ofDays(1)
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(1) + 1.days
         // exercise
         val actual = sut.fetchVideoList(setOf(videoId))
         // verify
@@ -183,20 +184,20 @@ class YouTubeRepositoryTest {
     @Test
     fun fetchVideoList_updatedItemHasIconUrl() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(1000)
         val channelDetail = channelDetail(1)
         val video = video(1, channelDetail)
         server.addResponses(ExpectedResponse.youtubeVideo(listOf(VideoJson(video))))
         hiltRule.inject()
         localSource.addChannelDetailList(
-            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.EPOCH))),
+            listOf(channelDetail.toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)))),
         )
         sut.addVideo(
             listOf(
                 object : YouTubeVideoExtended, YouTubeVideo by video {
                     override val channel: YouTubeChannel get() = channelDetail
                     override val isFreeChat: Boolean get() = false
-                }.toUpdatable(Instant.ofEpochMilli(200), Duration.ofMillis(800)),
+                }.toUpdatable(Instant.fromEpochMilliseconds(200), 800.milliseconds),
             ),
         )
         // exercise
@@ -213,7 +214,7 @@ class YouTubeRepositoryTest {
     @Test
     fun fetchPlaylistWithItems() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(1000)
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(1000)
         val playlist = PlaylistJson(YouTubePlaylist.Id("0"))
         val playlistItem = PlaylistItemJson(
             YouTubePlaylistItem.Id("0"),
@@ -236,7 +237,7 @@ class YouTubeRepositoryTest {
     @Test
     fun fetchPlaylistWithItems_receiveNotFoundAtInit_returnsSuccess() = testScope.runTest {
         // setup
-        val current = Instant.ofEpochMilli(1000)
+        val current = Instant.fromEpochMilliseconds(1000)
         FakeDateTimeProviderModule.instant = current
         val query = YouTubePlaylist.Id("0")
         server.addResponses(
@@ -252,14 +253,14 @@ class YouTubeRepositoryTest {
         actual shouldBeSuccess {
             it.item.playlist.id shouldBe query
             it.cacheControl.fetchedAt shouldBe current
-            it.cacheControl.maxAge shouldBe Duration.ofDays(1)
+            it.cacheControl.maxAge shouldBe 1.days
         }
     }
 
     @Test
     fun fetchPlaylistWithItems_receiveNotModified_returnsSuccess() = testScope.runTest {
         // setup
-        val current = Instant.ofEpochMilli(1000)
+        val current = Instant.fromEpochMilliseconds(1000)
         FakeDateTimeProviderModule.instant = current
         val playlistId = YouTubePlaylist.Id("0")
         val eTag = "valid_eTag"
@@ -280,7 +281,7 @@ class YouTubeRepositoryTest {
                 override val items: List<YouTubePlaylistItem> get() = listOf(item)
                 override val eTag: String get() = eTag
             },
-            CacheControl.fromRemote(Instant.EPOCH),
+            CacheControl.fromRemote(Instant.fromEpochMilliseconds(0)),
         )
         val cache = checkNotNull(localSource.fetchPlaylistWithItems(playlistId, 10).getOrNull())
         cache.item.eTag shouldBe eTag

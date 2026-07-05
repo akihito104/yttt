@@ -25,8 +25,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.experimental.runners.Enclosed
 import org.junit.runner.RunWith
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Instant
 
 @RunWith(Enclosed::class)
 class LiveVideoUpcomingItemDaoTest {
@@ -85,7 +87,7 @@ class LiveVideoUpcomingItemDaoTest {
                 val stream = TwitchStreams.create(
                     followerId = me.id,
                     streams = listOf(
-                        stream(id = "stream_id-0-0", userDetail = users[0], startedAt = now - Duration.ofHours(2)),
+                        stream(id = "stream_id-0-0", userDetail = users[0], startedAt = now - 2.hours),
                     ),
                     cacheControl = CacheControl.fromRemote(now),
                 )
@@ -105,15 +107,15 @@ class LiveVideoUpcomingItemDaoTest {
                 val videos = listOf(
                     YouTubeVideoEntity.upcomingStream(
                         channel = channels[0],
-                        scheduledStartDateTime = now - (Duration.ofHours(6) + Duration.ofSeconds(1)),
+                        scheduledStartDateTime = now - (6.hours + 1.seconds),
                     ),
                 )
                 dao.addVideoEntities(videos)
             }
             twitch.apply {
                 val segments = listOf(
-                    streamSchedule(id = "stream-0", startTime = now - (Duration.ofHours(6) + Duration.ofSeconds(1))),
-                    streamSchedule(id = "stream-1", startTime = now + (Duration.ofDays(7) + Duration.ofSeconds(1))),
+                    streamSchedule(id = "stream-0", startTime = now - (6.hours + 1.seconds)),
+                    streamSchedule(id = "stream-1", startTime = now + (7.days + 1.seconds)),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
                 dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
@@ -132,7 +134,7 @@ class LiveVideoUpcomingItemDaoTest {
                 val segments = listOf(
                     streamSchedule(
                         id = "stream-0",
-                        startTime = now + Duration.ofDays(2),
+                        startTime = now + 2.days,
                         category = category(id = "category-1", artUrlBase = "https://example.com/{width}x{height}"),
                     ),
                 )
@@ -155,7 +157,7 @@ class LiveVideoUpcomingItemDaoTest {
                 val segments = listOf(
                     streamSchedule(
                         id = "stream-0",
-                        startTime = now + Duration.ofDays(2),
+                        startTime = now + 2.days,
                         category = null,
                     ),
                 )
@@ -201,7 +203,7 @@ class LiveVideoUpcomingItemDaoTest {
                     YouTubeVideoEntity.upcomingStream(
                         id = "video-0-0",
                         channel = channels[0],
-                        scheduledStartDateTime = now - Duration.ofHours(6),
+                        scheduledStartDateTime = now - 6.hours,
                     ),
                 )
                 dao.addVideoEntities(videos)
@@ -217,7 +219,7 @@ class LiveVideoUpcomingItemDaoTest {
         fun youtube_sortByTitleAscendancy() = rule.runWithScope {
             // setup
             youtube.apply {
-                val scheduledStartDateTime = now + Duration.ofHours(2)
+                val scheduledStartDateTime = now + 2.hours
                 val videos = listOf(
                     YouTubeVideoEntity.upcomingStream(
                         id = "video-1-0",
@@ -246,8 +248,8 @@ class LiveVideoUpcomingItemDaoTest {
             // setup
             twitch.apply {
                 val segments = listOf(
-                    streamSchedule(id = "stream-0", startTime = now + Duration.ofDays(2)),
-                    streamSchedule(id = "stream-1", startTime = now + Duration.ofDays(3)),
+                    streamSchedule(id = "stream-0", startTime = now + 2.days),
+                    streamSchedule(id = "stream-1", startTime = now + 3.days),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
                 dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
@@ -263,7 +265,7 @@ class LiveVideoUpcomingItemDaoTest {
         fun twitch_sortByTitleAscendancy() = rule.runWithScope {
             // setup
             twitch.apply {
-                val startTime = now + Duration.ofDays(2)
+                val startTime = now + 2.days
                 val segments = mapOf(
                     users[0] to listOf(streamSchedule(id = "stream-0", startTime = startTime, title = "title1")),
                     users[1] to listOf(streamSchedule(id = "stream-1", startTime = startTime, title = "title0")),
@@ -295,7 +297,7 @@ class LiveVideoUpcomingItemDaoTest {
             }
             twitch.apply {
                 val segments = listOf(
-                    streamSchedule(id = "stream-1", startTime = now + Duration.ofDays(3)),
+                    streamSchedule(id = "stream-1", startTime = now + 3.days),
                 )
                 val updatable = channelSchedule(segments, users[0]).toUpdatable<TwitchChannelSchedule?>(cacheControl)
                 dao.replaceChannelScheduleEntitiesBatch(mapOf(users[0].id to updatable))
@@ -310,7 +312,7 @@ class LiveVideoUpcomingItemDaoTest {
         @Test
         fun sortByTitleAscendancy() = rule.runWithScope {
             // setup
-            val startTime = now + Duration.ofDays(3)
+            val startTime = now + 3.days
             youtube.apply {
                 val videos = listOf(
                     YouTubeVideoEntity.upcomingStream(

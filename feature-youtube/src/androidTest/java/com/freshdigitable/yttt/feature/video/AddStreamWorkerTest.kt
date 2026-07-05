@@ -34,7 +34,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
+import kotlin.time.Instant
 
 @HiltAndroidTest
 class AddStreamWorkerTest {
@@ -64,7 +64,7 @@ class AddStreamWorkerTest {
 
     @Before
     fun setup() {
-        FakeDateTimeProviderModule.instant = Instant.EPOCH
+        FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(0)
     }
 
     @Test

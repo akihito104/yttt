@@ -42,10 +42,10 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
+import kotlinx.datetime.TimeZone
 import java.math.BigInteger
 import java.text.DecimalFormat
-import java.time.Duration
-import java.time.ZoneId
+import kotlin.time.Duration.Companion.days
 
 internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
@@ -119,7 +119,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     override val activities: Flow<List<YouTubeChannelLog>> = flowOf(id).map { i ->
         repository.fetchLiveChannelLogs(
             channelId = i.mapTo(),
-            publishedAfter = dateTimeProvider.now() - Duration.ofDays(7),
+            publishedAfter = dateTimeProvider.now() - 7.days,
             maxResult = 20,
         ).onFailure { logE(throwable = it) { "fetchLiveChannelLogs:$i" } }
             .onFailureWithSnackbarMessage(errorMessageChannel)
@@ -155,17 +155,17 @@ internal interface YouTubeChannelDetailPagerContent : ChannelDetailDelegate.Page
 
 internal data class LiveChannelDetailYouTube(
     private val detail: YouTubeChannelDetail,
-    private val zoneId: ZoneId = ZoneId.systemDefault(),
+    private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ) : LiveChannelDetailBody {
     override val id: LiveChannel.Id get() = detail.id.mapTo()
     override val title: String get() = detail.title
     override val iconUrl: String get() = detail.iconUrl
     override val platform: LivePlatform get() = YouTube
     override val bannerUrl: String? get() = detail.bannerUrl
-    override val statsText: String get() = detail.statsText(zoneId)
+    override val statsText: String get() = detail.statsText(timeZone)
 
     companion object {
-        private fun YouTubeChannelDetail.statsText(zoneId: ZoneId): String {
+        private fun YouTubeChannelDetail.statsText(timeZone: TimeZone): String {
             val subscriberCount = if (!isSubscriberHidden) {
                 "Followers:${subscriberCount.toStringWithUnitPrefix}"
             } else {
@@ -176,7 +176,7 @@ internal data class LiveChannelDetailYouTube(
                 subscriberCount,
                 "Videos:${videoCount.toStringWithComma}",
                 "Views:${viewsCount.toStringWithComma}",
-                "Published:${publishedAt.toLocalFormattedText(formatter = DATE.toPattern(), zoneId = zoneId)}",
+                "Published:${publishedAt.toLocalFormattedText(formatter = DATE.toPattern(), timeZone = timeZone)}",
             ).joinToString(STATS_SEPARATOR)
         }
 

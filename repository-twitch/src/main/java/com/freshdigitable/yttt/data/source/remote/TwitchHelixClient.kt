@@ -12,7 +12,8 @@ import com.freshdigitable.yttt.data.source.NetworkResponse
 import com.freshdigitable.yttt.data.source.NetworkResponse.Companion.map
 import com.freshdigitable.yttt.data.source.remote.TwitchHelixService.Companion.getMe
 import retrofit2.Call
-import java.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toKotlinInstant
 
 interface TwitchHelixClient {
     suspend fun getFollowing(
@@ -114,13 +115,13 @@ private class Impl(
         service.fetch { getUser(id = ids) }
 
     companion object {
-        private val MAX_AGE_DEFAULT = Duration.ofMinutes(5)
+        private val MAX_AGE_DEFAULT = 5.minutes
 
         private inline fun <T : HasItem<E>, E> TwitchHelixService.fetch(
             query: TwitchHelixService.() -> Call<T>,
         ): NetworkResponse<E> {
             val response = query().execute()
-            val fetchedAt = response.headers().getDate("date")?.toInstant()
+            val fetchedAt = response.headers().getDate("date")?.toInstant()?.toKotlinInstant()
             val cacheControl = CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
             if (response.isSuccessful) {
                 val item = checkNotNull(response.body())

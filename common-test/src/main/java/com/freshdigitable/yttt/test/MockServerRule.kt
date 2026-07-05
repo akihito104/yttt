@@ -14,6 +14,7 @@ import org.junit.runner.Description
 import java.net.URL
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.time.toJavaInstant
 
 class MockServerRule(
     private val mockServerDispatcher: MockServerDispatcher = MockServerDispatcher.create(),
@@ -23,7 +24,7 @@ class MockServerRule(
         private val ZONE_ID_GMT: ZoneId = ZoneId.of("GMT")
         private val currentDate: String
             get() = DateTimeFormatter.RFC_1123_DATE_TIME.withZone(ZONE_ID_GMT)
-                .format(FakeDateTimeProviderModule.instant)
+                .format(FakeDateTimeProviderModule.instant?.toJavaInstant())
     }
 
     fun addResponses(vararg res: ExpectedResponse) {

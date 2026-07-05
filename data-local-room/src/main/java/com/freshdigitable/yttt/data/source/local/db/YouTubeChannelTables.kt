@@ -22,8 +22,8 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.data.source.local.TableDeletable
 import java.math.BigInteger
-import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Instant
 
 @Entity(tableName = "channel")
 internal data class YouTubeChannelTable(

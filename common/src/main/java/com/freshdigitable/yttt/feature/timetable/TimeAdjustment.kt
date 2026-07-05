@@ -1,14 +1,14 @@
 package com.freshdigitable.yttt.feature.timetable
 
 import androidx.compose.runtime.Immutable
-import java.time.Duration
-import java.time.ZoneId
+import kotlinx.datetime.TimeZone
 import java.util.Locale
+import kotlin.time.Duration
 
 @Immutable
 data class TimeAdjustment(
     val extraHourOfDay: Duration,
-    val zoneId: ZoneId = ZoneId.systemDefault(),
+    val timeZone: TimeZone = TimeZone.currentSystemDefault(),
     val locale: Locale = Locale.getDefault(),
 ) {
     companion object {

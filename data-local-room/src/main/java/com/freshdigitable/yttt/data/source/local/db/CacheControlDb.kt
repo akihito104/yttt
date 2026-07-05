@@ -2,8 +2,8 @@ package com.freshdigitable.yttt.data.source.local.db
 
 import androidx.room.ColumnInfo
 import com.freshdigitable.yttt.data.model.CacheControl
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Instant
 
 internal class CacheControlDb(
     @ColumnInfo(name = "fetched_at", defaultValue = "null")

@@ -4,8 +4,10 @@ import com.freshdigitable.yttt.data.model.CacheControl.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.checkUpdatableBy
 import com.freshdigitable.yttt.data.model.Updatable.Companion.overrideMaxAge
 import com.freshdigitable.yttt.data.model.Updatable.Companion.toUpdatable
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Instant
 
 interface TwitchUser {
     val id: Id
@@ -22,7 +24,7 @@ interface TwitchUserDetail : TwitchUser {
     val createdAt: Instant
 
     companion object {
-        val MAX_AGE_USER_DETAIL: Duration = Duration.ofDays(1)
+        val MAX_AGE_USER_DETAIL: Duration = 1.days
         fun Updatable<TwitchUserDetail>.update(maxAge: Duration): Updatable<TwitchUserDetail> =
             overrideMaxAge(maxAge)
     }
@@ -37,7 +39,7 @@ interface TwitchFollowings {
     val followings: List<TwitchBroadcaster>
 
     companion object {
-        internal val MAX_AGE_BROADCASTER: Duration = Duration.ofHours(12)
+        internal val MAX_AGE_BROADCASTER: Duration = 12.hours
         fun create(
             follower: TwitchUser.Id,
             followings: List<TwitchBroadcaster>,

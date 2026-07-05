@@ -13,8 +13,10 @@ import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isPostponedLive
 import com.freshdigitable.yttt.data.model.YouTubeVideo.Companion.isUnscheduledLive
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtendedImpl.Companion.createAsFreeChat
 import java.math.BigInteger
-import java.time.Duration
-import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 interface YouTubeVideo {
     val id: Id
@@ -57,7 +59,7 @@ interface YouTubeVideo {
 
         fun YouTubeVideo.isPostponedLive(current: Instant): Boolean {
             val s = scheduledStartDateTime ?: return false
-            return isUpcoming() && s <= current && Duration.between(s, current) > MAX_AGE_LIMIT_SOON
+            return isUpcoming() && s <= current && (current - s) > MAX_AGE_LIMIT_SOON
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -77,27 +79,27 @@ interface YouTubeVideo {
         /**
          * archived video is not needed to update (`Long.MAX_VALUE`, because of DB limitation :( )
          */
-        internal val MAX_AGE_NOT_UPDATABLE: Duration = Duration.ofMillis(Long.MAX_VALUE)
+        internal val MAX_AGE_NOT_UPDATABLE: Duration = Duration.INFINITE
 
         /**
          * update duration for default (20 min.)
          */
-        val MAX_AGE_DEFAULT: Duration = Duration.ofMinutes(20)
+        val MAX_AGE_DEFAULT: Duration = 20.minutes
 
         /**
          * update duration for free chat (1 day)
          */
-        val MAX_AGE_FREE_CHAT: Duration = Duration.ofDays(1)
+        val MAX_AGE_FREE_CHAT: Duration = 1.days
 
         /**
          * update duration for on air stream (5 min.)
          */
-        internal val MAX_AGE_ON_AIR = Duration.ofMinutes(5)
+        internal val MAX_AGE_ON_AIR = 5.minutes
 
         /**
          * updatable deadline as scheduled starting datetime (30 min.)
          */
-        internal val MAX_AGE_LIMIT_SOON = Duration.ofMinutes(30)
+        internal val MAX_AGE_LIMIT_SOON = 30.minutes
     }
 }
 
@@ -168,10 +170,11 @@ private class YouTubeVideoExtendedImpl(
                 isFreeChat(old?.item, new.item, isNewVideoFreeChat) -> MAX_AGE_FREE_CHAT
                 new.item.isUnscheduledLive() -> defaultValue
                 new.item.isPostponedLive(fetchedAt) -> defaultValue
-                new.item.isUpcoming() -> Duration.between(
-                    fetchedAt,
-                    (fetchedAt + defaultValue).coerceAtMost(checkNotNull(new.item.scheduledStartDateTime)),
-                )
+                new.item.isUpcoming() -> {
+                    val scheduled = checkNotNull(new.item.scheduledStartDateTime)
+                    val limit = fetchedAt + defaultValue
+                    if (limit < scheduled) defaultValue else scheduled - fetchedAt
+                }
 
                 new.item.isNowOnAir() -> MAX_AGE_ON_AIR
                 new.item.isArchived -> MAX_AGE_NOT_UPDATABLE

@@ -5,8 +5,9 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import java.time.Instant
 import javax.inject.Singleton
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -19,5 +20,5 @@ interface DateTimeModule {
 }
 
 internal class DateTimeProviderImpl : DateTimeProvider {
-    override fun now(): Instant = Instant.now()
+    override fun now(): Instant = Clock.System.now()
 }

@@ -47,9 +47,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
-import java.time.Duration
-import java.time.Instant
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 
 @HiltAndroidTest
 class TwitchRemoteMediatorTest {
@@ -69,8 +70,8 @@ class TwitchRemoteMediatorTest {
     internal lateinit var pagerFactory: TwitchSubscriptionPagerFactory
 
     private val broadcaster = broadcaster(100)
-    private val fetchedAt = Instant.ofEpochMilli(20)
-    private val maxAge = Duration.ofMinutes(5)
+    private val fetchedAt = Instant.fromEpochMilliseconds(20)
+    private val maxAge = 5.minutes
     private val updatableAt = fetchedAt + maxAge
     private val followings =
         TwitchFollowings.create(authUser.id, broadcaster, CacheControl.create(fetchedAt, maxAge))
@@ -81,8 +82,8 @@ class TwitchRemoteMediatorTest {
             hiltRule.inject()
             extendedSource.deleteAllTables()
 
-            FakeDateTimeProviderModule.instant = Instant.ofEpochMilli(100)
-            localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.EPOCH)))
+            FakeDateTimeProviderModule.instant = Instant.fromEpochMilliseconds(100)
+            localSource.setMe(authUser.toUpdatable(CacheControl.fromRemote(Instant.fromEpochMilliseconds(0))))
             val stream = broadcaster.take(10).map { stream(it) }
             val streams = object : TwitchStreams.Updated {
                 override val followerId: TwitchUser.Id get() = authUser.id
@@ -107,7 +108,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun firstTimeToLoadSubscriptionPage() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
+        FakeDateTimeProviderModule.instant = updatableAt - 1.milliseconds
         server.addResponses(broadcaster.take(60).toUserJson())
         // exercise
         val actual = sut.flow.asSnapshot()
@@ -135,7 +136,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun firstTimeToLoadSubscriptionPage_scrollToLastItem() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
+        FakeDateTimeProviderModule.instant = updatableAt - 1.milliseconds
         server.addResponses(
             broadcaster.take(60).toUserJson(),
             broadcaster.takeLast(40).toUserJson(),
@@ -189,7 +190,7 @@ class TwitchRemoteMediatorTest {
     @Test
     fun failedToGetFollowingsAtPrepend_returnsSuccess() = testScope.runTest {
         // setup
-        FakeDateTimeProviderModule.instant = updatableAt.minusMillis(1)
+        FakeDateTimeProviderModule.instant = updatableAt - 1.milliseconds
         val b = broadcaster.take(60)
         server.addResponses(b.toUserJson(TwitchErrorJson.internalError()))
         // exercise
@@ -212,14 +213,14 @@ class TwitchRemoteMediatorTest {
             loginName = "user.me",
             displayName = "user.me",
             description = "description",
-            createdAt = Instant.EPOCH,
+            createdAt = Instant.fromEpochMilliseconds(0),
             profileImageUrl = "",
         ) {}
 
         fun broadcaster(count: Int): List<Broadcaster> = (0..<count).map {
             Broadcaster(
                 id = TwitchUser.Id("user$it"),
-                followedAt = Instant.EPOCH,
+                followedAt = Instant.fromEpochMilliseconds(0),
                 displayName = "user$it",
                 loginName = "user$it",
             )
@@ -234,7 +235,7 @@ class TwitchRemoteMediatorTest {
             gameName = "gameName",
             type = "type",
             title = "title",
-            startedAt = Instant.EPOCH,
+            startedAt = Instant.fromEpochMilliseconds(0),
             viewCount = 100,
             thumbnailUrlBase = "",
             tags = emptyList(),
@@ -247,7 +248,7 @@ class TwitchRemoteMediatorTest {
             channelIconUrl: String? = null,
         ): TwitchLiveSubscription = TwitchLiveSubscription(
             idValue = authUser.id,
-            subscribeSince = Instant.EPOCH,
+            subscribeSince = Instant.fromEpochMilliseconds(0),
             channelId = broadcaster.id,
             channelName = broadcaster.displayName,
             channelIconUrl = channelIconUrl,

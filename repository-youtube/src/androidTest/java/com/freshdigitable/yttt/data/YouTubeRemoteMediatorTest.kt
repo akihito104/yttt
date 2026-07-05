@@ -36,9 +36,9 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.time.Instant
 
 @OptIn(ExperimentalPagingApi::class)
 @HiltAndroidTest
