@@ -53,7 +53,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(project(":data-local-room"))
+    androidTestImplementation(testFixtures(project(":data-local-room")))
     androidTestImplementation(project(":image-loadable-coil"))
     androidTestImplementation(project(":common-test"))
     androidTestImplementation(testFixtures(project(":repository-twitch")))

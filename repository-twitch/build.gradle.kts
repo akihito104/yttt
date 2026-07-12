@@ -68,6 +68,7 @@ dependencies {
     androidTestImplementation(project(":repository-appuser"))
     androidTestImplementation(project(":image-loadable-coil"))
     androidTestImplementation(project(":common-test"))
+    androidTestImplementation(testFixtures(project(":data-local-room")))
     androidTestImplementation(libs.androidx.room.runtime)
     androidTestImplementation(libs.kotest.assertions.core)
     androidTestImplementation(libs.kotlinx.coroutines.test)

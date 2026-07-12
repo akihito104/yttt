@@ -1,5 +1,6 @@
 package com.freshdigitable.yttt.test
 
+import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.di.OkHttpModule
 import com.freshdigitable.yttt.logD
 import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
@@ -14,6 +15,8 @@ import org.junit.runner.Description
 import java.net.URL
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 
 class MockServerRule(
@@ -135,3 +138,6 @@ private class MockServerDispatcherImpl : MockServerDispatcher {
         return expectedResponse.remove(key) ?: throw AssertionError("unexpected: $key, table: ${expectedResponse.keys}")
     }
 }
+
+fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
+    CacheControl.create(fetchedAt, 5.minutes)

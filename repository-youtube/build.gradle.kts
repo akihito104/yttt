@@ -21,6 +21,10 @@ android {
             consumerProguardFiles("consumer-rules.pro")
         }
     }
+
+    testFixtures {
+        enable = true
+    }
 }
 
 dependencies {
@@ -39,9 +43,18 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.paging.runtime)
 
+    testFixturesImplementation(project(":common-test"))
+    kspTestFixtures(libs.hilt.compiler)
+    testFixturesImplementation(libs.hilt.android.testing)
+    testFixturesImplementation(libs.androidx.paging.testing)
+    testFixturesImplementation(libs.google.api.client.android) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+
     testImplementation(libs.junit)
     androidTestImplementation(project(":common-test"))
     androidTestImplementation(project(":image-loadable-coil"))
+    androidTestImplementation(testFixtures(project(":data-local-room")))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.kotest.assertions.core)

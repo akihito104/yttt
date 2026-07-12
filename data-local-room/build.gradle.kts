@@ -22,6 +22,9 @@ android {
         }
     }
 
+    testFixtures {
+        enable = true
+    }
     sourceSets {
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
@@ -43,6 +46,8 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.room.paging)
 
+    kspTestFixtures(libs.hilt.compiler)
+    testFixturesImplementation(libs.hilt.android.testing)
     testImplementation(libs.junit)
 
     androidTestImplementation(project(":common-test"))

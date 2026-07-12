@@ -18,6 +18,6 @@ interface InMemoryDbModule {
     companion object {
         @Provides
         @Singleton
-        internal fun provideFlag(): DbFlagModule.Flag? = DbFlagModule.Flag.InMemory
+        internal fun provideFlag(): DbFlagModule.Flag = DbFlagModule.Flag.InMemory
     }
 }

@@ -2,14 +2,12 @@ package com.freshdigitable.yttt.test
 
 import android.content.Intent
 import com.freshdigitable.yttt.NewChooseAccountIntentProvider
-import com.freshdigitable.yttt.data.model.CacheControl
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeChannelTitle
 import com.freshdigitable.yttt.data.model.YouTubePlaylist
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItem
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.MAX_AGE_DEFAULT
 import com.freshdigitable.yttt.data.source.remote.YouTubeClient.Companion.text
 import com.freshdigitable.yttt.di.GoogleAccountModule
 import com.freshdigitable.yttt.test.ChannelItemJson.Companion.toQueryString
@@ -106,9 +104,6 @@ class YouTubeMockServerDispatcher : MockServerDispatcher {
         }
     }
 }
-
-fun CacheControl.Companion.fromRemote(fetchedAt: Instant): CacheControl =
-    CacheControl.create(fetchedAt, MAX_AGE_DEFAULT)
 
 class YouTubeResponseJson(
     private val kind: String,
