@@ -18,8 +18,10 @@ class TwitchUserJson(
         this["type"] = ""
         this["broadcaster_type"] = "partner"
         this["description"] = "description is here."
-        this["profile_image_url"] = "https://<url-is-here>/jtv_user_pictures/profile_image-300x300.png"
-        this["offline_image_url"] = "https://<url-is-here>/jtv_user_pictures/channel_offline_image-1920x1080.png"
+        this["profile_image_url"] =
+            "https://<url-is-here>/jtv_user_pictures/profile_image-300x300.png"
+        this["offline_image_url"] =
+            "https://<url-is-here>/jtv_user_pictures/channel_offline_image-1920x1080.png"
         this["view_count"] = 5980557
         this["email"] = "not-real@email.com"
         this["created_at"] = "2016-12-14T20:32:28Z"
@@ -150,7 +152,10 @@ fun ExpectedResponse.Companion.twitchMe(
     me: TwitchUserJson? = null,
     json: ResponseJson? = null,
 ): ExpectedResponse =
-    json?.let { twitchUsers(json = json) } ?: twitchUsers(users = listOf(requireNotNull(me)), query = null)
+    json?.let { twitchUsers(json = json) } ?: twitchUsers(
+        users = listOf(requireNotNull(me)),
+        query = null,
+    )
 
 fun ExpectedResponse.Companion.twitchUsers(
     users: List<TwitchUserJson>? = null,
@@ -201,4 +206,8 @@ fun ExpectedResponse.Companion.twitchChannelSchedule(
     userId: TwitchUser.Id? = data?.broadcaster?.id,
     json: ResponseJson? = null,
 ): ExpectedResponse =
-    create(HELIX_SCHEDULE, "broadcaster_id=${requireNotNull(userId).value}&first=10", json ?: requireNotNull(data))
+    create(
+        HELIX_SCHEDULE,
+        "broadcaster_id=${requireNotNull(userId).value}&first=10",
+        json ?: requireNotNull(data),
+    )

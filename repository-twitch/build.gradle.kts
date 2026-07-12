@@ -20,12 +20,12 @@ android {
         }
         buildConfigField(
             "String", "TWITCH_CLIENT_ID",
-            "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\""
+            "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\"",
         )
         buildConfigField(
             "String", "TWITCH_REDIRECT_URI",
             "\"${twitchProperties.getOrDefault("twitch_redirect_uri_scheme", "https")}://" +
-                "${twitchProperties.getOrDefault("twitch_redirect_uri_host", "example.com")}\""
+                "${twitchProperties.getOrDefault("twitch_redirect_uri_host", "example.com")}\"",
         )
     }
 
@@ -38,10 +38,13 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
             consumerProguardFiles("consumer-rules.pro")
         }
+    }
+    testFixtures {
+        enable = true
     }
 }
 
@@ -59,6 +62,9 @@ dependencies {
     implementation(libs.converter.gson)
 
     testImplementation(libs.junit)
+
+    testFixturesImplementation(project(":common-test"))
+
     androidTestImplementation(project(":repository-appuser"))
     androidTestImplementation(project(":image-loadable-coil"))
     androidTestImplementation(project(":common-test"))

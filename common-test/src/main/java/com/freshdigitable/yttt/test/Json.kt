@@ -1,6 +1,6 @@
 package com.freshdigitable.yttt.test
 
-sealed interface Json {
+interface Json {
     companion object {
         fun obj(body: Base.() -> Unit): Obj {
             val map = Base()
@@ -26,7 +26,8 @@ sealed interface Json {
 
     @JvmInline
     value class Obj(val map: Map<String, Any>) : Json {
-        override fun toString(): String = map.entries.joinToString(",", "{", "}") { "\"${it.key}\":${it.value}" }
+        override fun toString(): String =
+            map.entries.joinToString(",", "{", "}") { "\"${it.key}\":${it.value}" }
     }
 
     @JvmInline
@@ -60,7 +61,12 @@ fun MockServerDispatcher.ExpectedResponse.Companion.create(
     json: ResponseJson,
     eTag: String? = null,
 ): MockServerDispatcher.ExpectedResponse = object : MockServerDispatcher.ExpectedResponse {
-    override val key: MockServerDispatcher.RequestKey get() = MockServerDispatcher.RequestKey(path, query, eTag)
+    override val key: MockServerDispatcher.RequestKey
+        get() = MockServerDispatcher.RequestKey(
+            path,
+            query,
+            eTag,
+        )
     override val statusCode: Int get() = json.statusCode
     override val body: String get() = json.toString()
     override fun toString(): String = body

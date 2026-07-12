@@ -29,7 +29,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -56,6 +56,7 @@ dependencies {
     androidTestImplementation(project(":data-local-room"))
     androidTestImplementation(project(":image-loadable-coil"))
     androidTestImplementation(project(":common-test"))
+    androidTestImplementation(testFixtures(project(":repository-twitch")))
     androidTestImplementation(project(":repository-appuser"))
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
