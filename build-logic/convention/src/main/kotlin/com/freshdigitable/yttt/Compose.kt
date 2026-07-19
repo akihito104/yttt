@@ -13,6 +13,7 @@ fun Project.configureCompose(commonExtension: CommonExtension) {
         dependencies {
             val bom = libs.androidxComposeBom
             implementation(platform(bom))
+            testFixturesImplementation(platform(bom))
             androidTestImplementation(platform(bom))
             implementation(libs.androidxComposeUiToolingPreview)
             debugImplementation(libs.androidxComposeUiTooling)

@@ -5,7 +5,7 @@ import com.freshdigitable.yttt.compose.SnackbarMessageBus
 import com.freshdigitable.yttt.compose.TabData
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
-import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
+import com.freshdigitable.yttt.compose.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import kotlinx.coroutines.CoroutineScope

@@ -30,6 +30,9 @@ fun DependencyHandlerScope.debugImplementation(dependency: Optional<Provider<Min
 fun DependencyHandlerScope.testImplementation(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
     add("testImplementation", dependency.get())
 
+fun DependencyHandlerScope.testFixturesImplementation(dependency: Provider<MinimalExternalModuleDependency>) =
+    add("testFixturesImplementation", dependency.get())
+
 fun DependencyHandlerScope.androidTestImplementation(dependency: Provider<MinimalExternalModuleDependency>) =
     add("androidTestImplementation", dependency)
 

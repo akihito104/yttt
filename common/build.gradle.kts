@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.yttt.android.library.compose)
+    alias(libs.plugins.yttt.android.library)
     alias(libs.plugins.yttt.hilt)
     alias(libs.plugins.yttt.kotest)
     alias(libs.plugins.kotlin.serialization)
@@ -33,8 +33,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kermit)
     implementation(libs.androidx.paging.runtime)
-    implementation(libs.androidx.runtime.android)
-    implementation(libs.androidx.compose.material3)
 
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
