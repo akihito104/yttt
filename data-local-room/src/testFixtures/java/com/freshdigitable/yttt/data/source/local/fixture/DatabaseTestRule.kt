@@ -27,6 +27,7 @@ internal class DatabaseTestRule : TestWatcher() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .addTypeConverter(LivePlatformConverter(setOf(Twitch, YouTube)))
+            .allowMainThreadQueries()
             .build()
     }
 

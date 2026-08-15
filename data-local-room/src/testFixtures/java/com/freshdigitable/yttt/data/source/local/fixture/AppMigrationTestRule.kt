@@ -8,7 +8,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.platform.app.InstrumentationRegistry
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import io.kotest.inspectors.shouldForAll
+import org.junit.Assume.assumeTrue
 import org.junit.runner.Description
+import java.util.Locale
 
 internal class AppMigrationTestRule(
     private val versionFrom: Int,
@@ -19,6 +21,11 @@ internal class AppMigrationTestRule(
     AppDatabase::class.java,
 ) {
     init {
+        val os = System.getProperty("os.name")?.lowercase(Locale.ROOT)
+        assumeTrue(
+            "windows(actual: $os) is not capable migration test because of createDatabase() uses hardcoded path separator '/'.",
+            os?.contains("windows") == false,
+        )
         check(versionFrom < versionTo)
         check(versionFrom <= migration.startVersion && migration.endVersion <= versionTo)
     }
