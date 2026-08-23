@@ -28,6 +28,18 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
             configureAndroidSdk(this)
             configureKotlin<KotlinAndroidProjectExtension>()
             configureDesugaring(this)
+
+            testFixtures {
+                enable = true
+            }
+            androidResources {
+                enable = true
+            }
+            testOptions {
+                unitTests {
+                    isIncludeAndroidResources = true
+                }
+            }
         }
     }
 }
