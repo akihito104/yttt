@@ -58,7 +58,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 @HiltAndroidTest
-class YouTubeRepositoryTest {
+internal class YouTubeRepositoryTest {
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 

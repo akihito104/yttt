@@ -1,3 +1,4 @@
+import com.freshdigitable.yttt.testFixturesImplementation
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -61,20 +62,20 @@ dependencies {
     ksp(libs.retrofit.responseTypeKeeper)
     implementation(libs.converter.gson)
 
-    testImplementation(libs.junit)
-
+    testFixturesImplementation(project(":common-ui"))
     testFixturesImplementation(project(":common-test"))
+    testFixturesImplementation(project(":repository-appuser"))
+    testFixturesImplementation(project(":image-loadable-coil"))
+    testFixturesImplementation(testFixtures(project(":data-local-room")))
+    testFixturesImplementation(libs.androidx.room.runtime)
+    testFixturesImplementation(libs.kotest.assertions.core)
+    testFixturesImplementation(libs.androidx.espresso.core)
 
-    androidTestImplementation(project(":repository-appuser"))
-    androidTestImplementation(project(":image-loadable-coil"))
-    androidTestImplementation(project(":common-test"))
-    androidTestImplementation(testFixtures(project(":data-local-room")))
-    androidTestImplementation(libs.androidx.room.runtime)
-    androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.androidx.junit)
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.compiler)
+
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)
-    androidTestImplementation(libs.androidx.paging.testing)
-    androidTestImplementation(libs.androidx.espresso.core)
 }

@@ -60,17 +60,11 @@ dependencies {
     implementation(libs.androidx.room.paging)
 
     kspTestFixtures(libs.hilt.compiler)
-    testFixturesImplementation(libs.hilt.android.testing)
     testFixturesImplementation(project(":common-test"))
-    testFixturesImplementation(libs.androidx.junit)
-    testFixturesImplementation(libs.androidx.test.runner)
-    testFixturesImplementation(libs.kotlinx.coroutines.test)
     testFixturesImplementation(libs.kotest.assertions.core)
     testFixturesImplementation(libs.turbine)
     testFixturesImplementation(libs.androidx.room.testing)
     testFixturesImplementation(libs.androidx.espresso.core)
-    testFixturesCompileOnly(libs.androidx.paging.runtime)
-    testFixturesImplementation(libs.androidx.paging.testing)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

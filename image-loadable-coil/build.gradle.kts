@@ -16,7 +16,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -29,11 +29,11 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":common-ui"))
 
-    implementation(libs.androidx.compose.material3)
+    api(libs.androidx.compose.material3)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
 
-    implementation(libs.coil.compose)
+    api(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)

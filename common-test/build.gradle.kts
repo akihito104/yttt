@@ -24,13 +24,13 @@ android {
 
 dependencies {
     implementation(project(":common"))
-    implementation(libs.androidx.junit)
-    implementation(libs.androidx.test.runner)
-    implementation(libs.kotlinx.coroutines.test)
-    implementation(libs.hilt.android.testing)
+    api(libs.androidx.junit)
+    api(libs.androidx.test.runner)
+    api(libs.kotlinx.coroutines.test)
+    api(libs.hilt.android.testing)
     implementation(libs.kotest.assertions.core)
-    implementation(libs.androidx.paging.runtime)
-    implementation(libs.androidx.paging.testing)
+    api(libs.androidx.paging.runtime)
+    api(libs.androidx.paging.testing)
     implementation(libs.mockwebserver3)
     implementation(libs.okhttp.logging.interceptor)
 }
