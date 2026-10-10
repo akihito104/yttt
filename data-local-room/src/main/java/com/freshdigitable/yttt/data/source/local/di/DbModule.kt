@@ -67,6 +67,7 @@ internal fun AppDatabase.Companion.createInMemory(
     platforms: Collection<LivePlatform>,
 ) = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
     .addTypeConverter(LivePlatformConverter(platforms))
+    .allowMainThreadQueries()
     .build()
 
 @Module

@@ -7,14 +7,10 @@ import androidx.paging.PagingState
 import androidx.paging.RemoteMediator
 import androidx.paging.testing.asSnapshot
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery
 import com.freshdigitable.yttt.data.model.YouTubeSubscriptionQuery.Order
-import com.freshdigitable.yttt.data.source.AccountRepository
-import com.freshdigitable.yttt.data.source.YouTubeAccountDataStore
-import com.freshdigitable.yttt.di.LivePlatformKey
-import com.freshdigitable.yttt.di.YouTubeAccountDataSourceModule
 import com.freshdigitable.yttt.di.YouTubeModule
+import com.freshdigitable.yttt.test.FakeAccountRepositoryModule
 import com.freshdigitable.yttt.test.FakeDateTimeProviderModule
 import com.freshdigitable.yttt.test.MockServerDispatcher.ExpectedResponse
 import com.freshdigitable.yttt.test.MockServerRule
@@ -22,23 +18,15 @@ import com.freshdigitable.yttt.test.SubscriptionItemJson
 import com.freshdigitable.yttt.test.TestCoroutineScopeRule
 import com.freshdigitable.yttt.test.shouldBeSuccess
 import com.freshdigitable.yttt.test.youtubeSubscription
-import dagger.Binds
-import dagger.Module
-import dagger.Provides
 import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.components.SingletonComponent
-import dagger.hilt.testing.TestInstallIn
-import dagger.multibindings.IntoMap
 import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
-import kotlinx.coroutines.flow.Flow
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.time.Instant
 
 @OptIn(ExperimentalPagingApi::class)
@@ -186,30 +174,4 @@ internal abstract class YouTubeRemoteMediatorTestImpl {
         actual.map { it.id.value }.shouldContainInOrder(subs.map { it.id })
         repository.subscriptionsRelevanceOrderedFetchedAt shouldBe fetchedAt
     }
-}
-
-@Module
-@TestInstallIn(
-    replaces = [YouTubeAccountDataSourceModule::class],
-    components = [SingletonComponent::class],
-)
-interface FakeAccountRepositoryModule {
-    companion object {
-        var account: String? = null
-
-        @Singleton
-        @Provides
-        fun provide(): YouTubeAccountDataStore.Local = object : YouTubeAccountDataStore.Local {
-            override fun getAccount(): String? = account
-            override val googleAccount: Flow<String?> get() = throw NotImplementedError()
-            override suspend fun putAccount(account: String) = throw NotImplementedError()
-            override suspend fun clearAccount() = throw NotImplementedError()
-        }
-    }
-
-    @Singleton
-    @Binds
-    @IntoMap
-    @LivePlatformKey(YouTube::class)
-    fun bindAccountRepository(repository: YouTubeAccountRepository): AccountRepository
 }
