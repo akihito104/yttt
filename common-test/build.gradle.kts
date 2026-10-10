@@ -34,3 +34,7 @@ dependencies {
     implementation(libs.mockwebserver3)
     implementation(libs.okhttp.logging.interceptor)
 }
+
+tasks.withType<Test> {
+    failOnNoDiscoveredTests = false
+}
