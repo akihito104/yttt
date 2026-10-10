@@ -6,6 +6,6 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.SQLiteMode
 
 @HiltAndroidTest
-@Config(application = HiltTestApplication::class)
+@Config(application = HiltTestApplication::class, sdk = [26, 33])
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 internal class YouTubeRemoteMediatorTest : YouTubeRemoteMediatorTestImpl()

@@ -10,17 +10,17 @@ import org.robolectric.annotation.SQLiteMode
 @RunWith(Enclosed::class)
 internal class FetchYouTubeStreamUseCaseTest : FetchYouTubeStreamUseCaseTestImpl() {
     @HiltAndroidTest
-    @Config(application = HiltTestApplication::class)
+    @Config(application = HiltTestApplication::class, sdk = [26, 33])
     @SQLiteMode(SQLiteMode.Mode.NATIVE)
     internal class Init : InitImpl()
 
     @HiltAndroidTest
-    @Config(application = HiltTestApplication::class)
+    @Config(application = HiltTestApplication::class, sdk = [26, 33])
     @SQLiteMode(SQLiteMode.Mode.NATIVE)
     internal class AfterInit : AfterInitImpl()
 
     @HiltAndroidTest
-    @Config(application = HiltTestApplication::class)
+    @Config(application = HiltTestApplication::class, sdk = [26, 33])
     @SQLiteMode(SQLiteMode.Mode.NATIVE)
     internal class SubscriptionIsNotModified : SubscriptionIsNotModifiedImpl()
 }
