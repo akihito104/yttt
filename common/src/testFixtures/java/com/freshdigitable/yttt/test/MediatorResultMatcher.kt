@@ -1,6 +1,5 @@
 package com.freshdigitable.yttt.test
 
-import androidx.annotation.VisibleForTesting
 import androidx.paging.ExperimentalPagingApi
 import androidx.paging.PagingConfig
 import androidx.paging.PagingSource
@@ -23,7 +22,6 @@ inline fun <reified T : Throwable> RemoteMediator.MediatorResult.shouldBeError()
     }
 }
 
-@VisibleForTesting
 suspend fun <T : Any> PagingSource<Int, T>.testWithRefresh(
     pageSize: Int = 5,
     verify: PagingSource.LoadResult.Page<Int, T>.() -> Unit,
@@ -33,6 +31,5 @@ suspend fun <T : Any> PagingSource<Int, T>.testWithRefresh(
     verify(res)
 }
 
-@VisibleForTesting
 fun <T : Any> PagingSource<Int, T>.toTestPager(pageSize: Int = 5): TestPager<Int, T> =
     TestPager(PagingConfig(pageSize), this)

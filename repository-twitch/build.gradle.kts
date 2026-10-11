@@ -44,9 +44,6 @@ android {
             consumerProguardFiles("consumer-rules.pro")
         }
     }
-    testFixtures {
-        enable = true
-    }
 }
 
 dependencies {
@@ -63,19 +60,15 @@ dependencies {
     implementation(libs.converter.gson)
 
     testFixturesImplementation(project(":common-ui"))
-    testFixturesImplementation(project(":common-test"))
     testFixturesImplementation(project(":repository-appuser"))
     testFixturesImplementation(project(":image-loadable-coil"))
+    testFixturesImplementation(testFixtures(project(":common")))
     testFixturesImplementation(testFixtures(project(":data-local-room")))
     testFixturesImplementation(libs.androidx.room.runtime)
     testFixturesImplementation(libs.kotest.assertions.core)
     testFixturesImplementation(libs.androidx.espresso.core)
+    kspTestFixtures(libs.hilt.compiler)
+    testFixturesApi(libs.hilt.android.testing)
 
-    testImplementation(libs.junit)
     testImplementation(libs.robolectric)
-    testImplementation(libs.hilt.android.testing)
-    kspTest(libs.hilt.compiler)
-
-    androidTestImplementation(libs.hilt.android.testing)
-    kspAndroidTest(libs.hilt.compiler)
 }

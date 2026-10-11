@@ -1,5 +1,3 @@
-import com.freshdigitable.yttt.androidTestImplementation
-
 plugins {
     alias(libs.plugins.yttt.android.library)
     alias(libs.plugins.yttt.hilt)
@@ -41,11 +39,11 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.paging.runtime)
 
-    testFixturesImplementation(project(":common-test"))
+    testFixturesImplementation(testFixtures(project(":common")))
     testFixturesImplementation(project(":image-loadable-coil"))
     testFixturesImplementation(testFixtures(project(":data-local-room")))
     kspTestFixtures(libs.hilt.compiler)
-    testFixturesImplementation(libs.hilt.android.testing)
+    testFixturesApi(libs.hilt.android.testing)
     testFixturesImplementation(libs.androidx.paging.testing)
     testFixturesImplementation(libs.google.api.client.android) {
         exclude(group = "org.apache.httpcomponents")
@@ -57,24 +55,6 @@ dependencies {
     testFixturesImplementation(libs.kotlinx.coroutines.test)
     testFixturesImplementation(libs.kotest.assertions.core)
     testFixturesImplementation(libs.androidx.espresso.core)
-    kspTestFixtures(libs.hilt.compiler)
-    testFixturesImplementation(libs.hilt.android.testing)
-    testFixturesImplementation(libs.androidx.paging.testing)
 
-    testImplementation(libs.junit)
-    testImplementation(libs.hilt.android.testing)
-    kspTest(libs.hilt.compiler)
     testImplementation(libs.robolectric)
-
-    androidTestImplementation(project(":common-test"))
-    androidTestImplementation(project(":image-loadable-coil"))
-    androidTestImplementation(testFixtures(project(":data-local-room")))
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.hilt.android.testing)
-    kspAndroidTest(libs.hilt.compiler)
-    androidTestImplementation(libs.hilt.android.testing)
-    androidTestImplementation(libs.androidx.paging.testing)
 }

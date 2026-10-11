@@ -38,8 +38,15 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
 
-    testImplementation(project(":common-test"))
-
-    androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    testFixturesApi(libs.androidx.junit)
+    testFixturesApi(libs.androidx.test.runner)
+    testFixturesApi(libs.kotlinx.coroutines.test)
+    testFixturesApi(libs.hilt.android.testing)
+    testFixturesImplementation(libs.kotest.assertions.core)
+    testFixturesApi(libs.androidx.paging.runtime)
+    testFixturesApi(libs.androidx.paging.testing)
+    testFixturesImplementation(libs.mockwebserver3)
+    testFixturesImplementation(libs.okhttp.logging.interceptor)
 }
