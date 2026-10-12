@@ -107,6 +107,23 @@ class TestingPlugin : Plugin<Project> {
                     configureCoverage(this)
                     configureOrchestrator(this, isEnabled = isOrchestratorEnabled)
                 }
+                configureTestFixture()
+            }
+        }
+
+        private fun Project.configureTestFixture() {
+            extensions.configure<LibraryExtension> {
+                testFixtures {
+                    enable = true
+                }
+                androidResources {
+                    enable = true
+                }
+                testOptions {
+                    unitTests {
+                        isIncludeAndroidResources = true
+                    }
+                }
             }
         }
 

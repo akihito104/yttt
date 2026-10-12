@@ -1,4 +1,3 @@
-import com.freshdigitable.yttt.testFixturesImplementation
 import java.io.FileInputStream
 import java.util.Properties
 
