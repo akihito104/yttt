@@ -26,7 +26,6 @@ import com.freshdigitable.yttt.AppLogger
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.IdBase
-import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelDetailBody
 import com.freshdigitable.yttt.data.model.LivePlatform

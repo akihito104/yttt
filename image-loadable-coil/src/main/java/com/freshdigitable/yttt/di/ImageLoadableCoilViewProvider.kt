@@ -74,14 +74,20 @@ internal interface ImageLoadableCoilViewProvider {
                     .build()
             }
         }
-
-        @Provides
-        @Singleton
-        fun provideImageLoadableViewDelegate(): ImageLoadableView.Delegate = ImageLoadableCoilView
     }
 
     @Binds
     fun bindImageDataStore(dataStore: ImageDataStoreImpl): ImageDataSource
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+internal interface ImageLoadableCoilViewDelegateProvider {
+    companion object {
+        @Provides
+        @Singleton
+        fun provideImageLoadableViewDelegate(): ImageLoadableView.Delegate = ImageLoadableCoilView
+    }
 }
 
 @Singleton

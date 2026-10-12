@@ -54,18 +54,31 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.mockk)
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.kotest.property)
 
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(project(":data-local-room"))
-    androidTestImplementation(project(":image-loadable-coil"))
-    androidTestImplementation(project(":common-test"))
-    androidTestImplementation(libs.hilt.android.testing)
-    kspAndroidTest(libs.hilt.compiler)
-    androidTestImplementation(libs.androidx.room.runtime)
-    androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.turbine)
-    androidTestImplementation(libs.androidx.work.testing)
-    androidTestImplementation(libs.androidx.paging.testing)
+    testFixturesImplementation(libs.androidx.junit)
+    testFixturesImplementation(libs.androidx.espresso.core)
+    testFixturesImplementation(libs.kotlinx.coroutines.test)
+    testFixturesImplementation(testFixtures(project(":data-local-room")))
+    testFixturesImplementation(project(":image-loadable-coil"))
+    testFixturesImplementation(testFixtures(project(":common")))
+    testFixturesImplementation(testFixtures(project(":repository-youtube")))
+    kspTestFixtures(libs.hilt.compiler)
+    testFixturesApi(libs.hilt.android.testing)
+    testFixturesImplementation(libs.androidx.room.runtime)
+    testFixturesImplementation(libs.kotest.assertions.core)
+    testFixturesImplementation(libs.turbine)
+    testFixturesImplementation(libs.androidx.work.testing)
+    testFixturesImplementation(libs.androidx.hilt.work)
+    testFixturesImplementation(libs.androidx.paging.testing)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform {
+        includeEngines("junit-vintage", "kotest")
+    }
 }

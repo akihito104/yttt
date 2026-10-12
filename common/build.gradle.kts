@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.yttt.android.library.compose)
+    alias(libs.plugins.yttt.android.library)
     alias(libs.plugins.yttt.hilt)
     alias(libs.plugins.yttt.kotest)
     alias(libs.plugins.kotlin.serialization)
@@ -33,15 +33,20 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kermit)
     implementation(libs.androidx.paging.runtime)
-    implementation(libs.androidx.runtime.android)
-    implementation(libs.androidx.compose.material3)
 
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
 
-    testImplementation(project(":common-test"))
-
-    androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    testFixturesApi(libs.androidx.junit)
+    testFixturesApi(libs.androidx.test.runner)
+    testFixturesApi(libs.kotlinx.coroutines.test)
+    testFixturesApi(libs.hilt.android.testing)
+    testFixturesImplementation(libs.kotest.assertions.core)
+    testFixturesApi(libs.androidx.paging.runtime)
+    testFixturesApi(libs.androidx.paging.testing)
+    testFixturesImplementation(libs.mockwebserver3)
+    testFixturesImplementation(libs.okhttp.logging.interceptor)
 }

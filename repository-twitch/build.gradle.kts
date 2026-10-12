@@ -20,12 +20,12 @@ android {
         }
         buildConfigField(
             "String", "TWITCH_CLIENT_ID",
-            "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\""
+            "\"${twitchProperties.getOrDefault("twitch_client_id", "")}\"",
         )
         buildConfigField(
             "String", "TWITCH_REDIRECT_URI",
             "\"${twitchProperties.getOrDefault("twitch_redirect_uri_scheme", "https")}://" +
-                "${twitchProperties.getOrDefault("twitch_redirect_uri_host", "example.com")}\""
+                "${twitchProperties.getOrDefault("twitch_redirect_uri_host", "example.com")}\"",
         )
     }
 
@@ -38,7 +38,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
             consumerProguardFiles("consumer-rules.pro")
         }
@@ -58,16 +58,16 @@ dependencies {
     ksp(libs.retrofit.responseTypeKeeper)
     implementation(libs.converter.gson)
 
-    testImplementation(libs.junit)
-    androidTestImplementation(project(":repository-appuser"))
-    androidTestImplementation(project(":image-loadable-coil"))
-    androidTestImplementation(project(":common-test"))
-    androidTestImplementation(libs.androidx.room.runtime)
-    androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.hilt.android.testing)
-    kspAndroidTest(libs.hilt.compiler)
-    androidTestImplementation(libs.androidx.paging.testing)
-    androidTestImplementation(libs.androidx.espresso.core)
+    testFixturesImplementation(project(":common-ui"))
+    testFixturesImplementation(project(":repository-appuser"))
+    testFixturesImplementation(project(":image-loadable-coil"))
+    testFixturesImplementation(testFixtures(project(":common")))
+    testFixturesImplementation(testFixtures(project(":data-local-room")))
+    testFixturesImplementation(libs.androidx.room.runtime)
+    testFixturesImplementation(libs.kotest.assertions.core)
+    testFixturesImplementation(libs.androidx.espresso.core)
+    kspTestFixtures(libs.hilt.compiler)
+    testFixturesApi(libs.hilt.android.testing)
+
+    testImplementation(libs.robolectric)
 }

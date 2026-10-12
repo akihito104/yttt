@@ -18,25 +18,28 @@ fun PluginManager.applyKsp() = apply("com.google.devtools.ksp")
 fun PluginManager.applyHiltAndroid() = apply("dagger.hilt.android.plugin")
 fun PluginManager.applyDetekt() = apply("io.gitlab.arturbosch.detekt")
 
-fun DependencyHandlerScope.implementation(dependency: Provider<MinimalExternalModuleDependency>) =
+internal fun DependencyHandlerScope.implementation(dependency: Provider<MinimalExternalModuleDependency>) =
     add(IMPLEMENTATION, dependency)
 
-fun DependencyHandlerScope.implementation(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
+internal fun DependencyHandlerScope.implementation(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
     add(IMPLEMENTATION, dependency.get())
 
-fun DependencyHandlerScope.debugImplementation(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
+internal fun DependencyHandlerScope.debugImplementation(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
     add("debugImplementation", dependency.get())
 
-fun DependencyHandlerScope.testImplementation(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
+internal fun DependencyHandlerScope.testImplementation(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
     add("testImplementation", dependency.get())
 
-fun DependencyHandlerScope.androidTestImplementation(dependency: Provider<MinimalExternalModuleDependency>) =
+internal fun DependencyHandlerScope.testFixturesImplementation(dependency: Provider<MinimalExternalModuleDependency>) =
+    add("testFixturesImplementation", dependency.get())
+
+internal fun DependencyHandlerScope.androidTestImplementation(dependency: Provider<MinimalExternalModuleDependency>) =
     add("androidTestImplementation", dependency)
 
-fun DependencyHandlerScope.androidTestUtil(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
+internal fun DependencyHandlerScope.androidTestUtil(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
     add("androidTestUtil", dependency.get())
 
-fun DependencyHandlerScope.ksp(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
+internal fun DependencyHandlerScope.ksp(dependency: Optional<Provider<MinimalExternalModuleDependency>>) =
     add("ksp", dependency.get())
 
 val Project.libs

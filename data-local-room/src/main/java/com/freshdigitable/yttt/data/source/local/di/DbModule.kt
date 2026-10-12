@@ -62,11 +62,12 @@ object DbFlagModule {
     internal val provideFlag: Flag? get() = null
 }
 
-private fun AppDatabase.Companion.createInMemory(
+internal fun AppDatabase.Companion.createInMemory(
     context: Context,
     platforms: Collection<LivePlatform>,
 ) = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
     .addTypeConverter(LivePlatformConverter(platforms))
+    .allowMainThreadQueries()
     .build()
 
 @Module

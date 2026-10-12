@@ -39,14 +39,22 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.paging.runtime)
 
-    testImplementation(libs.junit)
-    androidTestImplementation(project(":common-test"))
-    androidTestImplementation(project(":image-loadable-coil"))
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.androidx.espresso.core)
-    kspAndroidTest(libs.hilt.compiler)
-    androidTestImplementation(libs.hilt.android.testing)
-    androidTestImplementation(libs.androidx.paging.testing)
+    testFixturesImplementation(testFixtures(project(":common")))
+    testFixturesImplementation(project(":image-loadable-coil"))
+    testFixturesImplementation(testFixtures(project(":data-local-room")))
+    kspTestFixtures(libs.hilt.compiler)
+    testFixturesApi(libs.hilt.android.testing)
+    testFixturesImplementation(libs.androidx.paging.testing)
+    testFixturesImplementation(libs.google.api.client.android) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    testFixturesImplementation(libs.google.api.services.youtube) {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    testFixturesImplementation(libs.androidx.junit)
+    testFixturesImplementation(libs.kotlinx.coroutines.test)
+    testFixturesImplementation(libs.kotest.assertions.core)
+    testFixturesImplementation(libs.androidx.espresso.core)
+
+    testImplementation(libs.robolectric)
 }

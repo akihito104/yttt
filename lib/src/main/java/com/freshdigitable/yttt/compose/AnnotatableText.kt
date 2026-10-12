@@ -23,7 +23,6 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.TextUnit
 import com.freshdigitable.yttt.compose.preview.PreviewLightDarkMode
 import com.freshdigitable.yttt.data.model.AnnotatableString
-import com.freshdigitable.yttt.data.model.LinkAnnotationDialogState
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange
 import com.freshdigitable.yttt.data.model.LinkAnnotationRange.Url.Companion.ellipsize
 

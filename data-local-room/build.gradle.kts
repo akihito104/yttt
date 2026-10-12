@@ -1,3 +1,5 @@
+import java.util.Locale
+
 plugins {
     alias(libs.plugins.yttt.android.library)
     alias(libs.plugins.yttt.hilt)
@@ -24,6 +26,7 @@ android {
 
     sourceSets {
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
+        getByName("test").assets.directories.add("$projectDir/schemas")
     }
 
     room {
@@ -31,6 +34,19 @@ android {
     }
     packaging {
         resources.excludes.add("META-INF/versions/9/OSGI-INF/MANIFEST.MF")
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    if (name.contains("UnitTestKotlin") || name.contains("TestFixturesKotlin")) {
+        name.removePrefix("compile")
+            .removeSuffix("Kotlin")
+            .let { n -> n.replaceFirstChar { it.lowercase(Locale.ROOT) } }
+
+        val mainCompilation = kotlin.target.compilations.findByName("main")
+        if (mainCompilation != null) {
+            friendPaths.from(mainCompilation.output.classesDirs)
+        }
     }
 }
 
@@ -43,15 +59,17 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation(libs.androidx.room.paging)
 
-    testImplementation(libs.junit)
+    kspTestFixtures(libs.hilt.compiler)
+    testFixturesImplementation(testFixtures(project(":common")))
+    testFixturesImplementation(libs.androidx.junit)
+    testFixturesImplementation(libs.androidx.test.runner)
+    testFixturesImplementation(libs.kotlinx.coroutines.test)
+    testFixturesImplementation(libs.kotest.assertions.core)
+    testFixturesImplementation(libs.turbine)
+    testFixturesImplementation(libs.androidx.room.testing)
+    testFixturesImplementation(libs.androidx.paging.runtime)
+    testFixturesImplementation(libs.androidx.paging.testing)
+    testFixturesImplementation(libs.androidx.espresso.core)
 
-    androidTestImplementation(project(":common-test"))
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.test.runner)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.kotest.assertions.core)
-    androidTestImplementation(libs.turbine)
-    androidTestImplementation(libs.androidx.room.testing)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.paging.testing)
+    testImplementation(libs.robolectric)
 }

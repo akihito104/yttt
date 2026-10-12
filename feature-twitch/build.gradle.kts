@@ -29,7 +29,7 @@ android {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
@@ -49,17 +49,22 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
 
     testImplementation(libs.mockk)
+    testImplementation(libs.robolectric)
+    testRuntimeOnly(libs.junit.vintage.engine)
+    testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.kotest.property)
 
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(project(":data-local-room"))
-    androidTestImplementation(project(":image-loadable-coil"))
-    androidTestImplementation(project(":common-test"))
-    androidTestImplementation(project(":repository-appuser"))
-    androidTestImplementation(libs.hilt.android.testing)
-    kspAndroidTest(libs.hilt.compiler)
-    androidTestImplementation(libs.androidx.room.runtime)
-    androidTestImplementation(libs.turbine)
-    androidTestImplementation(libs.kotest.assertions.core)
+    testFixturesImplementation(libs.androidx.junit)
+    testFixturesImplementation(libs.androidx.espresso.core)
+    testFixturesImplementation(libs.kotlinx.coroutines.test)
+    testFixturesImplementation(testFixtures(project(":data-local-room")))
+    testFixturesImplementation(project(":image-loadable-coil"))
+    testFixturesImplementation(testFixtures(project(":common")))
+    testFixturesImplementation(testFixtures(project(":repository-twitch")))
+    testFixturesImplementation(project(":repository-appuser"))
+    kspTestFixtures(libs.hilt.compiler)
+    testFixturesApi(libs.hilt.android.testing)
+    testFixturesImplementation(libs.androidx.room.runtime)
+    testFixturesImplementation(libs.turbine)
+    testFixturesImplementation(libs.kotest.assertions.core)
 }
