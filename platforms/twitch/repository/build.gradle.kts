@@ -47,6 +47,7 @@ android {
 
 dependencies {
     api(project(":common"))
+    api(project(":platforms:twitch:model"))
     implementation(project(":data-local-room"))
 
     implementation(libs.androidx.datastore.preferences)

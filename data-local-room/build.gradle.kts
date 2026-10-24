@@ -53,6 +53,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 dependencies {
     api(project(":common"))
     api(project(":platforms:youtube:model"))
+    api(project(":platforms:twitch:model"))
 
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)

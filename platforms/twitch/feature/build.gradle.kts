@@ -38,6 +38,7 @@ android {
 dependencies {
     api(project(":common"))
     api(project(":common-ui"))
+    api(project(":platforms:twitch:model"))
     implementation(project(":platforms:twitch:repository"))
 
     implementation(libs.androidx.hilt.navigation.compose)

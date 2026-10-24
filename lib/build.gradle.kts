@@ -35,6 +35,7 @@ dependencies {
     api(project(":common"))
     api(project(":common-ui"))
     api(project(":platforms:youtube:model"))
+    api(project(":platforms:twitch:model"))
     implementation(project(":repository-appuser"))
     implementation(project(":image-loadable-coil"))
 

@@ -61,7 +61,8 @@ class TwitchFollowingsTest : ShouldSpec(
                 val expectedIndexOfOld: Collection<Int>,
             ) {
                 val oldBroadcasters: List<TwitchBroadcaster> = old.broadcasters()
-                val expected: List<TwitchUser.Id> = expectedIndexOfOld.map { oldBroadcasters[it].id }
+                val expected: List<TwitchUser.Id> =
+                    expectedIndexOfOld.map { oldBroadcasters[it].id }
             }
             withData(
                 mapOf(

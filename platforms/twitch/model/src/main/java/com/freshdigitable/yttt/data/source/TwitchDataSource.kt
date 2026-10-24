@@ -11,9 +11,13 @@ import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
 import com.freshdigitable.yttt.data.model.Updatable
 
-interface TwitchDataSource : TwitchUserDataSource, TwitchStreamDataSource, TwitchScheduleDataSource {
+interface TwitchDataSource : TwitchUserDataSource, TwitchStreamDataSource,
+    TwitchScheduleDataSource {
     suspend fun fetchCategory(id: Set<TwitchCategory.Id>): Result<List<TwitchCategory>>
-    suspend fun fetchVideosByUserId(id: TwitchUser.Id, itemCount: Int = 20): Result<List<Updatable<TwitchVideoDetail>>>
+    suspend fun fetchVideosByUserId(
+        id: TwitchUser.Id,
+        itemCount: Int = 20,
+    ): Result<List<Updatable<TwitchVideoDetail>>>
 
     interface Local :
         TwitchDataSource,
