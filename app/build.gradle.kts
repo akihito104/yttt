@@ -38,8 +38,8 @@ dependencies {
     implementation(project(":lib"))
     implementation(project(":common"))
     implementation(project(":common-ui"))
-    implementation(project(":feature-youtube"))
-    implementation(project(":feature-twitch"))
+    implementation(project(":platforms:youtube:feature"))
+    implementation(project(":platforms:twitch:feature"))
 
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.animation)

@@ -1,6 +1,3 @@
-import java.io.FileInputStream
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.yttt.android.library.compose)
     alias(libs.plugins.yttt.hilt)
@@ -8,20 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "com.freshdigitable.yttt.feature.timetable.twitch"
+    namespace = "com.freshdigitable.yttt.feature.timetable.youtube"
 
     defaultConfig {
         testInstrumentationRunner = "com.freshdigitable.yttt.test.CustomTestRunner"
         consumerProguardFiles("consumer-rules.pro")
+    }
 
-        val twitchPFile = rootProject.file("twitch.properties")
-        val twitchProperties = Properties()
-        if (twitchPFile.exists()) {
-            FileInputStream(twitchPFile).use { twitchProperties.load(it) }
-        }
-        manifestPlaceholders["scheme"] =
-            twitchProperties.getOrDefault("twitch_redirect_uri_scheme", "")
-        manifestPlaceholders["host"] = twitchProperties.getOrDefault("twitch_redirect_uri_host", "")
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -38,17 +30,31 @@ android {
 dependencies {
     api(project(":common"))
     api(project(":common-ui"))
-    implementation(project(":repository-twitch"))
+    implementation(project(":platforms:youtube:repository"))
+    implementation(project(":repository-appuser"))
 
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.compose.runtime.livedata)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.paging.runtime)
+    implementation(libs.accompanist.permissions)
+    implementation(libs.play.services.base)
+    implementation(libs.play.services.auth)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.mockk)
+    testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testRuntimeOnly(libs.junit.vintage.engine)
     testImplementation(libs.kotest.runner.junit5)
@@ -60,11 +66,19 @@ dependencies {
     testFixturesImplementation(testFixtures(project(":data-local-room")))
     testFixturesImplementation(project(":image-loadable-coil"))
     testFixturesImplementation(testFixtures(project(":common")))
-    testFixturesImplementation(testFixtures(project(":repository-twitch")))
-    testFixturesImplementation(project(":repository-appuser"))
+    testFixturesImplementation(testFixtures(project(":platforms:youtube:repository")))
     kspTestFixtures(libs.hilt.compiler)
     testFixturesApi(libs.hilt.android.testing)
     testFixturesImplementation(libs.androidx.room.runtime)
-    testFixturesImplementation(libs.turbine)
     testFixturesImplementation(libs.kotest.assertions.core)
+    testFixturesImplementation(libs.turbine)
+    testFixturesImplementation(libs.androidx.work.testing)
+    testFixturesImplementation(libs.androidx.hilt.work)
+    testFixturesImplementation(libs.androidx.paging.testing)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform {
+        includeEngines("junit-vintage", "kotest")
+    }
 }
