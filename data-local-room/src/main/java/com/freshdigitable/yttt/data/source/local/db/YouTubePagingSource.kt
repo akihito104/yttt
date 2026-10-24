@@ -9,7 +9,7 @@ import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeSubscription
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.di.LivePlatformQualifier
@@ -35,10 +35,10 @@ data class YouTubeLiveSubscription(
     @ColumnInfo(name = "channel_icon")
     private val iconUrl: String,
 ) : LiveSubscription {
-    override val id: LiveSubscription.Id get() = idValue.mapTo()
+    override val id: LiveSubscription.Id get() = idValue.toLiveId()
     override val channel: LiveChannel
         get() = LiveChannelEntity(
-            id = channelId.mapTo(),
+            id = channelId.toLiveId(),
             title = channelTitle,
             iconUrl = iconUrl,
             platform = YouTube,

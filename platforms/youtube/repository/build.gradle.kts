@@ -25,6 +25,7 @@ android {
 
 dependencies {
     api(project(":common"))
+    api(project(":platforms:youtube:model"))
     implementation(project(":data-local-room"))
 
     implementation(libs.google.api.client.android) {
@@ -40,6 +41,7 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
 
     testFixturesImplementation(testFixtures(project(":common")))
+    testFixturesImplementation(testFixtures(project(":platforms:youtube:model")))
     testFixturesImplementation(project(":image-loadable-coil"))
     testFixturesImplementation(testFixtures(project(":data-local-room")))
     kspTestFixtures(libs.hilt.compiler)

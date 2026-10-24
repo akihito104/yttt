@@ -52,6 +52,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 
 dependencies {
     api(project(":common"))
+    api(project(":platforms:youtube:model"))
 
     implementation(libs.androidx.room.runtime)
     ksp(libs.androidx.room.compiler)
@@ -61,6 +62,7 @@ dependencies {
 
     kspTestFixtures(libs.hilt.compiler)
     testFixturesImplementation(testFixtures(project(":common")))
+    testFixturesImplementation(testFixtures(project(":platforms:youtube:model")))
     testFixturesImplementation(libs.androidx.junit)
     testFixturesImplementation(libs.androidx.test.runner)
     testFixturesImplementation(libs.kotlinx.coroutines.test)

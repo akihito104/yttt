@@ -10,7 +10,7 @@ import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.logE
 import java.math.BigInteger
@@ -22,7 +22,7 @@ internal class FindLiveVideoDetailFromYouTubeUseCase @Inject constructor(
 ) : FindLiveVideoDetailUseCase {
     override suspend fun invoke(id: LiveVideo.Id): Result<LiveVideoDetail?> {
         check(id.type == YouTubeVideo.Id::class)
-        return repository.fetchVideoList(setOf(id.mapTo()))
+        return repository.fetchVideoList(setOf(id.toLiveId()))
             .onFailure { logE(throwable = it) { "invoke: $id" } }
             .onSuccess { repository.addVideo(it) }
             .map { v ->
@@ -50,7 +50,7 @@ internal class LiveVideoDetailYouTube(
     override val title: AnnotatableString,
     override val description: AnnotatableString,
 ) : LiveVideoDetail {
-    override val id: LiveVideo.Id get() = item.id.mapTo()
+    override val id: LiveVideo.Id get() = item.id.toLiveId()
     override val channel: LiveChannel get() = item.channel.toLiveChannel()
     override val thumbnailUrl: String get() = item.thumbnailUrl
     override val contentType: TimetablePage
@@ -70,7 +70,7 @@ internal class LiveVideoDetailYouTube(
 }
 
 internal fun YouTubeChannel.toLiveChannel(): LiveChannel = LiveChannelEntity(
-    id = id.mapTo(),
+    id = id.toLiveId(),
     title = title,
     iconUrl = iconUrl,
     platform = YouTube,

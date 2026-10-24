@@ -13,7 +13,7 @@ import com.freshdigitable.yttt.data.model.TwitchLiveVideo
 import com.freshdigitable.yttt.data.model.TwitchStream
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.source.TwitchStreamDataSource
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import java.math.BigInteger
@@ -25,8 +25,8 @@ internal class FindLiveVideoDetailFromTwitchUseCase @Inject constructor(
 ) : FindLiveVideoDetailUseCase {
     override suspend operator fun invoke(id: LiveVideo.Id): Result<LiveVideoDetail?> {
         val twitchVideoId = when (id.type) {
-            TwitchStream.Id::class -> id.mapTo<TwitchStream.Id>()
-            TwitchChannelSchedule.Stream.Id::class -> id.mapTo<TwitchChannelSchedule.Stream.Id>()
+            TwitchStream.Id::class -> id.toLiveId<TwitchStream.Id>()
+            TwitchChannelSchedule.Stream.Id::class -> id.toLiveId<TwitchChannelSchedule.Stream.Id>()
             else -> throw AssertionError("unsupported type: ${id.type}")
         }
         val detail = dataSource.fetchStreamDetail(twitchVideoId)
@@ -57,7 +57,7 @@ internal class LiveVideoDetailTwitch(
     override val title: AnnotatableString,
     override val description: AnnotatableString,
 ) : LiveVideoDetail {
-    override val id: LiveVideo.Id get() = video.id.mapTo()
+    override val id: LiveVideo.Id get() = video.id.toLiveId()
     override val channel: LiveChannel get() = video.user.toLiveChannel()
     override val thumbnailUrl: String get() = video.getThumbnailUrl()
     override val isLandscape: Boolean
@@ -85,7 +85,7 @@ internal class LiveVideoDetailTwitch(
 }
 
 internal fun TwitchUserDetail.toLiveChannel(): LiveChannel = LiveChannelEntity(
-    id = id.mapTo(),
+    id = id.toLiveId(),
     title = displayName,
     iconUrl = profileImageUrl,
     platform = Twitch,

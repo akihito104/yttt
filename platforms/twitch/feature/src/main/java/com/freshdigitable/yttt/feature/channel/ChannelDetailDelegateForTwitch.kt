@@ -15,9 +15,10 @@ import com.freshdigitable.yttt.data.model.TwitchId
 import com.freshdigitable.yttt.data.model.TwitchUser
 import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideoDetail
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.data.model.toPattern
+import com.freshdigitable.yttt.data.model.toTwitchId
 import com.freshdigitable.yttt.feature.video.createForTwitch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -58,7 +59,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         if (BuildConfig.DEBUG) TwitchChannelDetailTab.Debug else null,
     )
     private val detail: Flow<TwitchUserDetail?> = flowOf(id).map { i ->
-        repository.findUsersById(setOf(i.mapTo()))
+        repository.findUsersById(setOf(i.toTwitchId()))
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .getOrNull()?.firstOrNull()?.item
     }
@@ -72,7 +73,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         AnnotatableString.createForTwitch(desc)
     }
     override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).mapNotNull { i ->
-        repository.fetchVideosByUserId(i.mapTo())
+        repository.fetchVideosByUserId(i.toTwitchId())
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .getOrNull()?.map { it.item }
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
@@ -99,7 +100,7 @@ internal data class LiveChannelDetailTwitch(
     private val detail: TwitchUserDetail,
     private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ) : LiveChannelDetailBody {
-    override val id: LiveChannel.Id get() = detail.id.mapTo()
+    override val id: LiveChannel.Id get() = detail.id.toLiveId()
     override val statsText: String get() = detail.statsText(timeZone)
     override val title: String get() = detail.displayName
     override val iconUrl: String get() = detail.profileImageUrl
@@ -109,7 +110,12 @@ internal data class LiveChannelDetailTwitch(
     companion object {
         private fun TwitchUserDetail.statsText(timeZone: TimeZone): String = listOf(
             loginName,
-            "Published:${createdAt.toLocalFormattedText(formatter = DATE.toPattern(), timeZone = timeZone)}",
+            "Published:${
+                createdAt.toLocalFormattedText(
+                    formatter = DATE.toPattern(),
+                    timeZone = timeZone,
+                )
+            }",
         ).joinToString(LiveChannelDetailBody.STATS_SEPARATOR)
     }
 }

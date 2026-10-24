@@ -119,7 +119,10 @@ interface YouTubeSubscriptionDataSource {
         var subscriptionsFetchedAt: Instant
         var subscriptionsRelevanceOrderedFetchedAt: Instant
         suspend fun findSubscriptionSummaries(ids: Collection<YouTubeSubscription.Id>): List<YouTubeSubscriptionSummary>
-        suspend fun findSubscriptionSummariesByOffset(offset: Int, pageSize: Int): List<YouTubeSubscriptionSummary>
+        suspend fun findSubscriptionSummariesByOffset(
+            offset: Int,
+            pageSize: Int,
+        ): List<YouTubeSubscriptionSummary>
 
         suspend fun addPagedSubscription(subscription: Collection<YouTubeSubscription>)
         suspend fun findSubscriptionQuery(offset: Int): YouTubeSubscriptionQuery?
@@ -152,7 +155,10 @@ interface YouTubePlaylistDataSource {
     }
 
     interface Extended {
-        suspend fun updatePlaylistWithItems(item: YouTubePlaylistWithItem<*>, cacheControl: CacheControl)
+        suspend fun updatePlaylistWithItems(
+            item: YouTubePlaylistWithItem<*>,
+            cacheControl: CacheControl,
+        )
     }
 
     interface Remote : YouTubePlaylistDataSource {

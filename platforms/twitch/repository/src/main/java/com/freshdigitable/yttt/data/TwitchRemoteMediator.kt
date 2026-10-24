@@ -8,7 +8,7 @@ import com.freshdigitable.yttt.data.model.DateTimeProvider
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchUser
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toTwitchId
 import com.freshdigitable.yttt.data.source.PagerFactory
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.db.TwitchPagingSource
@@ -57,7 +57,7 @@ internal class TwitchRemoteMediator @Inject constructor(
             LoadType.PREPEND, LoadType.APPEND -> {
                 val items: List<TwitchUser.Id> = state.pages.flatMap { it.data }
                     .filter { it.channel.iconUrl.isEmpty() }
-                    .map { it.channel.id.mapTo() }
+                    .map { it.channel.id.toTwitchId<TwitchUser.Id>() }
                 repository.findUsersById(items.toSet())
                     .onFailure { logE(throwable = it) { "load($loadType):" } }
                 MediatorResult.Success(true)

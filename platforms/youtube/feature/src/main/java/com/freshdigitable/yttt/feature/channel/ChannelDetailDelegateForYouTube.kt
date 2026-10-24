@@ -20,9 +20,10 @@ import com.freshdigitable.yttt.data.model.YouTubeChannelDetail
 import com.freshdigitable.yttt.data.model.YouTubeChannelLog
 import com.freshdigitable.yttt.data.model.YouTubeId
 import com.freshdigitable.yttt.data.model.YouTubePlaylistItemDetail
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.data.model.toPattern
+import com.freshdigitable.yttt.data.model.toYouTubeId
 import com.freshdigitable.yttt.feature.timetable.youtube.BuildConfig
 import com.freshdigitable.yttt.feature.video.createForYouTube
 import com.freshdigitable.yttt.logE
@@ -76,7 +77,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         if (BuildConfig.DEBUG) YouTubeChannelDetailTab.Debug else null,
     )
     private val detail: Flow<YouTubeChannelDetail?> = flowOf(id).map { i ->
-        repository.fetchChannelDetailList(setOf(i.mapTo())).map { it.firstOrNull() }
+        repository.fetchChannelDetailList(setOf(i.toYouTubeId())).map { it.firstOrNull() }
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "detail:$i" } }
             .getOrNull()?.item
@@ -101,7 +102,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
 
     @OptIn(FlowPreview::class)
     override val sections: Flow<List<ChannelSectionItem>> = flowOf(id).transform { i ->
-        val section = channelSectionFacade.fetchChannelSection(i.mapTo())
+        val section = channelSectionFacade.fetchChannelSection(i.toYouTubeId())
             .onFailureWithSnackbarMessage(errorMessageChannel)
             .onFailure { logE(throwable = it) { "fetchChannelSection:$i" } }
             .getOrDefault(emptyList())
@@ -118,7 +119,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
 
     override val activities: Flow<List<YouTubeChannelLog>> = flowOf(id).map { i ->
         repository.fetchLiveChannelLogs(
-            channelId = i.mapTo(),
+            channelId = i.toYouTubeId(),
             publishedAfter = dateTimeProvider.now() - 7.days,
             maxResult = 20,
         ).onFailure { logE(throwable = it) { "fetchLiveChannelLogs:$i" } }
@@ -157,7 +158,7 @@ internal data class LiveChannelDetailYouTube(
     private val detail: YouTubeChannelDetail,
     private val timeZone: TimeZone = TimeZone.currentSystemDefault(),
 ) : LiveChannelDetailBody {
-    override val id: LiveChannel.Id get() = detail.id.mapTo()
+    override val id: LiveChannel.Id get() = detail.id.toLiveId()
     override val title: String get() = detail.title
     override val iconUrl: String get() = detail.iconUrl
     override val platform: LivePlatform get() = YouTube
@@ -176,7 +177,12 @@ internal data class LiveChannelDetailYouTube(
                 subscriberCount,
                 "Videos:${videoCount.toStringWithComma}",
                 "Views:${viewsCount.toStringWithComma}",
-                "Published:${publishedAt.toLocalFormattedText(formatter = DATE.toPattern(), timeZone = timeZone)}",
+                "Published:${
+                    publishedAt.toLocalFormattedText(
+                        formatter = DATE.toPattern(),
+                        timeZone = timeZone,
+                    )
+                }",
             ).joinToString(STATS_SEPARATOR)
         }
 

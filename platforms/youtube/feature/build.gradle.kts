@@ -30,6 +30,7 @@ android {
 dependencies {
     api(project(":common"))
     api(project(":common-ui"))
+    api(project(":platforms:youtube:model"))
     implementation(project(":platforms:youtube:repository"))
     implementation(project(":repository-appuser"))
 
