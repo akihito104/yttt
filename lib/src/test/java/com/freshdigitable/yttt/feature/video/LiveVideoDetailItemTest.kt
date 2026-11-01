@@ -99,6 +99,7 @@ internal data class StatsTextParam(
 )
 
 private class LiveVideoDetailImpl(private val param: StatsTextParam) : LiveVideoDetail {
+    private val factory = AnnotatableString.Factory.empty()
     override val dateTime: Instant get() = param.dateTime
     override val viewerCount: BigInteger? get() = param.viewerCount
     override val contentType: TimetablePage get() = param.contentType
@@ -111,6 +112,6 @@ private class LiveVideoDetailImpl(private val param: StatsTextParam) : LiveVideo
             platform = YouTube,
         )
     override val thumbnailUrl: String get() = ""
-    override val title: AnnotatableString get() = AnnotatableString.create("") { emptyList() }
-    override val description: AnnotatableString get() = AnnotatableString.create("") { emptyList() }
+    override val title: AnnotatableString get() = factory.create("")
+    override val description: AnnotatableString get() = factory.create("")
 }

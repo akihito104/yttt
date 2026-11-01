@@ -26,7 +26,7 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
         }
         extensions.configure<LibraryExtension> {
             configureAndroidSdk(this)
-            configureKotlin<KotlinAndroidProjectExtension>()
+            configureKotlin<KotlinAndroidProjectExtension>(this)
             configureDesugaring(this)
         }
     }

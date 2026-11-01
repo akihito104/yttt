@@ -36,7 +36,7 @@ import com.freshdigitable.yttt.data.model.LiveVideoThumbnail
 import com.freshdigitable.yttt.data.model.YouTube
 import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.feature.timetable.TimeAdjustment
@@ -194,7 +194,10 @@ private fun LiveVideoListItemViewPreview(
     @PreviewParameter(LiveVideoPreviewParamProvider::class) video: LiveVideo,
 ) {
     AppTheme {
-        LiveVideoListItemView(TimetableItem.Video(video, TimeAdjustment.zero()), onItemClick = {}) {}
+        LiveVideoListItemView(
+            TimetableItem.Video(video, TimeAdjustment.zero()),
+            onItemClick = {},
+        ) {}
     }
 }
 
@@ -230,10 +233,10 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
-                id = YouTubeChannel.Id("b").mapTo(),
+                id = YouTubeChannel.Id("b").toLiveId(),
                 platform = YouTube,
             ),
-            id = YouTubeVideo.Id("a").mapTo(),
+            id = YouTubeVideo.Id("a").toLiveId(),
         )
 
         fun freeChat(
@@ -246,10 +249,10 @@ class LiveVideoPreviewParamProvider : PreviewParameterProvider<LiveVideo> {
             channel = LiveChannelEntity(
                 title = channelTitle,
                 iconUrl = "",
-                id = YouTubeChannel.Id("b").mapTo(),
+                id = YouTubeChannel.Id("b").toLiveId(),
                 platform = YouTube,
             ),
-            id = YouTubeVideo.Id("a").mapTo(),
+            id = YouTubeVideo.Id("a").toLiveId(),
             isPinned = isPinned,
         )
     }

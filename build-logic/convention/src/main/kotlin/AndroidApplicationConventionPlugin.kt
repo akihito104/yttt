@@ -18,7 +18,7 @@ class AndroidApplicationConventionPlugin : Plugin<Project> {
 
         extensions.configure<ApplicationExtension> {
             configureAndroidSdk(this)
-            configureKotlin<KotlinAndroidProjectExtension>()
+            configureKotlin<KotlinAndroidProjectExtension>(this)
             testOptions.animationsDisabled = true
             configureDesugaring(this)
         }

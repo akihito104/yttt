@@ -11,7 +11,7 @@ import com.freshdigitable.yttt.data.model.LiveChannelEntity
 import com.freshdigitable.yttt.data.model.LiveSubscription
 import com.freshdigitable.yttt.data.model.Twitch
 import com.freshdigitable.yttt.data.model.TwitchUser
-import com.freshdigitable.yttt.data.model.mapTo
+import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.source.PagingSourceFunction
 import com.freshdigitable.yttt.data.source.local.AppDatabase
 import com.freshdigitable.yttt.di.LivePlatformQualifier
@@ -36,10 +36,10 @@ data class TwitchLiveSubscription(
     private val channelIconUrl: String?,
 ) : LiveSubscription {
     override val id: LiveSubscription.Id
-        get() = idValue.mapTo()
+        get() = idValue.toLiveId()
     override val channel: LiveChannel
         get() = LiveChannelEntity(
-            id = channelId.mapTo(),
+            id = channelId.toLiveId(),
             title = channelName,
             iconUrl = channelIconUrl ?: "",
             platform = Twitch,

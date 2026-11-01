@@ -234,14 +234,11 @@ private fun ChannelScreenPreview() {
         override fun equals(other: Any?): Boolean = throw NotImplementedError()
         override fun hashCode(): Int = throw NotImplementedError()
     }
+    val factory = AnnotatableString.Factory.empty()
     val pageScope = ChannelDetailPageScope.create(
         pagerContent = object : ChannelDetailDelegate.PagerContent {
-            override val annotatedDetail: Flow<AnnotatableString> = flowOf(
-                AnnotatableString.create(
-                    annotatable = "text.",
-                    accountUrlCreator = { emptyList() },
-                ),
-            )
+            override val annotatedDetail: Flow<AnnotatableString> =
+                flowOf(factory.create(annotatable = "text."))
         },
         dialogState = LinkAnnotationDialogState(),
     )

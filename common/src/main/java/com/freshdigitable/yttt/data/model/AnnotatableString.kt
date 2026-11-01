@@ -22,37 +22,56 @@ interface AnnotatableString {
     val annotationRangeItems: List<LinkAnnotationRange>
 
     companion object {
-        private const val PARENTHESIS = "()<>{}\\[\\]（）【】「」『』〖〗"
-        private const val SEPARATOR = """,.;:|/\￤┊!！?？"""
+        fun empty(): AnnotatableString = EmptyAnnotatableString
+    }
 
-        // https://stackoverflow.com/questions/36586166/android-patterns-web-url-broken
+    interface Factory {
+        companion object {
+            private const val PARENTHESIS = "()<>{}\\[\\]（）【】「」『』〖〗"
+            private const val SEPARATOR = """,.;:|/\￤┊!！?？"""
+
+            // https://stackoverflow.com/questions/36586166/android-patterns-web-url-broken
 //        private val WEB_URL_REGEX = Patterns.WEB_URL.toRegex()
-        private val WEB_URL_REGEX = Regex("""http(s)?://[-\w.]+(:(\d+))?(/[^\s$PARENTHESIS]*)?""")
-        private val YOUTUBE_URL_REGEX =
-            Regex("""(?<!http(s)?://(www.)?)(www.)?youtube.com(/[^\s$PARENTHESIS]*)?""")
+            private val WEB_URL_REGEX =
+                Regex("""http(s)?://[-\w.]+(:(\d+))?(/[^\s$PARENTHESIS]*)?""")
 
-        private fun urlAnnotationRange(annotatable: String): List<LinkAnnotationRange> {
-            val url = WEB_URL_REGEX.findAll(annotatable).map {
-                LinkAnnotationRange.Url(range = it.range, text = it.value)
+            // Pattern.UNICODE_CHARACTER_CLASS is not supported
+            // Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
+            private val REGEX_HASHTAG =
+                Regex("""([#＃])[^\s　$PARENTHESIS#$'"$SEPARATOR]+""")
+            private val REGEX_ACCOUNT = Regex("""@([\w_.-]{3,30})""")
+
+            fun empty(): Factory = factory { emptyList() }
+            fun factory(accountUrlCandidate: (String) -> List<String>): Factory = object : Factory {
+                override fun accountUrlCandidate(account: String): List<String> =
+                    accountUrlCandidate(account)
             }
-            val youtubeUrl = YOUTUBE_URL_REGEX.findAll(annotatable)
-                .filter { r -> url.all { !it.range.contains(r.range.first) } }
-                .map {
-                    LinkAnnotationRange.Url(
-                        range = it.range,
-                        text = it.value,
-                        url = "https://${it.value}",
-                    )
-                }
-            return (url + youtubeUrl).toList().sortedBy { it.range.first }
         }
 
-        // Pattern.UNICODE_CHARACTER_CLASS is not supported
-        // Pattern.compile("""([#＃])(\w)+[^\s()]*""", Pattern.UNICODE_CHARACTER_CLASS).toRegex()
-        private val REGEX_HASHTAG =
-            Regex("""([#＃])[^\s　$PARENTHESIS#$'"$SEPARATOR]+""")
+        fun create(annotatable: String): AnnotatableString {
+            if (annotatable.isEmpty()) {
+                return AnnotatableString.empty()
+            }
+            val urlAnnotation = urlAnnotation(annotatable)
+            val hashtagAnnotation = hashTagAnnotation(annotatable).filter { a ->
+                urlAnnotation.all { !it.contains(a) }
+            }
+            val accountAnnotation = accountAnnotation(annotatable).filter { a ->
+                urlAnnotation.all { !it.contains(a) }
+            }
+            return AnnotatableStringImpl(
+                annotatable,
+                (urlAnnotation + hashtagAnnotation + accountAnnotation).sortedBy { it.range.first },
+            )
+        }
 
-        private fun hashTagAnnotationRange(annotatable: String): List<LinkAnnotationRange> {
+        fun urlAnnotation(annotatable: String): List<LinkAnnotationRange> {
+            return WEB_URL_REGEX.findAll(annotatable).map {
+                LinkAnnotationRange.Url(range = it.range, text = it.value)
+            }.toList()
+        }
+
+        fun hashTagAnnotation(annotatable: String): List<LinkAnnotationRange> {
             return REGEX_HASHTAG.findAll(annotatable).filter { a ->
                 !a.value.toCharArray(startIndex = 1).all { it.isDigit() }
             }.map {
@@ -60,45 +79,17 @@ interface AnnotatableString {
             }.toList()
         }
 
-        private val REGEX_ACCOUNT = Regex("""@([\w_.-]{3,30})""")
-        private fun accountAnnotationRange(
-            annotatable: String,
-            urlCreator: (String) -> List<String>,
-        ): List<LinkAnnotationRange> {
+        fun accountAnnotation(annotatable: String): List<LinkAnnotationRange> {
             return REGEX_ACCOUNT.findAll(annotatable).map {
                 LinkAnnotationRange.Account(
                     range = it.range,
                     text = it.value,
-                    urlCandidate = urlCreator(it.value),
+                    urlCandidate = accountUrlCandidate(it.value),
                 )
             }.toList()
         }
 
-        fun create(
-            annotatable: String,
-            /**
-             * at-mark-started string (such as @account01) is passed.
-             */
-            accountUrlCreator: (String) -> List<String>,
-        ): AnnotatableString {
-            if (annotatable.isEmpty()) {
-                return empty()
-            }
-            val urlAnnotation = urlAnnotationRange(annotatable)
-            val hashtagAnnotation = hashTagAnnotationRange(annotatable).filter { a ->
-                urlAnnotation.all { !it.contains(a) }
-            }
-            val accountAnnotation =
-                accountAnnotationRange(annotatable, accountUrlCreator).filter { a ->
-                    urlAnnotation.all { !it.contains(a) }
-                }
-            return AnnotatableStringImpl(
-                annotatable,
-                (urlAnnotation + hashtagAnnotation + accountAnnotation).sortedBy { it.range.first },
-            )
-        }
-
-        fun empty(): AnnotatableString = EmptyAnnotatableString
+        fun accountUrlCandidate(account: String): List<String>
     }
 
     private data class AnnotatableStringImpl(

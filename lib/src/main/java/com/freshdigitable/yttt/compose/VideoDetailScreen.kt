@@ -124,6 +124,7 @@ internal fun DetailItem.statsText(): String {
 @PreviewLightDarkMode
 @Composable
 private fun VideoDetailComposePreview() {
+    val factory = AnnotatableString.Factory.empty()
     val detail = DetailItem(
         detail = object : LiveVideoDetail {
             override val id: LiveVideo.Id = LiveVideo.Id("id", YouTubeVideo.Id::class)
@@ -134,9 +135,9 @@ private fun VideoDetailComposePreview() {
                 platform = YouTube,
             )
             override val thumbnailUrl: String = ""
-            override val title: AnnotatableString = AnnotatableString.create("title") { emptyList() }
+            override val title: AnnotatableString = factory.create("title")
             override val description: AnnotatableString =
-                AnnotatableString.create("description\nhttps://example.com") { emptyList() }
+                factory.create("description\nhttps://example.com")
             override val dateTime: Instant = Clock.System.now()
             override val viewerCount: BigInteger? = BigInteger.valueOf(100)
             override val contentType: TimetablePage = TimetablePage.Upcoming
