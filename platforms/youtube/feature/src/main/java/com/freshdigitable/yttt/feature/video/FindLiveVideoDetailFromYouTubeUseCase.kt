@@ -4,6 +4,7 @@ import com.freshdigitable.yttt.data.YouTubeRepository
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.YouTube
@@ -11,6 +12,7 @@ import com.freshdigitable.yttt.data.model.YouTubeChannel
 import com.freshdigitable.yttt.data.model.YouTubeVideo
 import com.freshdigitable.yttt.data.model.YouTubeVideoExtended
 import com.freshdigitable.yttt.data.model.toLiveId
+import com.freshdigitable.yttt.di.ClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import com.freshdigitable.yttt.logE
 import java.math.BigInteger
@@ -19,7 +21,11 @@ import kotlin.time.Instant
 
 internal class FindLiveVideoDetailFromYouTubeUseCase @Inject constructor(
     private val repository: YouTubeRepository,
+    annotatableStringFactoryMap: ClassMap<LivePlatform, AnnotatableString.Factory>,
 ) : FindLiveVideoDetailUseCase {
+    private val annotatableStringFactory: AnnotatableString.Factory =
+        annotatableStringFactoryMap.getValue(YouTube::class.java)
+
     override suspend fun invoke(id: LiveVideo.Id): Result<LiveVideoDetail?> {
         check(id.type == YouTubeVideo.Id::class)
         return repository.fetchVideoList(setOf(id.toLiveId()))
@@ -29,21 +35,13 @@ internal class FindLiveVideoDetailFromYouTubeUseCase @Inject constructor(
                 v.firstOrNull()?.let {
                     LiveVideoDetailYouTube(
                         it.item,
-                        AnnotatableString.createForYouTube(it.item.title),
-                        AnnotatableString.createForYouTube(it.item.description),
+                        annotatableStringFactory.create(it.item.title),
+                        annotatableStringFactory.create(it.item.description),
                     )
                 }
             }
     }
 }
-
-internal fun AnnotatableString.Companion.createForYouTube(description: String): AnnotatableString =
-    create(description) {
-        listOf(
-            "https://youtube.com/$it",
-            "https://twitter.com/${it.substring(1)}",
-        )
-    }
 
 internal class LiveVideoDetailYouTube(
     private val item: YouTubeVideoExtended,

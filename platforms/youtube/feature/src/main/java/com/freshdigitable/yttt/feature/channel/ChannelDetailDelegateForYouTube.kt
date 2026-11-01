@@ -24,8 +24,8 @@ import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.data.model.toYouTubeId
+import com.freshdigitable.yttt.di.ClassMap
 import com.freshdigitable.yttt.feature.timetable.youtube.BuildConfig
-import com.freshdigitable.yttt.feature.video.createForYouTube
 import com.freshdigitable.yttt.logE
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -52,6 +52,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     private val repository: YouTubeRepository,
     private val channelSectionFacade: YouTubeChannelSectionFacade,
     private val dateTimeProvider: DateTimeProvider,
+    annotatableStringFactoryMap: ClassMap<LivePlatform, AnnotatableString.Factory>,
     @Assisted id: LiveChannel.Id,
     @Assisted coroutineScope: CoroutineScope,
     @Assisted private val errorMessageChannel: SnackbarMessageBus.Sender,
@@ -68,6 +69,8 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
     init {
         check(id.type == YouTubeChannel.Id::class) { "unsupported id type: ${id.type}" }
     }
+
+    private val annotatableStringFactory = annotatableStringFactoryMap.getValue(YouTube::class.java)
 
     override val tabs: List<YouTubeChannelDetailTab> = listOfNotNull(
         YouTubeChannelDetailTab.About,
@@ -89,7 +92,7 @@ internal class ChannelDetailDelegateForYouTube @AssistedInject constructor(
         get() = this
     override val annotatedDetail: Flow<AnnotatableString> = detail.map { d ->
         val desc = d?.description ?: return@map AnnotatableString.empty()
-        AnnotatableString.createForYouTube(desc)
+        annotatableStringFactory.create(desc)
     }
     override val uploadedVideo: Flow<List<YouTubePlaylistItemDetail>> = detail.map { d ->
         val pId = d?.uploadedPlayList ?: return@map emptyList()

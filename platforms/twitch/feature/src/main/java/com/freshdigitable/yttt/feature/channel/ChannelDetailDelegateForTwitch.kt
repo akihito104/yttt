@@ -19,7 +19,7 @@ import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.model.toLocalFormattedText
 import com.freshdigitable.yttt.data.model.toPattern
 import com.freshdigitable.yttt.data.model.toTwitchId
-import com.freshdigitable.yttt.feature.video.createForTwitch
+import com.freshdigitable.yttt.di.ClassMap
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -36,6 +36,7 @@ import kotlinx.datetime.TimeZone
 
 internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
     private val repository: TwitchRepository,
+    annotatableStringFactoryMap: ClassMap<LivePlatform, AnnotatableString.Factory>,
     @Assisted id: LiveChannel.Id,
     @Assisted coroutineScope: CoroutineScope,
     @Assisted private val errorMessageChannel: SnackbarMessageBus.Sender,
@@ -53,6 +54,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         check(id.type == TwitchUser.Id::class) { "unsupported id type: ${id.type}" }
     }
 
+    private val annotatableStringFactory = annotatableStringFactoryMap.getValue(Twitch::class.java)
     override val tabs: List<ChannelDetailPageTab<*>> = listOfNotNull(
         TwitchChannelDetailTab.About,
         TwitchChannelDetailTab.Vod,
@@ -70,7 +72,7 @@ internal class ChannelDetailDelegateForTwitch @AssistedInject constructor(
         get() = this
     override val annotatedDetail: Flow<AnnotatableString> = detail.map { d ->
         val desc = d?.description ?: return@map AnnotatableString.empty()
-        AnnotatableString.createForTwitch(desc)
+        annotatableStringFactory.create(desc)
     }
     override val vod: Flow<List<TwitchVideoDetail>> = flowOf(id).mapNotNull { i ->
         repository.fetchVideosByUserId(i.toTwitchId())

@@ -1,6 +1,6 @@
-package com.freshdigitable.yttt.feature.video
+package com.freshdigitable.yttt.data
 
-import com.freshdigitable.yttt.data.model.AnnotatableString
+import com.freshdigitable.yttt.data.model.YouTubeAnnotatableStringFactory
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.datatest.withData
 import io.kotest.matchers.nulls.shouldNotBeNull
@@ -57,10 +57,44 @@ class YouTubeAnnotatableStringFactoryTest : ShouldSpec(
                         Param.Expected.url(10 + 13, "https://example.com/@account01"),
                     ),
                 ),
+                "no schema (well-known url: youtube.com)" to Param(
+                    description = """
+                    |goods - https://example.com/goods
+                    |membership - www.youtube.com/@akihito104/join
+                    """.trimMargin(),
+                    expected = listOf(
+                        Param.Expected.url(8, "https://example.com/goods"),
+                        Param.Expected.url(
+                            34 + 13,
+                            text = "www.youtube.com/@akihito104/join",
+                            url = "https://www.youtube.com/@akihito104/join",
+                        ),
+                    ),
+                ),
+                "item order with no schema (well-known url: youtube.com)" to Param(
+                    description = """
+                    |goods - https://example.com/goods
+                    |membership - www.youtube.com/@akihito104/join
+                    |back number 1 - https://youtube.com/playlist?list=example
+                    """.trimMargin(),
+                    expected = listOf(
+                        Param.Expected.url(8, "https://example.com/goods"),
+                        Param.Expected.url(
+                            34 + 13,
+                            text = "www.youtube.com/@akihito104/join",
+                            url = "https://www.youtube.com/@akihito104/join",
+                        ),
+                        Param.Expected.url(
+                            34 + 46 + 16,
+                            "https://youtube.com/playlist?list=example",
+                        ),
+                    ),
+                ),
             ),
         ) { (description, expected) ->
             // exercise
-            val actual = AnnotatableString.createForYouTube(description)
+            var factory = YouTubeAnnotatableStringFactory()
+            val actual = factory.create(description)
             // verify
             actual.shouldNotBeNull()
             actual.annotationRangeItems.size shouldBe expected.size

@@ -3,6 +3,7 @@ package com.freshdigitable.yttt.feature.video
 import com.freshdigitable.yttt.data.model.AnnotatableString
 import com.freshdigitable.yttt.data.model.LiveChannel
 import com.freshdigitable.yttt.data.model.LiveChannelEntity
+import com.freshdigitable.yttt.data.model.LivePlatform
 import com.freshdigitable.yttt.data.model.LiveVideo
 import com.freshdigitable.yttt.data.model.LiveVideoDetail
 import com.freshdigitable.yttt.data.model.Twitch
@@ -15,6 +16,7 @@ import com.freshdigitable.yttt.data.model.TwitchUserDetail
 import com.freshdigitable.yttt.data.model.TwitchVideo
 import com.freshdigitable.yttt.data.model.toLiveId
 import com.freshdigitable.yttt.data.source.TwitchStreamDataSource
+import com.freshdigitable.yttt.di.ClassMap
 import com.freshdigitable.yttt.feature.timetable.TimetablePage
 import java.math.BigInteger
 import javax.inject.Inject
@@ -22,7 +24,9 @@ import kotlin.time.Instant
 
 internal class FindLiveVideoDetailFromTwitchUseCase @Inject constructor(
     private val dataSource: TwitchStreamDataSource.Extended,
+    annotatableStringFactoryMap: ClassMap<LivePlatform, AnnotatableString.Factory>,
 ) : FindLiveVideoDetailUseCase {
+    private val annotatableStringFactory = annotatableStringFactoryMap.getValue(Twitch::class.java)
     override suspend operator fun invoke(id: LiveVideo.Id): Result<LiveVideoDetail?> {
         val twitchVideoId = when (id.type) {
             TwitchStream.Id::class -> id.toLiveId<TwitchStream.Id>()
@@ -39,18 +43,13 @@ internal class FindLiveVideoDetailFromTwitchUseCase @Inject constructor(
                 }
                 LiveVideoDetailTwitch(
                     it,
-                    AnnotatableString.createForTwitch(it.title),
-                    AnnotatableString.createForTwitch(description),
+                    annotatableStringFactory.create(it.title),
+                    annotatableStringFactory.create(description),
                 )
             },
         )
     }
 }
-
-internal fun AnnotatableString.Companion.createForTwitch(annotatable: String?): AnnotatableString =
-    create(annotatable ?: "") {
-        listOf("https://twitch.tv/${it.substring(1)}")
-    }
 
 internal class LiveVideoDetailTwitch(
     private val video: TwitchLiveVideo<out TwitchVideo.TwitchVideoId>,
